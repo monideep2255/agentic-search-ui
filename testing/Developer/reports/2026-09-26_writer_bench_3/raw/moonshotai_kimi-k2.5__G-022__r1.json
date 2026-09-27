@@ -1,0 +1,2443 @@
+{
+ "record": {
+  "model": "moonshotai/kimi-k2.5",
+  "model_id": "moonshotai/kimi-k2.5",
+  "synth_effort": "none",
+  "question_id": "G-022",
+  "run": 1,
+  "question": "What phenotypic features are associated with Marfan syndrome?",
+  "trace_id": "trace-wb3-G-022-r1-e151c96715854da5",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-26T22:47:31Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "answer",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 82,
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "withdrawn": false,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 1,
+  "prose_sentences_kept": 3,
+  "prose_kept": [
+   "MedGen lists these clinical features: Aortic regurgitation [1], Congestive heart failure [2].",
+   "MedGen lists these clinical features: Astigmatism [3], Ectopia lentis [4], Esotropia [5], Exotropia [6], Glaucoma [7], Hypertropia [8].",
+   "MedGen lists these clinical features: Arachnodactyly [9], Pes planus [10], Micrognathia [11]."
+  ],
+  "prose_text": "MedGen lists these clinical features: Aortic regurgitation [1], Congestive heart failure [2]. MedGen lists these clinical features: Astigmatism [3], Ectopia lentis [4], Esotropia [5], Exotropia [6], Glaucoma [7], Hypertropia [8]. MedGen lists these clinical features: Arachnodactyly [9], Pes planus [10], Micrognathia [11].",
+  "jev_sent": 4,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   15.882805749999534,
+   18.186599749999004
+  ],
+  "writer_completion_tokens": [
+   378,
+   479
+  ],
+  "writer_reasoning_tokens": [
+   0,
+   0
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 43.713,
+  "done_elapsed_s": 43.683,
+  "metered_cost_usd": 0.012487305359999997,
+  "done_cost_usd": 0.012487305359999997,
+  "openrouter_cost_usd": 0.004395,
+  "writer_openrouter_cost_usd": 0.00415,
+  "writer_metered_cost_usd": 0.012175,
+  "answer_text": "Found 1 medgen record, 5 pubmed records, 1 literature entity record and 5 clinical trial records for Marfan syndrome [12][13][73][74][75][76][77][78][79][80][81][82]. \n\nMedGen lists these clinical features: Aortic regurgitation [1], Congestive heart failure [2]. \n\nMedGen lists these clinical features: Astigmatism [3], Ectopia lentis [4], Esotropia [5], Exotropia [6], Glaucoma [7], Hypertropia [8]. \n\nMedGen lists these clinical features: Arachnodactyly [9], Pes planus [10], Micrognathia [11]. \n\nPubmed records found\n\nPubmed title: Marfan syndrome [12]. Pubmed title: [Latest advances in the diagnosis and treatment of Marfan syndrome] [75]. Pubmed title: What Is Marfan Syndrome [77]. Pubmed title: Marfan syndrome [79]. Pubmed title: Marfan syndrome [81]. \n\nMedgen records found\n\nMedgen title: Marfan syndrome [13]. \n\nClinical features MedGen lists for Marfan syndrome\n\nMedgen clinical_features: Aortic regurgitation [1]. Medgen clinical_features: Arachnodactyly [9]. Medgen clinical_features: Astigmatism [3]. Medgen clinical_features: Ectopia lentis [4]. Medgen clinical_features: Esotropia [5]. Medgen clinical_features: Exotropia [6]. Medgen clinical_features: Pes planus [10]. Medgen clinical_features: Glaucoma [7]. Medgen clinical_features: Congestive heart failure [2]. Medgen clinical_features: Hypertropia [8]. Medgen clinical_features: Micrognathia [11]. Medgen clinical_features: Mitral regurgitation [14]. Medgen clinical_features: Mitral valve prolapse [15]. Medgen clinical_features: Myopia [16]. Medgen clinical_features: Pneumothorax [17]. Medgen clinical_features: Emphysema [18]. Medgen clinical_features: Retinal detachment [19]. Medgen clinical_features: Retrognathia [20]. Medgen clinical_features: Scoliosis [21]. Medgen clinical_features: Spondylolisthesis [22]. Medgen clinical_features: Strabismus [23]. Medgen clinical_features: Dental crowding [24]. Medgen clinical_features: Tricuspid regurgitation [25]. Medgen clinical_features: Tricuspid valve prolapse [26]. Medgen clinical_features: Cataract [27]. Medgen clinical_features: Bicuspid aortic valve [28]. Medgen clinical_features: Striae distensae [29]. Medgen clinical_features: Pectus carinatum [30]. Medgen clinical_features: Dolichocephaly [31]. Medgen clinical_features: High palate [32]. Medgen clinical_features: Tall stature [33]. Medgen clinical_features: Incisional hernia [34]. Medgen clinical_features: Flexion contracture [35]. Medgen clinical_features: Aortic dissection [36]. Medgen clinical_features: Hypoplasia of the iris [37]. Medgen clinical_features: Protrusio acetabuli [38]. Medgen clinical_features: Downslanted palpebral fissures [39]. Medgen clinical_features: Deeply set eye [40]. Medgen clinical_features: Pulmonary artery dilatation [41]. Medgen clinical_features: Genu recurvatum [42]. Medgen clinical_features: Kyphoscoliosis [43]. Medgen clinical_features: Narrow foot [44]. Medgen clinical_features: Camptodactyly [45]. Medgen clinical_features: Pes cavus [46]. Medgen clinical_features: Ascending tubular aorta aneurysm [47]. Medgen clinical_features: Hammertoe [48]. Medgen clinical_features: Inferior oblique muscle overaction [49]. Medgen clinical_features: Aortic root aneurysm [50]. Medgen clinical_features: Talipes [51]. Medgen clinical_features: Narrow palate [52]. Medgen clinical_features: Microspherophakia [53]. Medgen clinical_features: Increased axial length of the globe [54]. Medgen clinical_features: Premature osteoarthritis [55]. Medgen clinical_features: Thoracic lordosis [56]. Medgen clinical_features: Mitral annular calcification [57]. Medgen clinical_features: Long face [58]. Medgen clinical_features: Disproportionate tall stature [59]. Medgen clinical_features: Decreased muscle mass [60]. Medgen clinical_features: Narrow face [61]. Medgen clinical_features: Dural ectasia [62]. Medgen clinical_features: Reduced subcutaneous adipose tissue [63]. Medgen clinical_features: Malar flattening [64]. Medgen clinical_features: Equinus calcaneus [65]. Medgen clinical_features: Joint hypermobility [66]. Medgen clinical_features: Limited elbow extension [67]. Medgen clinical_features: Pectus excavatum [68]. Medgen clinical_features: Medial rotation of the medial malleolus [69]. Medgen clinical_features: Spontaneous cerebrospinal fluid leak [70]. Medgen clinical_features: Metatarsus adductus [71]. Medgen clinical_features: Reduced upper to lower segment ratio [72]. \n\nLiterature entity records found\n\nLiterature entity name: Marfan Syndrome [73]. \n\nClinical trial records found\n\nClinical trial name: Studies of Heritable Disorders of Connective Tissue [74]. Clinical trial name: Comparison of Two Medications Aimed at Slowing Aortic Root Enlargement in Individuals With Marfan Syndrome [76]. Clinical trial name: Angiotensin Converting Enzyme Inhibitors in Marfan Syndrome [78]. Clinical trial name: Losartan Versus Atenolol for the Treatment of Marfan Syndrome [80]. Clinical trial name: A Randomized, Open-label, LOSARTAN Therapy on the Progression of Aortic Root Dilation in Patients With Marfan Syndrome [82]. "
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.076,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 798,
+    "completion_tokens": 51,
+    "cached_tokens": 647,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.0598e-05,
+    "reply": null,
+    "dur": 2.256
+   },
+   {
+    "t": 2.34,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 992,
+    "completion_tokens": 66,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.000150616,
+    "reply": null,
+    "dur": 1.483
+   },
+   {
+    "t": 4.641,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1072,
+    "completion_tokens": 69,
+    "cached_tokens": 890,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 5.424e-05,
+    "reply": null,
+    "dur": 2.777
+   },
+   {
+    "t": 8.933,
+    "model": "openrouter/moonshotai/kimi-k2.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11049,
+    "completion_tokens": 378,
+    "cached_tokens": 10112,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00197999,
+    "reply": "Marfan syndrome is a multisystem connective tissue disorder with autosomal dominant inheritance, primarily caused by FBN1 gene mutation, that presents with diverse clinical manifestations across multiple organ systems [22: \"Marfan syndrome (MFS) is a multisystem connective tissue disease with autosomal dominant inheritance. It is mainly caused by FBN1 gene mutation and often has different clinical manifestations\"]. Diagnosis relies on established criteria such as the Ghent II Nosology, which guides identification of high-risk patients, while management emphasizes early identification and intervention to improve prognosis [24: \"The Ghent II Nosology of MFS criteria are crucial in MFS diagnosis, guiding clinicians in identifying high-risk patients\"].\n\n## Cardiovascular Features\n\nCardiovascular involvement represents a major disease manifestation. Aortic regurgitation is a documented clinical feature [7]. Congestive heart failure also occurs among affected individuals [28]. Clinical trials have specifically targeted aortic root pathology, including comparisons of medications aimed at slowing aortic root enlargement [8] and investigations of losartan therapy on aortic root dilation progression [20].\n\n## Ocular Features\n\nOcular abnormalities are prominent in this condition. Ectopia lentis, a hallmark ocular finding, is listed among the clinical features [19]. Astigmatism is additionally recorded [15]. Strabismus manifestations include esotropia [23], exotropia [25], and hypertropia [29]. Glaucoma represents another recognized ocular complication [27].\n\n## Musculoskeletal Features\n\nSkeletal manifestations are characteristic and diagnostically relevant. Arachnodactyly, the distinctive long slender digits, is a documented feature [11]. Pes planus, or flatfoot deformity, is also associated with this syndrome [26]. Micrognathia, indicating abnormal mandibular development, appears among the recorded features [30].",
+    "dur": 15.883
+   },
+   {
+    "t": 25.099,
+    "model": "openrouter/moonshotai/kimi-k2.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11722,
+    "completion_tokens": 479,
+    "cached_tokens": 11008,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00216961,
+    "reply": "Marfan syndrome is a multisystem connective tissue disorder with autosomal dominant inheritance caused mainly by FBN1 gene mutation, presenting with diverse clinical manifestations across multiple organ systems [22: \"Marfan syndrome (MFS) is a multisystem connective tissue disease with autosomal dominant inheritance. It is mainly caused by FBN1 gene mutation and often has different clinical manifestations\"]. Diagnosis relies on the Ghent II Nosology criteria to identify high-risk patients, underscoring the importance of systematic screenings and close follow-ups [24: \"The Ghent II Nosology of MFS criteria are crucial in MFS diagnosis, guiding clinicians in identifying high-risk patients\"]. The literature encompasses review articles on latest advances in diagnosis and treatment [6], comprehensive clinical reviews [24], and educational overviews [10], alongside foundational studies [5][9][13][17][21] and ongoing clinical trials targeting aortic root disease progression [4][8][12][16][20].\n\n## Cardiovascular Features\n\nMedGen lists these clinical features: Aortic regurgitation [7], Congestive heart failure [28]. Cardiovascular involvement represents a major disease manifestation, with clinical trials specifically targeting aortic root enlargement through pharmacological interventions including losartan versus atenolol comparisons [16], ACE inhibitor therapy [12], and dedicated losartan therapy protocols [20].\n\n## Ocular Features\n\nMedGen lists these clinical features: Astigmatism [15], Ectopia lentis [19], Esotropia [23], Exotropia [25], Glaucoma [27], Hypertropia [29]. Ocular manifestations are diverse and well-documented in the MedGen clinical feature annotations, with ectopia lentis representing a hallmark diagnostic criterion in Ghent II Nosology.\n\n## Musculoskeletal Features\n\nMedGen lists these clinical features: Arachnodactyly [11], Pes planus [26], Micrognathia [30]. These skeletal manifestations contribute to the characteristic phenotype, with arachnodactyly serving as a recognizable clinical sign and pes planus representing common foot involvement.\n\n## Disease Nomenclature and Literature Indexing\n\nThe condition is indexed in PubMed as Marfan syndrome [1][14][18], in MedGen as Marfan syndrome [2], and in literature entity databases as Marfan Syndrome [3].",
+    "dur": 18.187
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.07,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 2.256174624999403,
+    "prompt_tokens": 798,
+    "completion_tokens": 51,
+    "cost_usd": 4.2336e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 2.262
+   },
+   {
+    "t": 2.34,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 1.4829458330023044,
+    "prompt_tokens": 992,
+    "completion_tokens": 66,
+    "cost_usd": 5.2872960000000004e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.483
+   },
+   {
+    "t": 4.641,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 2.7766763330000686,
+    "prompt_tokens": 1072,
+    "completion_tokens": 69,
+    "cost_usd": 5.69184e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 2.777
+   },
+   {
+    "t": 8.932,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 15.882805749999534,
+    "prompt_tokens": 11049,
+    "completion_tokens": 378,
+    "cost_usd": 0.005822549999999999,
+    "model": "moonshotai/kimi-k2.5",
+    "dur": 15.884
+   },
+   {
+    "t": 25.099,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 18.186599749999004,
+    "prompt_tokens": 11722,
+    "completion_tokens": 479,
+    "cost_usd": 0.00635265,
+    "model": "moonshotai/kimi-k2.5",
+    "dur": 18.187
+   }
+  ],
+  "grounding": [
+   {
+    "t": 24.823,
+    "dur": 0.2754,
+    "narrative_chars": 1541,
+    "narrative": "Marfan syndrome is a multisystem connective tissue disorder with autosomal dominant inheritance, primarily caused by FBN1 gene mutation, that presents with diverse clinical manifestations across multiple organ systems [22#0]. Diagnosis relies on established criteria such as the Ghent II Nosology, which guides identification of high-risk patients, while management emphasizes early identification and intervention to improve prognosis [24#1]. Cardiovascular involvement represents a major disease manifestation. Aortic regurgitation is a documented clinical feature [7]. Congestive heart failure also occurs among affected individuals [28]. Clinical trials have specifically targeted aortic root pathology, including comparisons of medications aimed at slowing aortic root enlargement [8] and investigations of losartan therapy on aortic root dilation progression [20]. Ocular abnormalities are prominent in this condition. Ectopia lentis, a hallmark ocular finding, is listed among the clinical features [19]. Astigmatism is additionally recorded [15]. Strabismus manifestations include esotropia [23], exotropia [25], and hypertropia [29]. Glaucoma represents another recognized ocular complication [27]. Skeletal manifestations are characteristic and diagnostically relevant. Arachnodactyly, the distinctive long slender digits, is a documented feature [11]. Pes planus, or flatfoot deformity, is also associated with this syndrome [26]. Micrognathia, indicating abnormal mandibular development, appears among the recorded features [30].",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 18,
+    "refused": true
+   },
+   {
+    "t": 43.288,
+    "dur": 0.3278,
+    "narrative_chars": 1853,
+    "narrative": "Marfan syndrome is a multisystem connective tissue disorder with autosomal dominant inheritance caused mainly by FBN1 gene mutation, presenting with diverse clinical manifestations across multiple organ systems [22#0]. Diagnosis relies on the Ghent II Nosology criteria to identify high-risk patients, underscoring the importance of systematic screenings and close follow-ups [24#1]. The literature encompasses review articles on latest advances in diagnosis and treatment [6], comprehensive clinical reviews [24], and educational overviews [10], alongside foundational studies [5][9][13][17][21] and ongoing clinical trials targeting aortic root disease progression [4][8][12][16][20]. MedGen lists these clinical features: Aortic regurgitation [7], Congestive heart failure [28]. Cardiovascular involvement represents a major disease manifestation, with clinical trials specifically targeting aortic root enlargement through pharmacological interventions including losartan versus atenolol comparisons [16], ACE inhibitor therapy [12], and dedicated losartan therapy protocols [20]. MedGen lists these clinical features: Astigmatism [15], Ectopia lentis [19], Esotropia [23], Exotropia [25], Glaucoma [27], Hypertropia [29]. Ocular manifestations are diverse and well-documented in the MedGen clinical feature annotations, with ectopia lentis representing a hallmark diagnostic criterion in Ghent II Nosology. MedGen lists these clinical features: Arachnodactyly [11], Pes planus [26], Micrognathia [30]. These skeletal manifestations contribute to the characteristic phenotype, with arachnodactyly serving as a recognizable clinical sign and pes planus representing common foot involvement. The condition is indexed in PubMed as Marfan syndrome [1][14][18], in MedGen as Marfan syndrome [2], and in literature entity databases as Marfan Syndrome [3].",
+    "sentences": [
+     "MedGen lists these clinical features: Aortic regurgitation [1], Congestive heart failure [2].",
+     "MedGen lists these clinical features: Astigmatism [3], Ectopia lentis [4], Esotropia [5], Exotropia [6], Glaucoma [7], Hypertropia [8].",
+     "MedGen lists these clinical features: Arachnodactyly [9], Pes planus [10], Micrognathia [11]."
+    ],
+    "claims": 11,
+    "claim_ids": [
+     "ne-13d36f78c423-11",
+     "ne-13d36f78c423-15",
+     "ne-13d36f78c423-19",
+     "ne-13d36f78c423-23",
+     "ne-13d36f78c423-25",
+     "ne-13d36f78c423-26",
+     "ne-13d36f78c423-27",
+     "ne-13d36f78c423-28",
+     "ne-13d36f78c423-29",
+     "ne-13d36f78c423-30",
+     "ne-13d36f78c423-7"
+    ],
+    "claim_detail": [
+     {
+      "text": "MedGen lists these clinical features: Aortic regurgitation",
+      "quote": "",
+      "ref": 7,
+      "field": "clinical_features",
+      "value": "Aortic regurgitation"
+     },
+     {
+      "text": "Congestive heart failure",
+      "quote": "",
+      "ref": 28,
+      "field": "clinical_features",
+      "value": "Congestive heart failure"
+     },
+     {
+      "text": "MedGen lists these clinical features: Astigmatism",
+      "quote": "",
+      "ref": 15,
+      "field": "clinical_features",
+      "value": "Astigmatism"
+     },
+     {
+      "text": "Ectopia lentis",
+      "quote": "",
+      "ref": 19,
+      "field": "clinical_features",
+      "value": "Ectopia lentis"
+     },
+     {
+      "text": "Esotropia",
+      "quote": "",
+      "ref": 23,
+      "field": "clinical_features",
+      "value": "Esotropia"
+     },
+     {
+      "text": "Exotropia",
+      "quote": "",
+      "ref": 25,
+      "field": "clinical_features",
+      "value": "Exotropia"
+     },
+     {
+      "text": "Glaucoma",
+      "quote": "",
+      "ref": 27,
+      "field": "clinical_features",
+      "value": "Glaucoma"
+     },
+     {
+      "text": "Hypertropia",
+      "quote": "",
+      "ref": 29,
+      "field": "clinical_features",
+      "value": "Hypertropia"
+     },
+     {
+      "text": "MedGen lists these clinical features: Arachnodactyly",
+      "quote": "",
+      "ref": 11,
+      "field": "clinical_features",
+      "value": "Arachnodactyly"
+     },
+     {
+      "text": "Pes planus",
+      "quote": "",
+      "ref": 26,
+      "field": "clinical_features",
+      "value": "Pes planus"
+     },
+     {
+      "text": "Micrognathia",
+      "quote": "",
+      "ref": 30,
+      "field": "clinical_features",
+      "value": "Micrognathia"
+     }
+    ],
+    "stripped": 15,
+    "refused": false
+   }
+  ],
+  "sentence_check": [
+   {
+    "t": 24.827,
+    "sent": 2,
+    "approved": 0,
+    "ok": true,
+    "dur": 0.272
+   },
+   {
+    "t": 43.294,
+    "sent": 2,
+    "approved": 0,
+    "ok": true,
+    "dur": 0.322
+   }
+  ],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "title",
+    "value": "Marfan syndrome.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/2402263/"
+   },
+   {
+    "ref": 2,
+    "field": "title",
+    "value": "Marfan syndrome",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "Marfan Syndrome",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/D008382"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "Studies of Heritable Disorders of Connective Tissue",
+    "url": "https://clinicaltrials.gov/study/NCT00270686"
+   },
+   {
+    "ref": 5,
+    "field": "pmid",
+    "value": "2402263",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/2402263/"
+   },
+   {
+    "ref": 6,
+    "field": "title",
+    "value": "[Latest advances in the diagnosis and treatment of Marfan syndrome].",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35894201/"
+   },
+   {
+    "ref": 7,
+    "field": "clinical_features",
+    "value": "Aortic regurgitation",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 8,
+    "field": "name",
+    "value": "Comparison of Two Medications Aimed at Slowing Aortic Root Enlargement in Individuals With Marfan Syndrome",
+    "url": "https://clinicaltrials.gov/study/NCT00429364"
+   },
+   {
+    "ref": 9,
+    "field": "pmid",
+    "value": "35894201",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35894201/"
+   },
+   {
+    "ref": 10,
+    "field": "title",
+    "value": "What Is Marfan Syndrome?",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/37058316/"
+   },
+   {
+    "ref": 11,
+    "field": "clinical_features",
+    "value": "Arachnodactyly",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 12,
+    "field": "name",
+    "value": "Angiotensin Converting Enzyme Inhibitors in Marfan Syndrome",
+    "url": "https://clinicaltrials.gov/study/NCT00485368"
+   },
+   {
+    "ref": 13,
+    "field": "pmid",
+    "value": "37058316",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/37058316/"
+   },
+   {
+    "ref": 14,
+    "field": "title",
+    "value": "Marfan syndrome.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/38517496/"
+   },
+   {
+    "ref": 15,
+    "field": "clinical_features",
+    "value": "Astigmatism",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 16,
+    "field": "name",
+    "value": "Losartan Versus Atenolol for the Treatment of Marfan Syndrome",
+    "url": "https://clinicaltrials.gov/study/NCT00593710"
+   },
+   {
+    "ref": 17,
+    "field": "pmid",
+    "value": "38517496",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/38517496/"
+   },
+   {
+    "ref": 18,
+    "field": "title",
+    "value": "Marfan syndrome.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/8733052/"
+   },
+   {
+    "ref": 19,
+    "field": "clinical_features",
+    "value": "Ectopia lentis",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 20,
+    "field": "name",
+    "value": "A Randomized, Open-label, LOSARTAN Therapy on the Progression of Aortic Root Dilation in Patients With Marfan Syndrome",
+    "url": "https://clinicaltrials.gov/study/NCT00651235"
+   },
+   {
+    "ref": 21,
+    "field": "pmid",
+    "value": "8733052",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/8733052/"
+   },
+   {
+    "ref": 22,
+    "field": "abstract",
+    "value": "Marfan syndrome (MFS) is a multisystem connective tissue disease with autosomal dominant inheritance. It is mainly caused by FBN1 gene mutation and often has different clinical manifestations. Neonatal MFS is especially rare with severe conditions and a poor prognosis. At present, there is still no ",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35894201/"
+   },
+   {
+    "ref": 23,
+    "field": "clinical_features",
+    "value": "Esotropia",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 24,
+    "field": "abstract",
+    "value": "This article provides a comprehensive review of Marfan Syndrome (MFS), covering its epidemiology, etiology, clinical presentations, diagnostics, complications, and treatment modalities. The Ghent II Nosology of MFS criteria are crucial in MFS diagnosis, guiding clinicians in identifying high-risk pa",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/38517496/"
+   },
+   {
+    "ref": 25,
+    "field": "clinical_features",
+    "value": "Exotropia",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 26,
+    "field": "clinical_features",
+    "value": "Pes planus",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 27,
+    "field": "clinical_features",
+    "value": "Glaucoma",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 28,
+    "field": "clinical_features",
+    "value": "Congestive heart failure",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 29,
+    "field": "clinical_features",
+    "value": "Hypertropia",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 30,
+    "field": "clinical_features",
+    "value": "Micrognathia",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 2.333,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 2.334,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 4.21,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 4.211,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 4.573,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 4.574,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.576,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.576,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.576,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.576,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.576,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.576,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.576,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.576,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.825,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.825,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.011,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.035,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.619,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.831,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.92,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.924,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 8.93,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.671,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.671,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.672,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.673,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.674,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.675,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.676,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.677,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.68,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.682,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.683,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.683,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.683,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.683,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.683,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 43.684,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 43.684,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 43.688,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.012487305359999997,
+  "total_tool_calls": 6,
+  "elapsed_ms": 43683,
+  "trust_outcome": "answer",
+  "trust_line": "Based on 12 sources",
+  "layer_calls_used": 11,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.99,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 357
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "asks_features",
+    "decided_by": "jev",
+    "jev_choice": "asks_features",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 293
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 319
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 442
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://pubmed.ncbi.nlm.nih.gov/2402263/",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/mesh/D008382",
+  "https://clinicaltrials.gov/study/NCT00270686",
+  "https://pubmed.ncbi.nlm.nih.gov/35894201/",
+  "https://clinicaltrials.gov/study/NCT00429364",
+  "https://pubmed.ncbi.nlm.nih.gov/37058316/",
+  "https://clinicaltrials.gov/study/NCT00485368",
+  "https://pubmed.ncbi.nlm.nih.gov/38517496/",
+  "https://clinicaltrials.gov/study/NCT00593710",
+  "https://pubmed.ncbi.nlm.nih.gov/8733052/",
+  "https://clinicaltrials.gov/study/NCT00651235"
+ ]
+}

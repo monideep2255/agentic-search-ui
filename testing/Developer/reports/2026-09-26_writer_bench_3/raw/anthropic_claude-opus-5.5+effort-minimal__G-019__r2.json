@@ -1,0 +1,1075 @@
+{
+ "record": {
+  "model": "anthropic/claude-opus-5.5+effort-minimal",
+  "model_id": "anthropic/claude-opus-5.5",
+  "synth_effort": "minimal",
+  "question_id": "G-019",
+  "run": 2,
+  "question": "What MeSH terms are assigned to PMID 11237011?",
+  "trace_id": "trace-wb3-G-019-r2-b1b4a0e8582344e3",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-27T00:51:48Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "answer",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 26,
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "withdrawn": false,
+  "writer_calls": 1,
+  "writer_calls_ok": 1,
+  "repair_fired": false,
+  "shipped_draft": 0,
+  "prose_sentences_kept": 5,
+  "prose_kept": [
+   "The terms include Genome, Human [1] and Human Genome Project [2].",
+   "Databases, Factual [3].",
+   "DNA Transposable Elements [4].",
+   "Gene Duplication [5].",
+   "Conserved Sequence [6] and Species Specificity [7]."
+  ],
+  "prose_text": "The terms include Genome, Human [1] and Human Genome Project [2]. Conserved Sequence [3] and Species Specificity [4].",
+  "jev_sent": 0,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   7.721444874998269
+  ],
+  "writer_completion_tokens": [
+   479
+  ],
+  "writer_reasoning_tokens": [
+   0
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 12.432,
+  "done_elapsed_s": 12.419,
+  "metered_cost_usd": 0.07486252008000001,
+  "done_cost_usd": 0.07486252008000001,
+  "openrouter_cost_usd": 0.074752,
+  "writer_openrouter_cost_usd": 0.074688,
+  "writer_metered_cost_usd": 0.074688,
+  "answer_text": "Found 26 ontology class records for PMID 11237011 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26]. \n\nThe terms include Genome, Human [1] and Human Genome Project [2]. \n\nConserved Sequence [3] and Species Specificity [4]. \n\nOntology class records found\n\nOntologyClass name: Animals [5]. OntologyClass name: Chromosome Mapping [6]. OntologyClass name: DNA Transposable Elements [7]. OntologyClass name: Drug Industry [8]. OntologyClass name: Forecasting [9]. OntologyClass name: Genes [10]. OntologyClass name: Genetics, Medical [11]. OntologyClass name: Humans [12]. OntologyClass name: Mutation [13]. OntologyClass name: Proteins [14]. OntologyClass name: Repetitive Sequences, Nucleic Acid [15]. OntologyClass name: RNA [16]. OntologyClass name: Species Specificity [4]. OntologyClass name: Genome, Human [1]. OntologyClass name: Human Genome Project [2]. OntologyClass name: Databases, Factual [17]. OntologyClass name: Conserved Sequence [3]. OntologyClass name: Private Sector [18]. OntologyClass name: Public Sector [19]. OntologyClass name: Sequence Analysis, DNA [20]. OntologyClass name: CpG Islands [21]. OntologyClass name: Evolution, Molecular [22]. OntologyClass name: Gene Duplication [23]. OntologyClass name: Proteome [24]. OntologyClass name: GC Rich Sequence [25]. OntologyClass name: Genetic Diseases, Inborn [26]. "
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.078,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 801,
+    "completion_tokens": 49,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.228896e-05,
+    "reply": null,
+    "dur": 2.087
+   },
+   {
+    "t": 2.171,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1008,
+    "completion_tokens": 35,
+    "cached_tokens": 768,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 2.1807744e-05,
+    "reply": null,
+    "dur": 1.495
+   },
+   {
+    "t": 4.686,
+    "model": "openrouter/anthropic/claude-opus-5.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 16277,
+    "completion_tokens": 479,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.074688,
+    "reply": "PMID 11237011 is indexed with MeSH terms that cover genome sequencing, genome structure and evolution, and medical genetics. The terms include Genome, Human [14] and Human Genome Project [15]. The indexing also names Private Sector [18] and Public Sector [19].\n\n## Sequencing and Mapping\n\nThe record carries Sequence Analysis, DNA [20]. It is also indexed with Chromosome Mapping [2]. Databases, Factual [16] is assigned as well.\n\n## Genome Structure\n\nRepeat content is captured by Repetitive Sequences, Nucleic Acid [11]. DNA Transposable Elements [3] is also assigned. Base-composition features appear as CpG Islands [21] and GC Rich Sequence [25].\n\n## Evolution and Conservation\n\nEvolutionary analysis is indexed as Evolution, Molecular [22]. Gene Duplication [23] is listed. Conserved Sequence [17] and Species Specificity [13] are also assigned.\n\n## Genes and Medicine\n\nGene-level terms include Genes [6]. Proteins [10] and Proteome [24] are assigned, along with RNA [12] and Mutation [9]. Clinical relevance terms include Genetics, Medical [7] and Genetic Diseases, Inborn [26]. The record also carries Drug Industry [4] and Forecasting [5]. The check tags are Humans [8] and Animals [1].",
+    "dur": 7.721
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.073,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 2.087549832998775,
+    "prompt_tokens": 801,
+    "completion_tokens": 49,
+    "cost_usd": 4.2288960000000005e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 2.092
+   },
+   {
+    "t": 2.171,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 1.4945299170030921,
+    "prompt_tokens": 1008,
+    "completion_tokens": 35,
+    "cost_usd": 5.070912e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.495
+   },
+   {
+    "t": 4.686,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 7.721444874998269,
+    "prompt_tokens": 16277,
+    "completion_tokens": 479,
+    "cost_usd": 0.074688,
+    "model": "anthropic/claude-opus-5.5",
+    "dur": 7.722
+   }
+  ],
+  "grounding": [
+   {
+    "t": 12.408,
+    "dur": 0.0014,
+    "narrative_chars": 1088,
+    "narrative": "PMID 11237011 is indexed with MeSH terms that cover genome sequencing, genome structure and evolution, and medical genetics. The terms include Genome, Human [14] and Human Genome Project [15]. The indexing also names Private Sector [18] and Public Sector [19]. The record carries Sequence Analysis, DNA [20]. It is also indexed with Chromosome Mapping [2]. Databases, Factual [16] is assigned as well. Repeat content is captured by Repetitive Sequences, Nucleic Acid [11]. DNA Transposable Elements [3] is also assigned. Base-composition features appear as CpG Islands [21] and GC Rich Sequence [25]. Evolutionary analysis is indexed as Evolution, Molecular [22]. Gene Duplication [23] is listed. Conserved Sequence [17] and Species Specificity [13] are also assigned. Gene-level terms include Genes [6]. Proteins [10] and Proteome [24] are assigned, along with RNA [12] and Mutation [9]. Clinical relevance terms include Genetics, Medical [7] and Genetic Diseases, Inborn [26]. The record also carries Drug Industry [4] and Forecasting [5]. The check tags are Humans [8] and Animals [1].",
+    "sentences": [
+     "The terms include Genome, Human [1] and Human Genome Project [2].",
+     "Databases, Factual [3].",
+     "DNA Transposable Elements [4].",
+     "Gene Duplication [5].",
+     "Conserved Sequence [6] and Species Specificity [7]."
+    ],
+    "claims": 7,
+    "claim_ids": [
+     "cq-bd8b975a235c-13",
+     "cq-bd8b975a235c-14",
+     "cq-bd8b975a235c-15",
+     "cq-bd8b975a235c-16",
+     "cq-bd8b975a235c-17",
+     "cq-bd8b975a235c-23",
+     "cq-bd8b975a235c-3"
+    ],
+    "claim_detail": [
+     {
+      "text": "The terms include Genome, Human",
+      "quote": "",
+      "ref": 14,
+      "field": "name",
+      "value": "Genome, Human"
+     },
+     {
+      "text": "Human Genome Project",
+      "quote": "",
+      "ref": 15,
+      "field": "name",
+      "value": "Human Genome Project"
+     },
+     {
+      "text": "Databases, Factual",
+      "quote": "",
+      "ref": 16,
+      "field": "name",
+      "value": "Databases, Factual"
+     },
+     {
+      "text": "DNA Transposable Elements",
+      "quote": "",
+      "ref": 3,
+      "field": "name",
+      "value": "DNA Transposable Elements"
+     },
+     {
+      "text": "Gene Duplication",
+      "quote": "",
+      "ref": 23,
+      "field": "name",
+      "value": "Gene Duplication"
+     },
+     {
+      "text": "Conserved Sequence",
+      "quote": "",
+      "ref": 17,
+      "field": "name",
+      "value": "Conserved Sequence"
+     },
+     {
+      "text": "Species Specificity",
+      "quote": "",
+      "ref": 13,
+      "field": "name",
+      "value": "Species Specificity"
+     }
+    ],
+    "stripped": 24,
+    "refused": false
+   }
+  ],
+  "sentence_check": [],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "name",
+    "value": "Animals",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D000818"
+   },
+   {
+    "ref": 2,
+    "field": "name",
+    "value": "Chromosome Mapping",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D002874"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "DNA Transposable Elements",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D004251"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "Drug Industry",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D004345"
+   },
+   {
+    "ref": 5,
+    "field": "name",
+    "value": "Forecasting",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D005544"
+   },
+   {
+    "ref": 6,
+    "field": "name",
+    "value": "Genes",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D005796"
+   },
+   {
+    "ref": 7,
+    "field": "name",
+    "value": "Genetics, Medical",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D005826"
+   },
+   {
+    "ref": 8,
+    "field": "name",
+    "value": "Humans",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D006801"
+   },
+   {
+    "ref": 9,
+    "field": "name",
+    "value": "Mutation",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D009154"
+   },
+   {
+    "ref": 10,
+    "field": "name",
+    "value": "Proteins",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D011506"
+   },
+   {
+    "ref": 11,
+    "field": "name",
+    "value": "Repetitive Sequences, Nucleic Acid",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D012091"
+   },
+   {
+    "ref": 12,
+    "field": "name",
+    "value": "RNA",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D012313"
+   },
+   {
+    "ref": 13,
+    "field": "name",
+    "value": "Species Specificity",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D013045"
+   },
+   {
+    "ref": 14,
+    "field": "name",
+    "value": "Genome, Human",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D015894"
+   },
+   {
+    "ref": 15,
+    "field": "name",
+    "value": "Human Genome Project",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D016045"
+   },
+   {
+    "ref": 16,
+    "field": "name",
+    "value": "Databases, Factual",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D016208"
+   },
+   {
+    "ref": 17,
+    "field": "name",
+    "value": "Conserved Sequence",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D017124"
+   },
+   {
+    "ref": 18,
+    "field": "name",
+    "value": "Private Sector",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D017149"
+   },
+   {
+    "ref": 19,
+    "field": "name",
+    "value": "Public Sector",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D017150"
+   },
+   {
+    "ref": 20,
+    "field": "name",
+    "value": "Sequence Analysis, DNA",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D017422"
+   },
+   {
+    "ref": 21,
+    "field": "name",
+    "value": "CpG Islands",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D018899"
+   },
+   {
+    "ref": 22,
+    "field": "name",
+    "value": "Evolution, Molecular",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D019143"
+   },
+   {
+    "ref": 23,
+    "field": "name",
+    "value": "Gene Duplication",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D020440"
+   },
+   {
+    "ref": 24,
+    "field": "name",
+    "value": "Proteome",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D020543"
+   },
+   {
+    "ref": 25,
+    "field": "name",
+    "value": "GC Rich Sequence",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D020862"
+   },
+   {
+    "ref": 26,
+    "field": "name",
+    "value": "Genetic Diseases, Inborn",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D030342"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 2.166,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 2.166,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 3.666,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 3.667,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 3.669,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 3.669,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 3.67,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.285,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "step",
+   "emitted": 4.297,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.416,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.417,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 12.42,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 12.421,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.07486252008000001,
+  "total_tool_calls": 1,
+  "elapsed_ms": 12419,
+  "trust_outcome": "answer",
+  "trust_line": "Based on 26 sources",
+  "layer_calls_used": 2,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 1.0,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 298
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 372
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 375
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 0.34,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 477
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D015894",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D016045",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D017124",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D013045",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D000818",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D002874",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D004251",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D004345",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D005544",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D005796",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D005826",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D006801",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D009154",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D011506",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D012091",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D012313",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D016208",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D017149",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D017150",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D017422",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D018899",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D019143",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D020440",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D020543",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D020862",
+  "https://www.ncbi.nlm.nih.gov/mesh/?term=D030342"
+ ]
+}

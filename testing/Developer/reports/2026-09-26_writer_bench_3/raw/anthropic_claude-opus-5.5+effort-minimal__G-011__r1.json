@@ -1,0 +1,1792 @@
+{
+ "record": {
+  "model": "anthropic/claude-opus-5.5+effort-minimal",
+  "model_id": "anthropic/claude-opus-5.5",
+  "synth_effort": "minimal",
+  "question_id": "G-011",
+  "run": 1,
+  "question": "Which diseases are associated with BRCA1 and BRCA2?",
+  "trace_id": "trace-wb3-G-011-r1-db79017891074316",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-27T00:23:36Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "ask",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 31,
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "withdrawn": false,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 0,
+  "prose_sentences_kept": 15,
+  "prose_kept": [
+   "One is NCBIGene:672, named BRCA1 DNA repair associated [1].",
+   "The other is NCBIGene:675, named BRCA2 DNA repair associated [2].",
+   "One associated disease is Familial cancer of breast [3].",
+   "Another is Familial breast-ovarian cancer susceptibility 1 [4].",
+   "Another is Familial breast-ovarian cancer susceptibility 2 [5].",
+   "Another is Pancreatic cancer susceptibility 4 [6].",
+   "Another is Pancreatic cancer susceptibility 2 [7].",
+   "Another is Familial prostate cancer [8].",
+   "Another is Glioma susceptibility 3 [9].",
+   "One associated disease is Fanconi anemia complementation group S [10].",
+   "Another is Fanconi anemia complementation group D1 [11].",
+   "Another is Medulloblastoma [12].",
+   "Another is Wilms tumor 1 [13].",
+   "The BRCA1 product helps keep the genome stable and suppresses tumors [14].",
+   "It works in transcription, DNA double-strand break repair and recombination [14]."
+  ],
+  "prose_text": "Cancer susceptibility conditions One associated disease is Familial cancer of breast [1]. One associated disease is Fanconi anemia complementation group S [2]. The BRCA1 product helps keep the genome stable and suppresses tumors [3]. It works in transcription, DNA double-strand break repair and recombination [3].",
+  "jev_sent": 5,
+  "jev_approved": 3,
+  "writer_elapsed_s": [
+   7.890101290999155,
+   13.839540124998166
+  ],
+  "writer_completion_tokens": [
+   584,
+   1233
+  ],
+  "writer_reasoning_tokens": [
+   0,
+   199
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 29.983,
+  "done_elapsed_s": 29.949,
+  "metered_cost_usd": 0.17735542567999998,
+  "done_cost_usd": 0.17735542567999998,
+  "openrouter_cost_usd": 0.17718,
+  "writer_openrouter_cost_usd": 0.177092,
+  "writer_metered_cost_usd": 0.177092,
+  "answer_text": "Found 11 disease records and 2 gene records for BRCA1 and BRCA2 [1][2][4][5][6][7][8][9][10][11][12][13][14]. \n\nCancer susceptibility conditions\n\nOne associated disease is Familial cancer of breast [1]. \n\nOne associated disease is Fanconi anemia complementation group S [2]. \n\nThe BRCA1 product helps keep the genome stable and suppresses tumors [3]. It works in transcription, DNA double-strand break repair and recombination [3]. \n\nGene records found\n\nGene NCBIGene:672, name: BRCA1 DNA repair associated [4]. Gene NCBIGene:675, name: BRCA2 DNA repair associated [7]. Gene symbol: BRCA1 [15]. \n\nDisease records found\n\nDisease name: Familial cancer of breast [1]. Disease name: Familial breast-ovarian cancer susceptibility 1 [5]. Disease name: Pancreatic cancer susceptibility 4 [6]. Disease name: Fanconi anemia complementation group S [2]. Disease name: Medulloblastoma [8]. Disease name: Fanconi anemia complementation group D1 [9]. Disease name: Familial breast-ovarian cancer susceptibility 2 [10]. Disease name: Glioma susceptibility 3 [11]. Disease name: Familial prostate cancer [12]. Disease name: Pancreatic cancer susceptibility 2 [13]. Disease name: Wilms tumor 1 [14]. \n\nPubmed records found\n\nPubmed title: BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing [16]. Pubmed title: BRCA1: An Endocrine and Metabolic Regulator [20]. Pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [23]. Pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [26]. Pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [29]. \n\nClinvar records found\n\nClinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [17]. Clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [21]. Clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [24]. Clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [27]. Clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [30]. \n\nOmim records found\n\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN [18]. BRCA1 [18]. \n\nClinical trial records found\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [19]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [22]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [25]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [28]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [31]. "
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.272,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 797,
+    "completion_tokens": 56,
+    "cached_tokens": 662,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.2668e-05,
+    "reply": null,
+    "dur": 2.566
+   },
+   {
+    "t": 2.859,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 993,
+    "completion_tokens": 70,
+    "cached_tokens": 794,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.52998e-05,
+    "reply": null,
+    "dur": 2.129
+   },
+   {
+    "t": 7.276,
+    "model": "openrouter/anthropic/claude-opus-5.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 17303,
+    "completion_tokens": 584,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.080892,
+    "reply": "The retrieved records link two genes to a set of hereditary cancer and Fanconi anemia conditions. One is NCBIGene:672, named BRCA1 DNA repair associated [1]. The other is NCBIGene:675, named BRCA2 DNA repair associated [6].\n\n## Cancer susceptibility conditions\n\nOne associated disease is Familial cancer of breast [2]. Another is Familial breast-ovarian cancer susceptibility 1 [3]. Another is Familial breast-ovarian cancer susceptibility 2 [9]. Another is Pancreatic cancer susceptibility 4 [4]. Another is Pancreatic cancer susceptibility 2 [12]. Another is Familial prostate cancer [11]. Another is Glioma susceptibility 3 [10].\n\n## Fanconi anemia and pediatric tumors\n\nOne associated disease is Fanconi anemia complementation group S [5]. Another is Fanconi anemia complementation group D1 [8]. Another is Medulloblastoma [7]. Another is Wilms tumor 1 [13].\n\n## Functional context\n\nThe BRCA1 product helps keep the genome stable and suppresses tumors [24: \"plays a role in maintaining genomic stability, and it also acts as a tumor suppressor\"]. It works in transcription, DNA double-strand break repair and recombination [24: \"plays a role in transcription, DNA repair of double-stranded breaks, and recombination\"]. BRCA1 mutations explain a large share of hereditary cancer [24: \"responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers\"]. A related annotated process is GO:0000724, double-strand break repair via homologous recombination [21].",
+    "dur": 7.89
+   },
+   {
+    "t": 15.478,
+    "model": "openrouter/anthropic/claude-opus-5.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 17885,
+    "completion_tokens": 1233,
+    "cached_tokens": 0,
+    "reasoning_tokens": 199,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.0962,
+    "reply": "The graph links Gene NCBIGene:672 to hereditary cancer and Fanconi anemia conditions [1]. It also links Gene NCBIGene:675 to such conditions [6]. The gene record NCBIGene:672 is named BRCA1 DNA repair associated [1], and NCBIGene:675 is named BRCA2 DNA repair associated [6].\n\n## Associated cancer syndromes\n\nOne associated condition is Familial cancer of breast [2]. Another is Familial breast-ovarian cancer susceptibility 1 [3]. Another is Familial breast-ovarian cancer susceptibility 2 [9]. Another is Pancreatic cancer susceptibility 4 [4]. Another is Pancreatic cancer susceptibility 2 [12]. Another is Familial prostate cancer [11]. Another is Glioma susceptibility 3 [10]. Another is Medulloblastoma [7]. Another is Wilms tumor 1 [13].\n\n## Fanconi anemia forms\n\nOne Fanconi anemia form is Fanconi anemia complementation group S [5]. Another is Fanconi anemia complementation group D1 [8].\n\n## Gene function\n\nThe gene record's symbol is BRCA1 [14]. Its gene name is also BRCA1 [18]. The OMIM entry is BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1 [17]. The protein maintains genome integrity and suppresses tumours [24: \"plays a role in maintaining genomic stability, and it also acts as a tumor suppressor\"]. Its mutations drive most hereditary breast-ovarian cancer [24: \"more than 80% of inherited breast and ovarian cancers\"]. It is annotated to GO:0000724, double-strand break repair via homologous recombination [21]. It is also annotated to GO:0006281, DNA repair [27].\n\n## Variants, literature, trials\n\nOne ClinVar record is NM_007294.4(BRCA1):c.5243_5277+2788del [16]. Another is NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [23]. Another is NG_005905.2:g.(147057_150288)_(160933_166866)del [29]. One paper is BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing. [15]. Another is BRCA1: An Endocrine and Metabolic Regulator. [22]. Another is Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis. [28]. A related publication is PMID 28976962 [20]. Another related publication is PMID 35432218 [26]. One trial is Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [19]. Another trial is BRCA1 Haploinsufficiency and Gene Expression [25]. Another trial is Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [30].",
+    "dur": 13.84
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.265,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 2.5662484580025193,
+    "prompt_tokens": 797,
+    "completion_tokens": 56,
+    "cost_usd": 4.275936e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 2.574
+   },
+   {
+    "t": 2.859,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 2.129072957999597,
+    "prompt_tokens": 993,
+    "completion_tokens": 70,
+    "cost_usd": 5.329632e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 2.129
+   },
+   {
+    "t": 7.272,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 7.890101290999155,
+    "prompt_tokens": 17303,
+    "completion_tokens": 584,
+    "cost_usd": 0.08089199999999999,
+    "model": "anthropic/claude-opus-5.5",
+    "dur": 7.894
+   },
+   {
+    "t": 15.478,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 13.839540124998166,
+    "prompt_tokens": 17885,
+    "completion_tokens": 1233,
+    "cost_usd": 0.0962,
+    "model": "anthropic/claude-opus-5.5",
+    "dur": 13.84
+   }
+  ],
+  "grounding": [
+   {
+    "t": 15.168,
+    "dur": 0.3081,
+    "narrative_chars": 1116,
+    "narrative": "The retrieved records link two genes to a set of hereditary cancer and Fanconi anemia conditions. One is NCBIGene:672, named BRCA1 DNA repair associated [1]. The other is NCBIGene:675, named BRCA2 DNA repair associated [6]. One associated disease is Familial cancer of breast [2]. Another is Familial breast-ovarian cancer susceptibility 1 [3]. Another is Familial breast-ovarian cancer susceptibility 2 [9]. Another is Pancreatic cancer susceptibility 4 [4]. Another is Pancreatic cancer susceptibility 2 [12]. Another is Familial prostate cancer [11]. Another is Glioma susceptibility 3 [10]. One associated disease is Fanconi anemia complementation group S [5]. Another is Fanconi anemia complementation group D1 [8]. Another is Medulloblastoma [7]. Another is Wilms tumor 1 [13]. The BRCA1 product helps keep the genome stable and suppresses tumors [24#0]. It works in transcription, DNA double-strand break repair and recombination [24#1]. BRCA1 mutations explain a large share of hereditary cancer [24#2]. A related annotated process is GO:0000724, double-strand break repair via homologous recombination [21].",
+    "sentences": [
+     "One is NCBIGene:672, named BRCA1 DNA repair associated [1].",
+     "The other is NCBIGene:675, named BRCA2 DNA repair associated [2].",
+     "One associated disease is Familial cancer of breast [3].",
+     "Another is Familial breast-ovarian cancer susceptibility 1 [4].",
+     "Another is Familial breast-ovarian cancer susceptibility 2 [5].",
+     "Another is Pancreatic cancer susceptibility 4 [6].",
+     "Another is Pancreatic cancer susceptibility 2 [7].",
+     "Another is Familial prostate cancer [8].",
+     "Another is Glioma susceptibility 3 [9].",
+     "One associated disease is Fanconi anemia complementation group S [10].",
+     "Another is Fanconi anemia complementation group D1 [11].",
+     "Another is Medulloblastoma [12].",
+     "Another is Wilms tumor 1 [13].",
+     "The BRCA1 product helps keep the genome stable and suppresses tumors [14].",
+     "It works in transcription, DNA double-strand break repair and recombination [14]."
+    ],
+    "claims": 15,
+    "claim_ids": [
+     "cq-c95ac895a85a-1",
+     "cq-c95ac895a85a-10",
+     "cq-c95ac895a85a-11",
+     "cq-c95ac895a85a-12",
+     "cq-c95ac895a85a-13",
+     "cq-c95ac895a85a-2",
+     "cq-c95ac895a85a-3",
+     "cq-c95ac895a85a-4",
+     "cq-c95ac895a85a-5",
+     "cq-c95ac895a85a-6",
+     "cq-c95ac895a85a-7",
+     "cq-c95ac895a85a-8",
+     "cq-c95ac895a85a-9",
+     "ne-7eeb92d520fe-24"
+    ],
+    "claim_detail": [
+     {
+      "text": "One is NCBIGene:672, named BRCA1 DNA repair associated",
+      "quote": "",
+      "ref": 1,
+      "field": "name",
+      "value": "BRCA1 DNA repair associated"
+     },
+     {
+      "text": "The other is NCBIGene:675, named BRCA2 DNA repair associated",
+      "quote": "",
+      "ref": 6,
+      "field": "name",
+      "value": "BRCA2 DNA repair associated"
+     },
+     {
+      "text": "One associated disease is Familial cancer of breast",
+      "quote": "",
+      "ref": 2,
+      "field": "name",
+      "value": "Familial cancer of breast"
+     },
+     {
+      "text": "Another is Familial breast-ovarian cancer susceptibility 1",
+      "quote": "",
+      "ref": 3,
+      "field": "name",
+      "value": "Familial breast-ovarian cancer susceptibility 1"
+     },
+     {
+      "text": "Another is Familial breast-ovarian cancer susceptibility 2",
+      "quote": "",
+      "ref": 9,
+      "field": "name",
+      "value": "Familial breast-ovarian cancer susceptibility 2"
+     },
+     {
+      "text": "Another is Pancreatic cancer susceptibility 4",
+      "quote": "",
+      "ref": 4,
+      "field": "name",
+      "value": "Pancreatic cancer susceptibility 4"
+     },
+     {
+      "text": "Another is Pancreatic cancer susceptibility 2",
+      "quote": "",
+      "ref": 12,
+      "field": "name",
+      "value": "Pancreatic cancer susceptibility 2"
+     },
+     {
+      "text": "Another is Familial prostate cancer",
+      "quote": "",
+      "ref": 11,
+      "field": "name",
+      "value": "Familial prostate cancer"
+     },
+     {
+      "text": "Another is Glioma susceptibility 3",
+      "quote": "",
+      "ref": 10,
+      "field": "name",
+      "value": "Glioma susceptibility 3"
+     },
+     {
+      "text": "One associated disease is Fanconi anemia complementation group S",
+      "quote": "",
+      "ref": 5,
+      "field": "name",
+      "value": "Fanconi anemia complementation group S"
+     },
+     {
+      "text": "Another is Fanconi anemia complementation group D1",
+      "quote": "",
+      "ref": 8,
+      "field": "name",
+      "value": "Fanconi anemia complementation group D1"
+     },
+     {
+      "text": "Another is Medulloblastoma",
+      "quote": "",
+      "ref": 7,
+      "field": "name",
+      "value": "Medulloblastoma"
+     },
+     {
+      "text": "Another is Wilms tumor 1",
+      "quote": "",
+      "ref": 13,
+      "field": "name",
+      "value": "Wilms tumor 1"
+     },
+     {
+      "text": "The BRCA1 product helps keep the genome stable and suppresses tumors",
+      "quote": "plays a role in maintaining genomic stability, and it also acts as a tumor suppressor",
+      "ref": 24,
+      "field": "summary",
+      "value": "This gene encodes a 190 kD nuclear phosphoprotein that plays a role in maintaining genomic stability, and it also acts as a tumor suppressor. The BRCA1 gene contains 22 exons spanning about 110 kb of DNA. The encoded protein combines with other tumor suppressors, DNA damage sensors, and signal trans"
+     },
+     {
+      "text": "It works in transcription, DNA double-strand break repair and recombination",
+      "quote": "plays a role in transcription, DNA repair of double-stranded breaks, and recombination",
+      "ref": 24,
+      "field": "summary",
+      "value": "This gene encodes a 190 kD nuclear phosphoprotein that plays a role in maintaining genomic stability, and it also acts as a tumor suppressor. The BRCA1 gene contains 22 exons spanning about 110 kb of DNA. The encoded protein combines with other tumor suppressors, DNA damage sensors, and signal trans"
+     }
+    ],
+    "stripped": 3,
+    "refused": false
+   },
+   {
+    "t": 29.349,
+    "dur": 0.5354,
+    "narrative_chars": 2083,
+    "narrative": "The graph links Gene NCBIGene:672 to hereditary cancer and Fanconi anemia conditions [1]. It also links Gene NCBIGene:675 to such conditions [6]. The gene record NCBIGene:672 is named BRCA1 DNA repair associated [1], and NCBIGene:675 is named BRCA2 DNA repair associated [6]. One associated condition is Familial cancer of breast [2]. Another is Familial breast-ovarian cancer susceptibility 1 [3]. Another is Familial breast-ovarian cancer susceptibility 2 [9]. Another is Pancreatic cancer susceptibility 4 [4]. Another is Pancreatic cancer susceptibility 2 [12]. Another is Familial prostate cancer [11]. Another is Glioma susceptibility 3 [10]. Another is Medulloblastoma [7]. Another is Wilms tumor 1 [13]. One Fanconi anemia form is Fanconi anemia complementation group S [5]. Another is Fanconi anemia complementation group D1 [8]. The gene record's symbol is BRCA1 [14]. Its gene name is also BRCA1 [18]. The OMIM entry is BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1 [17]. The protein maintains genome integrity and suppresses tumours [24#0]. Its mutations drive most hereditary breast-ovarian cancer [24#1]. It is annotated to GO:0000724, double-strand break repair via homologous recombination [21]. It is also annotated to GO:0006281, DNA repair [27]. One ClinVar record is NM_007294.4(BRCA1):c.5243_5277+2788del [16]. Another is NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [23]. Another is NG_005905.2:g.(147057_150288)_(160933_166866)del [29]. One paper is BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing. [15]. Another is BRCA1: An Endocrine and Metabolic Regulator. [22]. Another is Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis. [28]. A related publication is PMID 28976962 [20]. Another related publication is PMID 35432218 [26]. One trial is Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [19]. Another trial is BRCA1 Haploinsufficiency and Gene Expression [25]. Another trial is Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [30].",
+    "sentences": [
+     "The gene record NCBIGene:672 is named BRCA1 DNA repair associated [1], and NCBIGene:675 is named BRCA2 DNA repair associated [2].",
+     "Another is Familial breast-ovarian cancer susceptibility 1 [3].",
+     "Another is Familial breast-ovarian cancer susceptibility 2 [4].",
+     "Another is Pancreatic cancer susceptibility 4 [5].",
+     "Another is Pancreatic cancer susceptibility 2 [6].",
+     "Another is Familial prostate cancer [7].",
+     "Another is Glioma susceptibility 3 [8].",
+     "Another is Medulloblastoma [9].",
+     "Another is Wilms tumor 1 [10].",
+     "Another is Fanconi anemia complementation group D1 [11].",
+     "The gene record's symbol is BRCA1 [12].",
+     "Its gene name is also BRCA1 [13].",
+     "BRCA1 [14].",
+     "One ClinVar record is NM_007294.4(BRCA1):c.5243_5277+2788del [15].",
+     "Another is NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [16].",
+     "Another is NG_005905.2:g.(147057_150288)_(160933_166866)del [17].",
+     "A related publication is PMID 28976962 [18].",
+     "Another related publication is PMID 35432218 [19].",
+     "One trial is Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [20].",
+     "Another trial is BRCA1 Haploinsufficiency and Gene Expression [21].",
+     "Another trial is Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [22]."
+    ],
+    "claims": 22,
+    "claim_ids": [
+     "cq-c95ac895a85a-1",
+     "cq-c95ac895a85a-10",
+     "cq-c95ac895a85a-11",
+     "cq-c95ac895a85a-12",
+     "cq-c95ac895a85a-13",
+     "cq-c95ac895a85a-3",
+     "cq-c95ac895a85a-4",
+     "cq-c95ac895a85a-6",
+     "cq-c95ac895a85a-7",
+     "cq-c95ac895a85a-8",
+     "cq-c95ac895a85a-9",
+     "ct-dce83fecef55-19",
+     "ct-dce83fecef55-25",
+     "ct-dce83fecef55-30",
+     "ne-70513e01f020-14",
+     "ne-7eeb92d520fe-18",
+     "ne-c49918038501-17",
+     "ne-ffe19b593c89-16",
+     "ne-ffe19b593c89-23",
+     "ne-ffe19b593c89-29",
+     "pa-186c001d7029-20",
+     "pa-186c001d7029-26"
+    ],
+    "claim_detail": [
+     {
+      "text": "The gene record NCBIGene:672 is named BRCA1 DNA repair associated",
+      "quote": "",
+      "ref": 1,
+      "field": "name",
+      "value": "BRCA1 DNA repair associated"
+     },
+     {
+      "text": "NCBIGene:675 is named BRCA2 DNA repair associated",
+      "quote": "",
+      "ref": 6,
+      "field": "name",
+      "value": "BRCA2 DNA repair associated"
+     },
+     {
+      "text": "Another is Familial breast-ovarian cancer susceptibility 1",
+      "quote": "",
+      "ref": 3,
+      "field": "name",
+      "value": "Familial breast-ovarian cancer susceptibility 1"
+     },
+     {
+      "text": "Another is Familial breast-ovarian cancer susceptibility 2",
+      "quote": "",
+      "ref": 9,
+      "field": "name",
+      "value": "Familial breast-ovarian cancer susceptibility 2"
+     },
+     {
+      "text": "Another is Pancreatic cancer susceptibility 4",
+      "quote": "",
+      "ref": 4,
+      "field": "name",
+      "value": "Pancreatic cancer susceptibility 4"
+     },
+     {
+      "text": "Another is Pancreatic cancer susceptibility 2",
+      "quote": "",
+      "ref": 12,
+      "field": "name",
+      "value": "Pancreatic cancer susceptibility 2"
+     },
+     {
+      "text": "Another is Familial prostate cancer",
+      "quote": "",
+      "ref": 11,
+      "field": "name",
+      "value": "Familial prostate cancer"
+     },
+     {
+      "text": "Another is Glioma susceptibility 3",
+      "quote": "",
+      "ref": 10,
+      "field": "name",
+      "value": "Glioma susceptibility 3"
+     },
+     {
+      "text": "Another is Medulloblastoma",
+      "quote": "",
+      "ref": 7,
+      "field": "name",
+      "value": "Medulloblastoma"
+     },
+     {
+      "text": "Another is Wilms tumor 1",
+      "quote": "",
+      "ref": 13,
+      "field": "name",
+      "value": "Wilms tumor 1"
+     },
+     {
+      "text": "Another is Fanconi anemia complementation group D1",
+      "quote": "",
+      "ref": 8,
+      "field": "name",
+      "value": "Fanconi anemia complementation group D1"
+     },
+     {
+      "text": "The gene record's symbol is BRCA1",
+      "quote": "",
+      "ref": 14,
+      "field": "symbol",
+      "value": "BRCA1"
+     },
+     {
+      "text": "Its gene name is also BRCA1",
+      "quote": "",
+      "ref": 18,
+      "field": "name",
+      "value": "BRCA1"
+     },
+     {
+      "text": "BRCA1",
+      "quote": "",
+      "ref": 17,
+      "field": "title",
+      "value": "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1"
+     },
+     {
+      "text": "One ClinVar record is NM_007294.4(BRCA1):c.5243_5277+2788del",
+      "quote": "",
+      "ref": 16,
+      "field": "title",
+      "value": "NM_007294.4(BRCA1):c.5243_5277+2788del"
+     },
+     {
+      "text": "Another is NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG",
+      "quote": "",
+      "ref": 23,
+      "field": "title",
+      "value": "NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG"
+     },
+     {
+      "text": "Another is NG_005905.2:g.(147057_150288)_(160933_166866)del",
+      "quote": "",
+      "ref": 29,
+      "field": "title",
+      "value": "NG_005905.2:g.(147057_150288)_(160933_166866)del"
+     },
+     {
+      "text": "A related publication is PMID 28976962",
+      "quote": "",
+      "ref": 20,
+      "field": "pmid",
+      "value": "28976962"
+     },
+     {
+      "text": "Another related publication is PMID 35432218",
+      "quote": "",
+      "ref": 26,
+      "field": "pmid",
+      "value": "35432218"
+     },
+     {
+      "text": "One trial is Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer",
+      "quote": "",
+      "ref": 19,
+      "field": "name",
+      "value": "Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer"
+     },
+     {
+      "text": "Another trial is BRCA1 Haploinsufficiency and Gene Expression",
+      "quote": "",
+      "ref": 25,
+      "field": "name",
+      "value": "BRCA1 Haploinsufficiency and Gene Expression"
+     },
+     {
+      "text": "Another trial is Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma",
+      "quote": "",
+      "ref": 30,
+      "field": "name",
+      "value": "Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma"
+     }
+    ],
+    "stripped": 12,
+    "refused": false
+   }
+  ],
+  "sentence_check": [
+   {
+    "t": 15.179,
+    "sent": 3,
+    "approved": 2,
+    "ok": true,
+    "dur": 0.295
+   },
+   {
+    "t": 29.387,
+    "sent": 2,
+    "approved": 1,
+    "ok": true,
+    "dur": 0.493
+   }
+  ],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "name",
+    "value": "BRCA1 DNA repair associated",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/672"
+   },
+   {
+    "ref": 2,
+    "field": "name",
+    "value": "Familial cancer of breast",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "Familial breast-ovarian cancer susceptibility 1",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C2676676"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "Pancreatic cancer susceptibility 4",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C3280442"
+   },
+   {
+    "ref": 5,
+    "field": "name",
+    "value": "Fanconi anemia complementation group S",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C4554406"
+   },
+   {
+    "ref": 6,
+    "field": "name",
+    "value": "BRCA2 DNA repair associated",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/675"
+   },
+   {
+    "ref": 7,
+    "field": "name",
+    "value": "Medulloblastoma",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C0025149"
+   },
+   {
+    "ref": 8,
+    "field": "name",
+    "value": "Fanconi anemia complementation group D1",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C1838457"
+   },
+   {
+    "ref": 9,
+    "field": "name",
+    "value": "Familial breast-ovarian cancer susceptibility 2",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C2675520"
+   },
+   {
+    "ref": 10,
+    "field": "name",
+    "value": "Glioma susceptibility 3",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C2751641"
+   },
+   {
+    "ref": 11,
+    "field": "name",
+    "value": "Familial prostate cancer",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C2931456"
+   },
+   {
+    "ref": 12,
+    "field": "name",
+    "value": "Pancreatic cancer susceptibility 2",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C3150546"
+   },
+   {
+    "ref": 13,
+    "field": "name",
+    "value": "Wilms tumor 1",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/CN033288"
+   },
+   {
+    "ref": 14,
+    "field": "symbol",
+    "value": "BRCA1",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/672/"
+   },
+   {
+    "ref": 15,
+    "field": "title",
+    "value": "BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/28976962/"
+   },
+   {
+    "ref": 16,
+    "field": "title",
+    "value": "NM_007294.4(BRCA1):c.5243_5277+2788del",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/"
+   },
+   {
+    "ref": 17,
+    "field": "title",
+    "value": "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1",
+    "url": "https://omim.org/entry/113705"
+   },
+   {
+    "ref": 18,
+    "field": "name",
+    "value": "BRCA1",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/672"
+   },
+   {
+    "ref": 19,
+    "field": "name",
+    "value": "Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer",
+    "url": "https://clinicaltrials.gov/study/NCT00590109"
+   },
+   {
+    "ref": 20,
+    "field": "pmid",
+    "value": "28976962",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/28976962/"
+   },
+   {
+    "ref": 21,
+    "field": "name",
+    "value": "double-strand break repair via homologous recombination",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/672"
+   },
+   {
+    "ref": 22,
+    "field": "title",
+    "value": "BRCA1: An Endocrine and Metabolic Regulator.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35432218/"
+   },
+   {
+    "ref": 23,
+    "field": "title",
+    "value": "NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/"
+   },
+   {
+    "ref": 24,
+    "field": "summary",
+    "value": "This gene encodes a 190 kD nuclear phosphoprotein that plays a role in maintaining genomic stability, and it also acts as a tumor suppressor. The BRCA1 gene contains 22 exons spanning about 110 kb of DNA. The encoded protein combines with other tumor suppressors, DNA damage sensors, and signal trans",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/672"
+   },
+   {
+    "ref": 25,
+    "field": "name",
+    "value": "BRCA1 Haploinsufficiency and Gene Expression",
+    "url": "https://clinicaltrials.gov/study/NCT00597987"
+   },
+   {
+    "ref": 26,
+    "field": "pmid",
+    "value": "35432218",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35432218/"
+   },
+   {
+    "ref": 27,
+    "field": "name",
+    "value": "DNA repair",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/672"
+   },
+   {
+    "ref": 28,
+    "field": "title",
+    "value": "Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/36914836/"
+   },
+   {
+    "ref": 29,
+    "field": "title",
+    "value": "NG_005905.2:g.(147057_150288)_(160933_166866)del",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/"
+   },
+   {
+    "ref": 30,
+    "field": "name",
+    "value": "Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma",
+    "url": "https://clinicaltrials.gov/study/NCT00617656"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 2.84,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 2.84,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 5.678,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 5.678,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 5.686,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 5.686,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.69,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.989,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.017,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.04,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.045,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.066,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.111,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.201,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.291,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.428,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.62,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.674,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.825,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.838,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 6.861,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.947,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 29.95,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 29.951,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.17735542567999998,
+  "total_tool_calls": 10,
+  "elapsed_ms": 29949,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 30 sources, not yet confirmed",
+  "layer_calls_used": 15,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.98,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 273
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 348
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 362
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 0.98,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 857
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+  "https://www.ncbi.nlm.nih.gov/medgen/C4554406",
+  "https://www.ncbi.nlm.nih.gov/gene/672",
+  "https://www.ncbi.nlm.nih.gov/gene/672",
+  "https://www.ncbi.nlm.nih.gov/medgen/C2676676",
+  "https://www.ncbi.nlm.nih.gov/medgen/C3280442",
+  "https://www.ncbi.nlm.nih.gov/gene/675",
+  "https://www.ncbi.nlm.nih.gov/medgen/C0025149",
+  "https://www.ncbi.nlm.nih.gov/medgen/C1838457",
+  "https://www.ncbi.nlm.nih.gov/medgen/C2675520",
+  "https://www.ncbi.nlm.nih.gov/medgen/C2751641",
+  "https://www.ncbi.nlm.nih.gov/medgen/C2931456",
+  "https://www.ncbi.nlm.nih.gov/medgen/C3150546",
+  "https://www.ncbi.nlm.nih.gov/medgen/CN033288",
+  "https://www.ncbi.nlm.nih.gov/gene/672/",
+  "https://pubmed.ncbi.nlm.nih.gov/28976962/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/",
+  "https://omim.org/entry/113705",
+  "https://clinicaltrials.gov/study/NCT00590109",
+  "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/",
+  "https://clinicaltrials.gov/study/NCT00597987",
+  "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/",
+  "https://clinicaltrials.gov/study/NCT00617656",
+  "https://pubmed.ncbi.nlm.nih.gov/39261728/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/",
+  "https://clinicaltrials.gov/study/NCT00673335",
+  "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/",
+  "https://clinicaltrials.gov/study/NCT00700778"
+ ]
+}

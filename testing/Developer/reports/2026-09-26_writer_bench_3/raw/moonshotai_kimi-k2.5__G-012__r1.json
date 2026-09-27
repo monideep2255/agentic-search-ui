@@ -1,0 +1,795 @@
+{
+ "record": {
+  "model": "moonshotai/kimi-k2.5",
+  "model_id": "moonshotai/kimi-k2.5",
+  "synth_effort": "none",
+  "question_id": "G-012",
+  "run": 1,
+  "question": "Find clinical trials for carcinoma not otherwise specified.",
+  "trace_id": "trace-wb3-G-012-r1-f973c41e257b4023",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-26T23:27:05Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "ask",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 7,
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "withdrawn": false,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 1,
+  "prose_sentences_kept": 3,
+  "prose_kept": [
+   "Radioimmunotherapy with or without chemotherapy plus peripheral stem cell transplantation [1].",
+   "Thalidomide [2].",
+   "Tanespimycin [3]."
+  ],
+  "prose_text": "",
+  "jev_sent": 2,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   15.621455624997907,
+   15.829084332999628
+  ],
+  "writer_completion_tokens": [
+   375,
+   444
+  ],
+  "writer_reasoning_tokens": [
+   0,
+   0
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 49.276,
+  "done_elapsed_s": 49.243,
+  "metered_cost_usd": 0.012200685119999999,
+  "done_cost_usd": 0.012200685119999999,
+  "openrouter_cost_usd": 0.004131,
+  "writer_openrouter_cost_usd": 0.003914,
+  "writer_metered_cost_usd": 0.011842,
+  "answer_text": "Found 5 clinical trial records for carcinoma not otherwise specified: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer [1], Thalidomide in Treating Patients With Thyroid Cancer [2], Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer [3], Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer [4] and Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer [5]. \n\nClinical trial records found\n\nClinical trial name: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer [1]. Clinical trial name: Thalidomide in Treating Patients With Thyroid Cancer [2]. Clinical trial name: Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer [3]. Clinical trial name: Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer [4]. Clinical trial name: Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer [5]. \n\nPubmed records found\n\nPubmed title: Prognostic value of morphology and hormone receptor status in breast cancer - a population-based study [6]. \n\nMedgen records found\n\nMedgen title: Medullary Carcinoma, Not Otherwise Specified [7]. \n\nNote: this answer does not address the following entities named in the question: Medullary Carcinoma, Not Otherwise Specified, Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Cyst, Infiltrating duct carcinoma of breast, Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Keratocyst, Advanced Renal Cell Carcinoma, Not Otherwise Specified, Metastatic Renal Cell Carcinoma, Not Otherwise Specified, Locally Advanced Renal Cell Carcinoma, Not Otherwise Specified, Cervical Squamous Cell Carcinoma, Not Otherwise Specified. Ask about them individually for a complete answer."
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.11,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 795,
+    "completion_tokens": 49,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.200672e-05,
+    "reply": null,
+    "dur": 2.394
+   },
+   {
+    "t": 2.514,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 999,
+    "completion_tokens": 69,
+    "cached_tokens": 768,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 2.4583104e-05,
+    "reply": null,
+    "dur": 2.954
+   },
+   {
+    "t": 6.893,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1197,
+    "completion_tokens": 45,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 6.03603e-05,
+    "reply": null,
+    "dur": 1.105
+   },
+   {
+    "t": 8.003,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1275,
+    "completion_tokens": 143,
+    "cached_tokens": 1237,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 9.0338e-05,
+    "reply": null,
+    "dur": 7.562
+   },
+   {
+    "t": 16.622,
+    "model": "openrouter/moonshotai/kimi-k2.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 10838,
+    "completion_tokens": 375,
+    "cached_tokens": 10112,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00187829,
+    "reply": "## Clinical Trials for Thyroid Cancer\n\nFive clinical trials were identified for thyroid cancer with a \"not otherwise specified\" (NOS) carcinoma morphology component [1][2][3][4][5]. These trials span diverse therapeutic approaches including radioimmunotherapy with or without chemotherapy plus peripheral stem cell transplantation [1], thalidomide [2], irinotecan for metastatic or inoperable disease [3], tanespimycin for inoperable locoregionally advanced or metastatic cases [4], and suberoylanilide hydroxamic acid for metastatic and/or locally advanced or recurrent disease [5]. The trials reflect the heterogeneous clinical presentations of thyroid carcinoma NOS, from localized to widely metastatic disease.\n\n## Prognostic Context from Breast Cancer Literature\n\nA population-based study of breast cancer morphology provides relevant comparative context for NOS carcinoma outcomes [8]. In that analysis of 4473 cases across six European cancer registries, NOS carcinoma demonstrated intermediate 5-year relative survival at 66% (95% CI 61-71), positioned between the poorest prognosis group (cases without microscopic confirmation, 27%) and the most favorable \"special types\" (95%) [9: \"the 5-year relative survival ranged from 66% (95% CI 61-71) for NOS carcinoma to 95% (95% CI 90-100) for special types\"]. Morphology and hormone receptor status were confirmed as significant independent survival predictors after adjustment for age and stage [9: \"Morphology and hormone receptor status were confirmed as significant survival predictors in this population-based study, even after adjusting for age and stage at diagnosis\"]. The MedGen concept \"Medullary Carcinoma, Not Otherwise Specified\" [7] represents the formal disease classification underlying these morphologic distinctions.",
+    "dur": 15.621
+   },
+   {
+    "t": 32.66,
+    "model": "openrouter/moonshotai/kimi-k2.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11383,
+    "completion_tokens": 444,
+    "cached_tokens": 10752,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00203559,
+    "reply": "Five clinical trials for thyroid carcinoma were retrieved, each testing a distinct systemic or targeted agent: radioimmunotherapy with or without chemotherapy plus peripheral stem cell transplantation [1], thalidomide [2], irinotecan [3], tanespimycin [4], and suberoylanilide hydroxamic acid [5]. All five trials specify thyroid cancer as the target condition rather than carcinoma not otherwise specified (NOS) as a standalone diagnosis, indicating that the \"not otherwise specified\" category in this query set applies to the thyroid primary site rather than to a histologically undefined carcinoma of unknown origin.\n\n## Trial Interventions\n\nThe retrieved trials span diverse therapeutic modalities. Radioimmunotherapy with or without chemotherapy plus peripheral stem cell transplantation [1] represents a combined radio-immunologic and transplant approach. Thalidomide [2] is an immunomodulatory agent, while irinotecan [3] is a topoisomerase I inhibitor. Tanespimycin [4], an HSP90 inhibitor, and suberoylanilide hydroxamic acid [5], a histone deacetylase inhibitor, both target epigenetic and protein homeostasis pathways.\n\n## NOS Carcinoma in Population Context\n\nThe term \"not otherwise specified\" carcinoma appears in a population-based breast cancer survival study [6][8]. In that analysis of 4,473 cases, NOS carcinoma carried a 5-year relative survival of 66% (95% CI 61\u201371), the lowest among morphologically defined categories except for cases lacking microscopic confirmation [9: \"the 5-year relative survival ranged from 66% (95% CI 61-71) for NOS carcinoma\"]. This finding illustrates that NOS designation in cancer registries identifies a residual category with comparatively poor prognosis [9: \"Morphology and hormone receptor status were confirmed as significant survival predictors in this population-based study, even after adjusting for age and stage at diagnosis\"].\n\n## MedGen Classification\n\nMedGen records Medullary Carcinoma, Not Otherwise Specified as a distinct concept [7], separate from the thyroid-specific trials retrieved here.",
+    "dur": 15.829
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.104,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 2.3944380409993755,
+    "prompt_tokens": 795,
+    "completion_tokens": 49,
+    "cost_usd": 4.200672e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 2.4
+   },
+   {
+    "t": 2.514,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 2.9541957500005083,
+    "prompt_tokens": 999,
+    "completion_tokens": 69,
+    "cost_usd": 5.3484480000000005e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 2.954
+   },
+   {
+    "t": 6.893,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 1.104926042000443,
+    "prompt_tokens": 1197,
+    "completion_tokens": 45,
+    "cost_usd": 6.0540480000000006e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.105
+   },
+   {
+    "t": 8.003,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 7.562442250000458,
+    "prompt_tokens": 1275,
+    "completion_tokens": 143,
+    "cost_usd": 7.342944000000001e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 7.563
+   },
+   {
+    "t": 16.622,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 15.621455624997907,
+    "prompt_tokens": 10838,
+    "completion_tokens": 375,
+    "cost_usd": 0.0057208499999999995,
+    "model": "moonshotai/kimi-k2.5",
+    "dur": 15.622
+   },
+   {
+    "t": 32.66,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 15.829084332999628,
+    "prompt_tokens": 11383,
+    "completion_tokens": 444,
+    "cost_usd": 0.006121349999999999,
+    "model": "moonshotai/kimi-k2.5",
+    "dur": 15.829
+   }
+  ],
+  "grounding": [
+   {
+    "t": 32.245,
+    "dur": 0.4151,
+    "narrative_chars": 1402,
+    "narrative": "Five clinical trials were identified for thyroid cancer with a \"not otherwise specified\" (NOS) carcinoma morphology component [1][2][3][4][5]. These trials span diverse therapeutic approaches including radioimmunotherapy with or without chemotherapy plus peripheral stem cell transplantation [1], thalidomide [2], irinotecan for metastatic or inoperable disease [3], tanespimycin for inoperable locoregionally advanced or metastatic cases [4], and suberoylanilide hydroxamic acid for metastatic and/or locally advanced or recurrent disease [5]. The trials reflect the heterogeneous clinical presentations of thyroid carcinoma NOS, from localized to widely metastatic disease. A population-based study of breast cancer morphology provides relevant comparative context for NOS carcinoma outcomes [8]. In that analysis of 4473 cases across six European cancer registries, NOS carcinoma demonstrated intermediate 5-year relative survival at 66% (95% CI 61-71), positioned between the poorest prognosis group (cases without microscopic confirmation, 27%) and the most favorable \"special types\" (95%) [9#0]. Morphology and hormone receptor status were confirmed as significant independent survival predictors after adjustment for age and stage [9#1]. The MedGen concept \"Medullary Carcinoma, Not Otherwise Specified\" [7] represents the formal disease classification underlying these morphologic distinctions.",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 12,
+    "refused": true
+   },
+   {
+    "t": 48.492,
+    "dur": 0.3563,
+    "narrative_chars": 1714,
+    "narrative": "Five clinical trials for thyroid carcinoma were retrieved, each testing a distinct systemic or targeted agent: radioimmunotherapy with or without chemotherapy plus peripheral stem cell transplantation [1], thalidomide [2], irinotecan [3], tanespimycin [4], and suberoylanilide hydroxamic acid [5]. All five trials specify thyroid cancer as the target condition rather than carcinoma not otherwise specified (NOS) as a standalone diagnosis, indicating that the \"not otherwise specified\" category in this query set applies to the thyroid primary site rather than to a histologically undefined carcinoma of unknown origin. The retrieved trials span diverse therapeutic modalities. Radioimmunotherapy with or without chemotherapy plus peripheral stem cell transplantation [1] represents a combined radio-immunologic and transplant approach. Thalidomide [2] is an immunomodulatory agent, while irinotecan [3] is a topoisomerase I inhibitor. Tanespimycin [4], an HSP90 inhibitor, and suberoylanilide hydroxamic acid [5], a histone deacetylase inhibitor, both target epigenetic and protein homeostasis pathways. The term \"not otherwise specified\" carcinoma appears in a population-based breast cancer survival study [6][8]. In that analysis of 4,473 cases, NOS carcinoma carried a 5-year relative survival of 66% (95% CI 61\u201371), the lowest among morphologically defined categories except for cases lacking microscopic confirmation [9#0]. This finding illustrates that NOS designation in cancer registries identifies a residual category with comparatively poor prognosis [9#1]. MedGen records Medullary Carcinoma, Not Otherwise Specified as a distinct concept [7], separate from the thyroid-specific trials retrieved here.",
+    "sentences": [
+     "Radioimmunotherapy with or without chemotherapy plus peripheral stem cell transplantation [1].",
+     "Thalidomide [2].",
+     "Tanespimycin [3]."
+    ],
+    "claims": 3,
+    "claim_ids": [
+     "ct-180eae599e07-1",
+     "ct-180eae599e07-2",
+     "ct-180eae599e07-4"
+    ],
+    "claim_detail": [
+     {
+      "text": "Radioimmunotherapy with or without chemotherapy plus peripheral stem cell transplantation",
+      "quote": "",
+      "ref": 1,
+      "field": "name",
+      "value": "Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer"
+     },
+     {
+      "text": "Thalidomide",
+      "quote": "",
+      "ref": 2,
+      "field": "name",
+      "value": "Thalidomide in Treating Patients With Thyroid Cancer"
+     },
+     {
+      "text": "Tanespimycin",
+      "quote": "",
+      "ref": 4,
+      "field": "name",
+      "value": "Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer"
+     }
+    ],
+    "stripped": 17,
+    "refused": false
+   }
+  ],
+  "sentence_check": [
+   {
+    "t": 32.247,
+    "sent": 1,
+    "approved": 0,
+    "ok": true,
+    "dur": 0.413
+   },
+   {
+    "t": 48.5,
+    "sent": 1,
+    "approved": 0,
+    "ok": true,
+    "dur": 0.348
+   }
+  ],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "name",
+    "value": "Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer",
+    "url": "https://clinicaltrials.gov/study/NCT00004048"
+   },
+   {
+    "ref": 2,
+    "field": "name",
+    "value": "Thalidomide in Treating Patients With Thyroid Cancer",
+    "url": "https://clinicaltrials.gov/study/NCT00026533"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer",
+    "url": "https://clinicaltrials.gov/study/NCT00100828"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer",
+    "url": "https://clinicaltrials.gov/study/NCT00118248"
+   },
+   {
+    "ref": 5,
+    "field": "name",
+    "value": "Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer",
+    "url": "https://clinicaltrials.gov/study/NCT00134043"
+   },
+   {
+    "ref": 6,
+    "field": "title",
+    "value": "Prognostic value of morphology and hormone receptor status in breast cancer - a population-based study.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/15365566/"
+   },
+   {
+    "ref": 7,
+    "field": "title",
+    "value": "Medullary Carcinoma, Not Otherwise Specified",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/104918"
+   },
+   {
+    "ref": 8,
+    "field": "pmid",
+    "value": "15365566",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/15365566/"
+   },
+   {
+    "ref": 9,
+    "field": "abstract",
+    "value": "We analysed the 5-year relative survival among 4473 breast cancer cases diagnosed in 1990-1992 from cancer registries in Estonia, France, Italy, Spain, the Netherlands and the UK. Among eight categories based on ICD-O codes (infiltrating ductal carcinoma, lobular plus mixed carcinoma, comedocarcinom",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/15365566/"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 2.508,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 2.508,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 6.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 6.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 6.813,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 6.813,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.826,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.827,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.827,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.827,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.827,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.827,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.827,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.827,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.072,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.267,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.268,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.527,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 16.121,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 16.386,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 16.414,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 16.617,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "step",
+   "emitted": 16.621,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.243,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 49.244,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.012200685119999999,
+  "total_tool_calls": 6,
+  "elapsed_ms": 49243,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 7 sources, not yet confirmed",
+  "layer_calls_used": 13,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 1.0,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 297
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 297
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 315
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 322
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://clinicaltrials.gov/study/NCT00004048",
+  "https://clinicaltrials.gov/study/NCT00026533",
+  "https://clinicaltrials.gov/study/NCT00100828",
+  "https://clinicaltrials.gov/study/NCT00118248",
+  "https://clinicaltrials.gov/study/NCT00134043",
+  "https://pubmed.ncbi.nlm.nih.gov/15365566/",
+  "https://www.ncbi.nlm.nih.gov/medgen/104918"
+ ]
+}

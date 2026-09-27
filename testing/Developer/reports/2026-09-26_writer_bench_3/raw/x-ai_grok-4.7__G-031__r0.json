@@ -1,0 +1,413 @@
+{
+ "record": {
+  "model": "x-ai/grok-4.7",
+  "question_id": "G-031",
+  "run": 0,
+  "question": "What molecular activity does the KRAS gene product have?",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-26T22:17:35Z",
+  "outcome": "error",
+  "crash": null,
+  "trust_outcome": "refuse",
+  "fatal_source": "write",
+  "fatal_class": "transient",
+  "citations": 0,
+  "must_cite_total": 1,
+  "must_cite_hits": 0,
+  "withdrawn": false,
+  "writer_calls": 1,
+  "writer_calls_ok": 0,
+  "repair_fired": false,
+  "shipped_draft": null,
+  "prose_sentences_kept": 0,
+  "prose_kept": [],
+  "prose_text": "",
+  "jev_sent": 0,
+  "jev_approved": 0,
+  "writer_elapsed_s": [],
+  "writer_completion_tokens": [],
+  "writer_reasoning_tokens": [],
+  "writer_reasoning_refused": 1,
+  "writer_errors": [
+   "CancelledError: "
+  ],
+  "wall_s": 57.03,
+  "done_elapsed_s": 56.967,
+  "metered_cost_usd": 0.0001748964,
+  "done_cost_usd": 0.019374896399999997,
+  "openrouter_cost_usd": 9.4e-05,
+  "writer_openrouter_cost_usd": 0.0,
+  "writer_metered_cost_usd": 0.0,
+  "answer_text": ""
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.431,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 797,
+    "completion_tokens": 46,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.181856e-05,
+    "reply": null,
+    "dur": 1.707
+   },
+   {
+    "t": 2.148,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 991,
+    "completion_tokens": 65,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 5.25749e-05,
+    "reply": null,
+    "dur": 6.506
+   },
+   {
+    "t": 11.957,
+    "model": "openrouter/x-ai/grok-4.7",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": false,
+    "error": "BadRequestError",
+    "message": "litellm.BadRequestError: OpenrouterException - {\"error\":{\"message\":\"Reasoning is mandatory for this endpoint and cannot be disabled.\",\"code\":400,\"metadata\":{\"provider_name\":null}}}",
+    "dur": 0.205
+   },
+   {
+    "t": 12.163,
+    "model": "openrouter/x-ai/grok-4.7",
+    "synth": true,
+    "reasoning_param": false,
+    "max_tokens": 4000,
+    "ok": false,
+    "error": "CancelledError",
+    "message": "",
+    "dur": 44.803
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.425,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 1.7066807089977374,
+    "prompt_tokens": 797,
+    "completion_tokens": 46,
+    "cost_usd": 4.1818560000000004e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.713
+   },
+   {
+    "t": 2.148,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 6.506304832997557,
+    "prompt_tokens": 991,
+    "completion_tokens": 65,
+    "cost_usd": 5.273184e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 6.507
+   },
+   {
+    "t": 11.955,
+    "tier": "synth",
+    "ok": false,
+    "error": "CancelledError",
+    "message": "",
+    "dur": 45.011
+   }
+  ],
+  "grounding": [],
+  "sentence_check": []
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 2.141,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 2.141,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 10.106,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 10.106,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 10.133,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 10.134,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 10.136,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 10.136,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 10.136,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 10.136,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 10.137,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 10.137,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 10.137,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 10.137,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 10.137,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 10.137,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 10.137,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 10.137,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 10.733,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 11.018,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 11.033,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 11.034,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 11.115,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 11.121,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 11.121,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 11.193,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 11.782,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 11.783,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 11.92,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 11.92,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 11.953,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "error",
+   "emitted": 56.968,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 56.968,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.019374896399999997,
+  "total_tool_calls": 9,
+  "elapsed_ms": 56967,
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "layer_calls_used": 12,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 1.0,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 398
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 0.99,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 341
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 379
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 432
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": []
+}

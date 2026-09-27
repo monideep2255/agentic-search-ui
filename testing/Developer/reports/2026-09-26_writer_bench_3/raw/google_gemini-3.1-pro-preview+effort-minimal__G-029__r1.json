@@ -1,0 +1,1003 @@
+{
+ "record": {
+  "model": "google/gemini-3.1-pro-preview+effort-minimal",
+  "model_id": "google/gemini-3.1-pro-preview",
+  "synth_effort": "minimal",
+  "question_id": "G-029",
+  "run": 1,
+  "question": "Which genes are associated with Li-Fraumeni syndrome?",
+  "trace_id": "trace-wb3-G-029-r1-ea7133b41a924e55",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-27T00:30:34Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "answer",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 15,
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "withdrawn": false,
+  "writer_calls": 2,
+  "writer_calls_ok": 1,
+  "repair_fired": true,
+  "shipped_draft": 0,
+  "prose_sentences_kept": 3,
+  "prose_kept": [
+   "One associated record is Gene NCBIGene:1029, name: cyclin dependent kinase inhibitor 2A [1].",
+   "Another associated gene is Gene NCBIGene:11200, name: checkpoint kinase 2 [2].",
+   "A third identified gene is Gene NCBIGene:7157, name: tumor protein p53 [3]."
+  ],
+  "prose_text": "One associated record is Gene NCBIGene:1029, name: cyclin dependent kinase inhibitor 2A [1]. Another associated gene is Gene NCBIGene:11200, name: checkpoint kinase 2 [2].",
+  "jev_sent": 6,
+  "jev_approved": 3,
+  "writer_elapsed_s": [
+   18.780323334001878
+  ],
+  "writer_completion_tokens": [
+   2902
+  ],
+  "writer_reasoning_tokens": [
+   2587
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [
+   "CancelledError: "
+  ],
+  "wall_s": 52.094,
+  "done_elapsed_s": 52.072,
+  "metered_cost_usd": 0.10700821360000001,
+  "done_cost_usd": 0.10700821360000001,
+  "openrouter_cost_usd": 0.058895,
+  "writer_openrouter_cost_usd": 0.058744,
+  "writer_metered_cost_usd": 0.058744,
+  "answer_text": "Found 3 gene records for Li-Fraumeni syndrome: cyclin dependent kinase inhibitor 2A [1], checkpoint kinase 2 [2] and tumor protein p53 [4], linked to 1 disease: Li-Fraumeni syndrome [3]. \n\nOne associated record is Gene NCBIGene:1029, name: cyclin dependent kinase inhibitor 2A [1]. Another associated gene is Gene NCBIGene:11200, name: checkpoint kinase 2 [2]. \n\nDisease records found\n\nDisease name: Li-Fraumeni syndrome [3]. \n\nGene-to-disease mapping\n\nGene NCBIGene:1029, name: cyclin dependent kinase inhibitor 2A [1]. Gene NCBIGene:11200, name: checkpoint kinase 2 [2]. Gene NCBIGene:7157, name: tumor protein p53 [4]. \n\nPubmed records found\n\nPubmed title: Li-Fraumeni Syndrome [5]. Pubmed title: Li-Fraumeni syndrome [9]. Pubmed title: Li-Fraumeni Syndrome [11]. Pubmed title: Li-Fraumeni syndrome heterogeneity [13]. \n\nMedgen records found\n\nMedgen title: Li-Fraumeni syndrome [6]. \n\nLiterature entity records found\n\nLiterature entity name: Li-Fraumeni Syndrome [7]. \n\nClinical trial records found\n\nClinical trial name: Clinical, Genetic, Behavioral, Laboratory and Epidemiologic Characterization of Individuals and Families at High Risk of Breast/Ovarian Cancer [8]. Clinical trial name: Role of p53 Gene in Metabolism Regulation in Patients With Li-Fraumeni Syndrome [10]. Clinical trial name: Characterization of Patients With Uncommon Presentations and/or Uncommon Diseases Associated With the Cardiovascular System [12]. Clinical trial name: Clinical and Genetic Studies of Li-Fraumeni Syndrome [14]. Clinical trial name: LIFSCREEN : Evaluation of Whole Body MRI for Early Detection of Cancers in Subjects With P53 Mutation (Li-Fraumeni Syndrome) [15]. "
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.051,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 802,
+    "completion_tokens": 38,
+    "cached_tokens": 512,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.59032e-05,
+    "reply": null,
+    "dur": 3.929
+   },
+   {
+    "t": 3.982,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 994,
+    "completion_tokens": 59,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00010534,
+    "reply": null,
+    "dur": 0.656
+   },
+   {
+    "t": 7.047,
+    "model": "openrouter/google/gemini-3.1-pro-preview",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11960,
+    "completion_tokens": 2902,
+    "cached_tokens": 0,
+    "reasoning_tokens": 2587,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.058744,
+    "reply": "One associated record is Gene NCBIGene:1029, name: cyclin dependent kinase inhibitor 2A [1]. Another associated gene is Gene NCBIGene:11200, name: checkpoint kinase 2 [3]. A third identified gene is Gene NCBIGene:7157, name: tumor protein p53 [4].\n\n## Genetic Pathology\nLi-Fraumeni syndrome is an inherited susceptibility condition driven by specific genetic alterations [19: \"cancer predisposition syndrome caused by a germline mutation of the TP53 gene\"]. The inheritance occurs in a dominant manner with severe expression [19: \"autosomal dominant pattern of inheritance with high penetrance\"]. Individuals carrying these alterations face a substantial probability of developing various neoplasms [19: \"very high lifetime cumulative risk of developing multiple malignancies\"].\n\n## Clinical Heterogeneity\nPatients with this syndrome present with distinct forms of cancer across different tissues [19: \"tumors include soft tissue sarcomas, osteosarcoma, premenopausal breast cancer, brain tumors, and adrenal cortical carcinomas\"]. The presentation of the disease can differ significantly even among relatives sharing the same genetic alteration [22: \"Phenotypic heterogeneity is present among different families affected by the same pathogenic variant in TP53 gene and among members of the same family\"]. This diverse clinical variation may be influenced by multiple interacting molecular factors [22: \"polymorphic variants in TP53 gene or in TP53-related genes, copy number variations in particular regions, and/or epigenetic deregulation\"].",
+    "dur": 18.78
+   },
+   {
+    "t": 26.136,
+    "model": "openrouter/google/gemini-3.1-pro-preview",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": false,
+    "error": "CancelledError",
+    "message": "",
+    "dur": 25.917
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.048,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 3.9285152919983375,
+    "prompt_tokens": 802,
+    "completion_tokens": 38,
+    "cost_usd": 4.1301120000000005e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 3.931
+   },
+   {
+    "t": 3.982,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 0.6559122920007212,
+    "prompt_tokens": 994,
+    "completion_tokens": 59,
+    "cost_usd": 5.230848000000001e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 0.656
+   },
+   {
+    "t": 7.047,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 18.780323334001878,
+    "prompt_tokens": 11960,
+    "completion_tokens": 2902,
+    "cost_usd": 0.058744000000000005,
+    "model": "google/gemini-3.1-pro-preview",
+    "dur": 18.781
+   },
+   {
+    "t": 26.136,
+    "tier": "synth",
+    "ok": false,
+    "error": "CancelledError",
+    "message": "",
+    "dur": 25.917
+   }
+  ],
+  "grounding": [
+   {
+    "t": 25.83,
+    "dur": 0.3035,
+    "narrative_chars": 862,
+    "narrative": "One associated record is Gene NCBIGene:1029, name: cyclin dependent kinase inhibitor 2A [1]. Another associated gene is Gene NCBIGene:11200, name: checkpoint kinase 2 [3]. A third identified gene is Gene NCBIGene:7157, name: tumor protein p53 [4]. Li-Fraumeni syndrome is an inherited susceptibility condition driven by specific genetic alterations [19#0]. The inheritance occurs in a dominant manner with severe expression [19#1]. Individuals carrying these alterations face a substantial probability of developing various neoplasms [19#2]. Patients with this syndrome present with distinct forms of cancer across different tissues [19#3]. The presentation of the disease can differ significantly even among relatives sharing the same genetic alteration [22#4]. This diverse clinical variation may be influenced by multiple interacting molecular factors [22#5].",
+    "sentences": [
+     "One associated record is Gene NCBIGene:1029, name: cyclin dependent kinase inhibitor 2A [1].",
+     "Another associated gene is Gene NCBIGene:11200, name: checkpoint kinase 2 [2].",
+     "A third identified gene is Gene NCBIGene:7157, name: tumor protein p53 [3]."
+    ],
+    "claims": 3,
+    "claim_ids": [
+     "cq-98f2869b0c6a-1",
+     "cq-98f2869b0c6a-3",
+     "cq-98f2869b0c6a-4"
+    ],
+    "claim_detail": [
+     {
+      "text": "One associated record is Gene NCBIGene:1029, name: cyclin dependent kinase inhibitor 2A",
+      "quote": "",
+      "ref": 1,
+      "field": "name",
+      "value": "cyclin dependent kinase inhibitor 2A"
+     },
+     {
+      "text": "Another associated gene is Gene NCBIGene:11200, name: checkpoint kinase 2",
+      "quote": "",
+      "ref": 3,
+      "field": "name",
+      "value": "checkpoint kinase 2"
+     },
+     {
+      "text": "A third identified gene is Gene NCBIGene:7157, name: tumor protein p53",
+      "quote": "",
+      "ref": 4,
+      "field": "name",
+      "value": "tumor protein p53"
+     }
+    ],
+    "stripped": 6,
+    "refused": false
+   }
+  ],
+  "sentence_check": [
+   {
+    "t": 25.836,
+    "sent": 6,
+    "approved": 3,
+    "ok": true,
+    "dur": 0.295
+   }
+  ],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "name",
+    "value": "cyclin dependent kinase inhibitor 2A",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/1029"
+   },
+   {
+    "ref": 2,
+    "field": "name",
+    "value": "Li-Fraumeni syndrome",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C0085390"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "checkpoint kinase 2",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/11200"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/7157"
+   },
+   {
+    "ref": 5,
+    "field": "title",
+    "value": "Li-Fraumeni Syndrome.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27617148/"
+   },
+   {
+    "ref": 6,
+    "field": "title",
+    "value": "Li-Fraumeni syndrome",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/88399"
+   },
+   {
+    "ref": 7,
+    "field": "name",
+    "value": "Li-Fraumeni Syndrome",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/D016864"
+   },
+   {
+    "ref": 8,
+    "field": "name",
+    "value": "Clinical, Genetic, Behavioral, Laboratory and Epidemiologic Characterization of Individuals and Families at High Risk of Breast/Ovarian Cancer",
+    "url": "https://clinicaltrials.gov/study/NCT00040222"
+   },
+   {
+    "ref": 9,
+    "field": "pmid",
+    "value": "27617148",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27617148/"
+   },
+   {
+    "ref": 10,
+    "field": "title",
+    "value": "Li-Fraumeni syndrome.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27622479/"
+   },
+   {
+    "ref": 11,
+    "field": "name",
+    "value": "Role of p53 Gene in Metabolism Regulation in Patients With Li-Fraumeni Syndrome",
+    "url": "https://clinicaltrials.gov/study/NCT00406445"
+   },
+   {
+    "ref": 12,
+    "field": "pmid",
+    "value": "27622479",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27622479/"
+   },
+   {
+    "ref": 13,
+    "field": "title",
+    "value": "Li-Fraumeni Syndrome.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/30333936/"
+   },
+   {
+    "ref": 14,
+    "field": "name",
+    "value": "Characterization of Patients With Uncommon Presentations and/or Uncommon Diseases Associated With the Cardiovascular System",
+    "url": "https://clinicaltrials.gov/study/NCT01143454"
+   },
+   {
+    "ref": 15,
+    "field": "pmid",
+    "value": "30333936",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/30333936/"
+   },
+   {
+    "ref": 16,
+    "field": "title",
+    "value": "Li-Fraumeni syndrome heterogeneity.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/31691207/"
+   },
+   {
+    "ref": 17,
+    "field": "name",
+    "value": "Clinical and Genetic Studies of Li-Fraumeni Syndrome",
+    "url": "https://clinicaltrials.gov/study/NCT01443468"
+   },
+   {
+    "ref": 18,
+    "field": "pmid",
+    "value": "31691207",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/31691207/"
+   },
+   {
+    "ref": 19,
+    "field": "abstract",
+    "value": "Li-Fraumeni syndrome (LFS) is a cancer predisposition syndrome caused by a germline mutation of the TP53 gene on chromosome 17p13.1. It has an autosomal dominant pattern of inheritance with high penetrance. These patients have a very high lifetime cumulative risk of developing multiple malignancies ",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27617148/"
+   },
+   {
+    "ref": 20,
+    "field": "name",
+    "value": "LIFSCREEN : Evaluation of Whole Body MRI for Early Detection of Cancers in Subjects With P53 Mutation (Li-Fraumeni Syndrome)",
+    "url": "https://clinicaltrials.gov/study/NCT01464086"
+   },
+   {
+    "ref": 21,
+    "field": "abstract",
+    "value": "The Li-Fraumeni syndrome is characterized clinically by the appearance of tumors in multiple organs generally at an early age. This hereditary condition is caused by germinal mutations in the TP53 gene, which codifies for the tumoural suppressor gene p53.\u00a0We present the case of a patient aged 31 wit",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27622479/"
+   },
+   {
+    "ref": 22,
+    "field": "abstract",
+    "value": "Clinical variability is commonly seen in Li-Fraumeni syndrome. Phenotypic heterogeneity is present among different families affected by the same pathogenic variant in TP53 gene and among members of the same family. However, causes of this huge clinical spectrum have not been studied in depth. TP53 t",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/31691207/"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 3.98,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 3.98,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 5.238,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 5.239,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 5.649,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 5.649,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.65,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.65,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.65,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.65,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.65,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.65,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.65,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.65,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.025,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.07,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.083,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.174,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.675,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.863,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.974,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.045,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 7.046,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.065,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.066,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.066,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.066,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.071,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 52.072,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 52.073,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 52.073,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.10700821360000001,
+  "total_tool_calls": 6,
+  "elapsed_ms": 52072,
+  "trust_outcome": "answer",
+  "trust_line": "Based on 15 sources",
+  "layer_calls_used": 11,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.99,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 274
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 293
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 329
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 346
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/gene/1029",
+  "https://www.ncbi.nlm.nih.gov/gene/11200",
+  "https://www.ncbi.nlm.nih.gov/medgen/C0085390",
+  "https://www.ncbi.nlm.nih.gov/gene/7157",
+  "https://pubmed.ncbi.nlm.nih.gov/27617148/",
+  "https://www.ncbi.nlm.nih.gov/medgen/88399",
+  "https://www.ncbi.nlm.nih.gov/mesh/D016864",
+  "https://clinicaltrials.gov/study/NCT00040222",
+  "https://pubmed.ncbi.nlm.nih.gov/27622479/",
+  "https://clinicaltrials.gov/study/NCT00406445",
+  "https://pubmed.ncbi.nlm.nih.gov/30333936/",
+  "https://clinicaltrials.gov/study/NCT01143454",
+  "https://pubmed.ncbi.nlm.nih.gov/31691207/",
+  "https://clinicaltrials.gov/study/NCT01443468",
+  "https://clinicaltrials.gov/study/NCT01464086"
+ ]
+}

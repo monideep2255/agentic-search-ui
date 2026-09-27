@@ -1,0 +1,1275 @@
+{
+ "record": {
+  "model": "moonshotai/kimi-k2.5",
+  "model_id": "moonshotai/kimi-k2.5",
+  "synth_effort": "none",
+  "question_id": "G-003",
+  "run": 1,
+  "question": "What is known about Lynch syndrome across NCBI: the causal genes, the condition record, clinical variants and current trials?",
+  "trace_id": "trace-wb3-G-003-r1-0a511cbf64cb40ee",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-27T00:14:53Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "answer",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 26,
+  "must_cite_total": 4,
+  "must_cite_hits": 3,
+  "withdrawn": false,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 1,
+  "prose_sentences_kept": 5,
+  "prose_kept": [
+   "Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications [1].",
+   "Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer [2].",
+   "Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer [3].",
+   "Registry for Women Who Are At Risk Or May Have Lynch Syndrome [4].",
+   "Pubmed title: Lynch Syndrome Genetics and Clinical Implications [5]."
+  ],
+  "prose_text": "",
+  "jev_sent": 0,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   13.846343290999357,
+   27.796661250002217
+  ],
+  "writer_completion_tokens": [
+   609,
+   808
+  ],
+  "writer_reasoning_tokens": [
+   0,
+   0
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 51.291,
+  "done_elapsed_s": 51.272,
+  "metered_cost_usd": 0.013474260960000001,
+  "done_cost_usd": 0.013474260960000001,
+  "openrouter_cost_usd": 0.011212,
+  "writer_openrouter_cost_usd": 0.011002,
+  "writer_metered_cost_usd": 0.013292,
+  "answer_text": "Found 5 clinical trial records and 11 gene records for Lynch syndrome [1][2][3][4][5][6][8][9][10][11][12][13][14][15][16][17], linked to 1 disease: Lynch syndrome [7]. \n\nDisease records found\n\nDisease name: Lynch syndrome [7]. \n\nClinical trial records found\n\nClinical trial name: Implementation of a New Strategy to Identify HNPCC Patients [1]. Clinical trial name: Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications [2]. Clinical trial name: Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer [3]. Clinical trial name: Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer [4]. Clinical trial name: Registry for Women Who Are At Risk Or May Have Lynch Syndrome [5]. \n\nGene-to-disease mapping\n\nGene NCBIGene:27030, name: mutL homolog 3 [6]. Gene NCBIGene:2956, name: mutS homolog 6 [8]. Gene NCBIGene:4072, name: epithelial cell adhesion molecule [9]. Gene NCBIGene:4292, name: mutL homolog 1 [10]. Gene NCBIGene:4436, name: mutS homolog 2 [11]. Gene NCBIGene:4763, name: neurofibromin 1 [12]. Gene NCBIGene:5378, name: PMS1 homolog 1, mismatch repair system component [13]. Gene NCBIGene:5395, name: PMS1 homolog 2, mismatch repair system component [14]. Gene NCBIGene:6224, name: ribosomal protein S20 [15]. Gene NCBIGene:7048, name: transforming growth factor beta receptor 2 [16]. Gene NCBIGene:999, name: cadherin 1 [17]. \n\nPubmed records found\n\nPubmed title: Lynch syndrome [18]. Pubmed title: Differentiating Lynch-like from Lynch syndrome [21]. Pubmed title: Lynch Syndrome-Associated Colorectal Cancer [23]. Pubmed title: Identification of Lynch Syndrome [25]. Pubmed title: Lynch Syndrome Genetics and Clinical Implications [26]. \n\nMedgen records found\n\nMedgen title: Lynch syndrome [19]. \n\nLiterature entity records found\n\nLiterature entity name: Lynch syndrome I (site-specific colonic cancer) [20]. Literature entity name: Colorectal Neoplasms Hereditary Nonpolyposis [22]. Literature entity name: Lynch Syndrome II [24]. "
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.073,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 816,
+    "completion_tokens": 62,
+    "cached_tokens": 743,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.4322e-05,
+    "reply": null,
+    "dur": 5.438
+   },
+   {
+    "t": 5.525,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1008,
+    "completion_tokens": 88,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00016576,
+    "reply": null,
+    "dur": 1.181
+   },
+   {
+    "t": 9.596,
+    "model": "openrouter/moonshotai/kimi-k2.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 10956,
+    "completion_tokens": 609,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.007853517,
+    "reply": "Lynch syndrome is a hereditary colorectal cancer predisposition syndrome defined by the NCBI disease record MedGen:C1333991 (synonym: Colorectal Neoplasms Hereditary Nonpolyposis; clinical subtypes Lynch syndrome I and II) [6][7][8][9][10][11][12][13][14][15][16][17][19][20][22][23][25][26][28][30]. Its molecular basis involves several DNA mismatch repair genes, with Graph record Gene:4292 (mutL homolog 1) and Gene:4436 (mutS homolog 2) being the classical loci; [18][21][24][27][29]. Additional causal candidates include Gene:27030 (mutL homolog 3), Gene:2956 (mutS homolog 6), Gene:5378 (PMS1 homolog 1), and Gene:5395 (PMS1 homolog 2), as well as modifier/epithelial factors Gene:4072 (epithelial cell adhesion molecule), Gene:4763 (neurofibromin 1), Gene:7048 (transforming growth factor beta receptor 2), Gene:999 (cadherin 1), and Gene:6224 (ribosomal protein S20) [1][2][3][4][5].\n\n## Causal Genes and Molecular Pathway\n\nThe core mismatch repair apparatus comprises MLH1, MSH2, MSH6, and PMS2 products; NCBIGene:27030 (mutL homolog 3), NCBIGene:2956 (mutS homolog 6), NCBIGene:4292 (mutL homolog 1), NCBIGene:4436 (mutS homolog 2), NCBIGene:5378 (PMS1 homolog 1), and NCBIGene:5395 (PMS1 homolog 2). Modifier candidates include epithelial adhesion and TGF-\u03b2 signaling components NCBIGene:4072 and NCBIGene:7048 [6][7][8][9][10][11][12][13][14][15][16][17].\n\n## Clinical Variants and Phenotype Definitions\n\nThe condition labels distinguish site-specific colonic cancer (Lynch syndrome I) from extracolonic tumor spectrum (Lynch syndrome II), with literature distinguishing \"Lynch-like\" cases lacking identifiable germline mutations [20][22][26]. MedGen unifies these under C1333991 with preferential term Lynch syndrome [19].\n\n## Active Clinical Trials\n\nFive investigator-initiated trials are registered: patient identification strategy implementation [1]; Taiwan-specific genetic study with clinical applications [2]; psychosocial impact assessment of genetic testing [3]; educational intervention for informed consent in at-risk families [4]; and a prospective registry for at-risk women [5].",
+    "dur": 13.846
+   },
+   {
+    "t": 23.448,
+    "model": "openrouter/moonshotai/kimi-k2.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11496,
+    "completion_tokens": 808,
+    "cached_tokens": 10112,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00314864,
+    "reply": "Lynch syndrome is recorded in NCBI as Disease name: Lynch syndrome [7], with causal genes including NCBIGene:4292 mutL homolog 1 [10], NCBIGene:4436 mutS homolog 2 [11], NCBIGene:2956 mutS homolog 6 [8], NCBIGene:27030 mutL homolog 3 [6], NCBIGene:5378 PMS1 homolog 1, mismatch repair system component [13], and NCBIGene:5395 PMS1 homolog 2, mismatch repair system component [14]. Active or completed clinical trials include Implementation of a New Strategy to Identify HNPCC Patients [1], Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications [2], Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer [3], Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer [4], and Registry for Women Who Are At Risk Or May Have Lynch Syndrome [5].\n\n## Core Mismatch Repair Genes\n\nThe principal Lynch syndrome genes are the mismatch repair genes NCBIGene:4292 mutL homolog 1 [10] and NCBIGene:4436 mutS homolog 2 [11], with NCBIGene:2956 mutS homolog 6 [8], NCBIGene:27030 mutL homolog 3 [6], NCBIGene:5378 PMS1 homolog 1, mismatch repair system component [13], and NCBIGene:5395 PMS1 homolog 2, mismatch repair system component [14] also implicated. These encode proteins central to DNA mismatch repair.\n\n## Additional Associated Genes\n\nOther genes linked to Lynch syndrome in this dataset include NCBIGene:4072 epithelial cell adhesion molecule [9], NCBIGene:4763 neurofibromin 1 [12], NCBIGene:7048 transforming growth factor beta receptor 2 [16], NCBIGene:999 cadherin 1 [17], and NCBIGene:6224 ribosomal protein S20 [15]. Their mechanistic roles in Lynch syndrome pathogenesis are not detailed in these findings.\n\n## Clinical Trial Landscape\n\nFive Lynch syndrome trials are catalogued: Implementation of a New Strategy to Identify HNPCC Patients [1]; Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications [2]; Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer [3]; Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer [4]; and Registry for Women Who Are At Risk Or May Have Lynch Syndrome [5]. These span identification strategies, genetic studies, psychosocial aspects, informed consent education, and risk registry development.\n\n## Supporting Literature and Classification\n\nThe Lynch syndrome literature index includes pubmed title: Lynch syndrome. [18], pubmed title: Differentiating Lynch-like from Lynch syndrome. [22], pubmed title: Lynch Syndrome-Associated Colorectal Cancer. [25], pubmed title: Identification of Lynch Syndrome. [28], and pubmed title: Lynch Syndrome Genetics and Clinical Implications [30]. Key publications include PMID 21508689 [21], PMID 24468183 [24], PMID 30134129 [27], and PMID 34798986 [29]. Literature entity names distinguish Lynch syndrome I (site-specific colonic cancer) [20], Colorectal Neoplasms Hereditary Nonpolyposis [23], and Lynch Syndrome II [26], with medgen title: Lynch syndrome [19] as the consolidated condition record.",
+    "dur": 27.797
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.065,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 5.437972583000374,
+    "prompt_tokens": 816,
+    "completion_tokens": 62,
+    "cost_usd": 4.42176e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 5.446
+   },
+   {
+    "t": 5.524,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 1.1806911250023404,
+    "prompt_tokens": 1008,
+    "completion_tokens": 88,
+    "cost_usd": 5.5695360000000006e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.181
+   },
+   {
+    "t": 9.594,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 13.846343290999357,
+    "prompt_tokens": 10956,
+    "completion_tokens": 609,
+    "cost_usd": 0.00630045,
+    "model": "moonshotai/kimi-k2.5",
+    "dur": 13.849
+   },
+   {
+    "t": 23.447,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 27.796661250002217,
+    "prompt_tokens": 11496,
+    "completion_tokens": 808,
+    "cost_usd": 0.0069912,
+    "model": "moonshotai/kimi-k2.5",
+    "dur": 27.797
+   }
+  ],
+  "grounding": [
+   {
+    "t": 23.443,
+    "dur": 0.0007,
+    "narrative_chars": 1987,
+    "narrative": "Lynch syndrome is a hereditary colorectal cancer predisposition syndrome defined by the NCBI disease record MedGen:C1333991 (synonym: Colorectal Neoplasms Hereditary Nonpolyposis; clinical subtypes Lynch syndrome I and II) [6][7][8][9][10][11][12][13][14][15][16][17][19][20][22][23][25][26][28][30]. Its molecular basis involves several DNA mismatch repair genes, with Graph record Gene:4292 (mutL homolog 1) and Gene:4436 (mutS homolog 2) being the classical loci; [18][21][24][27][29]. Additional causal candidates include Gene:27030 (mutL homolog 3), Gene:2956 (mutS homolog 6), Gene:5378 (PMS1 homolog 1), and Gene:5395 (PMS1 homolog 2), as well as modifier/epithelial factors Gene:4072 (epithelial cell adhesion molecule), Gene:4763 (neurofibromin 1), Gene:7048 (transforming growth factor beta receptor 2), Gene:999 (cadherin 1), and Gene:6224 (ribosomal protein S20) [1][2][3][4][5]. The core mismatch repair apparatus comprises MLH1, MSH2, MSH6, and PMS2 products; NCBIGene:27030 (mutL homolog 3), NCBIGene:2956 (mutS homolog 6), NCBIGene:4292 (mutL homolog 1), NCBIGene:4436 (mutS homolog 2), NCBIGene:5378 (PMS1 homolog 1), and NCBIGene:5395 (PMS1 homolog 2). Modifier candidates include epithelial adhesion and TGF-\u03b2 signaling components NCBIGene:4072 and NCBIGene:7048 [6][7][8][9][10][11][12][13][14][15][16][17]. The condition labels distinguish site-specific colonic cancer (Lynch syndrome I) from extracolonic tumor spectrum (Lynch syndrome II), with literature distinguishing \"Lynch-like\" cases lacking identifiable germline mutations [20][22][26]. MedGen unifies these under C1333991 with preferential term Lynch syndrome [19]. Five investigator-initiated trials are registered: patient identification strategy implementation [1]; Taiwan-specific genetic study with clinical applications [2]; psychosocial impact assessment of genetic testing [3]; educational intervention for informed consent in at-risk families [4]; and a prospective registry for at-risk women [5].",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 14,
+    "refused": true
+   },
+   {
+    "t": 51.246,
+    "dur": 0.0057,
+    "narrative_chars": 3040,
+    "narrative": "Lynch syndrome is recorded in NCBI as Disease name: Lynch syndrome [7], with causal genes including NCBIGene:4292 mutL homolog 1 [10], NCBIGene:4436 mutS homolog 2 [11], NCBIGene:2956 mutS homolog 6 [8], NCBIGene:27030 mutL homolog 3 [6], NCBIGene:5378 PMS1 homolog 1, mismatch repair system component [13], and NCBIGene:5395 PMS1 homolog 2, mismatch repair system component [14]. Active or completed clinical trials include Implementation of a New Strategy to Identify HNPCC Patients [1], Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications [2], Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer [3], Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer [4], and Registry for Women Who Are At Risk Or May Have Lynch Syndrome [5]. The principal Lynch syndrome genes are the mismatch repair genes NCBIGene:4292 mutL homolog 1 [10] and NCBIGene:4436 mutS homolog 2 [11], with NCBIGene:2956 mutS homolog 6 [8], NCBIGene:27030 mutL homolog 3 [6], NCBIGene:5378 PMS1 homolog 1, mismatch repair system component [13], and NCBIGene:5395 PMS1 homolog 2, mismatch repair system component [14] also implicated. These encode proteins central to DNA mismatch repair. Other genes linked to Lynch syndrome in this dataset include NCBIGene:4072 epithelial cell adhesion molecule [9], NCBIGene:4763 neurofibromin 1 [12], NCBIGene:7048 transforming growth factor beta receptor 2 [16], NCBIGene:999 cadherin 1 [17], and NCBIGene:6224 ribosomal protein S20 [15]. Their mechanistic roles in Lynch syndrome pathogenesis are not detailed in these findings. Five Lynch syndrome trials are catalogued: Implementation of a New Strategy to Identify HNPCC Patients [1]; Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications [2]; Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer [3]; Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer [4]; and Registry for Women Who Are At Risk Or May Have Lynch Syndrome [5]. These span identification strategies, genetic studies, psychosocial aspects, informed consent education, and risk registry development. The Lynch syndrome literature index includes pubmed title: Lynch syndrome. [18], pubmed title: Differentiating Lynch-like from Lynch syndrome. [22], pubmed title: Lynch Syndrome-Associated Colorectal Cancer. [25], pubmed title: Identification of Lynch Syndrome. [28], and pubmed title: Lynch Syndrome Genetics and Clinical Implications [30]. Key publications include PMID 21508689 [21], PMID 24468183 [24], PMID 30134129 [27], and PMID 34798986 [29]. Literature entity names distinguish Lynch syndrome I (site-specific colonic cancer) [20], Colorectal Neoplasms Hereditary Nonpolyposis [23], and Lynch Syndrome II [26], with medgen title: Lynch syndrome [19] as the consolidated condition record.",
+    "sentences": [
+     "Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications [1].",
+     "Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer [2].",
+     "Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer [3].",
+     "Registry for Women Who Are At Risk Or May Have Lynch Syndrome [4].",
+     "Pubmed title: Lynch Syndrome Genetics and Clinical Implications [5]."
+    ],
+    "claims": 5,
+    "claim_ids": [
+     "ct-201b088ff0db-2",
+     "ct-201b088ff0db-3",
+     "ct-201b088ff0db-4",
+     "ct-201b088ff0db-5",
+     "ne-5832cd0030d3-30"
+    ],
+    "claim_detail": [
+     {
+      "text": "Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications",
+      "quote": "",
+      "ref": 2,
+      "field": "name",
+      "value": "Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications"
+     },
+     {
+      "text": "Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer",
+      "quote": "",
+      "ref": 3,
+      "field": "name",
+      "value": "Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer"
+     },
+     {
+      "text": "Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer",
+      "quote": "",
+      "ref": 4,
+      "field": "name",
+      "value": "Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer"
+     },
+     {
+      "text": "Registry for Women Who Are At Risk Or May Have Lynch Syndrome",
+      "quote": "",
+      "ref": 5,
+      "field": "name",
+      "value": "Registry for Women Who Are At Risk Or May Have Lynch Syndrome"
+     },
+     {
+      "text": "pubmed title: Lynch Syndrome Genetics and Clinical Implications",
+      "quote": "",
+      "ref": 30,
+      "field": "title",
+      "value": "Lynch Syndrome Genetics and Clinical Implications."
+     }
+    ],
+    "stripped": 41,
+    "refused": false
+   }
+  ],
+  "sentence_check": [],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "name",
+    "value": "Implementation of a New Strategy to Identify HNPCC Patients",
+    "url": "https://clinicaltrials.gov/study/NCT00141466"
+   },
+   {
+    "ref": 2,
+    "field": "name",
+    "value": "Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications",
+    "url": "https://clinicaltrials.gov/study/NCT00262171"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer",
+    "url": "https://clinicaltrials.gov/study/NCT00341575"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer",
+    "url": "https://clinicaltrials.gov/study/NCT00450424"
+   },
+   {
+    "ref": 5,
+    "field": "name",
+    "value": "Registry for Women Who Are At Risk Or May Have Lynch Syndrome",
+    "url": "https://clinicaltrials.gov/study/NCT00508573"
+   },
+   {
+    "ref": 6,
+    "field": "name",
+    "value": "mutL homolog 3",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/27030"
+   },
+   {
+    "ref": 7,
+    "field": "name",
+    "value": "Lynch syndrome",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C4552100"
+   },
+   {
+    "ref": 8,
+    "field": "name",
+    "value": "mutS homolog 6",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/2956"
+   },
+   {
+    "ref": 9,
+    "field": "name",
+    "value": "epithelial cell adhesion molecule",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/4072"
+   },
+   {
+    "ref": 10,
+    "field": "name",
+    "value": "mutL homolog 1",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/4292"
+   },
+   {
+    "ref": 11,
+    "field": "name",
+    "value": "mutS homolog 2",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/4436"
+   },
+   {
+    "ref": 12,
+    "field": "name",
+    "value": "neurofibromin 1",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/4763"
+   },
+   {
+    "ref": 13,
+    "field": "name",
+    "value": "PMS1 homolog 1, mismatch repair system component",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/5378"
+   },
+   {
+    "ref": 14,
+    "field": "name",
+    "value": "PMS1 homolog 2, mismatch repair system component",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/5395"
+   },
+   {
+    "ref": 15,
+    "field": "name",
+    "value": "ribosomal protein S20",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/6224"
+   },
+   {
+    "ref": 16,
+    "field": "name",
+    "value": "transforming growth factor beta receptor 2",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/7048"
+   },
+   {
+    "ref": 17,
+    "field": "name",
+    "value": "cadherin 1",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/999"
+   },
+   {
+    "ref": 18,
+    "field": "title",
+    "value": "Lynch syndrome.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/21508689/"
+   },
+   {
+    "ref": 19,
+    "field": "title",
+    "value": "Lynch syndrome",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/1633554"
+   },
+   {
+    "ref": 20,
+    "field": "name",
+    "value": "Lynch syndrome I (site-specific colonic cancer)",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/C537261"
+   },
+   {
+    "ref": 21,
+    "field": "pmid",
+    "value": "21508689",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/21508689/"
+   },
+   {
+    "ref": 22,
+    "field": "title",
+    "value": "Differentiating Lynch-like from Lynch syndrome.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/24468183/"
+   },
+   {
+    "ref": 23,
+    "field": "name",
+    "value": "Colorectal Neoplasms Hereditary Nonpolyposis",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/D003123"
+   },
+   {
+    "ref": 24,
+    "field": "pmid",
+    "value": "24468183",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/24468183/"
+   },
+   {
+    "ref": 25,
+    "field": "title",
+    "value": "Lynch Syndrome-Associated Colorectal Cancer.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/30134129/"
+   },
+   {
+    "ref": 26,
+    "field": "name",
+    "value": "Lynch Syndrome II",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/D055847"
+   },
+   {
+    "ref": 27,
+    "field": "pmid",
+    "value": "30134129",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/30134129/"
+   },
+   {
+    "ref": 28,
+    "field": "title",
+    "value": "Identification of Lynch Syndrome.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/34798986/"
+   },
+   {
+    "ref": 29,
+    "field": "pmid",
+    "value": "34798986",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/34798986/"
+   },
+   {
+    "ref": 30,
+    "field": "title",
+    "value": "Lynch Syndrome Genetics and Clinical Implications.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/36706841/"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 5.512,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 5.512,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 7.801,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 7.802,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 8.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 8.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 8.191,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 8.191,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 8.191,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 8.191,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 8.191,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 8.191,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 8.191,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 8.191,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.43,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.43,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.526,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.602,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.317,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.53,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.568,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.584,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 9.592,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.262,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.269,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.27,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.271,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.271,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.271,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.271,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.271,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.271,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.271,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 51.272,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 51.273,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 51.273,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.013474260960000001,
+  "total_tool_calls": 6,
+  "elapsed_ms": 51272,
+  "trust_outcome": "answer",
+  "trust_line": "Based on 26 sources",
+  "layer_calls_used": 13,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.99,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 328
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 0.99,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 307
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 0.97,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 357
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 0.95,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 407
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://clinicaltrials.gov/study/NCT00141466",
+  "https://clinicaltrials.gov/study/NCT00262171",
+  "https://clinicaltrials.gov/study/NCT00341575",
+  "https://clinicaltrials.gov/study/NCT00450424",
+  "https://clinicaltrials.gov/study/NCT00508573",
+  "https://www.ncbi.nlm.nih.gov/gene/27030",
+  "https://www.ncbi.nlm.nih.gov/medgen/C4552100",
+  "https://www.ncbi.nlm.nih.gov/gene/2956",
+  "https://www.ncbi.nlm.nih.gov/gene/4072",
+  "https://www.ncbi.nlm.nih.gov/gene/4292",
+  "https://www.ncbi.nlm.nih.gov/gene/4436",
+  "https://www.ncbi.nlm.nih.gov/gene/4763",
+  "https://www.ncbi.nlm.nih.gov/gene/5378",
+  "https://www.ncbi.nlm.nih.gov/gene/5395",
+  "https://www.ncbi.nlm.nih.gov/gene/6224",
+  "https://www.ncbi.nlm.nih.gov/gene/7048",
+  "https://www.ncbi.nlm.nih.gov/gene/999",
+  "https://pubmed.ncbi.nlm.nih.gov/21508689/",
+  "https://www.ncbi.nlm.nih.gov/medgen/1633554",
+  "https://www.ncbi.nlm.nih.gov/mesh/C537261",
+  "https://pubmed.ncbi.nlm.nih.gov/24468183/",
+  "https://www.ncbi.nlm.nih.gov/mesh/D003123",
+  "https://pubmed.ncbi.nlm.nih.gov/30134129/",
+  "https://www.ncbi.nlm.nih.gov/mesh/D055847",
+  "https://pubmed.ncbi.nlm.nih.gov/34798986/",
+  "https://pubmed.ncbi.nlm.nih.gov/36706841/"
+ ]
+}

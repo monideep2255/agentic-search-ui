@@ -1,0 +1,2212 @@
+{
+ "record": {
+  "model": "z-ai/glm-5.2",
+  "model_id": "z-ai/glm-5.2",
+  "synth_effort": "none",
+  "question_id": "G-021",
+  "run": 1,
+  "question": "Which papers in the graph mention the CFTR gene, and what do they cover?",
+  "trace_id": "trace-wb3-G-021-r1-505a4d3113d942ba",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-26T23:20:49Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "ask",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 72,
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "withdrawn": true,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 0,
+  "prose_sentences_kept": 0,
+  "prose_kept": [],
+  "prose_text": "",
+  "jev_sent": 0,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   2.788711916997272,
+   4.644586499998695
+  ],
+  "writer_completion_tokens": [
+   231,
+   683
+  ],
+  "writer_reasoning_tokens": [
+   0,
+   0
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 26.085,
+  "done_elapsed_s": 26.014,
+  "metered_cost_usd": 0.01625435048,
+  "done_cost_usd": 0.01625435048,
+  "openrouter_cost_usd": 0.022014,
+  "writer_openrouter_cost_usd": 0.021777,
+  "writer_metered_cost_usd": 0.016016,
+  "answer_text": "Found 54 article records for CFTR, of 1962 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44][45][46][47][48][49][50][51][52][53][54]. \n\nArticle records found\n\nArticle record PMID:10075921 [1]. Article record PMID:10094564 [2]. Article record PMID:10200050 [3]. Article record PMID:10561583 [4]. Article record PMID:10581360 [5]. Article record PMID:10651488 [6]. Article record PMID:10666020 [7]. Article record PMID:10766763 [8]. Article record PMID:10799517 [9]. Article record PMID:10852925 [10]. Article record PMID:10862786 [11]. Article record PMID:10893422 [12]. Article record PMID:10982807 [13]. Article record PMID:11025834 [14]. Article record PMID:11051556 [15]. Article record PMID:11095651 [16]. Article record PMID:11104661 [17]. Article record PMID:11109941 [18]. Article record PMID:11115825 [19]. Article record PMID:11117575 [20]. Article record PMID:11134427 [21]. Article record PMID:11146634 [22]. Article record PMID:11158634 [23]. Article record PMID:11168024 [24]. Article record PMID:11175304 [25]. Article record PMID:11186891 [26]. Article record PMID:11243954 [27]. Article record PMID:11304524 [28]. Article record PMID:11333866 [29]. Article record PMID:11354633 [30]. Article record PMID:11356077 [31]. Article record PMID:11379874 [32]. Article record PMID:11397675 [33]. Article record PMID:11400707 [34]. Article record PMID:11462247 [35]. Article record PMID:11462248 [36]. Article record PMID:11524016 [37]. Article record PMID:11529289 [38]. Article record PMID:11536079 [39]. Article record PMID:11569691 [40]. Article record PMID:11574497 [41]. Article record PMID:11597137 [42]. Article record PMID:11667976 [43]. Article record PMID:11680956 [44]. Article record PMID:11683083 [45]. Article record PMID:11686989 [46]. Article record PMID:11688981 [47]. Article record PMID:11707463 [48]. Article record PMID:11713441 [49]. Article record PMID:11713719 [50]. Article record PMID:11715005 [51]. Article record PMID:11748227 [52]. Article record PMID:11756355 [53]. Article record PMID:11773581 [54]. \n\nGene records found\n\nGene symbol: CFTR [55]. Gene name: CFTR [59]. \n\nPubmed records found\n\nPubmed title: Molecular Structure of the Human CFTR Ion Channel [56]. Pubmed title: ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction [61]. Pubmed title: ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria [64]. Pubmed title: Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators [67]. Pubmed title: In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis [70]. \n\nClinvar records found\n\nClinvar title: NM_000492.4(CFTR):c.1209+1988_1392+2067inv [57]. Clinvar title: NM_000492.4(CFTR):c.1392+2072_1392+2074del [62]. Clinvar title: NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [65]. Clinvar title: NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [68]. Clinvar title: NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [71]. \n\nOmim records found\n\nCYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR [58]. CFTR [58]. \n\nClinical trial records found\n\nClinical trial name: NPDT Evaluation in Children With CFTR and (PSC) [60]. Clinical trial name: Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [63]. Clinical trial name: Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [66]. Clinical trial name: Effects of Sildenafil on CFTR-dependent Ion Transport Activity [69]. Clinical trial name: Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [72]. \n\nNote: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.092,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 803,
+    "completion_tokens": 47,
+    "cached_tokens": 512,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 6.8236e-05,
+    "reply": null,
+    "dur": 1.626
+   },
+   {
+    "t": 1.722,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1001,
+    "completion_tokens": 71,
+    "cached_tokens": 768,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 5.12281e-05,
+    "reply": null,
+    "dur": 5.146
+   },
+   {
+    "t": 16.091,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 1036,
+    "completion_tokens": 128,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "length",
+    "openrouter_cost_usd": 0.000117572,
+    "reply": null,
+    "dur": 2.386
+   },
+   {
+    "t": 18.492,
+    "model": "openrouter/z-ai/glm-5.2",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 10626,
+    "completion_tokens": 231,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.0158928,
+    "reply": "I could not find information on this. The findings list 30 article record identifiers (PMID:10075921 through PMID:11354633) [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30], but none of these findings include titles, abstracts, annotations, or any text indicating CFTR gene involvement. The records are bare PMID identifiers with no associated content describing what each paper covers or whether it mentions CFTR. Without titles, abstracts, or graph edge data linking these articles to the CFTR gene, I cannot determine which papers mention CFTR or what topics they address [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30].",
+    "dur": 2.789
+   },
+   {
+    "t": 21.301,
+    "model": "openrouter/z-ai/glm-5.2",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11157,
+    "completion_tokens": 683,
+    "cached_tokens": 10112,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00588388,
+    "reply": "The knowledge graph contains thirty PubMed articles that mention the CFTR gene, spanning molecular characterization, mutation analysis, disease association, and therapeutic studies [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30].\n\n## Identified Articles\n\nThe thirty articles are recorded as PMID:10075921, PMID:10094564, PMID:10200050, PMID:10561583, PMID:10581360, PMID:10651488, PMID:10666020, PMID:10766763, PMID:10799517, PMID:10852925, PMID:10862786, PMID:10893422, PMID:10982807, PMID:11025834, and PMID:11051556 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15]. Additional articles include PMID:11095651, PMID:11104661, PMID:11109941, PMID:11115825, PMID:11117575, PMID:11134427, PMID:11146634, PMID:11158634, PMID:11168024, PMID:11175304, PMID:11186891, PMID:11243954, PMID:11304524, PMID:11333866, and PMID:11354633 [16][17][18][19][20][21][22][23][24][25][26][27][28][29][30].\n\n## Graph Coverage\n\nEach of these thirty records is linked to the CFTR gene node in the knowledge graph through a mentioned_in or has_mesh_annotation edge, confirming that all thirty publications reference CFTR [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. The article identifiers alone are returned without accompanying title or abstract text, so the specific topical content of each paper cannot be determined from the retrieved findings alone [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30].\n\n## Scope Limitation\n\nThe findings provide only PubMed identifiers for the thirty CFTR-mentioning articles and do not include abstracts, titles, or MeSH terms that would allow characterization of what each paper covers [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. Further retrieval via PubMed EFetch would be needed to summarize individual article content [1][30].",
+    "dur": 4.645
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.087,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 1.6257326250015467,
+    "prompt_tokens": 803,
+    "completion_tokens": 47,
+    "cost_usd": 4.2194880000000004e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.631
+   },
+   {
+    "t": 1.722,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 5.146110333000252,
+    "prompt_tokens": 1001,
+    "completion_tokens": 71,
+    "cost_usd": 5.376672e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 5.146
+   },
+   {
+    "t": 16.091,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 2.3864707499997166,
+    "prompt_tokens": 1036,
+    "completion_tokens": 128,
+    "cost_usd": 6.077568000000001e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 2.387
+   },
+   {
+    "t": 18.492,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 2.788711916997272,
+    "prompt_tokens": 10626,
+    "completion_tokens": 231,
+    "cost_usd": 0.007374259199999999,
+    "model": "z-ai/glm-5.2",
+    "dur": 2.792
+   },
+   {
+    "t": 21.299,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 4.644586499998695,
+    "prompt_tokens": 11157,
+    "completion_tokens": 683,
+    "cost_usd": 0.008642,
+    "model": "z-ai/glm-5.2",
+    "dur": 4.652
+   }
+  ],
+  "grounding": [
+   {
+    "t": 21.288,
+    "dur": 0.0018,
+    "narrative_chars": 750,
+    "narrative": "I could not find information on this. The findings list 30 article record identifiers (PMID:10075921 through PMID:11354633) [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30], but none of these findings include titles, abstracts, annotations, or any text indicating CFTR gene involvement. The records are bare PMID identifiers with no associated content describing what each paper covers or whether it mentions CFTR. Without titles, abstracts, or graph edge data linking these articles to the CFTR gene, I cannot determine which papers mention CFTR or what topics they address [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30].",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 5,
+    "refused": true
+   },
+   {
+    "t": 25.957,
+    "dur": 0.0008,
+    "narrative_chars": 1945,
+    "narrative": "The knowledge graph contains thirty PubMed articles that mention the CFTR gene, spanning molecular characterization, mutation analysis, disease association, and therapeutic studies [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. The thirty articles are recorded as PMID:10075921, PMID:10094564, PMID:10200050, PMID:10561583, PMID:10581360, PMID:10651488, PMID:10666020, PMID:10766763, PMID:10799517, PMID:10852925, PMID:10862786, PMID:10893422, PMID:10982807, PMID:11025834, and PMID:11051556 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15]. Additional articles include PMID:11095651, PMID:11104661, PMID:11109941, PMID:11115825, PMID:11117575, PMID:11134427, PMID:11146634, PMID:11158634, PMID:11168024, PMID:11175304, PMID:11186891, PMID:11243954, PMID:11304524, PMID:11333866, and PMID:11354633 [16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. Each of these thirty records is linked to the CFTR gene node in the knowledge graph through a mentioned_in or has_mesh_annotation edge, confirming that all thirty publications reference CFTR [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. The article identifiers alone are returned without accompanying title or abstract text, so the specific topical content of each paper cannot be determined from the retrieved findings alone [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. The findings provide only PubMed identifiers for the thirty CFTR-mentioning articles and do not include abstracts, titles, or MeSH terms that would allow characterization of what each paper covers [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. Further retrieval via PubMed EFetch would be needed to summarize individual article content [1][30].",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 7,
+    "refused": true
+   }
+  ],
+  "sentence_check": [],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "curie",
+    "value": "PMID:10075921",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10075921/"
+   },
+   {
+    "ref": 2,
+    "field": "curie",
+    "value": "PMID:10094564",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10094564/"
+   },
+   {
+    "ref": 3,
+    "field": "curie",
+    "value": "PMID:10200050",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10200050/"
+   },
+   {
+    "ref": 4,
+    "field": "curie",
+    "value": "PMID:10561583",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10561583/"
+   },
+   {
+    "ref": 5,
+    "field": "curie",
+    "value": "PMID:10581360",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10581360/"
+   },
+   {
+    "ref": 6,
+    "field": "curie",
+    "value": "PMID:10651488",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10651488/"
+   },
+   {
+    "ref": 7,
+    "field": "curie",
+    "value": "PMID:10666020",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10666020/"
+   },
+   {
+    "ref": 8,
+    "field": "curie",
+    "value": "PMID:10766763",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10766763/"
+   },
+   {
+    "ref": 9,
+    "field": "curie",
+    "value": "PMID:10799517",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10799517/"
+   },
+   {
+    "ref": 10,
+    "field": "curie",
+    "value": "PMID:10852925",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10852925/"
+   },
+   {
+    "ref": 11,
+    "field": "curie",
+    "value": "PMID:10862786",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10862786/"
+   },
+   {
+    "ref": 12,
+    "field": "curie",
+    "value": "PMID:10893422",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10893422/"
+   },
+   {
+    "ref": 13,
+    "field": "curie",
+    "value": "PMID:10982807",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/10982807/"
+   },
+   {
+    "ref": 14,
+    "field": "curie",
+    "value": "PMID:11025834",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11025834/"
+   },
+   {
+    "ref": 15,
+    "field": "curie",
+    "value": "PMID:11051556",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11051556/"
+   },
+   {
+    "ref": 16,
+    "field": "curie",
+    "value": "PMID:11095651",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11095651/"
+   },
+   {
+    "ref": 17,
+    "field": "curie",
+    "value": "PMID:11104661",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11104661/"
+   },
+   {
+    "ref": 18,
+    "field": "curie",
+    "value": "PMID:11109941",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11109941/"
+   },
+   {
+    "ref": 19,
+    "field": "curie",
+    "value": "PMID:11115825",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11115825/"
+   },
+   {
+    "ref": 20,
+    "field": "curie",
+    "value": "PMID:11117575",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11117575/"
+   },
+   {
+    "ref": 21,
+    "field": "curie",
+    "value": "PMID:11134427",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11134427/"
+   },
+   {
+    "ref": 22,
+    "field": "curie",
+    "value": "PMID:11146634",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11146634/"
+   },
+   {
+    "ref": 23,
+    "field": "curie",
+    "value": "PMID:11158634",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11158634/"
+   },
+   {
+    "ref": 24,
+    "field": "curie",
+    "value": "PMID:11168024",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11168024/"
+   },
+   {
+    "ref": 25,
+    "field": "curie",
+    "value": "PMID:11175304",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11175304/"
+   },
+   {
+    "ref": 26,
+    "field": "curie",
+    "value": "PMID:11186891",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11186891/"
+   },
+   {
+    "ref": 27,
+    "field": "curie",
+    "value": "PMID:11243954",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11243954/"
+   },
+   {
+    "ref": 28,
+    "field": "curie",
+    "value": "PMID:11304524",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11304524/"
+   },
+   {
+    "ref": 29,
+    "field": "curie",
+    "value": "PMID:11333866",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11333866/"
+   },
+   {
+    "ref": 30,
+    "field": "curie",
+    "value": "PMID:11354633",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/11354633/"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 1.719,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 1.719,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 7.111,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 7.112,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 7.119,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 7.119,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.121,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.121,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.121,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.122,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.122,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.122,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.122,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.122,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.122,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.122,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.122,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.122,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 7.122,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.435,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.464,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.618,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.625,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.625,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.741,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.775,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.03,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 15.504,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 15.727,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 15.817,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 15.846,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 16.084,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 18.486,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.001,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.001,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.001,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.001,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.001,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.001,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.001,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.001,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.001,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.002,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.004,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.005,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.006,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.007,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.007,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.007,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.008,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.009,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.01,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.01,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.01,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.01,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.01,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.01,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.01,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.01,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.01,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.01,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.011,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.011,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.011,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.011,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.011,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.011,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.011,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.011,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.011,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 26.012,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 26.013,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 26.016,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.01625435048,
+  "total_tool_calls": 11,
+  "elapsed_ms": 26014,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 72 sources, not yet confirmed",
+  "layer_calls_used": 12,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.97,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 257
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 273
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 300
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "wants_literature",
+    "decided_by": "jev",
+    "jev_choice": "wants_literature",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 311
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://pubmed.ncbi.nlm.nih.gov/10075921/",
+  "https://pubmed.ncbi.nlm.nih.gov/10094564/",
+  "https://pubmed.ncbi.nlm.nih.gov/10200050/",
+  "https://pubmed.ncbi.nlm.nih.gov/10561583/",
+  "https://pubmed.ncbi.nlm.nih.gov/10581360/",
+  "https://pubmed.ncbi.nlm.nih.gov/10651488/",
+  "https://pubmed.ncbi.nlm.nih.gov/10666020/",
+  "https://pubmed.ncbi.nlm.nih.gov/10766763/",
+  "https://pubmed.ncbi.nlm.nih.gov/10799517/",
+  "https://pubmed.ncbi.nlm.nih.gov/10852925/",
+  "https://pubmed.ncbi.nlm.nih.gov/10862786/",
+  "https://pubmed.ncbi.nlm.nih.gov/10893422/",
+  "https://pubmed.ncbi.nlm.nih.gov/10982807/",
+  "https://pubmed.ncbi.nlm.nih.gov/11025834/",
+  "https://pubmed.ncbi.nlm.nih.gov/11051556/",
+  "https://pubmed.ncbi.nlm.nih.gov/11095651/",
+  "https://pubmed.ncbi.nlm.nih.gov/11104661/",
+  "https://pubmed.ncbi.nlm.nih.gov/11109941/",
+  "https://pubmed.ncbi.nlm.nih.gov/11115825/",
+  "https://pubmed.ncbi.nlm.nih.gov/11117575/",
+  "https://pubmed.ncbi.nlm.nih.gov/11134427/",
+  "https://pubmed.ncbi.nlm.nih.gov/11146634/",
+  "https://pubmed.ncbi.nlm.nih.gov/11158634/",
+  "https://pubmed.ncbi.nlm.nih.gov/11168024/",
+  "https://pubmed.ncbi.nlm.nih.gov/11175304/",
+  "https://pubmed.ncbi.nlm.nih.gov/11186891/",
+  "https://pubmed.ncbi.nlm.nih.gov/11243954/",
+  "https://pubmed.ncbi.nlm.nih.gov/11304524/",
+  "https://pubmed.ncbi.nlm.nih.gov/11333866/",
+  "https://pubmed.ncbi.nlm.nih.gov/11354633/",
+  "https://pubmed.ncbi.nlm.nih.gov/11356077/",
+  "https://pubmed.ncbi.nlm.nih.gov/11379874/",
+  "https://pubmed.ncbi.nlm.nih.gov/11397675/",
+  "https://pubmed.ncbi.nlm.nih.gov/11400707/",
+  "https://pubmed.ncbi.nlm.nih.gov/11462247/",
+  "https://pubmed.ncbi.nlm.nih.gov/11462248/",
+  "https://pubmed.ncbi.nlm.nih.gov/11524016/",
+  "https://pubmed.ncbi.nlm.nih.gov/11529289/",
+  "https://pubmed.ncbi.nlm.nih.gov/11536079/",
+  "https://pubmed.ncbi.nlm.nih.gov/11569691/",
+  "https://pubmed.ncbi.nlm.nih.gov/11574497/",
+  "https://pubmed.ncbi.nlm.nih.gov/11597137/",
+  "https://pubmed.ncbi.nlm.nih.gov/11667976/",
+  "https://pubmed.ncbi.nlm.nih.gov/11680956/",
+  "https://pubmed.ncbi.nlm.nih.gov/11683083/",
+  "https://pubmed.ncbi.nlm.nih.gov/11686989/",
+  "https://pubmed.ncbi.nlm.nih.gov/11688981/",
+  "https://pubmed.ncbi.nlm.nih.gov/11707463/",
+  "https://pubmed.ncbi.nlm.nih.gov/11713441/",
+  "https://pubmed.ncbi.nlm.nih.gov/11713719/",
+  "https://pubmed.ncbi.nlm.nih.gov/11715005/",
+  "https://pubmed.ncbi.nlm.nih.gov/11748227/",
+  "https://pubmed.ncbi.nlm.nih.gov/11756355/",
+  "https://pubmed.ncbi.nlm.nih.gov/11773581/",
+  "https://www.ncbi.nlm.nih.gov/gene/1080/",
+  "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/",
+  "https://omim.org/entry/602421",
+  "https://www.ncbi.nlm.nih.gov/gene/1080",
+  "https://clinicaltrials.gov/study/NCT00179439",
+  "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/",
+  "https://clinicaltrials.gov/study/NCT00865904",
+  "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/",
+  "https://clinicaltrials.gov/study/NCT01078740",
+  "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/",
+  "https://clinicaltrials.gov/study/NCT01132482",
+  "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/",
+  "https://clinicaltrials.gov/study/NCT01348204"
+ ]
+}

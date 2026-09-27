@@ -1,0 +1,2653 @@
+{
+ "record": {
+  "model": "anthropic/claude-opus-5.5+effort-minimal",
+  "model_id": "anthropic/claude-opus-5.5",
+  "synth_effort": "minimal",
+  "question_id": "G-022",
+  "run": 3,
+  "question": "What phenotypic features are associated with Marfan syndrome?",
+  "trace_id": "trace-wb3-G-022-r3-2c2f3167ed554e31",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-27T00:59:16Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "answer",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 93,
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "withdrawn": false,
+  "writer_calls": 1,
+  "writer_calls_ok": 1,
+  "repair_fired": false,
+  "shipped_draft": 0,
+  "prose_sentences_kept": 5,
+  "prose_kept": [
+   "That record is named NM_000138.5(FBN1):c.6920G>C (p.Cys2307Ser) [1].",
+   "Another is NM_000138.5(FBN1):c.3746G>C (p.Cys1249Ser) [2].",
+   "A further record is NM_000138.5(FBN1):c.4987T>C (p.Cys1663Arg) [3].",
+   "Another record is NM_000138.5(FBN1):c.1643A>T (p.Asn548Ile) [4].",
+   "MedGen lists these clinical features: Aortic regurgitation [5], Arachnodactyly [6], Astigmatism [7], Ectopia lentis [8], Esotropia [9], Exotropia [10], Pes planus [11], Glaucoma [12], Congestive heart failure [13] and Hypertropia [14]."
+  ],
+  "prose_text": "MedGen clinical features MedGen lists these clinical features: Aortic regurgitation [1], Arachnodactyly [2], Astigmatism [3], Ectopia lentis [4], Esotropia [5], Exotropia [6], Pes planus [7], Glaucoma [8], Congestive heart failure [9] and Hypertropia [10].",
+  "jev_sent": 0,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   8.754356875000667
+  ],
+  "writer_completion_tokens": [
+   803
+  ],
+  "writer_reasoning_tokens": [
+   252
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 16.903,
+  "done_elapsed_s": 16.881,
+  "metered_cost_usd": 0.08446473544000001,
+  "done_cost_usd": 0.08446473544000001,
+  "openrouter_cost_usd": 0.084507,
+  "writer_openrouter_cost_usd": 0.084232,
+  "writer_metered_cost_usd": 0.084232,
+  "answer_text": "Found 23 sequence variant records and 23 derived records for Marfan syndrome [11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][56][57][58][59][60][61][62][63][64][65][66][67][68][69][70][71][72][73][74][75][76][77][78][79][80][81][82]. \n\nMedGen clinical features\n\nMedGen lists these clinical features: Aortic regurgitation [1], Arachnodactyly [2], Astigmatism [3], Ectopia lentis [4], Esotropia [5], Exotropia [6], Pes planus [7], Glaucoma [8], Congestive heart failure [9] and Hypertropia [10]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:16422, name: NM_000138.5(FBN1):c.6920G>C (p.Cys2307Ser) [11]. SequenceVariant ClinVar:16424, name: NM_000138.5(FBN1):c.8268G>A (p.Trp2756Ter) [13]. SequenceVariant ClinVar:16425, name: NM_000138.5(FBN1):c.3746G>C (p.Cys1249Ser) [15]. SequenceVariant ClinVar:16426, name: NM_000138.5(FBN1):c.4987T>C (p.Cys1663Arg) [17]. SequenceVariant ClinVar:16427, name: NM_000138.5(FBN1):c.6662G>C (p.Cys2221Ser) [19]. SequenceVariant ClinVar:16428, name: NM_000138.5(FBN1):c.3350G>A (p.Cys1117Tyr) [21]. SequenceVariant ClinVar:16429, name: NM_000138.5(FBN1):c.3725G>A (p.Cys1242Tyr) [23]. SequenceVariant ClinVar:16430, name: NM_000138.5(FBN1):c.6339T>G (p.Tyr2113Ter) [25]. SequenceVariant ClinVar:16431, name: NM_000138.5(FBN1):c.6431A>G (p.Asn2144Ser) [27]. SequenceVariant ClinVar:16432, name: NM_000138.5(FBN1):c.1643A>T (p.Asn548Ile) [29]. SequenceVariant ClinVar:16433, name: NM_000138.5(FBN1):c.2168A>C (p.Asp723Ala) [57]. SequenceVariant record ClinVar:16436 [59]. SequenceVariant ClinVar:16437, name: NM_000138.5(FBN1):c.7339G>A (p.Glu2447Lys) [61]. SequenceVariant ClinVar:16439, name: NM_000138.5(FBN1):c.8326C>T (p.Arg2776Ter) [63]. SequenceVariant ClinVar:16440, name: NM_000138.5(FBN1):c.364C>T (p.Arg122Cys) [65]. SequenceVariant record ClinVar:16442 [67]. SequenceVariant ClinVar:16443, name: NM_000138.5(FBN1):c.3379G>A (p.Gly1127Ser) [69]. SequenceVariant ClinVar:16444, name: NM_000138.5(FBN1):c.3668G>A (p.Cys1223Tyr) [71]. SequenceVariant ClinVar:16445, name: NM_000138.5(FBN1):c.8176C>T (p.Arg2726Trp) [73]. SequenceVariant ClinVar:16446, name: NM_000138.5(FBN1):c.3128A>G (p.Lys1043Arg) [75]. SequenceVariant ClinVar:16448, name: NM_000138.5(FBN1):c.3192del (p.Glu1065fs) [77]. SequenceVariant ClinVar:16449, name: NM_000138.5(FBN1):c.6354C>T (p.Ile2118=) [79]. SequenceVariant ClinVar:16450, name: NM_000138.5(FBN1):c.3793T>C (p.Cys1265Arg) [81]. \n\nDerived records found\n\nDerived record ClinVar:16422 [12]. Derived record ClinVar:16424 [14]. Derived record ClinVar:16425 [16]. Derived record ClinVar:16426 [18]. Derived record ClinVar:16427 [20]. Derived record ClinVar:16428 [22]. Derived record ClinVar:16429 [24]. Derived record ClinVar:16430 [26]. Derived record ClinVar:16431 [28]. Derived record ClinVar:16432 [56]. Derived record ClinVar:16433 [58]. Derived record ClinVar:16436 [60]. Derived record ClinVar:16437 [62]. Derived record ClinVar:16439 [64]. Derived record ClinVar:16440 [66]. Derived record ClinVar:16442 [68]. Derived record ClinVar:16443 [70]. Derived record ClinVar:16444 [72]. Derived record ClinVar:16445 [74]. Derived record ClinVar:16446 [76]. Derived record ClinVar:16448 [78]. Derived record ClinVar:16449 [80]. Derived record ClinVar:16450 [82]. \n\nMedgen records found\n\nMedgen title: Marfan syndrome [30]. \n\nClinical features MedGen lists for Marfan syndrome (35 of 70 shown)\n\nMedgen clinical_features: Aortic regurgitation [1]. Medgen clinical_features: Arachnodactyly [2]. Medgen clinical_features: Astigmatism [3]. Medgen clinical_features: Ectopia lentis [4]. Medgen clinical_features: Esotropia [5]. Medgen clinical_features: Exotropia [6]. Medgen clinical_features: Pes planus [7]. Medgen clinical_features: Glaucoma [8]. Medgen clinical_features: Congestive heart failure [9]. Medgen clinical_features: Hypertropia [10]. Medgen clinical_features: Micrognathia [31]. Medgen clinical_features: Mitral regurgitation [32]. Medgen clinical_features: Mitral valve prolapse [33]. Medgen clinical_features: Myopia [34]. Medgen clinical_features: Pneumothorax [35]. Medgen clinical_features: Emphysema [36]. Medgen clinical_features: Retinal detachment [37]. Medgen clinical_features: Retrognathia [38]. Medgen clinical_features: Scoliosis [39]. Medgen clinical_features: Spondylolisthesis [40]. Medgen clinical_features: Strabismus [41]. Medgen clinical_features: Dental crowding [42]. Medgen clinical_features: Tricuspid regurgitation [43]. Medgen clinical_features: Tricuspid valve prolapse [44]. Medgen clinical_features: Cataract [45]. Medgen clinical_features: Bicuspid aortic valve [46]. Medgen clinical_features: Striae distensae [47]. Medgen clinical_features: Pectus carinatum [48]. Medgen clinical_features: Dolichocephaly [49]. Medgen clinical_features: High palate [50]. Medgen clinical_features: Tall stature [51]. Medgen clinical_features: Incisional hernia [52]. Medgen clinical_features: Flexion contracture [53]. Medgen clinical_features: Aortic dissection [54]. Medgen clinical_features: Hypoplasia of the iris [55]. \n\nPubmed records found\n\nPubmed title: Marfan syndrome [83]. Pubmed title: [Latest advances in the diagnosis and treatment of Marfan syndrome] [86]. Pubmed title: What Is Marfan Syndrome [88]. Pubmed title: Marfan syndrome [90]. Pubmed title: Marfan syndrome [92]. \n\nLiterature entity records found\n\nLiterature entity name: Marfan Syndrome [84]. \n\nClinical trial records found\n\nClinical trial name: Studies of Heritable Disorders of Connective Tissue [85]. Clinical trial name: Comparison of Two Medications Aimed at Slowing Aortic Root Enlargement in Individuals With Marfan Syndrome [87]. Clinical trial name: Angiotensin Converting Enzyme Inhibitors in Marfan Syndrome [89]. Clinical trial name: Losartan Versus Atenolol for the Treatment of Marfan Syndrome [91]. Clinical trial name: A Randomized, Open-label, LOSARTAN Therapy on the Progression of Aortic Root Dilation in Patients With Marfan Syndrome [93]. \n\nNote: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query"
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.099,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 794,
+    "completion_tokens": 37,
+    "cached_tokens": 512,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 6.4176e-05,
+    "reply": null,
+    "dur": 2.022
+   },
+   {
+    "t": 2.145,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 992,
+    "completion_tokens": 84,
+    "cached_tokens": 768,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.9104e-05,
+    "reply": null,
+    "dur": 1.279
+   },
+   {
+    "t": 5.592,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1072,
+    "completion_tokens": 68,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.000161872,
+    "reply": null,
+    "dur": 1.453
+   },
+   {
+    "t": 8.077,
+    "model": "openrouter/anthropic/claude-opus-5.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 17043,
+    "completion_tokens": 803,
+    "cached_tokens": 0,
+    "reasoning_tokens": 252,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.084232,
+    "reply": "The records retrieved for this question are ClinVar sequence variants rather than phenotype annotations, beginning with ClinVar:16422 [1]. That record is named NM_000138.5(FBN1):c.6920G>C (p.Cys2307Ser) [1]. The phenotypic features themselves come from the linked MedGen record, titled Marfan syndrome [20].\n\n## Retrieved FBN1 variants\n\nOne retrieved variant is NM_000138.5(FBN1):c.8268G>A (p.Trp2756Ter) [3]. Another is NM_000138.5(FBN1):c.3746G>C (p.Cys1249Ser) [5]. A further record is NM_000138.5(FBN1):c.4987T>C (p.Cys1663Arg) [7]. The set also includes NM_000138.5(FBN1):c.6339T>G (p.Tyr2113Ter) [15].\n\n## Additional variant records\n\nThe set includes NM_000138.5(FBN1):c.3350G>A (p.Cys1117Tyr) [11]. It also includes NM_000138.5(FBN1):c.6431A>G (p.Asn2144Ser) [17]. Another record is NM_000138.5(FBN1):c.1643A>T (p.Asn548Ile) [19].\n\n## MedGen clinical features\n\nMedGen lists these clinical features: Aortic regurgitation [21], Arachnodactyly [22], Astigmatism [23], Ectopia lentis [24], Esotropia [25], Exotropia [26], Pes planus [27], Glaucoma [28], Congestive heart failure [29] and Hypertropia [30].",
+    "dur": 8.754
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.082,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 2.0218784580029023,
+    "prompt_tokens": 794,
+    "completion_tokens": 37,
+    "cost_usd": 4.083072e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 2.039
+   },
+   {
+    "t": 2.145,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 1.2786612500021874,
+    "prompt_tokens": 992,
+    "completion_tokens": 84,
+    "cost_usd": 5.456640000000001e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.279
+   },
+   {
+    "t": 5.592,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 1.4530665839993162,
+    "prompt_tokens": 1072,
+    "completion_tokens": 68,
+    "cost_usd": 5.6824320000000006e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.453
+   },
+   {
+    "t": 8.077,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 8.754356875000667,
+    "prompt_tokens": 17043,
+    "completion_tokens": 803,
+    "cost_usd": 0.084232,
+    "model": "anthropic/claude-opus-5.5",
+    "dur": 8.755
+   }
+  ],
+  "grounding": [
+   {
+    "t": 16.834,
+    "dur": 0.0021,
+    "narrative_chars": 1017,
+    "narrative": "The records retrieved for this question are ClinVar sequence variants rather than phenotype annotations, beginning with ClinVar:16422 [1]. That record is named NM_000138.5(FBN1):c.6920G>C (p.Cys2307Ser) [1]. The phenotypic features themselves come from the linked MedGen record, titled Marfan syndrome [20]. One retrieved variant is NM_000138.5(FBN1):c.8268G>A (p.Trp2756Ter) [3]. Another is NM_000138.5(FBN1):c.3746G>C (p.Cys1249Ser) [5]. A further record is NM_000138.5(FBN1):c.4987T>C (p.Cys1663Arg) [7]. The set also includes NM_000138.5(FBN1):c.6339T>G (p.Tyr2113Ter) [15]. The set includes NM_000138.5(FBN1):c.3350G>A (p.Cys1117Tyr) [11]. It also includes NM_000138.5(FBN1):c.6431A>G (p.Asn2144Ser) [17]. Another record is NM_000138.5(FBN1):c.1643A>T (p.Asn548Ile) [19]. MedGen lists these clinical features: Aortic regurgitation [21], Arachnodactyly [22], Astigmatism [23], Ectopia lentis [24], Esotropia [25], Exotropia [26], Pes planus [27], Glaucoma [28], Congestive heart failure [29] and Hypertropia [30].",
+    "sentences": [
+     "That record is named NM_000138.5(FBN1):c.6920G>C (p.Cys2307Ser) [1].",
+     "Another is NM_000138.5(FBN1):c.3746G>C (p.Cys1249Ser) [2].",
+     "A further record is NM_000138.5(FBN1):c.4987T>C (p.Cys1663Arg) [3].",
+     "Another record is NM_000138.5(FBN1):c.1643A>T (p.Asn548Ile) [4].",
+     "MedGen lists these clinical features: Aortic regurgitation [5], Arachnodactyly [6], Astigmatism [7], Ectopia lentis [8], Esotropia [9], Exotropia [10], Pes planus [11], Glaucoma [12], Congestive heart failure [13] and Hypertropia [14]."
+    ],
+    "claims": 14,
+    "claim_ids": [
+     "cq-2b69d165816e-1",
+     "cq-2b69d165816e-19",
+     "cq-2b69d165816e-5",
+     "cq-2b69d165816e-7",
+     "ne-6fc320660237-21",
+     "ne-6fc320660237-22",
+     "ne-6fc320660237-23",
+     "ne-6fc320660237-24",
+     "ne-6fc320660237-25",
+     "ne-6fc320660237-26",
+     "ne-6fc320660237-27",
+     "ne-6fc320660237-28",
+     "ne-6fc320660237-29",
+     "ne-6fc320660237-30"
+    ],
+    "claim_detail": [
+     {
+      "text": "That record is named NM_000138.5(FBN1):c.6920G>C (p.Cys2307Ser)",
+      "quote": "",
+      "ref": 1,
+      "field": "name",
+      "value": "NM_000138.5(FBN1):c.6920G>C (p.Cys2307Ser)"
+     },
+     {
+      "text": "Another is NM_000138.5(FBN1):c.3746G>C (p.Cys1249Ser)",
+      "quote": "",
+      "ref": 5,
+      "field": "name",
+      "value": "NM_000138.5(FBN1):c.3746G>C (p.Cys1249Ser)"
+     },
+     {
+      "text": "A further record is NM_000138.5(FBN1):c.4987T>C (p.Cys1663Arg)",
+      "quote": "",
+      "ref": 7,
+      "field": "name",
+      "value": "NM_000138.5(FBN1):c.4987T>C (p.Cys1663Arg)"
+     },
+     {
+      "text": "Another record is NM_000138.5(FBN1):c.1643A>T (p.Asn548Ile)",
+      "quote": "",
+      "ref": 19,
+      "field": "name",
+      "value": "NM_000138.5(FBN1):c.1643A>T (p.Asn548Ile)"
+     },
+     {
+      "text": "MedGen lists these clinical features: Aortic regurgitation",
+      "quote": "",
+      "ref": 21,
+      "field": "clinical_features",
+      "value": "Aortic regurgitation"
+     },
+     {
+      "text": "Arachnodactyly",
+      "quote": "",
+      "ref": 22,
+      "field": "clinical_features",
+      "value": "Arachnodactyly"
+     },
+     {
+      "text": "Astigmatism",
+      "quote": "",
+      "ref": 23,
+      "field": "clinical_features",
+      "value": "Astigmatism"
+     },
+     {
+      "text": "Ectopia lentis",
+      "quote": "",
+      "ref": 24,
+      "field": "clinical_features",
+      "value": "Ectopia lentis"
+     },
+     {
+      "text": "Esotropia",
+      "quote": "",
+      "ref": 25,
+      "field": "clinical_features",
+      "value": "Esotropia"
+     },
+     {
+      "text": "Exotropia",
+      "quote": "",
+      "ref": 26,
+      "field": "clinical_features",
+      "value": "Exotropia"
+     },
+     {
+      "text": "Pes planus",
+      "quote": "",
+      "ref": 27,
+      "field": "clinical_features",
+      "value": "Pes planus"
+     },
+     {
+      "text": "Glaucoma",
+      "quote": "",
+      "ref": 28,
+      "field": "clinical_features",
+      "value": "Glaucoma"
+     },
+     {
+      "text": "Congestive heart failure",
+      "quote": "",
+      "ref": 29,
+      "field": "clinical_features",
+      "value": "Congestive heart failure"
+     },
+     {
+      "text": "Hypertropia",
+      "quote": "",
+      "ref": 30,
+      "field": "clinical_features",
+      "value": "Hypertropia"
+     }
+    ],
+    "stripped": 6,
+    "refused": false
+   }
+  ],
+  "sentence_check": [],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "name",
+    "value": "NM_000138.5(FBN1):c.6920G>C (p.Cys2307Ser)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16422"
+   },
+   {
+    "ref": 2,
+    "field": "curie",
+    "value": "ClinVar:16422",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16422/"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "NM_000138.5(FBN1):c.8268G>A (p.Trp2756Ter)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16424"
+   },
+   {
+    "ref": 4,
+    "field": "curie",
+    "value": "ClinVar:16424",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16424/"
+   },
+   {
+    "ref": 5,
+    "field": "name",
+    "value": "NM_000138.5(FBN1):c.3746G>C (p.Cys1249Ser)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16425"
+   },
+   {
+    "ref": 6,
+    "field": "curie",
+    "value": "ClinVar:16425",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16425/"
+   },
+   {
+    "ref": 7,
+    "field": "name",
+    "value": "NM_000138.5(FBN1):c.4987T>C (p.Cys1663Arg)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16426"
+   },
+   {
+    "ref": 8,
+    "field": "curie",
+    "value": "ClinVar:16426",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16426/"
+   },
+   {
+    "ref": 9,
+    "field": "name",
+    "value": "NM_000138.5(FBN1):c.6662G>C (p.Cys2221Ser)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16427"
+   },
+   {
+    "ref": 10,
+    "field": "curie",
+    "value": "ClinVar:16427",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16427/"
+   },
+   {
+    "ref": 11,
+    "field": "name",
+    "value": "NM_000138.5(FBN1):c.3350G>A (p.Cys1117Tyr)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16428"
+   },
+   {
+    "ref": 12,
+    "field": "curie",
+    "value": "ClinVar:16428",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16428/"
+   },
+   {
+    "ref": 13,
+    "field": "name",
+    "value": "NM_000138.5(FBN1):c.3725G>A (p.Cys1242Tyr)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16429"
+   },
+   {
+    "ref": 14,
+    "field": "curie",
+    "value": "ClinVar:16429",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16429/"
+   },
+   {
+    "ref": 15,
+    "field": "name",
+    "value": "NM_000138.5(FBN1):c.6339T>G (p.Tyr2113Ter)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16430"
+   },
+   {
+    "ref": 16,
+    "field": "curie",
+    "value": "ClinVar:16430",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16430/"
+   },
+   {
+    "ref": 17,
+    "field": "name",
+    "value": "NM_000138.5(FBN1):c.6431A>G (p.Asn2144Ser)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16431"
+   },
+   {
+    "ref": 18,
+    "field": "curie",
+    "value": "ClinVar:16431",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16431/"
+   },
+   {
+    "ref": 19,
+    "field": "name",
+    "value": "NM_000138.5(FBN1):c.1643A>T (p.Asn548Ile)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16432"
+   },
+   {
+    "ref": 20,
+    "field": "title",
+    "value": "Marfan syndrome",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 21,
+    "field": "clinical_features",
+    "value": "Aortic regurgitation",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 22,
+    "field": "clinical_features",
+    "value": "Arachnodactyly",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 23,
+    "field": "clinical_features",
+    "value": "Astigmatism",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 24,
+    "field": "clinical_features",
+    "value": "Ectopia lentis",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 25,
+    "field": "clinical_features",
+    "value": "Esotropia",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 26,
+    "field": "clinical_features",
+    "value": "Exotropia",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 27,
+    "field": "clinical_features",
+    "value": "Pes planus",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 28,
+    "field": "clinical_features",
+    "value": "Glaucoma",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 29,
+    "field": "clinical_features",
+    "value": "Congestive heart failure",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   },
+   {
+    "ref": 30,
+    "field": "clinical_features",
+    "value": "Hypertropia",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 2.127,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 2.128,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 4.413,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 4.414,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 5.55,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 5.55,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.552,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.552,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.552,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.552,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.552,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.552,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.552,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.552,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.742,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.836,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.056,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.01,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.69,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.858,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.941,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.061,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 8.071,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.879,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.88,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.881,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 16.882,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.08446473544000001,
+  "total_tool_calls": 6,
+  "elapsed_ms": 16881,
+  "trust_outcome": "answer",
+  "trust_line": "Based on 58 sources",
+  "layer_calls_used": 11,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.99,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 269
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 321
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 397
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "asks_features",
+    "decided_by": "jev",
+    "jev_choice": "asks_features",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 943
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16422",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16422/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16424",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16424/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16425",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16425/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16426",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16426/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16427",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16427/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16428",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16428/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16429",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16429/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16430",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16430/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16431",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16431/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16432",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16432/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16433",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16433/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16436",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16436/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16437",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16437/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16439",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16439/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16440",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16440/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16442",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16442/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16443",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16443/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16444",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16444/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16445",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16445/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16446",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16446/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16448",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16448/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16449",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16449/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16450",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/16450/",
+  "https://pubmed.ncbi.nlm.nih.gov/2402263/",
+  "https://www.ncbi.nlm.nih.gov/mesh/D008382",
+  "https://clinicaltrials.gov/study/NCT00270686",
+  "https://pubmed.ncbi.nlm.nih.gov/35894201/",
+  "https://clinicaltrials.gov/study/NCT00429364",
+  "https://pubmed.ncbi.nlm.nih.gov/37058316/",
+  "https://clinicaltrials.gov/study/NCT00485368",
+  "https://pubmed.ncbi.nlm.nih.gov/38517496/",
+  "https://clinicaltrials.gov/study/NCT00593710",
+  "https://pubmed.ncbi.nlm.nih.gov/8733052/",
+  "https://clinicaltrials.gov/study/NCT00651235"
+ ]
+}

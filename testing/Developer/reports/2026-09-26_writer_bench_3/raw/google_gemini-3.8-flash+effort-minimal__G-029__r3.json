@@ -1,0 +1,991 @@
+{
+ "record": {
+  "model": "google/gemini-3.8-flash+effort-minimal",
+  "model_id": "google/gemini-3.8-flash",
+  "synth_effort": "minimal",
+  "question_id": "G-029",
+  "run": 3,
+  "question": "Which genes are associated with Li-Fraumeni syndrome?",
+  "trace_id": "trace-wb3-G-029-r3-404d16df6d3d494e",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-27T01:04:18Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "ask",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 15,
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "withdrawn": true,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 0,
+  "prose_sentences_kept": 0,
+  "prose_kept": [],
+  "prose_text": "",
+  "jev_sent": 9,
+  "jev_approved": 4,
+  "writer_elapsed_s": [
+   22.63204599999881,
+   5.199826542000665
+  ],
+  "writer_completion_tokens": [
+   319,
+   490
+  ],
+  "writer_reasoning_tokens": [
+   0,
+   0
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 33.807,
+  "done_elapsed_s": 33.773,
+  "metered_cost_usd": 0.022123838399999998,
+  "done_cost_usd": 0.022123838399999998,
+  "openrouter_cost_usd": 0.021875,
+  "writer_openrouter_cost_usd": 0.021809,
+  "writer_metered_cost_usd": 0.021809,
+  "answer_text": "Found 3 gene records for Li-Fraumeni syndrome: cyclin dependent kinase inhibitor 2A [1], checkpoint kinase 2 [3] and tumor protein p53 [4], linked to 1 disease: Li-Fraumeni syndrome [2]. \n\nDisease records found\n\nDisease name: Li-Fraumeni syndrome [2]. \n\nGene-to-disease mapping\n\nGene NCBIGene:1029, name: cyclin dependent kinase inhibitor 2A [1]. Gene NCBIGene:11200, name: checkpoint kinase 2 [3]. Gene NCBIGene:7157, name: tumor protein p53 [4]. \n\nPubmed records found\n\nPubmed title: Li-Fraumeni Syndrome [5]. Pubmed title: Li-Fraumeni syndrome [9]. Pubmed title: Li-Fraumeni Syndrome [11]. Pubmed title: Li-Fraumeni syndrome heterogeneity [13]. \n\nMedgen records found\n\nMedgen title: Li-Fraumeni syndrome [6]. \n\nLiterature entity records found\n\nLiterature entity name: Li-Fraumeni Syndrome [7]. \n\nClinical trial records found\n\nClinical trial name: Clinical, Genetic, Behavioral, Laboratory and Epidemiologic Characterization of Individuals and Families at High Risk of Breast/Ovarian Cancer [8]. Clinical trial name: Role of p53 Gene in Metabolism Regulation in Patients With Li-Fraumeni Syndrome [10]. Clinical trial name: Characterization of Patients With Uncommon Presentations and/or Uncommon Diseases Associated With the Cardiovascular System [12]. Clinical trial name: Clinical and Genetic Studies of Li-Fraumeni Syndrome [14]. Clinical trial name: LIFSCREEN : Evaluation of Whole Body MRI for Early Detection of Cancers in Subjects With P53 Mutation (Li-Fraumeni Syndrome) [15]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.128,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 800,
+    "completion_tokens": 39,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.11782e-05,
+    "reply": null,
+    "dur": 1.464
+   },
+   {
+    "t": 1.598,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 998,
+    "completion_tokens": 67,
+    "cached_tokens": 768,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 2.427544e-05,
+    "reply": null,
+    "dur": 1.104
+   },
+   {
+    "t": 5.228,
+    "model": "openrouter/google/gemini-3.8-flash",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11962,
+    "completion_tokens": 319,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.01016775,
+    "reply": "The genes associated with Li-Fraumeni syndrome are cyclin dependent kinase inhibitor 2A, checkpoint kinase 2, and tumor protein p53 [1][2][3][4]. The disease identifier is Li-Fraumeni syndrome [2].\n\n## Associated Genes\n\nA primary associated gene is NCBIGene:7157 [4]. Another associated entity is NCBIGene:11200 [3]. In addition, the condition is linked to NCBIGene:1029 [1].\n\n## Disease Characteristics\n\nLi-Fraumeni syndrome is an inherited condition with high penetrance [19: \"autosomal dominant pattern of inheritance with high penetrance\"]. Mutations in the TP53 gene impair p53 function and permit the emergence of multiple cancers [19: \"TP53 gene mutations cause the loss of function of p53, leading to downstream events permissive for development of various malignancies\"]. Patients experience a high cumulative lifetime risk of malignancy [19: \"very high lifetime cumulative risk of developing multiple malignancies\"].\n\n## Clinical Heterogeneity\n\nAffected individuals frequently demonstrate marked clinical heterogeneity [22: \"Clinical variability is commonly seen in Li-Fraumeni syndrome\"]. Phenotypic variation occurs even across individuals carrying identical pathogenic variants [22: \"Phenotypic heterogeneity is present among different families affected by the same pathogenic variant\"]. Component malignancies include soft tissue sarcomas and brain tumors [19: \"component tumors include soft tissue sarcomas, osteosarcoma, premenopausal breast cancer, brain tumors, and adrenal cortical carcinomas\"].",
+    "dur": 22.632
+   },
+   {
+    "t": 28.219,
+    "model": "openrouter/google/gemini-3.8-flash",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 13072,
+    "completion_tokens": 490,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.0116415,
+    "reply": "The genes associated with Li-Fraumeni syndrome are cyclin dependent kinase inhibitor 2A, checkpoint kinase 2, and tumor protein p53 [1][2][3][4]. The disease concept is documented under the MedGen title Li-Fraumeni syndrome [6]. It is also cataloged under the literature entity name Li-Fraumeni Syndrome [7].\n\n## Clinical Characteristics\n\nThis condition is an inherited cancer predisposition syndrome characterized by high penetrance and an autosomal dominant inheritance pattern [19: \"autosomal dominant pattern of inheritance with high penetrance\"]. A publication entitled Li-Fraumeni Syndrome addresses the condition [5], with primary data indexed under publication pmid: 27617148 [9]. The syndrome frequently involves early-onset malignancies and component tumors across multiple organ systems [21: \"appearance of tumors in multiple organs generally at an early age\"]. The literature includes a dedicated overview entitled Li-Fraumeni syndrome [10], which is linked to publication pmid: 27622479 [12].\n\n## Phenotypic Heterogeneity\n\nPatients harboring germline mutations exhibit diverse tumor spectra and substantial phenotypic variation [22: \"Phenotypic heterogeneity is present among different families affected by the same pathogenic variant in TP53 gene\"]. Additional literature titled Li-Fraumeni Syndrome discusses these underlying aspects [13], documented under publication pmid: 30333936 [15]. A dedicated study explores this topic under the title Li-Fraumeni syndrome heterogeneity [16], associated with publication pmid: 31691207 [18].\n\n## Clinical Studies\n\nClinical research includes the trial Clinical, Genetic, Behavioral, Laboratory and Epidemiologic Characterization of Individuals and Families at High Risk of Breast/Ovarian Cancer [8]. Metabolic mechanisms are investigated in Role of p53 Gene in Metabolism Regulation in Patients With Li-Fraumeni Syndrome [11]. Further clinical phenotypes are studied in Characterization of Patients With Uncommon Presentations and/or Uncommon Diseases Associated With the Cardiovascular System [14]. Other clinical protocols include Clinical and Genetic Studies of Li-Fraumeni Syndrome [17], as well as LIFSCREEN : Evaluation of Whole Body MRI for Early Detection of Cancers in Subjects With P53 Mutation (Li-Fraumeni Syndrome) [20].",
+    "dur": 5.2
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.116,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 1.4638297499986948,
+    "prompt_tokens": 800,
+    "completion_tokens": 39,
+    "cost_usd": 4.1301120000000005e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.476
+   },
+   {
+    "t": 1.598,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 1.1040480000010575,
+    "prompt_tokens": 998,
+    "completion_tokens": 67,
+    "cost_usd": 5.3249280000000004e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.104
+   },
+   {
+    "t": 5.221,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 22.63204599999881,
+    "prompt_tokens": 11962,
+    "completion_tokens": 319,
+    "cost_usd": 0.01016775,
+    "model": "google/gemini-3.8-flash",
+    "dur": 22.639
+   },
+   {
+    "t": 28.219,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 5.199826542000665,
+    "prompt_tokens": 13072,
+    "completion_tokens": 490,
+    "cost_usd": 0.0116415,
+    "model": "google/gemini-3.8-flash",
+    "dur": 5.208
+   }
+  ],
+  "grounding": [
+   {
+    "t": 27.864,
+    "dur": 0.355,
+    "narrative_chars": 861,
+    "narrative": "The genes associated with Li-Fraumeni syndrome are cyclin dependent kinase inhibitor 2A, checkpoint kinase 2, and tumor protein p53 [1][2][3][4]. The disease identifier is Li-Fraumeni syndrome [2]. A primary associated gene is NCBIGene:7157 [4]. Another associated entity is NCBIGene:11200 [3]. In addition, the condition is linked to NCBIGene:1029 [1]. Li-Fraumeni syndrome is an inherited condition with high penetrance [19#0]. Mutations in the TP53 gene impair p53 function and permit the emergence of multiple cancers [19#1]. Patients experience a high cumulative lifetime risk of malignancy [19#2]. Affected individuals frequently demonstrate marked clinical heterogeneity [22#3]. Phenotypic variation occurs even across individuals carrying identical pathogenic variants [22#4]. Component malignancies include soft tissue sarcomas and brain tumors [19#5].",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 11,
+    "refused": true
+   },
+   {
+    "t": 33.439,
+    "dur": 0.312,
+    "narrative_chars": 1961,
+    "narrative": "The genes associated with Li-Fraumeni syndrome are cyclin dependent kinase inhibitor 2A, checkpoint kinase 2, and tumor protein p53 [1][2][3][4]. The disease concept is documented under the MedGen title Li-Fraumeni syndrome [6]. It is also cataloged under the literature entity name Li-Fraumeni Syndrome [7]. This condition is an inherited cancer predisposition syndrome characterized by high penetrance and an autosomal dominant inheritance pattern [19#0]. A publication entitled Li-Fraumeni Syndrome addresses the condition [5], with primary data indexed under publication pmid: 27617148 [9]. The syndrome frequently involves early-onset malignancies and component tumors across multiple organ systems [21#1]. The literature includes a dedicated overview entitled Li-Fraumeni syndrome [10], which is linked to publication pmid: 27622479 [12]. Patients harboring germline mutations exhibit diverse tumor spectra and substantial phenotypic variation [22#2]. Additional literature titled Li-Fraumeni Syndrome discusses these underlying aspects [13], documented under publication pmid: 30333936 [15]. A dedicated study explores this topic under the title Li-Fraumeni syndrome heterogeneity [16], associated with publication pmid: 31691207 [18]. Clinical research includes the trial Clinical, Genetic, Behavioral, Laboratory and Epidemiologic Characterization of Individuals and Families at High Risk of Breast/Ovarian Cancer [8]. Metabolic mechanisms are investigated in Role of p53 Gene in Metabolism Regulation in Patients With Li-Fraumeni Syndrome [11]. Further clinical phenotypes are studied in Characterization of Patients With Uncommon Presentations and/or Uncommon Diseases Associated With the Cardiovascular System [14]. Other clinical protocols include Clinical and Genetic Studies of Li-Fraumeni Syndrome [17], as well as LIFSCREEN : Evaluation of Whole Body MRI for Early Detection of Cancers in Subjects With P53 Mutation (Li-Fraumeni Syndrome) [20].",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 19,
+    "refused": true
+   }
+  ],
+  "sentence_check": [
+   {
+    "t": 27.869,
+    "sent": 6,
+    "approved": 4,
+    "ok": true,
+    "dur": 0.346
+   },
+   {
+    "t": 33.451,
+    "sent": 3,
+    "approved": 0,
+    "ok": true,
+    "dur": 0.3
+   }
+  ],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "name",
+    "value": "cyclin dependent kinase inhibitor 2A",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/1029"
+   },
+   {
+    "ref": 2,
+    "field": "name",
+    "value": "Li-Fraumeni syndrome",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C0085390"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "checkpoint kinase 2",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/11200"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/7157"
+   },
+   {
+    "ref": 5,
+    "field": "title",
+    "value": "Li-Fraumeni Syndrome.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27617148/"
+   },
+   {
+    "ref": 6,
+    "field": "title",
+    "value": "Li-Fraumeni syndrome",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/88399"
+   },
+   {
+    "ref": 7,
+    "field": "name",
+    "value": "Li-Fraumeni Syndrome",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/D016864"
+   },
+   {
+    "ref": 8,
+    "field": "name",
+    "value": "Clinical, Genetic, Behavioral, Laboratory and Epidemiologic Characterization of Individuals and Families at High Risk of Breast/Ovarian Cancer",
+    "url": "https://clinicaltrials.gov/study/NCT00040222"
+   },
+   {
+    "ref": 9,
+    "field": "pmid",
+    "value": "27617148",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27617148/"
+   },
+   {
+    "ref": 10,
+    "field": "title",
+    "value": "Li-Fraumeni syndrome.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27622479/"
+   },
+   {
+    "ref": 11,
+    "field": "name",
+    "value": "Role of p53 Gene in Metabolism Regulation in Patients With Li-Fraumeni Syndrome",
+    "url": "https://clinicaltrials.gov/study/NCT00406445"
+   },
+   {
+    "ref": 12,
+    "field": "pmid",
+    "value": "27622479",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27622479/"
+   },
+   {
+    "ref": 13,
+    "field": "title",
+    "value": "Li-Fraumeni Syndrome.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/30333936/"
+   },
+   {
+    "ref": 14,
+    "field": "name",
+    "value": "Characterization of Patients With Uncommon Presentations and/or Uncommon Diseases Associated With the Cardiovascular System",
+    "url": "https://clinicaltrials.gov/study/NCT01143454"
+   },
+   {
+    "ref": 15,
+    "field": "pmid",
+    "value": "30333936",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/30333936/"
+   },
+   {
+    "ref": 16,
+    "field": "title",
+    "value": "Li-Fraumeni syndrome heterogeneity.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/31691207/"
+   },
+   {
+    "ref": 17,
+    "field": "name",
+    "value": "Clinical and Genetic Studies of Li-Fraumeni Syndrome",
+    "url": "https://clinicaltrials.gov/study/NCT01443468"
+   },
+   {
+    "ref": 18,
+    "field": "pmid",
+    "value": "31691207",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/31691207/"
+   },
+   {
+    "ref": 19,
+    "field": "abstract",
+    "value": "Li-Fraumeni syndrome (LFS) is a cancer predisposition syndrome caused by a germline mutation of the TP53 gene on chromosome 17p13.1. It has an autosomal dominant pattern of inheritance with high penetrance. These patients have a very high lifetime cumulative risk of developing multiple malignancies ",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27617148/"
+   },
+   {
+    "ref": 20,
+    "field": "name",
+    "value": "LIFSCREEN : Evaluation of Whole Body MRI for Early Detection of Cancers in Subjects With P53 Mutation (Li-Fraumeni Syndrome)",
+    "url": "https://clinicaltrials.gov/study/NCT01464086"
+   },
+   {
+    "ref": 21,
+    "field": "abstract",
+    "value": "The Li-Fraumeni syndrome is characterized clinically by the appearance of tumors in multiple organs generally at an early age. This hereditary condition is caused by germinal mutations in the TP53 gene, which codifies for the tumoural suppressor gene p53.\u00a0We present the case of a patient aged 31 wit",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27622479/"
+   },
+   {
+    "ref": 22,
+    "field": "abstract",
+    "value": "Clinical variability is commonly seen in Li-Fraumeni syndrome. Phenotypic heterogeneity is present among different families affected by the same pathogenic variant in TP53 gene and among members of the same family. However, causes of this huge clinical spectrum have not been studied in depth. TP53 t",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/31691207/"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 1.593,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 1.593,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 3.05,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 3.05,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 3.511,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 3.512,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 3.525,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 3.525,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 3.525,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 3.525,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 3.525,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 3.525,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 3.525,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 3.525,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 3.776,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 3.834,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 3.888,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.166,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.811,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.019,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.14,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.204,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 5.218,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.779,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.78,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.781,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.781,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.781,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.781,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.781,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.781,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.781,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.781,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.781,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.781,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 33.781,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 33.784,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.022123838399999998,
+  "total_tool_calls": 6,
+  "elapsed_ms": 33773,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 15 sources, not yet confirmed",
+  "layer_calls_used": 11,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 1.0,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 291
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 309
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 375
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 376
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/gene/1029",
+  "https://www.ncbi.nlm.nih.gov/medgen/C0085390",
+  "https://www.ncbi.nlm.nih.gov/gene/11200",
+  "https://www.ncbi.nlm.nih.gov/gene/7157",
+  "https://pubmed.ncbi.nlm.nih.gov/27617148/",
+  "https://www.ncbi.nlm.nih.gov/medgen/88399",
+  "https://www.ncbi.nlm.nih.gov/mesh/D016864",
+  "https://clinicaltrials.gov/study/NCT00040222",
+  "https://pubmed.ncbi.nlm.nih.gov/27622479/",
+  "https://clinicaltrials.gov/study/NCT00406445",
+  "https://pubmed.ncbi.nlm.nih.gov/30333936/",
+  "https://clinicaltrials.gov/study/NCT01143454",
+  "https://pubmed.ncbi.nlm.nih.gov/31691207/",
+  "https://clinicaltrials.gov/study/NCT01443468",
+  "https://clinicaltrials.gov/study/NCT01464086"
+ ]
+}
