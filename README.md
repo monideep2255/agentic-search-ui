@@ -2,7 +2,9 @@
 
 Agentic search agent for querying NCBI biomedical data across a 115M-node knowledge graph and 30+ live APIs.
 
-Takes natural language questions about genes, diseases, variants, publications, and taxonomy. Returns cited answers with links back to NCBI source records. Built with FastAPI, LangGraph, and React.
+- Takes natural language questions about genes, diseases, variants, publications, and taxonomy.
+- Returns cited answers with links back to NCBI source records.
+- Built with FastAPI, LangGraph, and React.
 
 For a plain-language, no-jargon project update, see [PROGRESS.md](PROGRESS.md).
 
@@ -30,16 +32,33 @@ There are TWO deployments as of build phase 4.15. Use the production links unles
 | Production | https://search-agent-web-production.up.railway.app | https://search-agent-api-production.up.railway.app | the `production` branch |
 | Develop | https://search-agent-web-develop-2aeb.up.railway.app | https://search-agent-api-develop-43b3.up.railway.app | the `develop` branch |
 
-They are fully separate: different Railway projects, different databases, different caches, different signing keys. An account created on one does not exist on the other, and a session token from one is rejected by the other. Ask either API's `/health` endpoint which it is and it will tell you, in an `app_env` field.
+They are fully separate:
 
-Deployed on Railway since 2026-08-24, split into two in build phase 4.15 on 2026-08-28. Merging to `develop` deploys the develop app. Production moves only when a release branch is cut from `develop` and merged into `production`, which also creates a version tag, a changelog entry and a GitHub Release. The full procedure is [`docs/build/Release_flow.md`](docs/build/Release_flow.md).
+- Different Railway projects
+- Different databases
+- Different caches
+- Different signing keys
+- An account created on one does not exist on the other, and a session token from one is rejected by the other.
+- Ask either API's `/health` endpoint which it is and it will tell you, in an `app_env` field.
+
+How the two deploy:
+
+- Deployed on Railway: since 2026-08-24.
+- Split into two: in build phase 4.15 on 2026-08-28.
+- Develop: merging to `develop` deploys the develop app.
+- Production: moves only when a release branch is cut from `develop` and merged into `production`.
+- A release also creates: a version tag, a changelog entry and a GitHub Release.
+
+The full procedure is [`docs/build/Release_flow.md`](docs/build/Release_flow.md).
 
 Measured on the deployed API rather than asserted, 2026-08-25: "Which diseases are associated with BRCA1?" returns a grounded answer with five citations in about 10 seconds, across a Layer 1 graph query and a Layer 2 NCBI confirmation, with each tool reporting itself as it runs.
 
 It is a PROTOTYPE. What that means in practice, stated because a demo link invites the wrong assumption:
 
 - No account is needed. An anonymous visitor gets a small free allowance of searches, counted server-side.
-- CI runs Section 24's ten gates on every pull request and on every push to `develop` or `production` (build phases 4.14 and 4.15). The gates are ADVISORY rather than merge-blocking, since branch protection needs GitHub Pro or a public repository, so a merge deploys regardless of gate outcome and the only thing stopping a red merge is a person choosing not to click. Since build phase 4.15 that exposure is one step further from the audience: a merge to `develop` reaches the develop deployment, and production moves only on a deliberate release.
+- CI runs Section 24's ten gates on every pull request and on every push to `develop` or `production` (build phases 4.14 and 4.15).
+  - The gates are ADVISORY rather than merge-blocking, since branch protection needs GitHub Pro or a public repository, so a merge deploys regardless of gate outcome and the only thing stopping a red merge is a person choosing not to click.
+  - Since build phase 4.15 that exposure is one step further from the audience: a merge to `develop` reaches the develop deployment, and production moves only on a deliberate release.
 - Coverage is uneven by organism and by database. Treat an answer as a starting point for verification, never as an endpoint.
 
 ## Quick start
@@ -128,9 +147,12 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 
 ## Status
 
-Known open items are tracked in two places rather than duplicated here: the board (`testing/UI_fix_plan.md`) and the open phase ledgers under `tracker/`. `tracker/BOARD.md` is frozen as the record of build phases through 6.2. The six UI defects the first live session surfaced, plus a seventh found alongside them, were all closed by build phase 4.16 on 2026-08-25.
-
-Per-phase narrative, including what each review round found and what it cost, is `requirements/Plan.md`'s Revision history. Per-phase tickets and evidence are `tracker/phase_N.M.md`.
+- Known open items are tracked in two places rather than duplicated here: the board (`testing/UI_fix_plan.md`) and the open phase ledgers under `tracker/`.
+- See `HANDOFF.md` for what to do next.
+- Per-phase narrative, including what each review round found and what it cost, is `requirements/Plan.md`'s Revision history.
+- Per-phase tickets and evidence are `tracker/phase_N.M.md`.
+- `tracker/BOARD.md` is frozen as the record of build phases through 6.2.
+- The six UI defects the first live session surfaced, plus a seventh found alongside them, were all closed by build phase 4.16 on 2026-08-25.
 
 ## Running the checks locally
 
@@ -262,7 +284,9 @@ Cost caps enforced per-query via the multi-model harness. Guard tier uses the ch
 
 ## Connection to System 1 and System 2
 
-The knowledge graph that System 3 queries was built by the data engineering repo (System 1 + System 2). That repo is symlinked at `reference/agentic-search-data-engineering` for documentation access. System 3 connects to the graph as a read-only client via psycopg2.
+- The knowledge graph that System 3 queries was built by the data engineering repo (System 1 + System 2).
+- That repo is symlinked at `reference/agentic-search-data-engineering` for documentation access.
+- System 3 connects to the graph as a read-only client via psycopg2.
 
 Do not add any of these to this repo:
 
