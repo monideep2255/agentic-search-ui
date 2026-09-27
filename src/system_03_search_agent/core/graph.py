@@ -9205,20 +9205,26 @@ def _build_failed_search_note(failed_searches: list[dict[str, str]]) -> str:
     if len(named) == 1 and not unnamed_down:
         name, missing = named[0]
         sentences = [
-            f"{name}'s search is down at NCBI right now, so this answer has no "
-            f"{missing} from it."
+            (
+                f"{name}'s search is down at NCBI right now, so this answer has no "
+                f"{missing} from it."
+            )
         ]
     elif named and not unnamed_down:
         names = [name for name, _ in named]
         joined = ", ".join(names[:-1]) + " and " + names[-1]
         sentences = [
-            f"The {joined} searches are down at NCBI right now, so this answer has "
-            "nothing from them."
+            (
+                f"The {joined} searches are down at NCBI right now, so this answer has "
+                "nothing from them."
+            )
         ]
     else:
         sentences = [
-            "Some of NCBI's searches are down right now, so this answer may be "
-            "missing sources from them."
+            (
+                "Some of NCBI's searches are down right now, so this answer may be "
+                "missing sources from them."
+            )
         ]
     if len(down) < len(failed_searches):
         sentences.append(
