@@ -316,7 +316,12 @@ export type AgentEventType = AgentEvent["type"];
 /**
  * The known event types this client listens for, mirroring Section 12.2's
  * `knownTypes` list minus `cost` (see this module's docstring for why
- * `cost` has no client-side variant).
+ * `cost` has no client-side variant) and minus `step`. The backend emits
+ * `step` (`StepPayload` in `contracts/events.py`), and this client skips it
+ * by name before parsing, through `FORWARD_COMPATIBLE_EVENT_NAMES` in
+ * `hooks/useAgentRun.ts`, so it has no variant here either. The facts
+ * checker reads that set, so a `step` frame the client stops skipping must
+ * be added here too.
  */
 export const KNOWN_EVENT_TYPES: readonly AgentEventType[] = [
   "guard",
