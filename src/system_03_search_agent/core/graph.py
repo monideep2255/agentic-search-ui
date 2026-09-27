@@ -4249,9 +4249,25 @@ class _PlannedFollowUpCall:
 #: two sequential calls, 30 seconds worst case (Section 6.3); the other three
 #: are 15 seconds per call (Sections 6.4, 6.5, 6.7). A timeout here degrades
 #: ONE call and discloses it; it never fails the run.
+#:
+#: PubTator is the exception since build phase 8.7 (T-8.7-02, option C of
+#: `testing/Developer/reports/2026-09-26_answer_speed/report.md`): 6 seconds
+#: in Act, below the tool's own 15-second per-call budget, which still bounds
+#: the call itself. The owner's words: "No answer waits more than 6 seconds
+#: on a literature search, and when one is cut off, the answer says one of
+#: its searches did not finish." Measured before the change: PubTator's
+#: median call was 1.07 s and its p90 4.96 s over 174 calls, and the long
+#: calls the report traced, 12 to 17.7 s, fell in a window of PubTator 502s
+#: and read timeouts. A call between 6 s and 20 s that would have finished
+#: now does not; the golden run's must-cite hits on literature questions are
+#: where that shows. A cut
+#: call closes as an `error` result and lands in `failed_searches`, so
+#: `write_node` adds the existing failed-search note and marks the answer
+#: "not yet confirmed". The transport is async httpx, so the cut cancels
+#: the request rather than leaving it running.
 _LAYER_TOOL_ACT_TIMEOUT_SECONDS: Final[dict[str, float]] = {
     "ncbi_dbsnp": 35.0,
-    "pubtator_annotate": 20.0,
+    "pubtator_annotate": 6.0,
     "litvar2_lookup": 20.0,
     "clinicaltrials_search": 20.0,
     # The isolate search (2026-09-22): the tool's own 120-second FTP budget
