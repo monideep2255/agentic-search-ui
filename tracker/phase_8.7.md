@@ -148,5 +148,6 @@ A and C touch disjoint functions of `core/graph.py`. The lead fixes the placemen
 ## History
 
 - 2026-09-27 04:29: phase opened on the owner's overnight decision. Transport preflight READY: the product model, the harness model and the graph each answered. PubMed's search is down at NCBI ("Cannot connect to SOLR" at 04:11 UTC), so the golden run waits for it.
+- 2026-09-27 04:33: builders A (T-8.7-01) and C (T-8.7-02) dispatched from 4990d821, dispatches 1 and 2 of 8, each in a worktree the lead created, `.claude/worktrees/p87s1` and `p87s3`, since an isolated worktree cannot run the project's Python here. Each may spend at most $1 on live model calls, so the shared account keeps about $34 for two golden runs. Builder B waits for card 58 to land on develop.
 
 ## Findings
