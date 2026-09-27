@@ -403,6 +403,91 @@ class TestAskJson:
         assert json.loads(out)["answer"] == hostile
 
 
+def _refusing_server(*, create_status: int = 202, stream_status: int = 200) -> httpx.MockTransport:
+    """A server that refuses the create or the stream with the given status."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST" and request.url.path == "/v1/query":
+            if create_status != 202:
+                return httpx.Response(create_status, json={"detail": "too many questions; wait a minute"})
+            return httpx.Response(202, json={"run_id": "run-1", "persona_name": "Franklin"})
+        if request.url.path == "/v1/query/run-1/events":
+            return httpx.Response(stream_status, json={"detail": "no such run"})
+        return httpx.Response(404, json={"detail": "no such route"})
+
+    return httpx.MockTransport(handler)
+
+
+async def _s3_against(transport: httpx.MockTransport, argv: list[str]) -> tuple[int, str, str]:
+    out, err = io.StringIO(), io.StringIO()
+    async with httpx.AsyncClient(transport=transport, base_url=main_module.PRODUCTION_API_ORIGIN) as http_client:
+        exit_code = await main_module.async_main(
+            argv, stdin=io.StringIO(""), stdout=out, stderr=err, http_client=http_client
+        )
+    return exit_code, out.getvalue(), err.getvalue()
+
+
+class TestAskJsonFailsAsJson:
+    """Build phase 8.10's fix round, F-8.10-J08: a failure before the stream
+    started wrote only to stderr, so a script parsing stdout got nothing.
+    Mutation that turns each arm red: return before writing the JSON object
+    again -> stdout is empty and `json.loads` raises."""
+
+    @pytest.mark.asyncio
+    async def test_not_signed_in_is_one_json_object_with_every_key(self, credential_file) -> None:
+        exit_code, out, err, seen = await _s3(["ask", "--json", "diseases linked to BRCA1"], [])
+
+        assert exit_code == 1
+        assert seen == []
+        document = json.loads(out)
+        assert document["complete"] is False
+        assert document["answer"] == ""
+        assert document["error"]["error_class"] == "sign_in_needed"
+        assert document["error"]["source"] == "s3"
+        assert "s3 login" in document["error"]["message"]
+        assert "s3 login" in err, "stderr still says it for a person watching"
+
+        _signed_in()
+        _, answered, _, _ = await _s3(["ask", "--json", "q"], _answer_frames())
+        assert set(document) == set(json.loads(answered)), "the same keys as an answer"
+
+    @pytest.mark.asyncio
+    async def test_a_refused_start_is_one_json_object_with_the_servers_reason(
+        self, credential_file
+    ) -> None:
+        _signed_in()
+        exit_code, out, err = await _s3_against(
+            _refusing_server(create_status=429), ["ask", "--json", "--session-id", "s-7", "q"]
+        )
+
+        assert exit_code != 0
+        document = json.loads(out)
+        assert document["error"]["error_class"] == "run_not_started"
+        assert document["error"]["message"] == err.strip()
+        assert document["session_id"] == "s-7"
+        assert document["run_id"] is None
+
+    @pytest.mark.asyncio
+    async def test_a_stream_that_will_not_open_is_one_json_object(self, credential_file) -> None:
+        _signed_in()
+        exit_code, out, err = await _s3_against(_refusing_server(stream_status=404), ["ask", "--json", "q"])
+
+        assert exit_code != 0
+        document = json.loads(out)
+        assert document["run_id"] == "run-1"
+        assert document["complete"] is False
+        assert document["error"]["error_class"] == "stream_failed"
+        assert document["error"]["message"] == err.strip()
+
+    @pytest.mark.asyncio
+    async def test_without_json_stdout_stays_empty(self, credential_file) -> None:
+        # The human mode is unchanged: its failures go to stderr alone.
+        exit_code, out, err, _ = await _s3(["ask", "diseases linked to BRCA1"], [])
+        assert exit_code == 1
+        assert out == ""
+        assert "s3 login" in err
+
+
 class TestJsonAndHumanAgreeOnTheExitCode:
     """A script switching `--json` on must not see zero mean something else."""
 

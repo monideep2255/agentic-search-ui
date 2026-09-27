@@ -1063,6 +1063,9 @@ class JsonRenderer:
             not taken.
         error: null, or the error class, its source and what to do next.
         stream: frames skipped as unknown, and whether the stream was cut.
+
+    A run that never streams still gets one object with these keys, from
+    `write_json_failure` (build phase 8.10's fix round, F-8.10-J08).
     """
 
     def __init__(
@@ -1145,6 +1148,15 @@ class JsonRenderer:
         if payload.scope == "answer" and self._guard is None:
             self._trust_outcome = payload.outcome
 
+    def record_failure(self, error_class: str, message: str) -> None:
+        """The stream could not be opened or read to its end, so no event
+        will say why. `s3 ask --json` records it here before `finish()`, so
+        the one object on stdout carries it (F-8.10-J08). A fatal error the
+        stream already sent is kept, since it is the server's own account."""
+        if self._error is not None and self._error.get("fatal"):
+            return
+        self._error = _cli_error(error_class, message)
+
     def _handle_error(self, event: Event) -> None:
         payload = ErrorPayload.model_validate(event.payload)
         self._error = {
@@ -1213,6 +1225,62 @@ class JsonRenderer:
             self._out.write(json.dumps(document, ensure_ascii=True, indent=2) + "\n")
             self._out.flush()
         return self._exit_code
+
+
+#: Bound on the failure text `s3 ask --json` carries, which is the same
+#: words `s3` already wrote to stderr for that failure.
+_MAX_JSON_FAILURE_MESSAGE = 2000
+
+
+def _cli_error(error_class: str, message: str) -> dict[str, object]:
+    """The `error` value for a failure `s3` saw itself, in the same shape as
+    one the event stream reports, with `source` `"s3"`."""
+    return {
+        "fatal": True,
+        "error_class": error_class,
+        "source": "s3",
+        "message": message[:_MAX_JSON_FAILURE_MESSAGE],
+        "retry_after_s": None,
+    }
+
+
+def write_json_failure(
+    out: TextIO,
+    *,
+    session_id: str | None,
+    run_id: str | None,
+    persona_name: str | None,
+    error_class: str,
+    message: str,
+) -> None:
+    """`s3 ask --json` when the run never started streaming: one JSON
+    object on stdout, with every key `JsonRenderer` always writes.
+
+    Build phase 8.10's fix round, F-8.10-J08: a failure before the stream
+    started, "not logged in" for one, wrote only to stderr, so a script
+    parsing stdout got nothing to parse. Now it gets `complete: false`, an
+    empty answer, and `error` naming the class and the same words stderr
+    shows. The exit code is still non-zero; the caller returns it."""
+    document = {
+        "run_id": run_id,
+        "session_id": session_id,
+        "persona_name": persona_name,
+        "complete": False,
+        "trust_outcome": None,
+        "trust_line": None,
+        "answer": "",
+        "citations": [],
+        "unresolved_markers": [],
+        "clarifying_question": None,
+        "clarifying_options": [],
+        "next_step": None,
+        "next_step_query": None,
+        "guard": None,
+        "error": _cli_error(error_class, message),
+        "stream": {"skipped_frames": 0, "truncated": False},
+    }
+    out.write(json.dumps(document, ensure_ascii=True, indent=2) + "\n")
+    out.flush()
 
 
 # ----------------------------------------------------------------------
