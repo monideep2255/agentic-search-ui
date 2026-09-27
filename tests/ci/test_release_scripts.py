@@ -238,6 +238,18 @@ class ReleaseRepo:
         self.merge_pull_request(f"origin/{branch}", "develop")
         self.git("push", "--quiet", "origin", "--delete", branch)
 
+    def squash_merge_back_merge(self, version: str) -> None:
+        """GitHub's squash button on the back-merge: one commit under the pull request's title."""
+        self._pull_request += 1
+        branch = f"chore/back-merge-{version}"
+        self.git("fetch", "--quiet", "origin")
+        self.git("checkout", "--quiet", "develop")
+        self.git("merge", "--quiet", "--squash", f"origin/{branch}")
+        title = f"chore: back-merge {version} into develop (#{self._pull_request})"
+        self.git("commit", "--quiet", "-m", title)
+        self.push("develop")
+        self.git("push", "--quiet", "origin", "--delete", branch)
+
     # -- the release job -----------------------------------------------------
 
     def run_release_job(self) -> ReleaseRun:
@@ -589,6 +601,41 @@ def test_an_unmerged_back_merge_is_carried_forward(
     assert "changelog" not in notes.lower(), notes
 
     # And the owner can merge the new back-merge without a conflict.
+    repo.merge_back_merge("v0.2.1")
+    assert _headings(repo.changelog_on("refs/heads/develop")) == ["v0.2.1", "v0.2.0", "v0.1.0"]
+
+
+def test_a_squash_merged_back_merge_is_carried_forward(released: Released, tmp_path: Path) -> None:
+    """Findings F-REL-A05 and F-REL-J13: the carry and the notes read one subject list.
+
+    commit_lib.sh recognises a back-merge squash-merged into `develop`, under
+    the pull request's title, as the changelog commit it is. The carry step
+    used to look only for the robot's own subject, so a release cut before
+    that squash merge landed lost the previous section, and its back-merge then
+    conflicted on CHANGELOG.md.
+    """
+    repo = released.repo.fork(tmp_path / "repo")
+    repo.commit("fix: a follow-up question keeps its gene")
+    repo.push("develop")
+    repo.git("branch", "release/v0.2.1", "develop")
+    repo.push("release/v0.2.1")
+    repo.squash_merge_back_merge("v0.2.0")
+    repo.release(source="origin/release/v0.2.1")
+    tip = repo.origin_ref("refs/heads/production")
+
+    run = repo.run_release_job()
+
+    assert run.outputs["version"]["version"] == "v0.2.1", run.log
+    assert repo.origin_ref("refs/heads/production") == tip
+    assert repo.origin_ref("refs/tags/v0.2.1^{commit}") == tip
+    branch = "refs/heads/chore/back-merge-v0.2.1"
+    assert _headings(repo.changelog_on(branch)) == ["v0.2.1", "v0.2.0", "v0.1.0"], (
+        "the squash-merged v0.2.0 section was not carried into v0.2.1\n" + run.log
+    )
+    notes = _call(run, "release", "create", "v0.2.1").stdin
+    assert "a follow-up question keeps its gene" in notes, notes
+    assert "back-merge" not in notes and "changelog" not in notes.lower(), notes
+
     repo.merge_back_merge("v0.2.1")
     assert _headings(repo.changelog_on("refs/heads/develop")) == ["v0.2.1", "v0.2.0", "v0.1.0"]
 

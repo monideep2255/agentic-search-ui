@@ -109,6 +109,21 @@ _RELEASE_CHANGELOG_SUBJECT_RE='^docs\(changelog\): release v[0-9]+\.[0-9]+\.[0-9
 # changelog survive any of GitHub's three merge buttons.
 _RELEASE_BACKMERGE_SQUASH_RE='^chore: back-merge v[0-9]+\.[0-9]+\.[0-9]+ into develop( \(#[0-9]+\))?$'
 
+# release_changelog_version <subject>
+# Prints the version a subject names when it is one of the two changelog
+# subjects above, and nothing for any other subject. This is the only place a
+# subject is matched against them. The verdict and the finder below ask here,
+# and every script that looks for a changelog commit asks the finder, so no
+# two scripts can recognise the changelog commit differently (F-REL-A05, where
+# the carry step matched the robot's own subject only and missed the
+# squash-merged form the verdict accepted).
+release_changelog_version() {
+  if printf '%s' "$1" \
+      | grep -Eq "${_RELEASE_CHANGELOG_SUBJECT_RE}|${_RELEASE_BACKMERGE_SQUASH_RE}"; then
+    printf '%s' "$1" | sed -nE 's/^[^0-9]*(v[0-9]+\.[0-9]+\.[0-9]+).*$/\1/p'
+  fi
+}
+
 # release_changelog_verdict <sha> <subject>
 # Prints `changelog` when the commit is the release job's own changelog
 # commit, `commit` for everything else. Returns non-zero if git fails.
@@ -120,8 +135,7 @@ _RELEASE_BACKMERGE_SQUASH_RE='^chore: back-merge v[0-9]+\.[0-9]+\.[0-9]+ into de
 # text, which is exactly what it is.
 release_changelog_verdict() {
   local sha="$1" subject="$2" files status
-  if ! printf '%s' "$subject" \
-      | grep -Eq "${_RELEASE_CHANGELOG_SUBJECT_RE}|${_RELEASE_BACKMERGE_SQUASH_RE}"; then
+  if [ -z "$(release_changelog_version "$subject")" ]; then
     printf 'commit'
     return 0
   fi
@@ -136,6 +150,39 @@ release_changelog_verdict() {
   else
     printf 'commit'
   fi
+}
+
+# release_find_changelog_commit <version> <ref>...
+# Searches each ref in the order given for the release job's changelog commit
+# for <version>, recognised exactly as the verdict above recognises it: either
+# subject, naming <version>, on a commit that changes CHANGELOG.md alone.
+# Prints `<sha><TAB><ref>` for the first one found, and nothing when no ref
+# carries one. A ref that does not exist is skipped. Returns non-zero if git
+# fails.
+release_find_changelog_commit() {
+  local version="$1" ref out status line sha subject verdict
+  shift
+  for ref in "$@"; do
+    git rev-parse --verify --quiet "${ref}^{commit}" > /dev/null || continue
+    out="$(git log "$ref" --no-merges --fixed-strings --grep="$version" --format='%H%x09%s' 2>&1)"
+    status=$?
+    if [ "$status" -ne 0 ]; then
+      printf 'git log failed searching %s (exit %s): %s\n' "$ref" "$status" "$out" >&2
+      return 1
+    fi
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      sha="${line%%$'\t'*}"
+      subject="${line#*$'\t'}"
+      [ "$(release_changelog_version "$subject")" = "$version" ] || continue
+      verdict="$(release_changelog_verdict "$sha" "$subject")" || return 1
+      if [ "$verdict" = "changelog" ]; then
+        printf '%s\t%s\n' "$sha" "$ref"
+        return 0
+      fi
+    done <<< "$out"
+  done
+  return 0
 }
 
 # ---------------------------------------------------------------------------

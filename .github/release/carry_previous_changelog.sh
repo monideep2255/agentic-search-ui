@@ -26,10 +26,15 @@
 # WHERE THE COMMIT CAN BE, in the order searched:
 #   - on `chore/back-merge-<previous>`, while that pull request is open
 #   - on `develop`, when that pull request merged after this release's branch
-#     was cut, and its branch was then deleted
-# Only a commit that commit_lib.sh recognises as a changelog commit, with the
-# exact subject for <previous>, is ever merged. Such a commit changes
-# CHANGELOG.md and nothing else.
+#     was cut, and its branch was then deleted. A squash merge leaves it there
+#     under the pull request's title, `chore: back-merge <previous> into
+#     develop (#N)`, and it is found under that subject too
+# Only a commit that commit_lib.sh recognises as the changelog commit for
+# <previous>, through its one finder, is ever merged.
+# Such a commit changes CHANGELOG.md and nothing else. Merging a squash-merged
+# one also brings the `develop` commits beneath it into this checkout; those
+# reach no tag and no notes, since both stop at RELEASE_SHA, and they are on
+# `develop` already, where the back-merge pull request goes.
 #
 # FAIL-SOFT, deliberately. If the commit is not found, or the merge conflicts,
 # this says so in the log and changes nothing, and the release goes out exactly
@@ -56,29 +61,17 @@ if [ -f CHANGELOG.md ] \
   exit 0
 fi
 
-subject="$(release_changelog_subject "$previous")"
-
 if ! git fetch --quiet origin; then
   echo "warning: could not fetch origin; not carrying the ${previous} changelog" >&2
   exit 0
 fi
 
-candidate=""
-for ref in "refs/remotes/origin/chore/back-merge-${previous}" "refs/remotes/origin/develop"; do
-  git rev-parse --verify --quiet "$ref" > /dev/null || continue
-  found="$(git log "$ref" --no-merges --fixed-strings --grep="$subject" --format='%H%x09%s')"
-  while IFS= read -r line; do
-    [ -n "$line" ] || continue
-    sha="${line%%$'\t'*}"
-    [ "${line#*$'\t'}" = "$subject" ] || continue
-    verdict="$(release_changelog_verdict "$sha" "$subject")"
-    if [ "$verdict" = "changelog" ]; then
-      candidate="$sha"
-      break
-    fi
-  done <<< "$found"
-  [ -z "$candidate" ] || break
-done
+# commit_lib.sh's one finder, so this step recognises the previous changelog
+# commit exactly as the notes and the version bump do, under either subject
+# (F-REL-A05).
+found="$(release_find_changelog_commit "$previous" \
+  "refs/remotes/origin/chore/back-merge-${previous}" "refs/remotes/origin/develop")"
+candidate="${found%%$'\t'*}"
 
 if [ -z "$candidate" ]; then
   echo "warning: CHANGELOG.md has no ${previous} section, and no changelog commit" \
