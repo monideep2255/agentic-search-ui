@@ -12,6 +12,7 @@ For a plain-language, no-jargon project update, see [PROGRESS.md](PROGRESS.md).
 
 - [Live demo](#live-demo)
 - [Quick start](#quick-start)
+- [Use it from a terminal or an AI agent](#use-it-from-a-terminal-or-an-ai-agent)
 - [Architecture](#architecture)
 - [Tech stack](#tech-stack)
 - [Status](#status)
@@ -38,8 +39,8 @@ They are fully separate:
 - Different databases
 - Different caches
 - Different signing keys
-- An account created on one does not exist on the other, and a session token from one is rejected by the other.
-- Ask either API's `/health` endpoint which it is and it will tell you, in an `app_env` field.
+
+An account created on one does not exist on the other, and a session token from one is rejected by the other. To check which one you are on, ask either API's `/health` endpoint: it answers in an `app_env` field.
 
 How the two deploy:
 
@@ -57,7 +58,8 @@ It is a PROTOTYPE. What that means in practice, stated because a demo link invit
 
 - No account is needed. An anonymous visitor gets a small free allowance of searches, counted server-side.
 - CI runs Section 24's ten gates on every pull request and on every push to `develop` or `production` (build phases 4.14 and 4.15).
-  - The gates are ADVISORY rather than merge-blocking, since branch protection needs GitHub Pro or a public repository, so a merge deploys regardless of gate outcome and the only thing stopping a red merge is a person choosing not to click.
+  - Since 2026-09-27, rulesets let only the owner's account change `develop` and `production`, and neither may be force-pushed or deleted.
+  - The gates are still ADVISORY rather than merge-blocking: a documentation-only change runs no workflow, so a required check would never report on it. The only thing stopping a red merge is the owner choosing not to click.
   - Since build phase 4.15 that exposure is one step further from the audience: a merge to `develop` reaches the develop deployment, and production moves only on a deliberate release.
 - Coverage is uneven by organism and by database. Treat an answer as a starting point for verification, never as an endpoint.
 
@@ -66,7 +68,7 @@ It is a PROTOTYPE. What that means in practice, stated because a demo link invit
 ```bash
 # Prerequisites
 python 3.11+
-node 18+ (for React frontend)
+node 22+ (for React frontend)
 redis (for caching)
 postgresql 15+ (local, for the user-data database: auth, sessions, interactions)
 # No local AGE knowledge graph needed - Layer 1 connects to the remote Hetzner VPS
@@ -97,6 +99,13 @@ npm run dev
 # Run tests
 pytest tests/
 ```
+
+## Use it from a terminal or an AI agent
+
+The web app is one of six ways in. The Integrations page prints the exact commands for each: the REST API with its event stream, GraphQL, MCP, the `s3` command line and KGX export. See it on [production](https://search-agent-web-production.up.railway.app/integrations) or [develop](https://search-agent-web-develop-2aeb.up.railway.app/integrations).
+
+- Command line and local MCP server: `pip install "git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli"`, with Python 3.11 or newer, in a virtualenv.
+- Depth: the command line takes `--depth`, and MCP's ask tool takes `audience_depth`. MCP answers at researcher depth unless the agent asks for another.
 
 ## Architecture
 
@@ -226,7 +235,7 @@ agentic-search-ui/
 
 | Doc | Status |
 |-----|--------|
-| [Plan](requirements/Plan.md) | Master phase tracker. Its Revision history section is the project's change record, since no release has been cut yet |
+| [Plan](requirements/Plan.md) | Master phase tracker. Its Revision history section is the project's change record; each release since v0.1.0 on 2026-08-28 is also in [`CHANGELOG.md`](CHANGELOG.md) |
 | [PRD](requirements/PRD.md) | Locked 2026-07-22 |
 | [Technical specification](requirements/Technical_specification.md) | Locked. 25 sections, seven tools, six delivery surfaces (web UI, REST plus SSE API, GraphQL API, MCP server, KGX export, CLI), Section 25 build order |
 | [Strategic memo](requirements/Strategic_memo.md) | Phase 4 deliverable |
@@ -300,7 +309,7 @@ That belongs in the data engineering repo.
 
 Apache 2.0. See [LICENSE](LICENSE). Copyright 2026 [Monideep Chakraborti](https://github.com/monideep2255).
 
-You are welcome to use, fork and build on this code. When you share a copy or something built on it, the license asks for two things. The project asks for one more:
+You are welcome to use, fork and build on this code. When you share a copy or something built on it, keep to the three points below. The license asks for the first two and the project asks for the third:
 
 - Keep the `LICENSE` and `NOTICE` files with your copy. `NOTICE` carries the attribution, and Apache 2.0 (Section 4) has every redistribution carry it somewhere a reader can find it.
 - Mark any file you changed as changed, so nobody mistakes your version for this one.
@@ -308,4 +317,4 @@ You are welcome to use, fork and build on this code. When you share a copy or so
 
 Apache 2.0 grants no rights to the project's names or marks (Section 6). Call your derivative something of your own.
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
