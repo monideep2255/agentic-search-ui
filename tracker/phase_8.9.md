@@ -7,7 +7,11 @@ The phase comes from two product-owner decisions of 2026-09-25 (`DECISIONS.md`):
 - The order of work: "then phase 8.9, the writer is given the field the question asked for (a paper's title, an ortholog's species, a variant's gene, and rs334 matched exactly rather than by its first digits)".
 - Row 733: "The trust line says what was checked: which sources back the answer and whether their values could be compared, for example 'Based on 4 sources, all from MedGen' or 'Based on 6 sources from MedGen and OMIM; their values could not be compared'. The verdict behind the line does not change." The line is built from the parked commit `90b018e`, and its "which differ" wording is replaced.
 
-The merge and this phase's golden run are delegated to the lead under automatic checks (`DECISIONS.md`, 2026-09-26; `testing/Overnight_build_plan_2026-09-25.md`, "Automatic checks for each merge").
+The merge and this phase's golden run are delegated to the lead under automatic checks (`DECISIONS.md`, 2026-09-26):
+
+- nothing blocking after the judge, the adversary and one fix-and-verify;
+- CI green;
+- after the merge, a golden run answering no fewer than phase 8.6's run did, a drop undoing the merge.
 
 The design sources are:
 

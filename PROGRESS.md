@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-09-26.
+Last updated: 2026-09-27.
 
 ## Table of contents
 
@@ -51,7 +51,14 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
 
-NEW ON 25 SEPTEMBER, from an overnight build on the practice site, waiting for the product owner's retest. If they do not like it, one command puts the practice site back exactly as it was the evening before:
+NEW ON 26 AND 27 SEPTEMBER, on the practice site, waiting for the product owner's retest:
+
+- Stop now works until the first sentence of the answer is on screen, and pressing it never shows part of an answer.
+- People can ask from a terminal or from their own AI assistant and get the same answers the web gives, in either the plain-language or the researcher setting.
+- The site lists the open-source libraries it is built on, each with its licence.
+- The stray "no clinical features" sentence is gone from answers that never asked about features, and a graph search that cannot finish gives up after 30 seconds instead of 90.
+
+NEW ON 25 SEPTEMBER, from an overnight build on the practice site, waiting for the product owner's retest:
 
 - A good question is no longer turned away because an internal step misread its own notes. Asked ten times, both questions that used to fail answered every time.
 - Ask what physical features go with Marfan syndrome and the answer now lists them, each linked to the government's medical genetics record: aortic regurgitation, long thin fingers, a displaced eye lens and more. In the plain-language mode the answer names them in sentences; in the researcher mode they sit in a list under the answer.
@@ -188,7 +195,11 @@ All six live-government-API connections the plan called for are now built. That 
 
 ## What does not work yet
 
-THE HONEST HEADLINE AS OF 26 SEPTEMBER, in one sentence: the change that removes the stray "no clinical features" sentence and lets a small, cheap decision model make the system's small choices was built and reviewed, but on the practice site it made two good questions worse, so it was taken back off within the hour and the stray sentence is still there until the product owner decides.
+THE HONEST HEADLINE AS OF 27 SEPTEMBER, in one sentence: answers still open with a stock line of counts and take about seventeen seconds before their first word.
+
+The work that fixes both was part-built when the owner's computer restarted, and it is parked until the next session.
+
+THE HONEST HEADLINE AS OF 26 SEPTEMBER, kept for the record, in one sentence: the change that removes the stray "no clinical features" sentence and lets a small, cheap decision model make the system's small choices was built and reviewed, but on the practice site it made two good questions worse, so it was taken back off within the hour and the stray sentence is still there until the product owner decides.
 
 What went wrong, in plain words:
 
@@ -356,6 +367,8 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| Stop that works, the same answers from a terminal, and a safer release | Stop now works until the answer appears. People can ask from a terminal or their own AI assistant. Only the owner can change the main copies of both projects' code, and a release no longer rewrites the published copy. The data project had its first release, version 1.0.0. The rest of the day's work was parked when the computer restarted | 27 September |
+| The decision model back, with its problems fixed | The small decision model that makes the system's small choices came back after its three problems were reworked, and the stray "no clinical features" sentence went with it | 26 September |
 | A decision model for every small choice: built, measured, and held back | The fix for the stray "no clinical features" sentence, and a change that lets a small, cheap decision model make every small choice, were built and reviewed. The reviews caught that a question disguised as a fake chat conversation could slip past the gatekeeper, and that was fixed before anything reached the practice site. Once live, the fifty-question check answered 99 of 150 tries against the floor of 102, so by the rule the change came back off the practice site the same hour, keeping its written record. The same day the building crew's own safety guards were tightened, and the product owner asked for the crew to check the product the way a person uses it before they see anything. Earlier, the session had stopped overnight and lost its working files, and everything was rebuilt from its own record | 26 September |
 | An overnight build: good questions stop failing, and a decision model makes the small choices | Four questions the product owner raised were built and merged overnight with their reviews: fewer refused questions, Marfan's features named, thirty sources, and a small model deciding what is on topic and when to ask how recent. Three fixes were undone during review because each made answers less trustworthy. The practice site answered 102 of 150 test questions, up from 86; answers got about five seconds slower | 25 September |
 | How the building crew works, rebuilt | Nothing a person using the site sees changed. The automatic crew that builds the product was checked against its own record, which showed it spent more and more of its effort testing its own tests while nobody looked at the screen: after every stage had passed its reviews, the fifty test questions answered only thirteen times in eighty-five tries. It now has a reviewer that uses the practice site like a person before the product owner does, one round of review instead of up to seven, and a limit of a working day and eight helpers per stage. The to-do list became a simple board (to do, being built, to retest), every test question now says what to type and what you should see, and a short handoff note replaced a long document that kept going out of date. About 43,000 lines of old test machinery and review reports were removed, and every safety check they held was first rewritten as an ordinary test. That same evening, the board briefly lost track of the product owner's own architecture ideas, marking them "parked" and hiding their detail; the product owner caught it and they were put back where every other open item sits. The board now lists every piece of open work in the UI fix loop, including that architecture work, and a separate new file holds everything still ahead that is not part of the UI fix loop | 2026-09-24 |
@@ -669,16 +682,14 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. The product owner decides on the decision-model change: accept that two questions got worse, or fix the three problems above first and measure again. Everything below waits on that answer.
-2. Remove the stray "MedGen lists no clinical features" sentence from answers that never asked about features. The fix is built, inside the change in item 1.
-3. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting for the owner's yes.
-4. Decide whether the stock opening line of counts is replaced by a sentence that answers the question. This is the product owner's decision.
-5. Decide which writing model to use. Overnight, Kimi K2.5 wrote better answers than today's model for less money; a well-known paid model did not beat either.
-6. Find out why answers got about five seconds slower overnight.
-7. Finish and merge the overnight work that is built but not yet on the practice site: the plain-language and researcher switch on the answer itself, counts that say what they count, a calmer trust line, and narrowing bacterial sample searches by place and year.
-8. Build the step where the system checks its own results and tries once more when they do not answer the question.
-9. Tell the reader when the system wrote its own search rather than using a checked one.
-10. Build the connections between facts the product owner chose on 25 September: facts cited as paths through the graph, such as other genes that turn up in the same papers, with no vector search. Background: connecting facts across several steps now has a measured document rather than an opinion. It counts how many of the fifty test questions actually need it (five, and all five follow one route that is already built), and says plainly that two of the three technologies usually proposed for this have nothing here to justify them.
+1. Pick the parked work back up, two helpers at a time. First: every answer is saved so it can be reopened, and an answer says plainly when NCBI's search is down. Then: answers that answer sooner, with the records on screen in about eight seconds, a first sentence that answers the question, and a stronger writing model. The old steps about the opening line of counts, the writing model and the slower answers are all inside this work.
+2. The product owner retests what went live: Stop that works until the answer appears, the list of open-source libraries the site is built on, and asking from a terminal or an AI assistant.
+3. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
+4. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting for the owner's yes.
+5. Finish and merge the overnight work that is built but not yet on the practice site: the plain-language and researcher switch on the answer itself, counts that say what they count, a calmer trust line, and narrowing bacterial sample searches by place and year.
+6. Build the step where the system checks its own results and tries once more when they do not answer the question.
+7. Tell the reader when the system wrote its own search rather than using a checked one.
+8. Build the connections between facts the product owner chose on 25 September: facts cited as paths through the graph, such as other genes that turn up in the same papers, with no vector search. Background: connecting facts across several steps now has a measured document rather than an opinion. It counts how many of the fifty test questions actually need it (five, and all five follow one route that is already built), and says plainly that two of the three technologies usually proposed for this have nothing here to justify them.
 
 Done since this list was last written, overnight on 23 September, while nobody was watching:
 
@@ -780,10 +791,11 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
-| A sentence added overnight, "MedGen lists no clinical features for ...", appears in answers that never asked about features | Built, but held back with the change it rides in, until the product owner decides on that change |
-| The decision-model change turned away "Tell me about the tree of life" as off topic, let one brief error stop a whole question, and gave a less helpful message to a request to change the graph. It is off the practice site | Before it returns: fixed and measured again, or accepted by the product owner as it is |
-| Every answer opens with a stock line of counts written by the code, so its first sentence never answers the question | When the product owner decides what should replace it |
-| Answers got about five seconds slower overnight, a median of 21.9 seconds where it was 17.1 | Next, once the cause is measured |
+| ~~A sentence added overnight, "MedGen lists no clinical features for ...", appears in answers that never asked about features~~ | Fixed on 26 September; on the practice site, waiting for the product owner's retest |
+| The decision-model change turned away "Tell me about the tree of life" as off topic, let one brief error stop a whole question, and gave a less helpful message to a request to change the graph. It is off the practice site | Reworked and back on the practice site since 26 September; the product owner's retest decides |
+| Every answer opens with a stock line of counts written by the code, so its first sentence never answers the question | Being built in the next phase of work, parked on 27 September when the computer restarted |
+| Answers got about five seconds slower overnight, a median of 21.9 seconds where it was 17.1 | Inside the same parked work, which aims to show the records in about eight seconds |
+| In a rare case, a release could drop an older release's notes from the changelog file, though the notes on the release page stay | Before the next release |
 | ~~The system can quote its sources word for word but cannot explain them in its own words, because every sentence has to repeat a source exactly to pass the safety check. This is why both answer settings read like a list of records. Worked on all day on 21 September. Five attempts to fix it by rewording the instructions all failed~~ | LARGELY FIXED, 23 September. A second, separate check now reads each sentence after it is written: a fast rule confirms every quote, number and "not" it leans on is really in the source, then a second, separate model confirms the sentence says no more than the words it quotes. Live, this worked for all seven plain-language questions tried. Not yet bulletproof: in two tries out of six the answer fell back to a plain list, one of them because the second check's call failed, and the system showed the list rather than a sentence that had not passed the check |
 | ~~The practice site's back end could not take this evening's update. An outside software library it depends on released a new version thirteen minutes before the update was built, and that version looks for a different database connector than the one installed. The site kept running the previous version, so nothing anyone tests has changed, but no new back-end fix can reach it until this is settled~~ | FIXED the same evening. On the product owner's call, the library is held at the version the site was already using |
 | Ask what physical features go with a condition, such as Marfan syndrome, and the system still names no phenotypes at all, answering with genes and variants instead | First in line to be built, once the product owner's retests are done |

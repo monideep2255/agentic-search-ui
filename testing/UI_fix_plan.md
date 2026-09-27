@@ -324,7 +324,7 @@ Status: Not started. Decided 2026-09-25 (`DECISIONS.md`): add the card, probe fi
 
 - The source: NCBI's LitSense, sentence-level search over PubMed abstracts and PMC full text, with the index hosted by NCBI. The locked technical specification already names it as a Layer 3 source in Section 5; nothing in the code calls it yet.
 - The probe, first: about ten golden literature questions sent to LitSense live, measuring whether the returned sentences answer the question and how long each call takes.
-- The build, in phase 8.4 of `testing/Overnight_build_plan_2026-09-25.md` if the probe holds: the answering sentences shown quoted under each paper, each cited. Verbatim sentences pass the cite-or-refuse gate by construction.
+- The build, if the probe holds: the answering sentences shown quoted under each paper, each cited. Verbatim sentences pass the cite-or-refuse gate by construction.
 - Not built: chunking or embedding full texts ourselves, which is a data-pipeline project for the data repository.
 - Budgets: one of the twenty per-query calls, a 15-second timeout, and the provisional 5 requests per second throttle, since LitSense publishes no rate limit.
 
@@ -401,10 +401,10 @@ as the answer to a failure the harness has not been worked on yet.
 
 | What | Cards | Where |
 |---|---|---|
-| Phase 8.7: the first sentence answers the question, the records show at about 8 seconds, and Opus writes | 2, 50, 5 | `tracker/phase_8.7.md`, branch `phase/8.7-answers-sooner`; builders A and C running; merges overnight only if its golden run holds, and PubMed is down at NCBI |
-| Card 63: every "not yet confirmed" answer saved, and a search down at NCBI said so | 63 | branch `fix/card63-tested`: built and tested, judge reviewing, adversary PASS; a golden run when PubMed is back |
-| Card 53: stale facts on the pages and in the documents | 53 | branch `fix/card53-stale-facts`, builder running |
-| Card 62: install and connect from the Integrations page on the first try | 62 | branch `fix/card62-install-first-try`, builder running |
+| Phase 8.7: the first sentence answers the question, the records show at about 8 seconds, and Opus writes | 2, 50, 5 | `tracker/phase_8.7.md`, branch `phase/8.7-answers-sooner`; parked 2026-09-27 with its three builders part-way, each listed in `HANDOFF.md` |
+| Card 63: every "not yet confirmed" answer saved, and a search down at NCBI said so | 63 | branch `fix/card63-tested`: built and tested, adversary PASS; parked 2026-09-27 with the judge's round part-way (`HANDOFF.md`) |
+| Card 53: stale facts on the pages and in the documents | 53 | branch `fix/card53-stale-facts`, parked 2026-09-27 (`HANDOFF.md`) |
+| Card 62: install and connect from the Integrations page on the first try | 62 | branch `fix/card62-install-first-try`, parked 2026-09-27 (`HANDOFF.md`) |
 | Two reviews of the harness, since "I do not think our harness works well right now": the product's, which turns a question into an answer, and the build's, which is how the product gets built; each ends in ranked changes and questions for you | the product owner, 2026-09-25 | `testing/Developer/reports/2026-09-25_harness_review/product_harness.md` and `build_harness.md` |
 
 ## Retest

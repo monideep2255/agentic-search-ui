@@ -18,7 +18,7 @@ Nothing here requires a document to carry today's date:
 - Build harness review item D2 removed the column and the gate, delegated by the product owner on 2026-09-25 (DECISIONS.md, the lead implements both harness reviews' takeaways).
 - Now `HANDOFF.md` is rewritten at every session end, and every other document is edited when its fact changes.
 
-Last updated: 2026-09-26.
+Last updated: 2026-09-27.
 
 ## Table of contents
 
@@ -39,11 +39,11 @@ Last updated: 2026-09-26.
 
 | Document | Job | Owner | Shape | Set by |
 |---|---|---|---|---|
-| `HANDOFF.md` | What a fresh session needs and nothing else: what is live, what awaits the product owner, the one next action, pointers | `/phase-checkpoint` Step 4, every mode, rewritten in place. The one document every session end rewrites before the push | `## Table of contents`; `## What is live`; `## What awaits the product owner`; `## The one next action`; `## Where the facts live` | 2026-09-24, HANDOFF.md replaces the Phase 6 continuation prompt; 2026-09-25, the lead implements both harness reviews' takeaways (a session end rewrites it, no other document needs a date) |
+| `HANDOFF.md` | What a fresh session needs and nothing else: what is live, what awaits the product owner, the one next action, pointers | `/phase-checkpoint` Step 4, every mode, rewritten in place. The one document every session end rewrites before the push | `## Table of contents`; `## What is live`; `## What awaits the product owner`; `## The one next action`; `## Where the facts live` | 2026-09-24, HANDOFF.md replaces the Phase 6 continuation prompt; 2026-09-25, the lead implements both harness reviews' takeaways (a session end rewrites it, no other document needs a date); 2026-09-27, every owner decision is asked at once, so the handoff names only what is still unanswered |
 | `tracker/Living_documents.md` | This registry | `/phase-checkpoint` Step 0, the decision guard; the product owner by hand | `## The registry`; `## The decision guard watermark` | 2026-09-24, one registry for the living documents; 2026-09-25, the lead implements both harness reviews' takeaways (no freshness column and no freshness gate) |
-| `testing/UI_fix_plan.md` | The board: what is not started, what is being built now, what is live awaiting retest; and, under To do, the detail behind the product owner's architecture cards, with their direction of 2026-09-23 verbatim | `/phase-checkpoint` UI-fix-loop mode, and whoever moves a card during work | `## To do`; `## Build in progress`; `## Retest` | 2026-09-24, the plan is split by job; 2026-09-24, the plan becomes a kanban board; 2026-09-24, the owner's architecture work stays in To do, never parked; 2026-09-24, exactly three sections, no table of contents, everything inside To do; 2026-09-25, a wording or layout card closes by itself seven days after reaching Retest once the product reviewer has passed it (the Retest column empties on that clock as well as on the owner's approval; a card that changes answers still waits for the owner) |
+| `testing/UI_fix_plan.md` | The board: what is not started, what is being built now, what is live awaiting retest; and, under To do, the detail behind the product owner's architecture cards, with their direction of 2026-09-23 verbatim | `/phase-checkpoint` UI-fix-loop mode, and whoever moves a card during work | `## To do`; `## Build in progress`; `## Retest` | 2026-09-24, the plan is split by job; 2026-09-24, the plan becomes a kanban board; 2026-09-24, the owner's architecture work stays in To do, never parked; 2026-09-24, exactly three sections, no table of contents, everything inside To do; 2026-09-25, a wording or layout card closes by itself seven days after reaching Retest once the product reviewer has passed it (the Retest column empties on that clock as well as on the owner's approval; a card that changes answers still waits for the owner); 2026-09-26, a `/verify` pass at 1280 and 390 pixels starts that seven-day close |
 | `testing/UI_fixes_done.md` | Every closed item with its detail, the detail behind every card except the architecture cards, whose detail sits under To do on the board, the cutoff, and each day's shipped list as a session table | `/phase-checkpoint` UI-fix-loop mode | `## Done features at a glance`; `## Where we stopped`; `### Next, in order`; `### How to start the next session`; `## Detail for items on the board`; `## Session history` | 2026-09-24, the plan is split by job; 2026-09-24, the plan becomes a kanban board |
-| `testing/Test_queries_and_workflows.md` | Every query worth typing, what a person should see, and the retest steps the board's Retest cards point at by query number | `/phase-checkpoint` UI-fix-loop mode | `## Every feature and where to try it`; `Queries to try:`; `What you should see:` | 2026-09-24, one shape per feature and the shipped lists folded in |
+| `testing/Test_queries_and_workflows.md` | Every query worth typing, what a person should see, and the retest steps the board's Retest cards point at by query number; since 2026-09-26 also the gate that decides whether work is done | `/phase-checkpoint` UI-fix-loop mode | `## Every feature and where to try it`; `Queries to try:`; `What you should see:` | 2026-09-24, one shape per feature and the shipped lists folded in; 2026-09-26, the test queries document becomes the gate that decides whether work is done |
 | `testing/Future.md` | The remaining work outside the UI fix loop: Plan.md's Phase 7 backlog and the still-open findings, each a card with where its detail lives, plus the list checked and found closed | `/phase-checkpoint`, every mode | `## To do`; `## Checked and closed`; `## How this file is kept` | 2026-09-24, remaining work outside the UI fix loop gets its own file |
 | `PROGRESS.md` | The plain-language state of the project, for a reader outside the build | `/phase-checkpoint`, every mode | `## What works today`; `## What does not work yet`; `## The story so far, sprint by sprint`; `## What is next`; `## Problems we know about and are tracking` | none recorded |
 | `requirements/Plan.md` | The phase narrative and the build narrative (the per-phase story that used to sit in CLAUDE.md and the board) and the phase status table. It states no count: the line under the status table points at `python3 tracker/check_doc_drift.py --counts` | `/phase-checkpoint`, every mode: Revision history entry always, status table in build-phase mode only | `## Status at a glance`; `## Revision history` | 2026-07-27, the checkpoint covers build phases; 2026-09-24, the build narrative moves out of CLAUDE.md and the board into Plan.md; 2026-09-25, the lead implements both harness reviews' takeaways (counts are computed on demand, never stated) |
@@ -58,14 +58,19 @@ Last updated: 2026-09-26.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-09-26 that begins "The hook-gap pull request (#112) merges after its second check", the last of the lead's rows at the phase 8.6 checkpoint. Of the rows read since the previous watermark, one changed a process this skill runs: the seven-day close for wording and layout cards (2026-09-25), now cited in the board's row. The others change code, rules, permissions or merge practice, not a registered document's shape:
+Guarded through the DECISIONS.md row dated 2026-09-27 that begins "The overnight build plan of 2026-09-25 and its settings log are deleted", the last row at the 2026-09-27 checkpoint. Of the rows read since the previous watermark, three changed a registered document's job or a process this skill runs, each now cited in its row:
 
-- the public-repository privacy rows;
-- the product and model rows;
-- the harness-review rows, already cited above;
-- the owner's merge delegation and standing permission;
-- the four hook gaps;
-- phase 8.6's merge and its rollback.
+- the test queries document becomes the gate that decides whether work is done (2026-09-26);
+- a `/verify` pass starts a wording or layout card's seven-day close (2026-09-26);
+- every owner decision is asked at once, never held for a list (2026-09-27).
+
+The others change code, rules, permissions, merges, spend or branch protection, not a registered document's shape:
+
+- phase 8.6's re-land and follow-up, phase 8.10, and cards 58 and 63;
+- the guard gaps and the graph server's password login;
+- the models, the writer bench and the MCP and command-line surfaces;
+- the rulesets, the release job and data engineering's v1.0.0;
+- the overnight run's answers, the spend cap, the parking after the machine restarted, and the deleted overnight files.
 
 ## Why the registry lives here
 

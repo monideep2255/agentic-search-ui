@@ -16,8 +16,9 @@ Last updated: 2026-09-27.
 - Develop's product code is card 58's merge, e116b9d9: Stop works until the answer appears. Everything after it on develop is documents. `git log --merges --first-parent develop` lists what came before.
 - Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`, raised from $10 on 2026-09-27. Both Railway services redeploy on every push to `develop`.
 - Production: `v0.2.0`, tag `cde4f59`, released 2026-09-20. Nothing since is on it.
+- Releases, in both repositories: the release job tags `production` and never pushes to it, and only the owner's account changes `develop` and `production`. Data engineering released v1.0.0 on 2026-09-27. The release fix merged with its verifier's findings open; card 65 fixes them before the next release of either repository.
 - Parked tags: `parked/phase-8.4-2026-09-25`, `parked/phase-8.8-snippets-2026-09-25` and `parked/verify-facts-118-2026-09-27`.
-- Nothing is being built between sessions. The machine restarted at 06:45 UTC on 2026-09-27 with seven agents running, and the owner parked everything except the release job (`DECISIONS.md`, the same day).
+- Nothing is being built between sessions. The machine restarted at 06:45 UTC on 2026-09-27 with seven agents running, and the owner parked everything except the release job, which finished the same day (`DECISIONS.md`).
 - PubMed answers again, since 06:26 UTC on 2026-09-27. Check `gh run list --branch develop --limit 3` before trusting that CI is green.
 
 ### Parked work, to pick up later
@@ -26,7 +27,6 @@ Nothing below is pushed unless it says so. Each worktree is under `.claude/workt
 
 | Work | Done | Where | Not done |
 |---|---|---|---|
-| Release job, both repositories | Built and fixed after one review round; System 3's CI passed | #125 (`chore/release-without-production-push`), data engineering #9 (`chore/release-cadence`) | In progress today: the fresh reviewer's verdict, the merges, the README line, data engineering's v1.0.0 and `production` in both repositories' owner-only rule |
 | Phase 8.7 builder A: the first sentence answers the question | Built, not reviewed; its unit suite never finished | `feat/8.7-s1` at 32e5945e, worktree `p87s1` | Review its own diff, run the suite, commit it properly |
 | Phase 8.7 builder B: records on screen while the summary is written | The `placement` field (1e030148); the screen work, not reviewed | `feat/8.7-s2` at cb407508, worktree `p87s2` | The screen and App-level Stop tests (one new test file's write was refused), reshaping `App.stopUntilAnswer.test.tsx`, the mutation reds, the gates |
 | Phase 8.7 builder C: shorter waits, the Opus writer | Six commits, every mutation red | `feat/8.7-s3` at da2c04f6, worktree `p87s3` | Its final gates |
@@ -58,6 +58,7 @@ Resume the parked work two agents at a time, card 63's judge first, since card 6
 | Phases 8.6 and 8.10, and earlier numbered phases | `tracker/phase_N.M.md`; `tracker/BOARD.md` is frozen at 6.2 |
 | Phase 8.9's plan, not yet opened | `tracker/phase_8.9.md` |
 | Card 58's reviews | `testing/Developer/reports/2026-09-27_card58_stop/review.md` |
+| The release fix's reviews and its open findings | `testing/Developer/reports/2026-09-27_release_fix/review.md`, card 65 |
 | Which model does what, and how the calls hand off | `docs/architecture/Model_architecture.md` |
 | The golden run and its floor | `.claude/skills/bossman-mode/reference/Product_review.md`, Step 2; the owner set 101 for card 63 and phase 8.7 (`DECISIONS.md`, 2026-09-27) |
 | The remaining work outside the board | `testing/Future.md` |

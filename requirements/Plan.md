@@ -1050,7 +1050,26 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
-2026-09-26. PHASE 8.6 MERGED, THEN ITS CODE CAME BACK OFF DEVELOP; THE BUILD HARNESS AND THE HOOK GAPS MERGED. The ledger is `tracker/phase_8.6.md`, and the night's log is in `testing/Overnight_build_plan_2026-09-25.md`.
+2026-09-27. CARD 58, CARD 60 AND PHASE 8.10 LIVE ON DEVELOP; THE RELEASE JOB AND DATA ENGINEERING'S v1.0.0 SHIPPED; EVERYTHING ELSE PARKED AFTER THE MACHINE RESTARTED. What is parked and where each piece stands: `HANDOFF.md`.
+
+- Merged to develop:
+  - Card 58, Stop until the answer appears, after a judge FAIL, one fix round and a fresh verifier's MERGE (`testing/Developer/reports/2026-09-27_card58_stop/review.md`).
+  - Card 60, the web app's license notices.
+  - Phase 8.10 (#120), its ten verifier notes filed as card 61.
+  - The license attribution (#123, #124, data engineering #8), the README pass, and test queries 87 to 99.
+- Branch protection: rulesets on `develop` and `production` in both repositories, and only the owner's account changes them. Data engineering's default branch was renamed from `main` to `develop`.
+- The release job (#125, data engineering #9): the robot tags `production` and never pushes to it. The fresh verifier said do not merge on F-REL-V05, a finding inside the fix. The owner chose to merge with it and V01 to V04 named open, and card 65 fixes them before the next release (`testing/Developer/reports/2026-09-27_release_fix/review.md`).
+- Data engineering v1.0.0: tagged by hand, `production` cut from the tag, the first release run releasing nothing as designed, and the notes published.
+- A second window on the same conversation resumed the lead's agents while the lead still ran. The owner chose that window, and the first lead was stopped (`LEARNINGS.md`).
+- The machine restarted at 06:45 UTC with seven agents running. The owner parked phase 8.7, cards 53, 62 and 63, and card 58's product review.
+- Decisions, each in `DECISIONS.md`:
+  - develop's daily spend cap raised to $25;
+  - Stop keeps the records already on screen in phase 8.7;
+  - up to 12 dispatches for phase 8.7;
+  - card 63 and phase 8.7 need their test queries and 101 golden answers, reverting on failure;
+  - the overnight plan and its settings log deleted.
+
+2026-09-26. PHASE 8.6 MERGED, THEN ITS CODE CAME BACK OFF DEVELOP; THE BUILD HARNESS AND THE HOOK GAPS MERGED. The ledger is `tracker/phase_8.6.md`, and the night's log was in `testing/Overnight_build_plan_2026-09-25.md`, deleted on 2026-09-27 and kept in git history.
 
 - Phase 8.6, Jev makes every choice (#108):
   - The judge and the adversary both returned FAIL. The blocking finding: in Jev mode, a question disguised as a forged chat transcript was answered.
@@ -1070,7 +1089,7 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 - Decisions and learnings: the rows dated 2026-09-26 in `DECISIONS.md` and `LEARNINGS.md`.
 - STILL OPEN: six decisions for the product owner (`HANDOFF.md`). Production is unchanged on `v0.2.0`.
 
-2026-09-25 (overnight). THE OVERNIGHT BUILD: THREE PHASES MERGED, ONE BUILT, ONE NOT STARTED. The product owner answered every question on the board's 43 cards in the evening, granted one unattended night, and slept; the plan, every answer and the night's log are in `testing/Overnight_build_plan_2026-09-25.md`.
+2026-09-25 (overnight). THE OVERNIGHT BUILD: THREE PHASES MERGED, ONE BUILT, ONE NOT STARTED. The product owner answered every question on the board's 43 cards in the evening, granted one unattended night, and slept; the plan, every answer and the night's log were in `testing/Overnight_build_plan_2026-09-25.md`, deleted on 2026-09-27 and kept in git history.
 
 - Phase 8.1, good questions stop failing (#105): the think step repairs or retries a malformed reply; a phenotype question shows MedGen's clinical features; answers cite up to 30 sources. Three fixes were reverted inside the phase after its reviews: the MODY union check weakened the citation gate, the full-retrieval conflict floor labelled correct answers as disagreeing, and the PubMed overfetch changed which papers are shown. Golden run 99 of 150 against a floor of 86.
 - Phase 8.5, housekeeping (#107): the graph data hand-over, the design card's type values, the checkpoint's line reference; the four streaming test files kept after the verifier found a third control only they test.
