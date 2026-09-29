@@ -1692,6 +1692,41 @@ What you should see:
 - Back as A, the GCK search is listed again, and it reopens.
 - Why it matters: what a researcher searched for is private. An agent holding someone else's sign-in must never be a way into it.
 
+### 101. Install and connect on the first try, from a fresh terminal (card 62)
+
+Queries to try:
+
+- No query needed in the web app. Once #133 is on develop, open develop's Integrations page and read the Command line tools card before copying anything.
+- In a new terminal, run what "Copy install command" copies, then open a second new terminal and follow the card's line on re-entering the environment before `s3 login` and `s3 ask "diseases linked to BRCA1"`.
+- Run `s3 mcp --help`, and add the agent configuration the page prints to an AI agent app, using the full path the card tells you how to find.
+- As a guest with no account, point an MCP client at the server with no token.
+
+What you should see:
+
+- Before any command, the card says it needs Python 3.11 and git, and works on macOS and Linux.
+- The install command creates its environment with `python3.11`, not `python3`, and succeeds on a Mac whose `python3` is older.
+- In the second terminal, following the card's line, `s3` is found and `s3 login` works.
+- Under a finished answer, `s3` prints the same trust line the web shows for that answer, with "High-risk claim" or "Not fully grounded" where the web shows them. A search you stop prints "Not verified · the run did not finish", never a confirmed verdict. A question the system asks back reads `[ask]` with no trust line.
+- `s3 mcp --help` says to point the agent app at `s3` by its full path, and the agent app finds it.
+- The page prints no KGX install command; it says a KGX file comes from the operator. This replaces query 90's line about the fourth copy button.
+- A guest over MCP is told MCP needs an account and how to get a token, never that the token is malformed.
+- Known, card 75: an agent that sends an unknown argument whose name contains "bearer token" can make `s3 mcp` tell you to log in again.
+- Why it matters: someone outside the project judges the integration by the first command they paste, and by whether `s3` tells them the same truth about an answer that the web does.
+
+### 102. The pages say what the system actually does (card 53)
+
+Queries to try:
+
+- No query needed. Once #134 is on develop, read the Architecture page's stops and the About page's walk-through, then ask `Which diseases are associated with BRCA1?`, `Which diseases are associated with NCBIGene:672?` and `Any trials for GERD?`, and open the steps each search shows.
+
+What you should see:
+
+- The pages say the plan step decides whether literature and trial evidence (PubTator3 and ClinicalTrials.gov) are searched, never that they run for every gene or disease question. The BRCA1 question searches them; the question naming NCBIGene:672 does not, as the page's layer 3 stop says.
+- They say what the PubTator3 and LitVar2 searches return, that each source has its own time limit with Pathogen Detection's 120 seconds the longest, and that some follow-up searches run in a second round after the first.
+- No page or README names LitSense, which nothing calls, and README names no Redis cache.
+- Known, card 76: the layer 3 stop names three kinds of question searched another way where there are five, and the About walk says BRCA1's live searches run at the same time as the graph, where four of its thirteen run in a second round.
+- Why it matters: a researcher who reads how the system works and then sees it do something else stops trusting the rest of what it says.
+
 ## Workflow for the product owner
 
 1. Open the develop app: <https://search-agent-web-develop-2aeb.up.railway.app>

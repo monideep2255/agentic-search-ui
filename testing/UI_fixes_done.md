@@ -418,7 +418,7 @@ fixed.
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-09-29. THE ONE THING TO KNOW: card 63 is on develop (#128) and its golden consistency run has not run, because the accounts file it signs in with is still on the first laptop. Until it runs and answers 101 or more of 150, nothing else lands on develop; below 101, card 63 is reverted. The work parked on 2026-09-27 is still parked, now on GitHub, and `HANDOFF.md` lists each piece.
+LAST UPDATED 2026-09-29. THE ONE THING TO KNOW: card 63 stays on develop. Its test queries 100 and 67 passed, and its golden run answered 98 of 150, below its floor of 101; the owner kept it and accepted the run, and the floor for the next change stays 101 (`DECISIONS.md`). Cards 62 and 53 finished their review rounds and wait on the owner's merge as #133 and #134, with the two rule lists card 53 named as #135. Phase 8.7 is the parked work still to resume, and `HANDOFF.md` lists each piece.
 
 What is live on develop:
 
@@ -426,7 +426,7 @@ What is live on develop:
 - What each numbered phase delivered and what stays open: its ledger, `tracker/phase_N.M.md`. Phase 8.7's ledger says where each builder stopped.
 - Production is unchanged on `v0.2.0`. The release job tags `production` and never pushes to it, and only the owner changes `develop` and `production`: the owner merges each pull request in the browser, and the assistant never passes `--admin`.
 
-What awaits the product owner's retest is the Retest column of `testing/UI_fix_plan.md`, newest first, card 63 at the top; each card names its query numbers in `testing/Test_queries_and_workflows.md`.
+What awaits the product owner is their merge of #133, #134 and #135, and their retests: the Retest column of `testing/UI_fix_plan.md`, newest first, card 63 at the top; each card names its query numbers in `testing/Test_queries_and_workflows.md`.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -475,7 +475,7 @@ option rather than a queued task.
 
 ### What is parked, and why
 
-- WHAT WAS IN FLIGHT ON 2026-09-27, less card 63, which landed on 2026-09-29: phase 8.7's three builders, cards 53 and 62, and card 58's product review. The owner parked them after the machine restarted, and they wait behind card 63's golden run. Each piece, its branch on GitHub and what is left: `HANDOFF.md`.
+- WHAT WAS IN FLIGHT ON 2026-09-27 AND IS STILL PARKED: phase 8.7's three builders and card 58's product review. Card 63 landed on 2026-09-29, and cards 53 and 62 were resumed and reviewed the same day and wait on the owner's merge. Each parked piece, its branch and what it still needs: `HANDOFF.md`.
 - Older work parked at tags: `parked/phase-8.4-2026-09-25`, `parked/phase-8.8-snippets-2026-09-25` and `parked/verify-facts-118-2026-09-27`.
 - THE ARCHITECTURE WORK IS NOT PARKED. The product owner will build it, so
   its six cards, 8 to 13 in the board's To do, wait on nobody. Corrected
@@ -493,9 +493,9 @@ option rather than a queued task.
 
 ### What is waiting on the product owner
 
-Checked 2026-09-29 against `DECISIONS.md`. The first item blocks everything that would land on develop:
+Checked 2026-09-29 against `DECISIONS.md`:
 
-- The golden run's accounts file, copied privately from the first laptop, for card 63's golden run.
+- Merges: #133 (card 62), then #134 (card 53), then #135 (the two rule lists).
 - The privacy pre-commit hooks on the second laptop, and `railway link` there so deploys can be confirmed.
 - Retests: the board's Retest column, newest first, card 63 at the top.
 - Four checks of under a minute each, the only rows still not approved:
@@ -606,7 +606,7 @@ board on 2026-09-24.
 
 ### Next, in order
 
-Written 2026-09-25 in the order of that day's To do column, and not re-ordered since. The board's To do column now leads with newer cards, card 2 first. Where the two differ, the board's order wins. Ahead of every item below, since 2026-09-29: card 63's golden run, then the parked work in `HANDOFF.md`. The items below keep the reasons behind the older cards.
+Written 2026-09-25 in the order of that day's To do column, and not re-ordered since. The board's To do column now leads with newer cards, card 2 first. Where the two differ, the board's order wins. Ahead of every item below, since 2026-09-29: the merges of #133 and #134, with whichever lands second updated to drop the facts checker's KGX example fact, then phase 8.7 from `HANDOFF.md`; cards 72 and 73, the guard timeouts behind card 63's lost golden runs, lead the board's To do column. The items below keep the reasons behind the older cards.
 
 The earlier framing of this list, kept because it still holds:
 
@@ -731,8 +731,10 @@ a standing option, not as queued work.
    removed without the other.
 4. Pick up the board, `testing/UI_fix_plan.md`: the product owner's retests
    in its Retest column first, each card naming its queries in
-   `testing/Test_queries_and_workflows.md`, then the parked work `HANDOFF.md`
-   lists, then its To do column from the top. The call ceiling is measured
+   `testing/Test_queries_and_workflows.md`, then the open pull requests and
+   the parked work `HANDOFF.md` lists, then its To do column from the top.
+   Golden runs and test queries sign in with fresh test accounts made on
+   develop, never committed. The call ceiling is measured
    and stays at twenty.
 
 ## Detail for items on the board
@@ -2036,6 +2038,19 @@ Evidence, with a full transcript per question and a re-runnable script:
 | 12.5 | Can these questions be answered at all, and how? | ANSWERED, and this is the encouraging half | ONE ALREADY DOES (`reflux disease`, eight cited MedGen concepts). YES for the other six, with tools already built and data that exists. `Any trials for GERD?`: `clinicaltrials_search` with `query_cond` taken from a disease anchor rather than only a gene symbol. `reflux disease` and `GERD`: a live MedGen lookup for the concept, plus PubMed, plus the trials registry. `papers on caffeine and exercise` and the two population questions: a PubMed search on the topic, no gene anchor needed. THE HONEST LIMIT on `Does coffee help make exercise more effective?`: the product can return what has been published and must never return a verdict on whether coffee works. SO THE CONSTRAINT IS ROUTING AND VOCABULARY, NOT CAPABILITY, which is the opposite of the graph disease-name finding from the same day that cannot be fixed from this repository at all |
 
 ## Session history
+
+### 2026-09-29, second session, in one table
+
+Back on the first laptop. Card 63's two checks ran, and cards 62 and 53 were resumed from their parked branches and taken through their review rounds.
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| Card 63, every "not yet confirmed" answer saved and an NCBI outage said plainly | Test queries 100 and 67 passed on develop; the golden run answered 98 of 150 against a floor of 101, the lost runs guard-model timeouts, one unlogged crash and G-006's graph timeouts; the owner kept it and accepted the run | Retest |
+| Card 62, install and connect on the first try | Builder's report, judge, adversary, one fix round, fresh verifier; the round's MCP fix broke silent renewal against production and the owner had it reverted | #133, waiting on the owner's merge |
+| Card 53, the pages and documents state what the code does | The same rounds; every rewritten page sentence true on every path the verifier ran; checker gaps and two sentences named open | #134, waiting on the owner's merge |
+| Two rules naming LitSense | The owner approved correcting the two API lists, one line each | #135, waiting on the owner's merge |
+| Cards 71 to 78 | Filed: a reopened answer that differs from the one read (71), guard timeouts (72), a crash with no logged reason (73), G-006 (74), card 62's dropped MCP fix (75), two page sentences (76), the silent layer 3 skip (77), the facts checker's gaps (78) | To do |
+| The AirDrop steps in `HANDOFF.md` | Removed at the owner's word | Done |
 
 ### 2026-09-29, in one table
 

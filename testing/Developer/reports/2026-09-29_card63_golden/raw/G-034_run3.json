@@ -1,0 +1,738 @@
+{
+ "record": {
+  "id": "G-034",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-golden-b-20260929@example.com",
+  "category": "kiss",
+  "query_class": "aggregate",
+  "expected_outcome": "answer",
+  "question": "How many genes in the graph are associated with breast cancer?",
+  "session_id": "c103-55e6a802f4c6",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "bae5d1bd",
+  "started_at": "2026-09-29T16:30:48+00:00",
+  "run_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "aggregate",
+  "resolved_entities": [
+   "MedGen:C1320450",
+   "MedGen:C1861471",
+   "MedGen:C1968974",
+   "MedGen:C2675521",
+   "MedGen:C2676677",
+   "MedGen:C3469522",
+   "MedGen:C4016360",
+   "MedGen:C4016581"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 1 source, not yet confirmed",
+  "citations": 1,
+  "distinct_sources": 1,
+  "citations_by_layer": {
+   "layer_2_api": 1
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "summary": "call did not complete within its per-step timeout budget"
+   }
+  ],
+  "rate_limit_signals": 0,
+  "answer_words": 133,
+  "answer_start": "Found 1 medgen record for breast cancer: Seen by breast cancer nurse [1]. \n\nMedgen records found\n\nMedgen title: Seen by breast cancer nurse [1]. \n\nNote: the wri",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 4,
+  "server_elapsed_s": 35.341,
+  "seconds": 35.7,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 11,
+   "citation": 1,
+   "trust_signal": 2,
+   "done": 1
+  },
+  "first_word_s": 35.482,
+  "first_token_ts": "2026-09-29T16:29:35.469691Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 0,
+   "ts": "2026-09-29T16:29:01.214530Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 2,
+   "ts": "2026-09-29T16:29:02.081376Z",
+   "payload": {
+    "narrative": "The query asks for a count of genes associated with a disease, which requires an aggregate operation over multiple records. (breast cancer: 8 of at least 20 MedGen records matched by name)",
+    "query_class": "aggregate",
+    "resolved_entities": [
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1320450",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1861471",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1968974",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2675521",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2676677",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C3469522",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016360",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016581",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 4,
+   "ts": "2026-09-29T16:29:02.084784Z",
+   "payload": {
+    "narrative": "searching 3 layers for seen by breast cancer nurse. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-295371568c5a",
+      "layer": "layer_1_graph",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-1bc2ff0d2157",
+      "layer": "layer_3_enrichment",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-672eb617ccc8",
+      "layer": "layer_3_enrichment",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-fbfd9e459012",
+      "layer": "layer_2_api",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4abd42d0bb29",
+      "layer": "layer_2_api",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-cfd0cac60b7c",
+      "layer": "layer_2_api",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-217eb2f68559",
+      "layer": "layer_3_enrichment",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-0a345b8d05dd",
+      "layer": "layer_2_api",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1320450",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1861471",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1968974",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2675521",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2676677",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C3469522",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016360",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016581",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 6,
+   "ts": "2026-09-29T16:29:02.086619Z",
+   "payload": {
+    "call_id": "cq-295371568c5a",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 7,
+   "ts": "2026-09-29T16:29:02.086667Z",
+   "payload": {
+    "call_id": "pa-1bc2ff0d2157",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 8,
+   "ts": "2026-09-29T16:29:02.086684Z",
+   "payload": {
+    "call_id": "ct-672eb617ccc8",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 9,
+   "ts": "2026-09-29T16:29:02.086699Z",
+   "payload": {
+    "call_id": "ne-fbfd9e459012",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 10,
+   "ts": "2026-09-29T16:29:02.086711Z",
+   "payload": {
+    "call_id": "ne-4abd42d0bb29",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 11,
+   "ts": "2026-09-29T16:29:02.086724Z",
+   "payload": {
+    "call_id": "ne-cfd0cac60b7c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 12,
+   "ts": "2026-09-29T16:29:02.086737Z",
+   "payload": {
+    "call_id": "pa-217eb2f68559",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 13,
+   "ts": "2026-09-29T16:29:02.086750Z",
+   "payload": {
+    "call_id": "ne-0a345b8d05dd",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 14,
+   "ts": "2026-09-29T16:29:02.274361Z",
+   "payload": {
+    "call_id": "pa-1bc2ff0d2157",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 15,
+   "ts": "2026-09-29T16:29:02.280596Z",
+   "payload": {
+    "call_id": "ct-672eb617ccc8",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 16,
+   "ts": "2026-09-29T16:29:02.400035Z",
+   "payload": {
+    "call_id": "ne-fbfd9e459012",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 17,
+   "ts": "2026-09-29T16:29:02.420102Z",
+   "payload": {
+    "call_id": "ne-4abd42d0bb29",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "search: 0 id(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 18,
+   "ts": "2026-09-29T16:29:32.087860Z",
+   "payload": {
+    "call_id": "cq-295371568c5a",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "call did not complete within its per-step timeout budget",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 19,
+   "ts": "2026-09-29T16:29:32.088290Z",
+   "payload": {
+    "call_id": "ne-cfd0cac60b7c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 20,
+   "ts": "2026-09-29T16:29:32.088366Z",
+   "payload": {
+    "call_id": "pa-217eb2f68559",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 21,
+   "ts": "2026-09-29T16:29:32.246187Z",
+   "payload": {
+    "call_id": "ne-0a345b8d05dd",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 22,
+   "ts": "2026-09-29T16:29:32.247756Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 23,
+   "ts": "2026-09-29T16:29:35.469691Z",
+   "payload": {
+    "text": "Found 1 medgen record for breast cancer: Seen by breast cancer nurse [1]. ",
+    "marker_ids": [
+     "ne-0a345b8d05dd-1"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Seen by breast cancer nurse",
+     "breast cancer"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "729095",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/729095",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "2cac46f8-398e-4e35-919d-c1993ab340f2",
+   "seq": 38,
+   "ts": "2026-09-29T16:29:35.470223Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 4,
+    "elapsed_ms": 35341,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 1 source, not yet confirmed",
+    "layer_calls_used": 5,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.97,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 162
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 171
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 195
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 213
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 medgen record for breast cancer: Seen by breast cancer nurse [1]. \n\nMedgen records found\n\nMedgen title: Seen by breast cancer nurse [1]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\nNote: this answer does not address the following entities named in the question: Seen by breast cancer nurse, Paraneoplastic SPS is associated with breast cancer and other malignancies, BREAST CANCER, INVASIVE, SUSCEPTIBILITY TO, Familial BREAST CANCER susceptibility 2, Familial BREAST CANCER susceptibility 1, Breast cancer susceptibility, BREAST CANCER, SUSCEPTIBILITY TO, IN BRCA1 AND BRCA2 CARRIERS, Androgen insensitivity, partial, with breast cancer. Ask about them individually for a complete answer.\n\nOne of the background searches did not finish, so this answer may be missing sources. Ask again to retry."
+}

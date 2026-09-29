@@ -1,0 +1,1164 @@
+{
+ "record": {
+  "id": "G-027",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-golden-a-20260929@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What genetic tests are available for Huntington disease?",
+  "session_id": "c103-b92c5bd183f2",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "bae5d1bd",
+  "started_at": "2026-09-29T16:27:34+00:00",
+  "run_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0020179"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 29 sources, not yet confirmed",
+  "citations": 42,
+  "distinct_sources": 29,
+  "citations_by_layer": {
+   "layer_1_graph": 17,
+   "layer_2_api": 19,
+   "layer_3_enrichment": 6
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 41,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 8,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 14,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   41
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 328,
+  "answer_start": "Found 16 sequence variant records and 1 gene record for Huntington disease [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17]. \n\nTwo additional records",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 27.731,
+  "seconds": 28.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 68,
+   "citation": 42,
+   "trust_signal": 43,
+   "done": 1
+  },
+  "first_word_s": 27.893,
+  "first_token_ts": "2026-09-29T16:26:14.065008Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 0,
+   "ts": "2026-09-29T16:25:47.080507Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 2,
+   "ts": "2026-09-29T16:25:51.120313Z",
+   "payload": {
+    "narrative": "The query asks what genetic tests are available for a specific disease, which is a direct question answerable by one or two API calls to a genetic testing resource. (Huntington disease: 1 of 6 MedGen record matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 4,
+   "ts": "2026-09-29T16:25:51.122869Z",
+   "payload": {
+    "narrative": "searching 3 layers for huntington disease. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-159be1a7ef29",
+      "layer": "layer_1_graph",
+      "persona": "Florey",
+      "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-cfdaa6966e7f",
+      "layer": "layer_3_enrichment",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-2f8b76461f65",
+      "layer": "layer_3_enrichment",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e63f21a5643c",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-3a851ecc5e1c",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-aa21bd753f31",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-d39ea50c7423",
+      "layer": "layer_3_enrichment",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-920acaf21a07",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 6,
+   "ts": "2026-09-29T16:25:51.124308Z",
+   "payload": {
+    "call_id": "cq-159be1a7ef29",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 7,
+   "ts": "2026-09-29T16:25:51.124356Z",
+   "payload": {
+    "call_id": "pa-cfdaa6966e7f",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 8,
+   "ts": "2026-09-29T16:25:51.124374Z",
+   "payload": {
+    "call_id": "ct-2f8b76461f65",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 9,
+   "ts": "2026-09-29T16:25:51.124406Z",
+   "payload": {
+    "call_id": "ne-e63f21a5643c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 10,
+   "ts": "2026-09-29T16:25:51.124419Z",
+   "payload": {
+    "call_id": "ne-3a851ecc5e1c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 11,
+   "ts": "2026-09-29T16:25:51.124433Z",
+   "payload": {
+    "call_id": "ne-aa21bd753f31",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 12,
+   "ts": "2026-09-29T16:25:51.124446Z",
+   "payload": {
+    "call_id": "pa-d39ea50c7423",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 13,
+   "ts": "2026-09-29T16:25:51.124459Z",
+   "payload": {
+    "call_id": "ne-920acaf21a07",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 14,
+   "ts": "2026-09-29T16:25:51.295111Z",
+   "payload": {
+    "call_id": "pa-cfdaa6966e7f",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 15,
+   "ts": "2026-09-29T16:25:51.299378Z",
+   "payload": {
+    "call_id": "ne-e63f21a5643c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 16,
+   "ts": "2026-09-29T16:25:51.457408Z",
+   "payload": {
+    "call_id": "ct-2f8b76461f65",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 17,
+   "ts": "2026-09-29T16:25:51.577238Z",
+   "payload": {
+    "call_id": "ne-3a851ecc5e1c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 18,
+   "ts": "2026-09-29T16:25:53.199241Z",
+   "payload": {
+    "call_id": "cq-159be1a7ef29",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey",
+    "summary": "41 row(s) of 41",
+    "result_count": 41,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 19,
+   "ts": "2026-09-29T16:25:53.368411Z",
+   "payload": {
+    "call_id": "pa-d39ea50c7423",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 20,
+   "ts": "2026-09-29T16:25:53.509401Z",
+   "payload": {
+    "call_id": "ne-aa21bd753f31",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "fetch: 8 record(s)",
+    "result_count": 8,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 21,
+   "ts": "2026-09-29T16:25:53.590974Z",
+   "payload": {
+    "call_id": "ne-920acaf21a07",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "summary: 14 record(s)",
+    "result_count": 14,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 22,
+   "ts": "2026-09-29T16:25:53.594115Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 23,
+   "ts": "2026-09-29T16:26:14.065008Z",
+   "payload": {
+    "text": "Found 16 sequence variant records and 1 gene record for Huntington disease [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17]. ",
+    "marker_ids": [
+     "cq-159be1a7ef29-15",
+     "cq-159be1a7ef29-22",
+     "cq-159be1a7ef29-1",
+     "cq-159be1a7ef29-2",
+     "cq-159be1a7ef29-4",
+     "cq-159be1a7ef29-5",
+     "cq-159be1a7ef29-6",
+     "cq-159be1a7ef29-7",
+     "cq-159be1a7ef29-9",
+     "cq-159be1a7ef29-10",
+     "cq-159be1a7ef29-12",
+     "cq-159be1a7ef29-13",
+     "cq-159be1a7ef29-14",
+     "cq-159be1a7ef29-17",
+     "cq-159be1a7ef29-18",
+     "cq-159be1a7ef29-19",
+     "cq-159be1a7ef29-20"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Huntington disease"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1671702",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1671702",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.4638C>G (p.Val1546=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:4278357",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4278357",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.7849G>A (p.Val2617Met)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:3064",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/3064",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "huntingtin",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:409",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/409",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:21303",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/21303",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:31915",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/31915",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_002111.8(HTT):c.52CAG[27_35] (p.Gln18_Gln38delinsGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGln)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:31916",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/31916",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:417742",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/417742",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.2108C>T (p.Pro703Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:982633",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/982633",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.8903G>A (p.Gly2968Asp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1298952",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1298952",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.2758G>A (p.Asp920Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1405485",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1405485",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.6250G>A (p.Gly2084Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1355049",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1355049",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.7498G>A (p.Val2500Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1599166",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1599166",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1809691",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1809691",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.99_100del (p.Gln34fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779747",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779747",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.107del (p.Gln36fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779748",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779748",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.99_102del (p.Gln33fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779749",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779749",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.99del (p.Gln33fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "15132037",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/15132037/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Huntington_Disease",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D006816",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00052143",
+    "source_url": "https://clinicaltrials.gov/study/NCT00052143",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1839348",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/1839348/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00075140",
+    "source_url": "https://clinicaltrials.gov/study/NCT00075140",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27228260",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27228260/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00980694",
+    "source_url": "https://clinicaltrials.gov/study/NCT00980694",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "29325616",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29325616/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01554033",
+    "source_url": "https://clinicaltrials.gov/study/NCT01554033",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38489195",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38489195/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02336633",
+    "source_url": "https://clinicaltrials.gov/study/NCT02336633",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "8dc5e649-8fbf-4539-a88d-a94029d6ac10",
+   "seq": 177,
+   "ts": "2026-09-29T16:26:14.080041Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 27731,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 29 sources, not yet confirmed",
+    "layer_calls_used": 7,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.98,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 159
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 145
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 143
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 349
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 16 sequence variant records and 1 gene record for Huntington disease [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17]. \n\nTwo additional records are NM_001388492.1(HTT):c.4638C>G (p.Val1546=) at ClinVar:1671702 [1] and NM_001388492.1(HTT):c.7849G>A (p.Val2617Met) at ClinVar:4278357 [2]. \n\nGene records found\n\nGene NCBIGene:3064, name: huntingtin [3]. \n\nSequence variant records found\n\nSequenceVariant record ClinVar:409 [4]. SequenceVariant record ClinVar:21303 [5]. SequenceVariant ClinVar:31915, name: NM_002111.8(HTT):c.52CAG[27_35] (p.Gln18_Gln38delinsGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGln) [6]. SequenceVariant record ClinVar:31916 [7]. SequenceVariant ClinVar:417742, name: NM_001388492.1(HTT):c.2108C>T (p.Pro703Leu) [8]. SequenceVariant ClinVar:982633, name: NM_001388492.1(HTT):c.8903G>A (p.Gly2968Asp) [9]. SequenceVariant ClinVar:1298952, name: NM_001388492.1(HTT):c.2758G>A (p.Asp920Asn) [10]. SequenceVariant ClinVar:1405485, name: NM_001388492.1(HTT):c.6250G>A (p.Gly2084Arg) [11]. SequenceVariant ClinVar:1355049, name: NM_001388492.1(HTT):c.7498G>A (p.Val2500Ile) [12]. SequenceVariant record ClinVar:1599166 [13]. SequenceVariant ClinVar:1671702, name: NM_001388492.1(HTT):c.4638C>G (p.Val1546=) [1]. SequenceVariant ClinVar:1809691, name: NM_001388492.1(HTT):c.99_100del (p.Gln34fs) [14]. SequenceVariant ClinVar:3779747, name: NM_001388492.1(HTT):c.107del (p.Gln36fs) [15]. SequenceVariant ClinVar:3779748, name: NM_001388492.1(HTT):c.99_102del (p.Gln33fs) [16]. SequenceVariant ClinVar:3779749, name: NM_001388492.1(HTT):c.99del (p.Gln33fs) [17]. SequenceVariant ClinVar:4278357, name: NM_001388492.1(HTT):c.7849G>A (p.Val2617Met) [2]. \n\nPubmed records found\n\nPubmed title: Huntington's disease [18]. Pubmed title: Huntington's disease [35]. Pubmed title: Huntington disease [37]. Pubmed title: Huntington disease [39]. Pubmed title: Huntington's Disease Clinical Trials Corner: March 2024 [41]. \n\nMedgen records found\n\nMedgen title: Huntington disease [19]. \n\nClinical features MedGen lists for Huntington disease\n\nMedgen clinical_features: Chorea [20]. Medgen clinical_features: Depression [21]. Medgen clinical_features: Gliosis [22]. Medgen clinical_features: Rigidity [23]. Medgen clinical_features: Seizure [24]. Medgen clinical_features: Hyperreflexia [25]. Medgen clinical_features: Bradykinesia [26]. Medgen clinical_features: Personality changes [27]. Medgen clinical_features: Abnormality of eye movement [28]. Medgen clinical_features: Dementia [29]. Medgen clinical_features: Cerebellar atrophy [30]. Medgen clinical_features: Gait ataxia [31]. Medgen clinical_features: Neuronal loss in central nervous system [32]. \n\nLiterature entity records found\n\nLiterature entity name: Huntington Disease [33]. \n\nClinical trial records found\n\nClinical trial name: Prospective Huntington At Risk Observational Study [34]. Clinical trial name: Family Health After Predictive Huntington Disease (HD) Testing [36]. Clinical trial name: Bioavailability of Ubiquinol in Huntington Disease [38]. Clinical trial name: Study of Huntington Patients in Connection With European Huntington's Disease Network (EHDN) [40]. Clinical trial name: Resveratrol and Huntington Disease [42]. \n\nNote: 4 further sequence variant records were found for this question and are not covered in the summary above"
+}

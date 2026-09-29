@@ -13,40 +13,42 @@ Last updated: 2026-09-29.
 
 ## What is live
 
-- Develop's product code is card 63's merge, #128 at 25800026: every "not yet confirmed" answer is saved and reopens, and an NCBI outage is said plainly. Before it, #129 at fbe85117 moved two dev-only frontend packages past a high advisory that had turned gate 7 red. `git log --merges --first-parent develop` lists what came before.
-- Card 63 is an answer-path change and its golden consistency run has NOT run: the accounts file it signs in with is still on the other laptop. Until it runs and answers 101 or more of 150, nothing else lands on develop, and below 101 card 63 is reverted (`DECISIONS.md`, 2026-09-27).
+- Develop's product code is card 63's merge, #128 at 25800026: every "not yet confirmed" answer is saved and reopens, and an NCBI outage is said plainly. `git log --merges --first-parent develop` lists what came before.
+- Card 63 passed test queries 100 and 67 on develop on 2026-09-29, and its golden run answered 98 of 150, below its floor of 101. The owner kept card 63 and accepted that run; the floor for the next change stays 101 (`DECISIONS.md`, 2026-09-29). The lost runs are guard-model timeouts and a crash that logs no reason, now cards 72 and 73.
+- Golden runs and test queries sign in with fresh test accounts made on develop; their sign-ins live only in the lead's scratch folder, never committed. A new session makes its own the same way (`LEARNINGS.md`, 2026-09-29).
 - Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`. Both Railway services redeploy on every push to `develop`.
 - Production: `v0.2.0`, tag `cde4f59`, released 2026-09-20. Nothing since is on it.
-- Merging into develop: develop's ruleset blocks `gh pr merge` from the assistant, and the owner merges each pull request in the browser. The assistant never passes `--admin` (`DECISIONS.md`, 2026-09-29).
+- Merging into develop: the owner merges each pull request in the browser; the assistant never passes `--admin` (`DECISIONS.md`, 2026-09-29).
 - Releases: the release job tags `production` and never pushes to it. Card 65 fixes the release fix's open findings before the next release.
 - Parked tags, on the first laptop only: `parked/phase-8.4-2026-09-25`, `parked/phase-8.8-snippets-2026-09-25` and `parked/verify-facts-118-2026-09-27`.
 - Nothing is being built between sessions. Check `gh run list --branch develop --limit 3` before trusting that CI is green.
 
-### Parked work, to pick up later
+### Open pull requests and parked work
 
-Every branch below is on GitHub and none is merged. To pick one up: `git worktree add .claude/worktrees/<name> <branch>`, which also creates the local branch on a fresh clone. These are the only branches on GitHub besides `develop` and `production`; delete each on both sides when it merges or is dropped (`git-workflow`).
+Every branch below is on GitHub. To pick one up: `git worktree add .claude/worktrees/<name> <branch>`. Delete each on both sides when it merges or is dropped (`git-workflow`).
 
-| Work | Done | Where | Not done |
+| Work | State | Where | Not done |
 |---|---|---|---|
+| Card 62: install and connect from the Integrations page on the first try | Reviewed: judge, adversary, one fix round, fresh verifier; its MCP fix dropped by the owner (card 75) | #133, `fix/card62-install-first-try` | The owner's merge |
+| Card 53: the pages and documents state what the code does | Reviewed the same way; checker gaps and two sentences named open (cards 76 to 78) | #134, `fix/card53-stale-facts` | The owner's merge. Whichever of #133 and #134 lands second is updated to drop the facts checker's `surfaces.kgx_options` fact, which reads the KGX example #133 removed |
+| Two rules name the APIs each layer calls | Approved by the owner item by item | #135, `chore/rules-api-lists` | The owner's merge |
 | Phase 8.7 builder A: the first sentence answers the question | Built, not reviewed; its unit suite never finished | `feat/8.7-s1` at 32e5945e | Review its own diff, run the suite, commit it properly |
-| Phase 8.7 builder B: records on screen while the summary is written | The `placement` field (1e030148); the screen work, not reviewed | `feat/8.7-s2` at cb407508 | The screen and App-level Stop tests (one new test file's write was refused), reshaping `App.stopUntilAnswer.test.tsx`, the mutation reds, the gates |
+| Phase 8.7 builder B: records on screen while the summary is written | The `placement` field (1e030148); the screen work, not reviewed | `feat/8.7-s2` at cb407508 | The screen and App-level Stop tests, reshaping `App.stopUntilAnswer.test.tsx`, the mutation reds, the gates |
 | Phase 8.7 builder C: shorter waits, the Opus writer | Six commits, every mutation red | `feat/8.7-s3` at da2c04f6 | Its final gates |
 | Phase 8.7 as a whole | Tickets, findings and every decision | `tracker/phase_8.7.md`, branch `phase/8.7-answers-sooner` | Merge the three builders into the phase branch, then the judge, the adversary and one fix-and-verify; then the golden run at 101 or more plus test queries 1, 2, 17, 72 and 98, reverting on failure; then the product review. At merge, set `PER_QUERY_COST_CAP_USD=0.25` on develop. Up to 12 dispatches |
-| Card 53: stale facts on the pages and in the documents | Eight commits | `fix/card53-stale-facts` at a470c82e | The builder's report, the review, the gates, the merge |
-| Card 62: install and connect from the Integrations page on the first try | Five commits | `fix/card62-install-first-try` at 4f749a7f | Its test run, its report, the judge and the adversary, the merge |
 
-The reviewers' probes from 2026-09-27 are gone, so any resumed reviewer reruns its own.
+The reviewers' probes from 2026-09-27 are gone, so any resumed phase 8.7 reviewer reruns its own.
 
 ## What awaits the product owner
 
-- The golden run's accounts file, copied from the first laptop privately (AirDrop), never through git or a chat. Card 63's golden run waits on it, and so does everything else that would land on develop.
+- Merges: #133, then #134, then #135, and the checkpoint pull request that carries this file.
 - The privacy pre-commit and commit-msg hooks on the second laptop, from your private notes. Until they are in, every commit there is checked by hand.
-- `~/.local/bin/railway link` on the second laptop, choosing `system3-search-agent-develop`, so `/ship` can confirm deploys. The sign-in itself is done.
+- `~/.local/bin/railway link` on the second laptop, choosing `system3-search-agent-develop`, so `/ship` can confirm deploys.
 - Retests: the Retest column of `testing/UI_fix_plan.md`, newest first. Card 63 is at the top, queries 100 and 67; card 58 is next, query 98.
 
 ## The one next action
 
-Run card 63's golden consistency run once the accounts file is on this laptop: 101 or more of 150 keeps it, fewer reverts it on develop with the per-question table left for the owner. Only then resume the parked work, two agents at a time and one unit suite at a time, card 53 and card 62 as a pair before phase 8.7.
+Once #133 and #134 have both landed, update whichever landed second so the facts checker no longer reads the removed KGX example, then open phase 8.7 from its ledger, `tracker/phase_8.7.md`, two agents at a time and one unit suite at a time. Cards 72 and 73, the guard timeouts behind card 63's lost golden runs, lead the board's To do column and may go first if the owner says so.
 
 ### Starting on another computer
 
@@ -94,14 +96,7 @@ For a laptop with nothing installed. The commands are for macOS on Apple silicon
    - `frontend/.env`, one line, `VITE_API_BASE_URL`.
    - `requirements/context/Private_NCBI_context.md`.
 
-   The easiest way between two Macs is AirDrop. On the old laptop, from the repository folder, zip the three into the system's temporary folder, which iCloud does not sync, and show the zip in Finder:
-
-   ```bash
-   zip -q "$TMPDIR/secrets.zip" .env frontend/.env requirements/context/Private_NCBI_context.md
-   open -R "$TMPDIR/secrets.zip"
-   ```
-
-   Right-click the zip, then Share, then AirDrop to the new laptop, where it lands in Downloads. From the new clone's folder, run `unzip <the zip in Downloads> -d .`, which puts each file back at its own path, then move the zip to the Trash on both laptops.
+   Copy each back to its own path by hand, or rebuild `.env` from `env.example`.
 
    With `.env` in place, the app and the preflight reach the graph over the HTTPS query service, so the new laptop needs no SSH tunnel. The direct-connection graph keys in `.env` are only the rollback path (`env.example`).
 
