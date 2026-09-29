@@ -760,3 +760,501 @@ async def test_remember_turn_records_the_citations_the_answer_showed(
 
     assert captured["reported_record_ids"] == [url_a, url_b], captured
     assert captured["question"] == "What variants cause it?"
+
+
+# Card 73: a crashed search writes its reason to the log. The person's screen
+# stays generic (the tests above pin that); a developer traces the crash by
+# trace id. The fake secret below is shaped like a provider key and rides in
+# the exception MESSAGE, the way a provider error echoing a key would. It is
+# assembled from parts so no scanner mistakes the test file for a leak.
+_FAKE_KEY = "sk-" + "ant-" + "api03-" + "FAKEFAKEFAKE0123456789abcdefABCDEF"
+_FAKE_PASSWORD = "hunter" + "2"
+
+
+def _crash_records(caplog: pytest.LogCaptureFixture) -> list:
+    return [
+        r
+        for r in caplog.records
+        if r.name == "system_03_search_agent.core.run" and r.levelname == "ERROR"
+    ]
+
+
+def _install_crash(monkeypatch: pytest.MonkeyPatch, path: str) -> None:
+    import system_03_search_agent.core.run as run_module
+
+    message = f"provider rejected key {_FAKE_KEY} for dsn postgresql://u:{_FAKE_PASSWORD}@h/db"
+    if path == "run":
+
+        async def _boom(*args: object, **kwargs: object) -> None:
+            raise ValueError(message)
+
+        monkeypatch.setattr(run_module.compiled_graph, "ainvoke", _boom)
+    else:
+
+        async def _boom_astream(*args: object, **kwargs: object):
+            raise ValueError(message)
+            yield  # pragma: no cover
+
+        monkeypatch.setattr(run_module.compiled_graph, "astream", _boom_astream)
+
+
+async def _drain(path: str, query: Query) -> list:
+    entry = run if path == "run" else run_streaming
+    return [event async for event in entry(query, _valid_context())]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["run", "run_streaming"])
+async def test_a_crash_logs_one_error_record_with_trace_id_and_exception_class(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, path: str
+) -> None:
+    _install_crash(monkeypatch, path)
+    query = _valid_query()
+    with caplog.at_level("ERROR", logger="system_03_search_agent.core.run"):
+        events = await _drain(path, query)
+
+    records = _crash_records(caplog)
+    assert len(records) == 1
+    text = records[0].getMessage()
+    assert query.trace_id in text
+    assert "builtins.ValueError" in text
+    assert "test_run.py" in text  # a frame of the traceback is present
+    assert records[0].exc_info is None  # the formatter would print the message
+    # The person's screen is unchanged: the same generic pair, in order.
+    assert [e.type for e in events] == ["error", "done"]
+    assert (
+        events[0].payload["message"]
+        == "This query failed unexpectedly before it could complete."
+    )
+    assert events[0].payload["error_class"] == "unexpected"
+    assert _FAKE_KEY not in str(events[0].payload)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["run", "run_streaming"])
+async def test_a_crash_never_puts_a_secret_from_the_exception_message_in_the_log(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, path: str
+) -> None:
+    _install_crash(monkeypatch, path)
+    with caplog.at_level("DEBUG"):
+        await _drain(path, _valid_query())
+
+    assert _crash_records(caplog)
+    for record in caplog.records:
+        rendered = caplog.handler.format(record)
+        assert _FAKE_KEY not in rendered
+        assert _FAKE_PASSWORD not in rendered
+        assert "provider rejected" not in rendered
+
+
+# Card 73, fix round: the record's shape and its bounds, and the promise that
+# writing it can never cost the person the error event. These call
+# `_log_crash` directly with built exceptions, so each bound is tested on its
+# own; the two paths above and the tests below `_install_raise` cover the
+# handlers.
+_CRASH_LOGGER = "system_03_search_agent.core.run"
+_TRACE = "2ff4e9d4-6499-4167-9e92-8c54d8ab720e"
+
+
+def _crash_text(caplog: pytest.LogCaptureFixture) -> str:
+    records = _crash_records(caplog)
+    assert len(records) == 1, [r.getMessage() for r in records]
+    return records[0].getMessage()
+
+
+def _log_directly(caplog: pytest.LogCaptureFixture, exc: BaseException) -> str:
+    from system_03_search_agent.core.run import _log_crash
+
+    escaped = ""
+    with caplog.at_level("ERROR", logger=_CRASH_LOGGER):
+        try:
+            _log_crash(_TRACE, exc)
+        except Exception as raised:  # noqa: BLE001
+            escaped = type(raised).__name__
+    assert not escaped, f"_log_crash raised: {escaped}"
+    return _crash_text(caplog)
+
+
+def _install_raise(monkeypatch: pytest.MonkeyPatch, path: str, exc: BaseException) -> None:
+    import system_03_search_agent.core.run as run_module
+
+    if path == "run":
+
+        async def _boom(*args: object, **kwargs: object) -> None:
+            raise exc
+
+        monkeypatch.setattr(run_module.compiled_graph, "ainvoke", _boom)
+    else:
+
+        async def _boom_astream(*args: object, **kwargs: object):
+            raise exc
+            yield  # pragma: no cover
+
+        monkeypatch.setattr(run_module.compiled_graph, "astream", _boom_astream)
+
+
+async def _drain_never_raising(path: str, query: Query) -> list:
+    """Drain a run, failing with a plain message if the crash logger raised
+    into the caller. Reporting only the class keeps pytest from formatting an
+    exception whose own methods are hostile."""
+    escaped = ""
+    try:
+        return await _drain(path, query)
+    except Exception as raised:  # noqa: BLE001
+        escaped = type(raised).__name__
+    # Failed outside the except block so pytest does not chain, and try to
+    # format, the hostile exception.
+    pytest.fail(f"the crash logger raised into the caller: {escaped}")
+
+
+def _assert_generic_pair(events: list) -> None:
+    assert [e.type for e in events] == ["error", "done"]
+    assert (
+        events[0].payload["message"]
+        == "This query failed unexpectedly before it could complete."
+    )
+
+
+def _deep(n: int, exc: BaseException) -> None:
+    """Raise `exc` from n + 1 frames of `_deep` down, then one more frame."""
+    if n == 0:
+        _the_failing_line(exc)
+    else:
+        _deep(n - 1, exc)
+
+
+def _the_failing_line(exc: BaseException) -> None:
+    raise exc
+
+
+def _raised(exc: BaseException, depth: int = 0) -> BaseException:
+    try:
+        _deep(depth, exc)
+    except BaseException as caught:  # noqa: BLE001 - the test wants the raised object back
+        return caught
+    raise AssertionError("unreachable")  # pragma: no cover
+
+
+# --- the first line: short, trace id first, never split (J05) -------------
+
+
+@pytest.mark.parametrize("path", ["run", "run_streaming"])
+@pytest.mark.asyncio
+async def test_the_first_line_of_a_crash_record_starts_with_the_whole_trace_id_and_is_short(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, path: str
+) -> None:
+    _install_crash(monkeypatch, path)
+    query = _valid_query()
+    with caplog.at_level("ERROR", logger=_CRASH_LOGGER):
+        await _drain(path, query)
+
+    first = _crash_text(caplog).splitlines()[0]
+    assert first.startswith("search crashed, trace ")
+    assert query.trace_id in first  # unbroken, on the one line
+    assert len(first) < 80, first
+
+
+def test_a_very_long_trace_id_still_leaves_a_first_line_under_eighty_characters(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from system_03_search_agent.core.run import _log_crash
+
+    with caplog.at_level("ERROR", logger=_CRASH_LOGGER):
+        _log_crash("t" * 5000, ValueError("x"))
+    assert len(_crash_text(caplog).splitlines()[0]) < 80
+
+
+# --- the logger can never raise (J01, A08) ---------------------------------
+
+
+def _exception_with_no_module() -> BaseException:
+    namespace: dict = {}
+    exec("E = type('E', (Exception,), {})", namespace)  # noqa: S102 - builds a class the way a template would
+    return namespace["E"]()
+
+
+@pytest.mark.parametrize("path", ["run", "run_streaming"])
+@pytest.mark.asyncio
+async def test_a_crash_whose_record_cannot_be_built_still_gives_the_person_the_error_event(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, path: str
+) -> None:
+    exc = _exception_with_no_module()
+    with pytest.raises(AttributeError):
+        _ = type(exc).__module__  # the trigger is real: reading it raises
+    _install_raise(monkeypatch, path, exc)
+    with caplog.at_level("ERROR", logger=_CRASH_LOGGER):
+        events = await _drain_never_raising(path, _valid_query())
+
+    _assert_generic_pair(events)
+    text = _crash_text(caplog)
+    assert "crash record could not be built" in text
+    assert "trace " in text
+
+
+def test_a_record_that_cannot_be_built_logs_one_fallback_line_carrying_the_trace_id(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    text = _log_directly(caplog, _exception_with_no_module())
+    assert text.startswith("search crashed, trace " + _TRACE)
+    assert "crash record could not be built" in text
+
+
+@pytest.mark.parametrize("path", ["run", "run_streaming"])
+@pytest.mark.asyncio
+async def test_a_logger_that_itself_raises_never_costs_the_person_the_error_event(
+    monkeypatch: pytest.MonkeyPatch, path: str
+) -> None:
+    import system_03_search_agent.core.run as run_module
+
+    _install_raise(monkeypatch, path, ValueError("boom"))
+
+    def _broken_error(*args: object, **kwargs: object) -> None:
+        raise OSError("log disk full")
+
+    monkeypatch.setattr(run_module.logger, "error", _broken_error)
+    events = await _drain_never_raising(path, _valid_query())
+    _assert_generic_pair(events)
+
+
+def test_a_cause_whose_truthiness_raises_does_not_stop_the_record() -> None:
+    class Hostile(Exception):
+        def __bool__(self) -> bool:
+            raise RuntimeError("no truthiness")
+
+    from system_03_search_agent.core.run import _crash_record
+
+    escaped = ""
+    text = ""
+    try:
+        raise ValueError("outer") from Hostile()
+    except ValueError as caught:
+        try:
+            text = _crash_record(_TRACE, caught)
+        except Exception as raised:  # noqa: BLE001
+            escaped = type(raised).__name__
+    assert not escaped, f"the record builder raised: {escaped}"
+    assert "Hostile" in text
+
+
+# --- the outermost and the innermost frames both survive (J02, A01) --------
+
+
+def test_a_deep_traceback_keeps_the_entry_point_and_the_failure_and_counts_the_gap(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    exc = _raised(RecursionError("deep"), depth=60)
+    text = _log_directly(caplog, exc)
+    frames = text.split("frames:\n", 1)[1].splitlines()
+
+    # Entry point first (this test function is where the exception was caught),
+    # the failure last, and a line saying how many were left out between them.
+    assert "test_a_deep_traceback_keeps_the_entry_point" not in frames[0]  # caught above _raised
+    assert "_raised" in frames[0]
+    assert "_the_failing_line" in frames[-1]
+    omitted_lines = [f for f in frames if "frames omitted" in f]
+    assert len(omitted_lines) == 1
+    head = frames.index(omitted_lines[0])
+    assert head >= 5  # at least 5 outer frames kept
+    assert len(frames) - head - 1 >= 20  # at least 20 inner frames kept
+    total = 1 + 61 + 1  # _raised, 61 frames of _deep, _the_failing_line
+    kept = head + (len(frames) - head - 1)
+    assert f"... {total - kept} frames omitted ..." in omitted_lines[0]
+
+
+def test_a_short_traceback_is_listed_whole_with_no_omission_line(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    text = _log_directly(caplog, _raised(ValueError("x"), depth=3))
+    assert "omitted" not in text
+    assert text.count("_the_failing_line") == 1
+
+
+# --- frames from the innermost exception, groups, chain rule (A02, A03, J03)
+
+
+def test_the_frames_of_the_innermost_exception_in_the_chain_are_in_the_record(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def _origin_of_the_real_failure() -> None:
+        raise KeyError("k")
+
+    def _wrapper() -> None:
+        try:
+            _origin_of_the_real_failure()
+        except KeyError as real:
+            raise ValueError("wrapped") from real
+
+    try:
+        _wrapper()
+    except ValueError as wrapped:
+        exc = wrapped
+    text = _log_directly(caplog, exc)
+    assert "innermost_frames (builtins.KeyError)" in text
+    assert "_origin_of_the_real_failure" in text.split("innermost_frames", 1)[1]
+
+
+def test_the_innermost_exceptions_frames_obey_the_same_bounds(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    inner = _raised(KeyError("k"), depth=200)
+    try:
+        raise ValueError("outer") from inner
+    except ValueError as outer:
+        text = _log_directly(caplog, outer)
+    innermost = text.split("innermost_frames", 1)[1].splitlines()[1:]
+    assert len(innermost) == 8 + 1 + 25  # head, omission line, tail
+    assert any("frames omitted" in line for line in innermost)
+    assert "_the_failing_line" in innermost[-1]
+
+
+def test_an_exception_group_lists_its_members_classes_and_no_message(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    members = [KeyError(_FAKE_KEY), TypeError(_FAKE_KEY)] + [
+        ValueError(_FAKE_KEY) for _ in range(6)
+    ]
+    text = _log_directly(caplog, ExceptionGroup(_FAKE_KEY, members))
+    line = next(x for x in text.splitlines() if x.startswith("group_members="))
+    assert "builtins.KeyError" in line
+    assert "builtins.TypeError" in line
+    assert line.count("builtins.ValueError") == 3  # first five members only
+    assert "(+3 more)" in line
+    assert _FAKE_KEY not in text
+
+
+def test_the_chain_follows_the_cause_and_falls_back_to_the_context(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    try:
+        try:
+            raise KeyError("k")
+        except KeyError:
+            raise ValueError("implicit context")
+    except ValueError as caught:
+        text = _log_directly(caplog, caught)
+    assert "chain=builtins.ValueError <- builtins.KeyError" in text
+
+
+def test_a_falsy_explicit_cause_is_still_followed(caplog: pytest.LogCaptureFixture) -> None:
+    class Falsy(Exception):
+        def __len__(self) -> int:
+            return 0
+
+    try:
+        try:
+            raise KeyError("suppressed context")
+        except KeyError:
+            raise ValueError("outer") from Falsy("real cause")
+    except ValueError as caught:
+        text = _log_directly(caplog, caught)
+    chain = next(x for x in text.splitlines() if x.startswith("chain="))
+    assert "Falsy" in chain
+    assert "KeyError" not in chain  # an explicit cause wins over the context
+
+
+def test_raise_from_none_hides_the_suppressed_context(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    try:
+        try:
+            raise KeyError("k")
+        except KeyError:
+            raise ValueError("outer") from None
+    except ValueError as caught:
+        text = _log_directly(caplog, caught)
+    chain = next(x for x in text.splitlines() if x.startswith("chain="))
+    assert chain == "chain=builtins.ValueError"
+
+
+def test_the_chain_is_bounded_and_a_cycle_ends_it(caplog: pytest.LogCaptureFixture) -> None:
+    head = ValueError("0")
+    link = head
+    for index in range(1, 40):
+        nxt = ValueError(str(index))
+        link.__cause__ = nxt
+        link = nxt
+    text = _log_directly(caplog, head)
+    chain = next(x for x in text.splitlines() if x.startswith("chain="))
+    assert chain.count("builtins.ValueError") == 8
+
+    caplog.clear()
+    a, b = ValueError("a"), KeyError("b")
+    a.__cause__, b.__cause__ = b, a
+    text = _log_directly(caplog, a)
+    chain = next(x for x in text.splitlines() if x.startswith("chain="))
+    assert chain == "chain=builtins.ValueError <- builtins.KeyError"
+
+
+# --- every string and the whole record are bounded (A06) -------------------
+
+
+def test_a_huge_class_name_module_file_and_function_name_are_each_cut(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    big_class = type("C" * 200_000, (Exception,), {"__module__": "m" * 200_000})
+    code = compile("def " + "f" * 300 + "():\n    raise BIG\n", "p" * 5000 + ".py", "exec")
+    scope: dict = {"BIG": big_class()}
+    exec(code, scope)  # noqa: S102 - builds developer-shaped frames with hostile-length names
+    try:
+        scope["f" * 300]()
+    except Exception as caught:  # noqa: BLE001
+        exc = caught
+    text = _log_directly(caplog, exc)
+    assert len(text) < 1500
+    assert max(len(line) for line in text.splitlines()) < 320
+    assert "m" * 101 not in text
+    assert "C" * 101 not in text
+    assert "f" * 101 not in text
+    assert "p" * 101 not in text
+
+
+def test_the_whole_record_has_a_size_ceiling_and_keeps_its_first_line(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    import system_03_search_agent.core.run as run_module
+
+    monkeypatch.setattr(run_module, "_CRASH_LOG_MAX_CHARS", 500)
+    text = _log_directly(caplog, _raised(ValueError("x"), depth=20))
+    assert len(text) <= 500 + len("\n... record cut at its size limit")
+    assert text.splitlines()[0] == "search crashed, trace " + _TRACE
+    assert text.endswith("record cut at its size limit")
+
+
+def test_the_worst_case_record_stays_under_the_real_ceiling(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    import system_03_search_agent.core.run as run_module
+
+    inner = _raised(KeyError("k"), depth=300)
+    try:
+        _deep(300, ValueError("outer"))
+    except ValueError:
+        try:
+            raise RuntimeError("wrap") from inner
+        except RuntimeError as wrapped:
+            text = _log_directly(caplog, wrapped)
+    assert len(text) <= run_module._CRASH_LOG_MAX_CHARS + 100
+
+
+# --- the no-message rule holds across every new path (decision 6) ----------
+
+
+def test_no_message_argument_or_local_reaches_the_record_from_any_link_or_group_member(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def _fail() -> None:
+        secret_local = _FAKE_KEY  # a local variable must never be read into the record
+        raise KeyError(secret_local, _FAKE_PASSWORD)
+
+    try:
+        try:
+            _fail()
+        except KeyError as inner:
+            raise ExceptionGroup(_FAKE_KEY, [inner, ValueError(_FAKE_PASSWORD)]) from inner
+    except ExceptionGroup as group:
+        text = _log_directly(caplog, group)
+    assert "innermost_frames" in text or "group_members" in text
+    for rendered in [text, *(caplog.handler.format(r) for r in caplog.records)]:
+        assert _FAKE_KEY not in rendered
+        assert _FAKE_PASSWORD not in rendered
+    assert all(r.exc_info is None for r in caplog.records)
