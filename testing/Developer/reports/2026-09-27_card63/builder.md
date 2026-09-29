@@ -10,6 +10,7 @@ Card 63 on `testing/UI_fix_plan.md`, dial position 2, built on the branch `fix/c
 - [Not run here](#not-run-here)
 - [Judgement calls and open items](#judgement-calls-and-open-items)
 - [Test round](#test-round)
+- [Fix round, 2026-09-29](#fix-round-2026-09-29)
 
 ## What a person notices
 

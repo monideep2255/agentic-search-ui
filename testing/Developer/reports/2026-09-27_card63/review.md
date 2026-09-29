@@ -7,6 +7,7 @@ Card 63, "every not yet confirmed answer saved, and a search down at NCBI said s
 - [Why both rounds run again](#why-both-rounds-run-again)
 - [Dispatches](#dispatches)
 - [Verdicts](#verdicts)
+- [Gates on the fix round](#gates-on-the-fix-round)
 
 ## Why both rounds run again
 

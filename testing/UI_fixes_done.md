@@ -2046,6 +2046,7 @@ The first session on a second laptop, an Intel Mac, set up from nothing. Card 63
 | Card 63, every "not yet confirmed" answer saved and an NCBI outage said plainly | Both rounds rerun, since no adversary row survived the restart; judge PASS, adversary FAIL on an outage note contradicting the papers above it; one fix round, a fresh verifier's MERGE, the full suite green; merged by the owner (#128) | Retest, queries 100 and 67; its golden run still to come |
 | The frontend dependency audit | A high advisory against the dev-only `fast-uri` turned gate 7 red; lockfile moved to `fast-uri` 3.1.8 and `undici` 7.30.0 after the supply-chain checks; merged by the owner (#129) before card 63 | Done |
 | Cards 67 to 70 | Filed: three open items from card 63's review and two moderate `vitest` advisories | To do |
+| Local links under `reference/` | `.gitignore` ignores anything added there except the two committed links, so a private repository's link never needs naming; merged by the owner (#131) | Done |
 | The second laptop | Python 3.11, PostgreSQL, Redis and Node from Miniforge, since Homebrew no longer installs on Intel Macs; the develop suite passed on it | Done, less the privacy hooks and the Railway link |
 
 ### 2026-09-27, in one table
