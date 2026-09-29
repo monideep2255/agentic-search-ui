@@ -1,0 +1,92 @@
+[
+  {
+    "src": "develop",
+    "screen": "integrations",
+    "w": 1280,
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "url": "/integrations",
+    "heading": "Integrations",
+    "consoleErrors": [],
+    "offenders": []
+  },
+  {
+    "src": "develop",
+    "screen": "about",
+    "w": 1280,
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "url": "/about",
+    "heading": "How an answer is built",
+    "consoleErrors": [],
+    "offenders": []
+  },
+  {
+    "src": "develop",
+    "screen": "architecture",
+    "w": 1280,
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "url": "/architecture",
+    "heading": "Architecture",
+    "consoleErrors": [],
+    "offenders": []
+  },
+  {
+    "src": "prototype",
+    "screen": "integrations",
+    "w": 1280,
+    "overflow": 0
+  },
+  {
+    "src": "prototype",
+    "screen": "about",
+    "w": 1280,
+    "overflow": 0
+  },
+  {
+    "src": "develop",
+    "screen": "integrations",
+    "w": 390,
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "url": "/integrations",
+    "heading": "Integrations",
+    "consoleErrors": [],
+    "offenders": []
+  },
+  {
+    "src": "develop",
+    "screen": "about",
+    "w": 390,
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "url": "/about",
+    "heading": "How an answer is built",
+    "consoleErrors": [],
+    "offenders": []
+  },
+  {
+    "src": "develop",
+    "screen": "architecture",
+    "w": 390,
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "url": "/architecture",
+    "heading": "Architecture",
+    "consoleErrors": [],
+    "offenders": []
+  },
+  {
+    "src": "prototype",
+    "screen": "integrations",
+    "w": 390,
+    "overflow": 34
+  },
+  {
+    "src": "prototype",
+    "screen": "about",
+    "w": 390,
+    "overflow": 0
+  }
+]

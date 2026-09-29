@@ -104,7 +104,7 @@ pytest -m "not integration"
 
 ## Use it from a terminal or an AI agent
 
-The web app is one of six ways in. The Integrations page prints the exact commands for each: the REST API with its event stream, GraphQL, MCP, the `s3` command line and KGX export. See it on [production](https://search-agent-web-production.up.railway.app/integrations) or [develop](https://search-agent-web-develop-2aeb.up.railway.app/integrations).
+The web app is one of six ways in. The Integrations page prints the exact commands for the REST API with its event stream, GraphQL, MCP and the `s3` command line. KGX export has no command to paste: a KGX file comes from the operator, who runs the exporter with graph credentials only they hold. See it on [production](https://search-agent-web-production.up.railway.app/integrations) or [develop](https://search-agent-web-develop-2aeb.up.railway.app/integrations).
 
 - Command line and local MCP server: `pip install "git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli"`, with Python 3.11 or newer, in a virtualenv.
 - Depth: the command line takes `--depth`, and MCP's ask tool takes `audience_depth`. MCP answers at researcher depth unless the agent asks for another.
