@@ -2,7 +2,7 @@
 
 What a fresh session needs, and nothing else. Rewritten in place at every `/phase-checkpoint`, never appended to. It states no fact another file owns beyond the pointers in the last section; history goes to `requirements/Plan.md`'s Revision history and `testing/UI_fixes_done.md`, never here.
 
-Last updated: 2026-09-27.
+Last updated: 2026-09-28.
 
 ## Table of contents
 
@@ -23,7 +23,10 @@ Last updated: 2026-09-27.
 
 ### Parked work, to pick up later
 
-Nothing below is pushed unless it says so. Each piece lives on a local branch, and its worktree folder was removed on 2026-09-27. To pick one up: `git worktree add .claude/worktrees/<name> <branch>`.
+Every branch below is on GitHub. The phase branch already was; the other six were pushed on 2026-09-28 so the build can continue on another computer. None of it is merged. The worktree folders were removed on 2026-09-27.
+
+- To pick one up: `git worktree add .claude/worktrees/<name> <branch>`. On a fresh clone the same command also creates the local branch from `origin`.
+- These are the only branches on GitHub besides `develop` and `production`. Delete each one on both sides when it merges or is dropped (`git-workflow`).
 
 | Work | Done | Where | Not done |
 |---|---|---|---|
@@ -45,7 +48,29 @@ The reviewers' probes lived in the temporary folder the restart cleared, so any 
 
 ## The one next action
 
-Resume the parked work two agents at a time, card 63's judge first, since card 63 is closest to landing. Run one unit suite at a time: several at once took the machine down on 2026-09-27.
+Resume the parked work two agents at a time, card 63's judge first, since card 63 is closest to landing. Run one unit suite at a time: several at once took the machine down on 2026-09-27. On a computer that has not run this build before, set it up first, as below.
+
+### Starting on another computer
+
+Git carries the code, the documents and every parked branch. It does not carry the things below, so set them up before the first build step.
+
+1. Location: clone outside any iCloud-synced folder, into a path with no space in it. On the first laptop, iCloud made " 2" copies inside `.git` that broke `git fetch` (`LEARNINGS.md`, 2026-09-25), and the worktree isolation guard cannot read a path with a space in it. Clone the data engineering repository beside this one, since `reference/agentic-search-data-engineering` is a relative link to `../agentic-search-data-engineering` from the repository root.
+2. Commit identity: set `git config user.email` to the GitHub noreply address before the first commit (`public-repository-privacy`).
+3. Privacy hook: `.git/hooks/` is never cloned, so the local pre-commit and commit-msg hooks are missing. Reinstall them from the owner's private notes (not published) before the first commit. GitHub push protection still blocks secrets, but nothing else catches a local path or a name.
+4. Secrets: copy these by hand over a private channel, never through git or a chat:
+   - `.env` at the root. `env.example` names every key if you rebuild it instead.
+   - `frontend/.env`, one line, `VITE_API_BASE_URL`.
+   - `requirements/context/Private_NCBI_context.md`.
+5. Packages: build them fresh, the way CI does. Do not copy `venv/` or `frontend/node_modules/`, which were built for the old machine.
+   - Python 3.11: `python3.11 -m venv venv`, `source venv/bin/activate`, then `.github/gates/setup_python.sh`.
+   - Node 22 or newer: `npm ci --prefix frontend`, then `npx --prefix frontend playwright install chromium` for `/verify`.
+6. Local services: PostgreSQL 15 or newer and Redis, as `README.md` lists. Create the user database with `createdb search_agent_users`, then run `alembic upgrade head`. The unit suite talks to a real database.
+7. Sign-ins: `gh auth login` as the owner's account, which merges pull requests and reads CI, and the Railway connection `/ship` uses to confirm a deploy.
+8. The assistant's own setup lives outside the repository, on each machine:
+   - Its memory folder, which holds the owner's standing feedback. Copy it by hand, or the first session starts without it.
+   - Its user-level settings for agent teams in tmux (`docs/build/Agent_teams_tmux_quickstart.md`), its plugins, and the gitignored `.claude/settings.local.json`.
+
+Then prove the setup: `python3 tracker/preflight.py` exits 0, and `.github/gates/gate04_unit_suite.sh` passes on `develop`.
 
 ## Where the facts live
 
@@ -70,4 +95,4 @@ Resume the parked work two agents at a time, card 63's judge first, since card 6
 | How a phase or a card runs | `.claude/skills/bossman-mode/SKILL.md` and its `reference/` files |
 | How a release is cut | `docs/build/Release_flow.md` |
 
-How to start: read this file, then `git status --short` and `git worktree list`. Locally, expect `develop` plus the parked branches above. Then read the board's Retest and To do columns. Run `/phase-checkpoint` then `/ship` at the session's end.
+How to start: read this file, then `git status --short` and `git worktree list`. On the laptop that parked the work, expect `develop` plus the parked branches above. On a fresh clone, expect `develop` alone locally, with the parked branches listed by `git branch -r`. Then read the board's Retest and To do columns. Run `/phase-checkpoint` then `/ship` at the session's end.
