@@ -997,8 +997,4 @@ class TestFeedbackIsYoursAlone:
             "send_answer_feedback",
             {"run_id": str(uuid.uuid4()), "owner_id": "user:someone-else"},
         )
-        # Card 62's fix round (F-62-A06): the caller's argument name is
-        # never echoed; the refusal names what the tool accepts instead.
-        assert message.startswith("unknown argument: this tool accepts only ")
-        assert "owner_id" not in message
-        assert "run_id" in message
+        assert "owner_id" in message

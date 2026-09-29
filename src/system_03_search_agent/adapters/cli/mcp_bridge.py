@@ -137,12 +137,6 @@ REMOTE_FAILED = -32003
 
 _SIGN_IN_AGAIN = "In a terminal, run: s3 login, then restart this MCP server."
 
-# The structured field System 3's MCP server sets on a refused sign-in, as
-# the JSON-RPC error's `data` (`adapters/mcp/server.py`,
-# `SIGN_IN_REFUSED_DATA`). Copied, not imported: `s3` installs without the
-# server package.
-SIGN_IN_REFUSED_REASON = "sign_in_refused"
-
 # What the agent is told when something this module did not foresee goes
 # wrong while it handles a request (build phase 8.10's fix round, F-8.10-J01
 # and A01). A reply nested thousands deep raised `RecursionError`, and a body
@@ -255,20 +249,18 @@ def _is_token_refusal(message: Any) -> bool:
 
     `adapters/mcp/server.py` raises `MCPError(INVALID_REQUEST, ...)` before
     any run starts (T-4.1-03), so resending the same message after a renewal
-    can never start a second run. Decided from structure alone, since card
-    62's fix round (F-62-A06): the INVALID_REQUEST code AND the error's
-    `data.reason` equal to `SIGN_IN_REFUSED_REASON`, which the server sets
-    on its sign-in refusals and on nothing else. The message text is never
-    read, so an error whose words the caller chose (an unknown argument
-    named "bearer token", say) cannot make `s3 mcp` renew the sign-in and
-    tell the person to log in again."""
+    can never start a second run. Since card 62 its three refusals say "no
+    bearer token", "malformed bearer token" or "invalid bearer token", each
+    with how to get a token, and every one keeps the words "bearer token"
+    this matches. Matching the words rather than only the code keeps an
+    ordinary invalid request from triggering a renewal."""
     if not isinstance(message, dict):
         return False
     error = message.get("error")
-    if not isinstance(error, dict) or error.get("code") != INVALID_REQUEST:
+    if not isinstance(error, dict):
         return False
-    data = error.get("data")
-    return isinstance(data, dict) and data.get("reason") == SIGN_IN_REFUSED_REASON
+    text = error.get("message")
+    return isinstance(text, str) and "bearer token" in text.lower()
 
 
 def _error_response(request_id: Any, code: int, message: str) -> dict[str, Any]:

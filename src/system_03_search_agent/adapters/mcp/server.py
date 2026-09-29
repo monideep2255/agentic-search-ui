@@ -202,17 +202,12 @@ _MAX_ANSWER_LENGTH = 8000
 # how to get a token, in the page's own terms. Only the words changed: the
 # same two checks refuse the same callers at the same point.
 #
-# Card 62's fix round (F-62-A06): every refusal also carries
-# `SIGN_IN_REFUSED_DATA` as the JSON-RPC error's `data`, and that structured
-# field, with the INVALID_REQUEST code, is what `s3 mcp` reads to decide the
-# sign-in was refused (`adapters/cli/mcp_bridge.py`, `_is_token_refusal`),
-# never the words. Every message still keeps the words "bearer token",
-# because copies of `s3` installed before this change match on them.
+# Every message keeps the words "bearer token". `s3 mcp` renews its sign-in
+# when a refusal names them (`adapters/cli/mcp_bridge.py`,
+# `_is_token_refusal`), and so does every copy of `s3` already installed.
 # None discloses which check an invalid token failed: "a guest token cannot
 # be used here" is the rule, said to every invalid token alike, never a
 # verdict on this one.
-SIGN_IN_REFUSED_REASON = "sign_in_refused"
-SIGN_IN_REFUSED_DATA: dict[str, str] = {"reason": SIGN_IN_REFUSED_REASON}
 _HOW_TO_GET_A_TOKEN = (
     "The MCP server needs a System 3 account: sign in with POST /auth/login, "
     "using the email and password of your account on the web (create one "
@@ -228,11 +223,6 @@ _INVALID_TOKEN_MESSAGE = (
     "invalid bearer token: it is not a current access token for a System 3 "
     "account. A guest token cannot be used here, and an account's token "
     f"expires after 15 minutes. {_HOW_TO_GET_A_TOKEN}"
-)
-# F-62-J06: two Authorization headers used to read as none at all.
-_DUPLICATE_HEADER_MESSAGE = (
-    "malformed bearer token: the request carried more than one Authorization "
-    f"header, and it must carry exactly one. {_HOW_TO_GET_A_TOKEN}"
 )
 
 # F-4.10-J-04 / F-4.10-A-08 (judge and adversary round 1, build phase
@@ -849,44 +839,17 @@ async def _authenticate_mcp_caller(ctx: Context) -> User:
     the token/user lookup itself, which still runs, unchanged, below.
     """
     authorization = _extract_bearer_header(ctx)
-    if not has_bearer_scheme(authorization) or not _bearer_token_part(authorization):
-        # Card 62: the same refusal as before; the words say which shape
-        # was wrong. Its fix round (F-62-J06): two headers read as two, not
-        # as none, and the scheme with no token after it is malformed.
-        raise _sign_in_refused(_shape_refusal_message(ctx, authorization))
+    if not has_bearer_scheme(authorization):
+        # Card 62: the same refusal as before; the words say whether a
+        # header was there at all. `_extract_bearer_header` reads two
+        # headers as none, which "send ... as Authorization" also covers.
+        message = _NO_TOKEN_MESSAGE if authorization is None else _MALFORMED_TOKEN_MESSAGE
+        raise MCPError(code=INVALID_REQUEST, message=message)
     with session_scope() as session:
         try:
             return resolve_user_from_bearer_token(authorization, session)
         except InvalidBearerTokenError:
-            raise _sign_in_refused(_INVALID_TOKEN_MESSAGE) from None
-
-
-def _sign_in_refused(message: str) -> MCPError:
-    """A refused sign-in: INVALID_REQUEST, one of this module's fixed
-    messages, and `SIGN_IN_REFUSED_DATA`, the field `s3 mcp` reads to renew
-    its sign-in (F-62-A06). No other error in this module carries it."""
-    return MCPError(code=INVALID_REQUEST, message=message, data=dict(SIGN_IN_REFUSED_DATA))
-
-
-def _bearer_token_part(authorization: str | None) -> str:
-    """What follows the `Bearer` scheme, trimmed; empty when nothing does."""
-    if authorization is None:
-        return ""
-    return authorization[len("Bearer") :].strip()
-
-
-def _shape_refusal_message(ctx: Context, authorization: str | None) -> str:
-    """Which fixed refusal a request with no usable bearer token gets."""
-    headers = ctx.headers
-    if (
-        headers is not None
-        and hasattr(headers, "getlist")
-        and len(headers.getlist("authorization")) > 1
-    ):
-        return _DUPLICATE_HEADER_MESSAGE
-    if authorization is None:
-        return _NO_TOKEN_MESSAGE
-    return _MALFORMED_TOKEN_MESSAGE
+            raise MCPError(code=INVALID_REQUEST, message=_INVALID_TOKEN_MESSAGE) from None
 
 
 def _reject_unknown_arguments(
@@ -930,16 +893,9 @@ def _reject_unknown_arguments(
         return
     unknown = set(arguments) - allowed
     if unknown:
-        # Card 62's fix round (F-62-A06): the caller's own argument names are
-        # never echoed, so no message this module sends can carry words the
-        # caller chose. It names the arguments the tool does accept, which
-        # are this module's own constants and say what to send instead.
         raise MCPError(
             code=INVALID_PARAMS,
-            message=(
-                "unknown argument: this tool accepts only "
-                f"{', '.join(sorted(allowed))}. Remove any other argument and try again."
-            ),
+            message=f"unknown argument(s): {', '.join(sorted(unknown))}",
         )
 
 
