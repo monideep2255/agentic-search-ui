@@ -10,7 +10,7 @@ Reads:
       checks both that the variable is set and that the host:port is
       actually reachable, since importing litellm anywhere in the process
       calls load_dotenv() at import time, which can populate GRAPH_PG_HOST
-      from this repo's .env even when no SSH tunnel is open.
+      from this repository's .env even when no SSH tunnel is open.
 
 Writes:
     - Nothing.
@@ -90,7 +90,7 @@ def _graph_host_reachable(host: str, port: str, timeout: float = 2.0) -> bool:
 
     Importing litellm anywhere in the process calls load_dotenv() at import
     time (venv/lib/python3.11/site-packages/litellm/__init__.py:27), which
-    silently loads this repo's .env and can populate GRAPH_PG_HOST even when
+    silently loads this repository's .env and can populate GRAPH_PG_HOST even when
     no SSH tunnel is open. Checking the environment variable alone is not
     enough to decide whether the live integration test should run, so this
     does a short TCP connect and treats any failure as unreachable.

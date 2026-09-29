@@ -30,7 +30,11 @@ Exercised:
 - The guest exclusion at the write, from both sides: an account run stores
   an answer, a guest run stores nothing, with the two runs identical in
   every other respect.
-- That a refusal and a clarifying question store nothing.
+- That a refusal and a clarifying question store nothing. Both end
+  `trust_outcome="refuse"`.
+- That a "not yet confirmed" (`ask`) answer IS stored, with its trust line
+  and its note tokens (card 63). Until 2026-09-27 this file pinned the
+  opposite, on the false premise that `ask` is a clarifying question.
 - The bound: at it, over it.
 - Hostile cell content: a pipe, a backslash, a newline.
 
@@ -302,24 +306,95 @@ def test_a_saved_answer_must_record_its_depth() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("outcome", ["refuse", "ask"])
-def test_a_refusal_and_a_clarifying_question_store_nothing(outcome: str) -> None:
-    """Narrow on purpose. The answer screen renders these two outcomes from
-    other events entirely, so saving their tokens would show the person
-    something different from what they saw."""
-    events = [
-        _token("I could not find evidence for this. "),
-        _done(outcome),
-    ]
+@pytest.mark.parametrize(
+    "text",
+    [
+        # A refusal.
+        "I could not find evidence for this. ",
+        # A clarifying question. It ends `refuse` too: `write_node`'s
+        # `clarification_needed` branch emits `trust_outcome="refuse"`,
+        # because no claim was made.
+        "Which gene do you mean, BRCA1 or BRCA2? ",
+    ],
+)
+def test_a_refusal_and_a_clarifying_question_store_nothing(text: str) -> None:
+    """Narrow on purpose. The answer screen renders a refusal, and so a
+    clarifying question, from other events entirely, so saving its tokens
+    would show the person something different from what they saw."""
+    events = [_token(text), _done("refuse")]
     row = assemble_interaction(_query(_ACCOUNT), events)
     assert row is not None
     # POPULATE CHECK: the identical events under an `answer` outcome DO
-    # store, so the two `None`s below are about the outcome rule.
+    # store, so the `None`s below are about the outcome rule.
     answered = assemble_interaction(_query(_ACCOUNT), [events[0], _done("answer")])
     assert answered is not None and answered.answer_markdown is not None
 
     assert row.answer_markdown is None
     assert row.audience_depth is None
+    assert row.answer_trust_line is None
+
+
+_NOT_YET_CONFIRMED = "Based on 2 sources, not yet confirmed"
+_DOWN_NOTE = (
+    "PubMed is down at NCBI right now, so this answer may be missing papers "
+    "from it. Try again later."
+)
+
+
+def _not_yet_confirmed_run() -> list[Event]:
+    """An answered search that ended `ask`: two cited claims, the note a lost
+    background search adds, and a `done` carrying the trust line the web
+    shows under a "not yet confirmed" answer (`synthesis.trust.
+    answer_trust_line`'s own wording for `ask`)."""
+    return [
+        _citation("c-1", 1),
+        _citation("c-2", 2),
+        _token("BRCA1 is associated with breast cancer [1]. ", marker_ids=["c-1"]),
+        _token("It is also associated with ovarian cancer [2]. ", marker_ids=["c-2"]),
+        _token("", kind="paragraph_break"),
+        _token(_DOWN_NOTE, kind="note"),
+        _event(
+            "done",
+            {
+                "total_cost_usd": 0.01,
+                "total_tool_calls": 4,
+                "elapsed_ms": 900,
+                "trust_outcome": "ask",
+                "trust_line": _NOT_YET_CONFIRMED,
+            },
+        ),
+    ]
+
+
+def test_a_not_yet_confirmed_answer_is_stored_with_its_trust_line_and_its_notes() -> None:
+    """Card 63, the product owner's decision of 2026-09-27: every answered
+    search can be reopened, including the six in ten that end "not yet
+    confirmed". Stored exactly as the person saw it: the claims, the note
+    that said a search was down, and the trust line under it."""
+    row = assemble_interaction(_query(_ACCOUNT), _not_yet_confirmed_run())
+    assert row is not None
+    assert row.trust_signal == "ask"
+
+    assert row.answer_markdown is not None
+    assert "BRCA1 is associated with breast cancer [1]." in row.answer_markdown
+    assert "It is also associated with ovarian cancer [2]." in row.answer_markdown
+    # The note travels with the answer, as its own block, so a reopened
+    # answer still says why it may be missing papers.
+    assert _DOWN_NOTE in row.answer_markdown.split("\n\n")
+    assert row.answer_trust_line == _NOT_YET_CONFIRMED
+    assert row.audience_depth == "researcher"
+
+
+def test_a_guest_not_yet_confirmed_answer_still_stores_nothing() -> None:
+    """Saving `ask` widens WHICH answers are saved, never WHO they are saved
+    for. The account arm above, on the identical events, is the populate
+    check that makes this `None` about the guest rule."""
+    row = assemble_interaction(_query(_GUEST), _not_yet_confirmed_run())
+    assert row is not None
+    assert row.trust_signal == "ask"
+    assert row.answer_markdown is None
+    assert row.audience_depth is None
+    assert row.answer_trust_line is None
 
 
 def test_a_run_with_no_tokens_stores_nothing() -> None:

@@ -21,7 +21,7 @@
 # KNOWN HOLE, learned the hard way on 2026-07-26: PostToolUse fires on the Edit
 # and Write tools only. An edit made through Bash (sed, awk, a heredoc) bypasses
 # this hook entirely and leaves the HTML stale. That exact failure hit AGENTS.md
-# in this repo and is recorded in LEARNINGS.md. Two mitigations: prefer Edit for
+# in this repository and is recorded in LEARNINGS.md. Two mitigations: prefer Edit for
 # board files, and bossman-mode re-runs the renderer explicitly at phase close as
 # a backstop rather than trusting the hook alone.
 #
@@ -40,7 +40,7 @@ if [ "$1" = "--force" ] || [ -t 0 ]; then
 else
   MATCHED=0
   INPUT=$(cat)
-  # Fast path: this hook runs on every Edit/Write in the repo, so bail out before
+  # Fast path: this hook runs on every Edit/Write in the repository, so bail out before
   # paying for a JSON parse when the payload cannot possibly be about the board.
   case "$INPUT" in
     *tracker/*) ;;

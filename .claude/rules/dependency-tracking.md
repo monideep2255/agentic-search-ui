@@ -67,7 +67,7 @@ Writes:
 ### Keep it honest
 
 - Only direct dependencies (1 hop), not transitive
-- Use relative paths from repo root
+- Use relative paths from repository root
 - Update when you notice drift, don't let it go stale
 - This rule is enforced by convention, not by tooling, and only within its actual scope (hooks). If you skip it, future-you will have to grep through 50 files to figure out what broke
 - Known open item: `.claude/hooks/session-start.sh` reads `CLAUDE.md` directly but declares no `depends_on` header. This is a real violation under this rule as written, not a hypothetical one. Add the header comment the next time that hook is touched; it is recorded here rather than fixed on the spot so this rule change stays a documentation-only edit.

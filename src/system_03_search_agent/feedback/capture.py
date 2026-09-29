@@ -62,16 +62,30 @@ _MAX_CITATIONS = 50
 #: one they saw.
 MAX_ANSWER_MARKDOWN = 32000
 
-#: The two outcomes that actually put an answer on screen. A refusal or a
-#: clarifying question is deliberately NOT saved, and this is the narrow
-#: choice rather than the generous one. The answer screen renders those two
-#: outcomes from other events entirely (`useRunView.ts` strips a no-data
-#: refusal's own tokens from the claims list and renders the refusal message
-#: off the `trust_signal` payload instead), so saving their tokens would
-#: produce a stored view that differs from the screen the person saw. They
-#: fall back to today's behaviour, which costs that person nothing: someone
-#: who was refused wants to ask again anyway.
-_SAVEABLE_OUTCOMES = ("answer", "flag")
+#: The three outcomes that put an answer on screen: `answer`, `flag` and
+#: `ask`. Only `refuse` is not saved.
+#:
+#: `ask` WAS LEFT OUT UNTIL CARD 63 (2026-09-27), on a false premise: this
+#: comment called it "a clarifying question". It is not one. The locked
+#: specification's Section 8.3.3 defines `ask` as a high-stakes claim resting
+#: on a single independent-origin source, the web renders the whole `ask`
+#: answer with its "not yet confirmed" trust line, and an answer that lost a
+#: background search is floored to `ask` too. A clarifying question ends
+#: `trust_outcome="refuse"` (`core/graph.py`, `write_node`'s
+#: `clarification_needed` branch). About six answered searches in ten end
+#: `ask`, and none of them could be reopened from history or through MCP's
+#: `reopen_past_answer`.
+#: The product owner's decision of 2026-09-27: save every one of them, and
+#: change nothing about what counts as confirmed.
+#:
+#: A refusal, and so a clarifying question, is still deliberately NOT saved.
+#: The answer screen renders it from other events entirely (`useRunView.ts`
+#: strips a no-data refusal's own tokens from the claims list and renders
+#: the refusal message off the `trust_signal` payload instead), so saving
+#: its tokens would produce a stored view that differs from the screen the
+#: person saw. It falls back to today's behaviour, which costs that person
+#: nothing: someone who was refused wants to ask again anyway.
+_SAVEABLE_OUTCOMES = ("answer", "flag", "ask")
 
 
 def _cell(value: str) -> str:

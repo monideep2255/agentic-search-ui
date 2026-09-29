@@ -37,7 +37,7 @@ if [ "$1" = "--force" ] || [ -t 0 ]; then
 else
   MATCHED=0
   INPUT=$(cat)
-  # Fast path: this hook runs on every Edit/Write in the repo, so bail out before
+  # Fast path: this hook runs on every Edit/Write in the repository, so bail out before
   # paying for a JSON parse (which spawns python) when the payload cannot
   # possibly be about CLAUDE.md. Any edit to it names the file in the payload.
   case "$INPUT" in

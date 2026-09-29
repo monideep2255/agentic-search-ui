@@ -51,7 +51,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // Runs from the repo root, not `frontend/`: `tests.e2e_support
+      // Runs from the repository root, not `frontend/`: `tests.e2e_support
       // .mock_llm_backend` is a module under the repo's top-level `tests`
       // package (the same package pytest already runs from), not part of
       // the frontend build.

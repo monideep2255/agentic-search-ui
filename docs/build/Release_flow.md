@@ -46,23 +46,37 @@ The two projects are isolated end to end, not just by URL. An account created on
 2. When `develop` is ready to release, cut a release branch from it: `git checkout develop && git pull && git checkout -b release/<version>`, then push it. The release branch is not optional and not a formality: it is the thing that freezes what goes out, so `develop` can keep taking merges while the release is being checked, and it is what the product owner asked for in those words on 2026-08-27.
 3. Open a pull request from `release/<version>` into `production`.
 4. CI runs on that pull request automatically. `.github/workflows/ci.yml`'s `pull_request` trigger carries no branch filter, so a pull request into `production` already runs all ten of Section 24's gates with no separate configuration needed. Wait for the gates to report before merging.
-5. Merge the pull request into `production`. CI is advisory, not merge-blocking, so the merge button stays available next to a red check regardless of gate status. Confirm the gates are actually green before merging rather than relying on a blocked merge to stop you.
+5. Merge the pull request into `production` with a merge commit, never squash and never rebase. The release job reads the Conventional Commit subjects of the commits the merge brings in, and a squash merge replaces them all with the pull request's one title, so the version and the notes come out wrong: measured on a squash-merged `feat!:`, the job published a patch version whose notes said no user-facing change shipped (finding F-REL-A02). CI is advisory, not merge-blocking, so the merge button stays available next to a red check regardless of gate status. Confirm the gates are actually green before merging rather than relying on a blocked merge to stop you.
 6. The push to `production` triggers two things at once: the production project redeploys, publishing to the production URLs above, and `.github/workflows/release.yml` fires and cuts a release. See the next section for what that produces.
 7. Confirm the deployment by calling `GET https://search-agent-api-production.up.railway.app/health` and checking that `app_env` reads `production`.
-8. Review and merge the automated back-merge pull request the release workflow opens against `develop`, described below.
+8. Review and merge the automated back-merge pull request the release workflow opens against `develop`, described below. Merge it with a merge commit, and before cutting the next release branch, since it is the only way the release's changelog reaches `develop` and, from there, `production`.
 
 Everything in this list up to and including the merge in step 5 is a human action. Steps 6 onward, the deploy and the release automation, run without further action once the merge lands, except reviewing the back-merge pull request in step 8.
 
 ## What the automation produces
 
-`.github/workflows/release.yml` fires on every push to `production` and runs four scripts in `.github/release/`, in order:
+The release job never pushes to `production`. Since 2026-09-27 the owner's account is meant to be the only writer of `production`, as it already is of `develop`, and GitHub will not exempt the Actions robot from that rule on a personal-account repository. So the job pushes exactly two things: the release tag, and a `chore/back-merge-<version>` branch.
 
-- `derive_version.sh`: computes the next semantic version from the Conventional Commit subjects since the previous release tag. A `!` before the colon or a `BREAKING CHANGE` footer bumps major, a `feat` commit bumps minor, anything else bumps patch. If there are no commits since the previous tag, the workflow stops here and releases nothing.
+`.github/workflows/release.yml` fires on every push to `production` and runs six scripts in `.github/release/`, in order:
+
+- `derive_version.sh`: computes the next semantic version from the Conventional Commit subjects since the previous release tag. A `!` before the colon or a `BREAKING CHANGE` footer bumps major, a `feat` commit bumps minor, anything else bumps patch. If there are no commits since the previous tag, the workflow stops here and releases nothing. It also records which production commit it read, so the tag and the notes are for exactly that commit. If that commit already carries a tag this job made, an earlier run started this release and failed, so it picks that release up under its own version instead, as the next section describes.
+- `resume_release.sh`: does nothing in the normal case. If an earlier run of this release already pushed its changelog commit, it checks that commit out instead of letting a second one be written, and the next two scripts are skipped.
+- `carry_previous_changelog.sh`: does nothing in the normal case. If `CHANGELOG.md` on `production` has no section for the previous release, because its back-merge pull request was not merged before this release, it merges the previous release's changelog commit into the job's own checkout, never into `production`. It finds that commit under the robot's own subject or under the squash-merged back-merge's title. A conflict in `CHANGELOG.md` is resolved by placing the previous section above the newest one, every other edit kept. If the commit cannot be carried at all, it prints a warning and the release goes ahead without the section.
 - `write_changelog.sh`: prepends a new dated section to `CHANGELOG.md`, grouped by commit type (breaking changes, features, fixes, security, maintenance).
-- `tag_and_release.sh`: commits the changelog with a `[skip ci]` marker so the commit does not trigger another CI or release run, creates an annotated tag `vN.N.N`, pushes it, and publishes a GitHub Release with the changelog section as its notes.
-- `open_backmerge_pr.sh`: opens a pull request from `production` back into `develop`, carrying the changelog commit and the tag forward so the two branches do not drift apart.
+- `tag_and_release.sh`: commits the changelog with a `[skip ci]` marker and pushes the job's checkout as `chore/back-merge-<version>`, so the changelog is safe on GitHub before anything permanent happens. It then creates an annotated tag `vN.N.N` on the production commit the version was derived from, after checking that commit is on `production`, and pushes the tag. Last, it publishes a GitHub Release with the changelog section as its notes, retrying up to five times while GitHub's API catches up with the new tag.
+- `open_backmerge_pr.sh`: opens a pull request from `chore/back-merge-<version>` into `develop`, carrying the changelog commit so the two branches do not drift apart. If the branch's `CHANGELOG.md` has no section for the previous release, the pull request's first paragraph names it and says how to add it.
 
-The back-merge lands as a pull request, never a direct push, because a back-merge can conflict, and an automatic conflicting push to the default branch is worse than a pull request a human reviews. If `develop` already contains everything on `production`, the script opens no pull request, since there would be nothing to carry back.
+The changelog therefore reaches `production` one release late: the back-merge carries it into `develop`, and the next release pull request carries it into `production`. The next release recognises that commit, by its subject and by it changing nothing but `CHANGELOG.md`, and leaves it out of its notes and its version bump. A release whose only new commit is that changelog commit releases nothing.
+
+The back-merge lands as a pull request, never a direct push, because a back-merge can conflict, and an automatic conflicting push to the default branch is worse than a pull request a human reviews. If `develop` already contains everything the job produced, the script opens no pull request, since there would be nothing to carry back.
+
+A release job that fails part way is finished by re-running it (finding F-REL-A04). The changelog commit reaches GitHub, on the back-merge branch, before the tag does, so no failure loses it. A re-run recognises the tag this job made, takes the changelog commit from that branch, and creates only what is still missing:
+
+- The tag, if the tag push failed.
+- The GitHub Release, if `gh release create` failed.
+- The back-merge pull request, if opening it failed.
+
+It never makes a second tag, a second GitHub Release or a second pull request, and a re-run of a release that already finished changes nothing. A tag the owner made by hand is never picked up this way, so a hand-tagged release still means the robot releases nothing. One case stops the re-run on purpose: when `production` moved on before the re-run, the changelog left on the back-merge branch lists the wrong commits, and the job says to delete that branch and re-run.
 
 The first release, `v0.1.0`, was cut on 2026-08-28. It derived its version from 798 commits with no previous tag, wrote the changelog, tagged, and published, all correct on the first run; only the back-merge step failed, on the repository setting described below.
 
@@ -76,12 +90,13 @@ The API and web services are separate Railway services, so rolling one back does
 
 Said plainly rather than implied:
 
-- CI is advisory, not merge-blocking. This is finding F-4.14-A-04, unchanged by build phase 4.15. Branch protection needs GitHub Pro or a public repository. A red check on a release pull request sits beside a working merge button. Nothing stops a merge with failing gates except a human choosing not to click it.
-- Nothing stops a direct push to `production`. There is no branch protection rule blocking it, so a push straight to `production`, bypassing the release pull request entirely, still triggers a production deploy and still fires the release automation.
+- CI is advisory, not merge-blocking. This is finding F-4.14-A-04, unchanged by build phase 4.15. The repository has been public since 2026-09-24, so required checks are available, but the rulesets of 2026-09-27 do not require them: a documentation-only change runs no workflow (`paths-ignore` in `ci.yml`), so a required check would never report on it. A red check on a release pull request sits beside a working merge button. Nothing stops a merge with failing gates except a human choosing not to click it.
+- A ruleset blocks force-pushing or deleting `production` and `develop`, and only the owner's account may change `develop`. Restricting `production` the same way is what the release job's change of 2026-09-27 makes possible, since the job no longer writes to it. Until that rule is set, an account with write access can push straight to `production`, bypassing the release pull request entirely, and that push still triggers a production deploy and still fires the release automation.
+- The changelog reaches `production` one release late, through the back-merge pull request and `develop`. A release cut before the previous back-merge merged still writes a complete `CHANGELOG.md`, because the carry step brings the previous section into the job's checkout, but that relies on the previous changelog commit still being on its back-merge branch or on `develop`. If it is on neither, the run shows a warning, and the new back-merge pull request opens with a paragraph naming the missing section and saying how to add it on that branch before merging.
 - The two deployments share one read-only HTTPS graph query service by design. Layer 1 access is read-only at the connection level, so there is no develop-versus-production hazard on the graph the way there is on Postgres, Redis, `AUTH_SECRET` or `CORS_ORIGINS`, and this phase does not attempt to separate it.
 - The back-merge pull request can conflict. When it does, the release workflow still opens it, and it needs a human to resolve the conflict on that branch. Nobody force-pushes `develop` to make it apply.
 - The back-merge pull request runs NO CI, and it is the one automated pull request that reaches `develop`, the default branch. `gh pr create` authenticated with the workflow's built-in token does not raise events that start workflow runs, which is GitHub's recursion guard working as designed. The content is code that already passed CI on the release pull request, so the gap is that nothing re-checks the merge, not that unreviewed code arrives. Confirm the gates were green on the release pull request before merging the back-merge. This is findings F-4.15-J-10 and F-4.15-A-12, filed independently by a judge and an adversary.
-- The back-merge pull request depends on a REPOSITORY SETTING, not just on code. Settings, Actions, General, "Allow GitHub Actions to create and approve pull requests" must be on, and GitHub ships it off. With it off, the release workflow pushes the back-merge branch and then fails at the last step, having already tagged and published the release. The first release found this the hard way on 2026-08-28 (finding F-4.15-10); the setting is now on, and the premise gate's P11 arm fails if it is ever turned back off. This is NOT the same as the missing-CI item above: no personal access token is involved in either the problem or the fix.
+- The back-merge pull request depends on a REPOSITORY SETTING, not just on code. Settings, Actions, General, "Allow GitHub Actions to create and approve pull requests" must be on, and GitHub ships it off. With it off, the release workflow pushes the back-merge branch, tags and publishes the release, and then fails at the last step. Turn the setting on and re-run the job: it opens the missing pull request and changes nothing else. The first release found this the hard way on 2026-08-28 (finding F-4.15-10); the setting is now on, and the premise gate's P11 arm fails if it is ever turned back off. This is NOT the same as the missing-CI item above: no personal access token is involved in either the problem or the fix.
 - Rollback is not exercised by any automated check in this repository. It is a console action, tested by hand, not by CI.
 
 ## Branch to deployment flow
@@ -94,7 +109,7 @@ flowchart LR
   pr --> prod[production branch]
   prod --> prodproj[Production project]
   prod --> rel[Release workflow]
-  rel --> tag[Tag and changelog]
-  rel --> bm[Back-merge PR]
+  rel --> tag[Tag on production]
+  rel --> bm[Changelog in back-merge PR]
   bm --> dev
 ```

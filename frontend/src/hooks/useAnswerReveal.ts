@@ -20,11 +20,14 @@
  *     `activeStep: "Write"`, so the screen stays in the writing state instead
  *     of jumping to a landed answer with half its sentences.
  *   - Stop freezes the reveal where it is and clears the pending timer.
+ *   - Stop before the first sentence withholds the whole answer, see
+ *     `withholdAnswer` below.
  *   - Once every sentence is shown, the input view is returned UNCHANGED, the
  *     same object, so the landed answer is exactly what arrived.
  *
- * NOTHING IS DROPPED OR REWORDED: claims are sliced, never filtered, and the
- * slice only grows until it equals the input.
+ * NOTHING IS DROPPED OR REWORDED while the reveal runs: claims are sliced,
+ * never filtered, and the slice only grows until it equals the input. The one
+ * exception is the Stop above, where the reader asked for no answer at all.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -58,6 +61,60 @@ export interface AnswerRevealOptions {
   flush?: boolean;
   /** `prefers-reduced-motion: reduce`: hold the banner `reducedMinBannerMs` only. */
   reducedMotion?: boolean;
+}
+
+/**
+ * What a run stopped before its first sentence shows: no part of its answer.
+ *
+ * Card 58's fix round, F-58-J02 and F-58-A01. Stop now stays offered until
+ * the first sentence is on screen, which is often after the server has
+ * finished. Stop then flushes the pacing (`usePacedEvents`), so the whole
+ * held-back answer reaches `useRunView` in one go. The reveal's freeze used
+ * to be the only thing keeping it off screen, and it only holds SENTENCES:
+ *
+ *   - J02. The per-question cap's partial result (`_partial_result_for_cap`
+ *     in `core/graph.py`) has no sentences, only a note and `done`. Nothing
+ *     was held, the view landed, and a person who pressed Stop was taken to
+ *     the result page with the note and a trust line.
+ *   - A01. An answer's own cap note becomes `capMessage`, which the stopped
+ *     screen renders under "Search stopped", so the page said "This answer
+ *     stopped early" under "No answer was produced".
+ *
+ * So the answer is withheld as a whole: the view never lands, and everything
+ * `useRunView` derives from the Write step's output is cleared.
+ *
+ * KEPT, because each was on screen before any Stop could discard it:
+ *
+ *   - The refusal, its label and link, and a clarification. Every source of
+ *     them (a failed guard, a clarifying `think`, an answer-level refusal
+ *     signal) flushes the pacing the moment it arrives, so the person has
+ *     already read it, and it says what to type next.
+ *   - `failure`, from a fatal error, which flushes the same way.
+ *   - The search itself: steps, helpers and layers. The stopped screen does
+ *     not show them, and they describe the search, not the answer.
+ *
+ * DROPPED: the cap notice as well, whatever its source. On develop its only
+ * source is the answer's own note, since the server never sends a cap-shaped
+ * error (its one non-fatal error, in `core/graph.py`'s refusal path, names
+ * `write` or `cypher_query` as its source), and its copy speaks of "this
+ * answer" beside "No answer was produced".
+ */
+export function withholdAnswer(view: RunView): RunView {
+  return {
+    ...view,
+    landed: false,
+    claims: [],
+    sources: [],
+    trust: [],
+    meta: "",
+    outcome: null,
+    outcomeTone: null,
+    elapsedMs: null,
+    nextStep: null,
+    nextStepQuery: null,
+    capMessage: null,
+    systemNotes: [],
+  };
 }
 
 export function useAnswerReveal(
@@ -97,7 +154,12 @@ export function useAnswerReveal(
     return () => clearTimeout(timer);
   }, [runKey, stopped, flush, count, total, view.landed, minBannerMs]);
 
-  if (runKey === null || flush || count >= total) return view;
+  if (runKey === null || flush) return view;
+  // Stop froze the reveal before its first sentence: the reader saw no
+  // answer and asked for none. Checked before `count >= total`, because a run
+  // with no sentences at all has nothing to slice and would otherwise land.
+  if (stopped && count === 0) return withholdAnswer(view);
+  if (count >= total) return view;
 
   const reachedSteps = view.reachedSteps.includes("Write")
     ? view.reachedSteps

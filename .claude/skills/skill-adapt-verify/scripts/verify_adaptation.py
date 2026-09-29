@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify that a copied/adapted skill or agent has been cleaned for this repo.
+"""Verify that a copied/adapted skill or agent has been cleaned for this repository.
 
 Usage:
     python verify_adaptation.py <path-to-file>
@@ -12,7 +12,7 @@ Exit codes:
 
 This is a text-grep check, not a semantic one. It catches the common drift
 patterns when skills are copied from a private personal operating system
-reference repo or similar external repos. It will not catch everything, but
+reference repository or similar external repositories. It will not catch everything, but
 it will catch the stuff that took three hours of manual editing last time.
 """
 
@@ -54,7 +54,7 @@ WRONG_REPO_TERMS = [
     "chakrabortim" + "2",  # split so this file itself never contains the literal
 ]
 
-# tools/integrations this repo does not use
+# tools/integrations this repository does not use
 FOREIGN_TOOLS = [
     "Tavily",
     "Firecrawl",

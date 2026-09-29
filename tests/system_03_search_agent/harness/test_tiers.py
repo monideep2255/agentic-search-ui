@@ -131,7 +131,7 @@ def test_tier_context_invalid_input_unknown_tier_raises() -> None:
 #
 # A plain substring/line grep for a "/" false-positives on ordinary prose
 # ("request/response", "mint/decode/generate", "alembic/versions/...") that
-# already exists throughout this repo's docstrings and comments. Scanning
+# already exists throughout this repository's docstrings and comments. Scanning
 # only the string *constants* the AST actually parses, and requiring the
 # ENTIRE constant (not a substring of a longer sentence) to match a bare
 # provider/model slug shape, keys the check to what the acceptance
@@ -148,12 +148,12 @@ _TIERS_FILE = _SRC_ROOT / "harness" / "tiers.py"
 # "application/json" trips the scan below as a false positive of the
 # SCANNER's mechanism, not a violation of the PURPOSE it exists to catch
 # (a real provider/model id hardcoded outside `_DEFAULT_MODELS`). This
-# repo tripped this exact guard once before, in build phase 2.2
+# repository tripped this exact guard once before, in build phase 2.2
 # (LEARNINGS.md, 2026-08-03), so the fix here is a precision improvement
 # to the check, not a relaxation of it.
 #
 # The exemption is a closed, hand-enumerated set of the SPECIFIC string
-# literals this repo's source actually uses, never a pattern rule such as
+# literals this repository's source actually uses, never a pattern rule such as
 # "the top-level type is a known IANA registered type": a pattern-based
 # exemption would itself be gameable by any future model id that happened
 # to start with "text" or "application". A fixed enumeration cannot hide
@@ -207,7 +207,7 @@ def test_model_id_shape_regex_matches_known_default_values() -> None:
 
 def test_model_id_shape_regex_rejects_ordinary_prose_with_slashes() -> None:
     """Negative control: ordinary multi-word prose containing a "/" (the
-    shape already present elsewhere in this repo's docstrings, e.g.
+    shape already present elsewhere in this repository's docstrings, e.g.
     "request/response") must not be mistaken for a model id.
     """
     prose_examples = [

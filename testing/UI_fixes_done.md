@@ -152,6 +152,38 @@ decisions in its To do column.
 | 12.11 | The sources chip and the trust line disagree | Live, awaiting your retest | 74 |
 | 12.12 | Broken sentences and repeated records | Live, awaiting your retest | 75 |
 | 12.13 | Clicking a search in the history rail re-runs it instead of showing the saved answer | Live, awaiting your retest | 67 |
+| card 58 | Stop works until the first sentence of the answer is on screen, and a stop in that window shows "Search stopped" and nothing of the answer | Live, awaiting your retest | 98 |
+| card 60 | The web app carries its libraries' license notices: React, React DOM and MUI, each with its version and license text | Live, awaiting your retest | 99 |
+| card 63 | A "not yet confirmed" answer reopens from your searches with its trust line and notes, and during an NCBI outage the note says the database is down and may be missing things, never that the answer has none | Live, awaiting the golden run and your retest | 100, 67 |
+| cards 49 and 21, phase 8.10 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | Live, awaiting your retest | 90 to 97, and 60 |
+| card 1, T-8.6-06 | An answer about something else never says "MedGen lists no clinical features for ..." | Live, awaiting your retest | 87 |
+| card 31, T-8.6-06 | At Researcher depth, a question about a disease's features names them in the written answer too | Live, awaiting your retest | 81 |
+| T-8.6-04, T-8.6-05, R-02 | A question carrying hidden instructions, or asking to change the graph, is refused, and Jev makes that call | Live, awaiting your retest | 88, 89 |
+| card 45, R-09 | A graph search that cannot finish gives up after 30 seconds, not 90 | Live, awaiting your retest | 59 |
+| card 3, T-8.6-07 | The second writing call runs only when it can change the answer | Live, awaiting your retest | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-07 |
+| card 34, T-8.6-03 | Jev's and DeepSeek's picks are compared offline instead of racing the answer | Live, awaiting your retest | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-03 |
+| 13.2 | The Answer modes card gives each mode its own block and says what the mode gives, never who the reader is; on a phone it now fits on screen | Live, awaiting your retest | 86 |
+| Jev as the classifier, golden row G-038 | A question the biomedical word list does not know is judged by the classifier, not refused: the tree of life is answered, pizza is refused, and off-topic follow-ups are refused | Live, awaiting your retest | 83 |
+| 12.15 | "Recent papers" asks how far back to search, and the choice narrows the papers | Live, awaiting your retest | 84 |
+| 12.16 part 3 | Whether a question wants papers is a classifier's choice, not a word list | Live, awaiting your retest | 85 |
+| Jev, the probability model trial | Jev makes the small choices on develop and DeepSeek's pick is recorded beside it: read the comparison table | Live, awaiting your retest | Nothing to try by hand: `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md` |
+| 11.32, the function catalogue | The NCBI and enrichment calls are listed once as typed functions the classifier can choose from | Live, awaiting your retest | Nothing to try by hand: `src/system_03_search_agent/tools/catalogue.py` |
+| the golden rows | Golden row G-035 accepts the Taxonomy link the product cites | Live, awaiting your retest | Nothing to try by hand |
+| disease names, the hand-over | The graph's data gaps are handed to the repository that writes the graph | Live, awaiting your retest | Nothing to try by hand: read `docs/data-engineering/Graph_data_hand_over_2026-09-25.md` |
+| 2.13, the four type values | The design card's four type values match the shipped code | Live, awaiting your retest | Nothing to try by hand |
+| the checkpoint line | `/phase-checkpoint` names the counts line by what it holds | Live, awaiting your retest | Nothing to try by hand |
+| 12.14 | A question about a disease's features names them, each cited to MedGen: in the written answer at Plain language, in the list at Researcher | Live, awaiting your retest | 81 |
+| 12.17 | A good question is never refused because the think step's reply was malformed | Live, awaiting your retest | 80 |
+| the ceiling, the byte ceiling | An answer can cite up to 30 sources, and a question about papers reaches them | Live, awaiting your retest | 82 |
+| the live NCBI unit test | An NCBI outage no longer turns the build red | Live, awaiting your retest | Nothing to try by hand: CI's unit gate deselects the live test |
+| G-019 | MeSH terms show as real terms, each linked to its MeSH record | Live, awaiting your retest | 64 |
+| the opening count | The opening sentence's count agrees with the list beneath it | Live, awaiting your retest | 65 |
+| the phenotype template | The Marfan phenotype question no longer says "I could not find evidence"; what it answers instead is 12.14 in To do | Live, awaiting your retest | 66 |
+| G-033, G-037 | Two questions keep their own graph search: MLH1 and MSH2, and GEO datasets for TP53 | Live, awaiting your retest | 24, 25 |
+| the coordinate range | A chromosome range is answered with its genes and records, and a range with no assembly asks which | Live, awaiting your retest | 27, 28, 29 |
+| the question's own words | An answer never lists the question's own words as diseases it did not address | Live, awaiting your retest | 23, 25 |
+| the accessions | A BioProject or BioSample accession is answered, and an unknown one is named as not found | Live, awaiting your retest | 30, 31, 32 |
+| G-035 | Pathogen Detection isolate questions answer with a table of isolates and their resistance genes | Live, awaiting your retest | 33, 35, 36, 38, 39, 40, 44, and `testing/Product/queries/Isolate_search_queries_and_workflow.md` |
 
 ## What is done, in summary
 
@@ -386,16 +418,15 @@ fixed.
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-09-25, at the close of the overnight build. THE ONE THING TO KNOW: develop changed overnight and production did not. Three pull requests merged, each after one judge round, one adversary round (phases 8.1 and 8.2), a fix-and-verify round and a green CI: phase 8.1 (#105), phase 8.5 (#107) and phase 8.2 (#106). Jev, the decision model, now makes the loop's small choices on develop. The golden run answered 102 of 150 after the last merge, against a floor of 86, and answers got slower (median 21.9 seconds, from 17.1). If the product owner does not like any of it, `python3 testing/Developer/scripts/bin_overnight.py --all --yes` restores develop's product code to the tag `pre-overnight-2026-09-25` and takes back the one Railway setting; `--phase 8.2` bins one phase.
+LAST UPDATED 2026-09-29. THE ONE THING TO KNOW: card 63 is on develop (#128) and its golden consistency run has not run, because the accounts file it signs in with is still on the first laptop. Until it runs and answers 101 or more of 150, nothing else lands on develop; below 101, card 63 is reverted. The work parked on 2026-09-27 is still parked, now on GitHub, and `HANDOFF.md` lists each piece.
 
 What is live on develop:
 
-- Product code through the merge of #106 (`06f4587`), plus documents and evidence after it. `CLASSIFIER_PROVIDER=jev` is set on develop's API, logged in `testing/Overnight_settings_log.json`.
-- What each phase delivered, what was reverted inside it and why, and what stays open: `tracker/phase_8.1.md`, `tracker/phase_8.2.md`, `tracker/phase_8.5.md`, and the night's session table under "Session history".
-- Phase 8.4 (answers worth reading) is built on the branch `phase/8.4-answers-worth-reading` and not merged: the night's budget allowed two golden runs, and its `core/graph.py` wiring is not built.
-- Production is unchanged on `v0.2.0`.
+- Product code through card 63's merge (`25800026`), after #129 (`fbe85117`) moved two dev-only frontend packages past a high advisory that had turned gate 7 red. Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`.
+- What each numbered phase delivered and what stays open: its ledger, `tracker/phase_N.M.md`. Phase 8.7's ledger says where each builder stopped.
+- Production is unchanged on `v0.2.0`. The release job tags `production` and never pushes to it, and only the owner changes `develop` and `production`: the owner merges each pull request in the browser, and the assistant never passes `--admin`.
 
-What awaits the product owner's retest is the Retest column of `testing/UI_fix_plan.md`, newest first; each card names its query numbers in `testing/Test_queries_and_workflows.md`. Read the product review of phase 8.1 first: `testing/Developer/reports/2026-09-25_product_review_8.1/report.md`.
+What awaits the product owner's retest is the Retest column of `testing/UI_fix_plan.md`, newest first, card 63 at the top; each card names its query numbers in `testing/Test_queries_and_workflows.md`.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -444,6 +475,8 @@ option rather than a queued task.
 
 ### What is parked, and why
 
+- WHAT WAS IN FLIGHT ON 2026-09-27, less card 63, which landed on 2026-09-29: phase 8.7's three builders, cards 53 and 62, and card 58's product review. The owner parked them after the machine restarted, and they wait behind card 63's golden run. Each piece, its branch on GitHub and what is left: `HANDOFF.md`.
+- Older work parked at tags: `parked/phase-8.4-2026-09-25`, `parked/phase-8.8-snippets-2026-09-25` and `parked/verify-facts-118-2026-09-27`.
 - THE ARCHITECTURE WORK IS NOT PARKED. The product owner will build it, so
   its six cards, 8 to 13 in the board's To do, wait on nobody. Corrected
   2026-09-24 on their instruction: the board had marked three of those
@@ -457,42 +490,20 @@ option rather than a queued task.
   than deleted: the dispatch and the filter ship together, and re-enabling one
   without the other cites a different gene than the question asked about.
 - THE EXPLANATION HALF OF 11.31, above.
-- THE BYTE CEILING. `_MAX_FINDING_TOTAL_BYTES` stays at 50,000 after the 11.33
-  fix. Measured: a fetch of 20 PubMed records with 2000-character abstracts is
-  45,841 bytes and all 20 rows survive; the ceiling fires at 22 rows. Whether
-  50,000 is still right is a product decision, deliberately not taken inside a
-  defect fix.
 
 ### What is waiting on the product owner
 
-Rewritten 2026-09-24 at the session checkpoint. None of it blocks work:
+Checked 2026-09-29 against `DECISIONS.md`. The first item blocks everything that would land on develop:
 
-- Retests, newest first: items 12 to 17 of the 2026-09-23 shipped list,
-  then its items 1 to 11, then items 7 to 22 of the 2026-09-22 list. The
-  board's Retest column holds them, and each has its query in
-  `testing/Test_queries_and_workflows.md`.
-- Two decisions added since 2026-09-22: the four golden test rows, and
-  whether twenty sources is the right ceiling.
-
+- The golden run's accounts file, copied privately from the first laptop, for card 63's golden run.
+- The privacy pre-commit hooks on the second laptop, and `railway link` there so deploys can be confirmed.
+- Retests: the board's Retest column, newest first, card 63 at the top.
 - Four checks of under a minute each, the only rows still not approved:
   - Copy an answer and paste it somewhere (11.14)
   - Open the answer-modes info button (11.36)
   - Change the mode while a search is running (9.12)
   - Open the app twice to see different scientists with the same answer (8.4)
-- Two decisions, both already on the standing list below: whether Plain
-  language answers keep the small medical-advice line (9.11), and the
-  trust-line wording (9.9).
-
-The longer standing list is unchanged:
-
-- the three `theme.ts` logo tokens
-- the six undesigned surfaces
-- whether answers carry a medical-advice notice
-- the 720px nav
-- the 20-source citation cap
-- the provenance note
-- the mode toggle's placement
-- and the trust-line wording.
+- Still undecided from the older standing list: the three `theme.ts` logo tokens, the 720px nav, and the four golden test rows. The rest of that list was decided on 2026-09-25: the medical-advice line, the trust-line wording, the source ceiling, the provenance note and the mode toggle's placement.
 
 ### Loose ends, named rather than left
 
@@ -595,12 +606,12 @@ board on 2026-09-24.
 
 ### Next, in order
 
-REWRITTEN 2026-09-25 after the overnight build, in the order of the To do column of `testing/UI_fix_plan.md`, card for card. Items that were open on 2026-09-24 keep their text word for word, with what the night tried appended; items the night closed moved to Retest, and four the product owner decided without a build left the board (11.11 closed; 9.11 kept as live; the gene summary kept for reconciliation; 11.31's explanation half left as approved). New items come from the night's reviews, the product review and the writer bench.
+Written 2026-09-25 in the order of that day's To do column, and not re-ordered since. The board's To do column now leads with newer cards, card 2 first. Where the two differ, the board's order wins. Ahead of every item below, since 2026-09-29: card 63's golden run, then the parked work in `HANDOFF.md`. The items below keep the reasons behind the older cards.
 
 The earlier framing of this list, kept because it still holds:
 
 - Nothing below is a retest. Every item is engineering or a decision, ordered by what the person typing the question feels first.
-- The night's record: `testing/Overnight_build_plan_2026-09-25.md`, its answers and its log; per phase, `tracker/phase_8.1.md`, `tracker/phase_8.2.md` and `tracker/phase_8.5.md`.
+- The night's record, per phase: `tracker/phase_8.1.md`, `tracker/phase_8.2.md` and `tracker/phase_8.5.md`.
 
 1. An answer about something else can say "MedGen lists no clinical features for ...": 15 golden answers carry it, one "for Seen by breast cancer nurse" inside a question about how many genes relate to breast cancer. Source: `testing/Developer/reports/2026-09-25_product_review_8.1/report.md`, from phase 8.1's fix round. Added 2026-09-25 from the overnight build.
 2. Every answer opens with the code-built "Found N ... records for X" line, whatever the writing model, so its first sentence never answers the question. Source: `testing/Developer/reports/2026-09-25_writer_bench/results.md` and the 8.1 product review. Added 2026-09-25 from the overnight build.
@@ -713,14 +724,16 @@ a standing option, not as queued work.
 1. Read `HANDOFF.md`, then "Where we stopped" above, then the session tables
    under "Session history" below, newest first.
 2. Run `git status` and `git worktree list`. Both should be clean, with local
-   carrying only `develop`.
+   carrying `develop` alone and the parked branches `HANDOFF.md` lists on
+   GitHub, listed by `git branch -r`.
 3. Read "What is parked, and why" before picking anything up. OMIM is live
    WITH its title filter; the two ship together and neither is re-enabled or
    removed without the other.
 4. Pick up the board, `testing/UI_fix_plan.md`: the product owner's retests
    in its Retest column first, each card naming its queries in
-   `testing/Test_queries_and_workflows.md`, then its To do column at item 1,
-   12.14. The call ceiling is measured and stays at twenty.
+   `testing/Test_queries_and_workflows.md`, then the parked work `HANDOFF.md`
+   lists, then its To do column from the top. The call ceiling is measured
+   and stays at twenty.
 
 ## Detail for items on the board
 
@@ -2023,6 +2036,40 @@ Evidence, with a full transcript per question and a re-runnable script:
 | 12.5 | Can these questions be answered at all, and how? | ANSWERED, and this is the encouraging half | ONE ALREADY DOES (`reflux disease`, eight cited MedGen concepts). YES for the other six, with tools already built and data that exists. `Any trials for GERD?`: `clinicaltrials_search` with `query_cond` taken from a disease anchor rather than only a gene symbol. `reflux disease` and `GERD`: a live MedGen lookup for the concept, plus PubMed, plus the trials registry. `papers on caffeine and exercise` and the two population questions: a PubMed search on the topic, no gene anchor needed. THE HONEST LIMIT on `Does coffee help make exercise more effective?`: the product can return what has been published and must never return a verdict on whether coffee works. SO THE CONSTRAINT IS ROUTING AND VOCABULARY, NOT CAPABILITY, which is the opposite of the graph disease-name finding from the same day that cannot be fixed from this repository at all |
 
 ## Session history
+
+### 2026-09-29, in one table
+
+The first session on a second laptop, an Intel Mac, set up from nothing. Card 63 was the one piece of parked work resumed.
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| Card 63, every "not yet confirmed" answer saved and an NCBI outage said plainly | Both rounds rerun, since no adversary row survived the restart; judge PASS, adversary FAIL on an outage note contradicting the papers above it; one fix round, a fresh verifier's MERGE, the full suite green; merged by the owner (#128) | Retest, queries 100 and 67; its golden run still to come |
+| The frontend dependency audit | A high advisory against the dev-only `fast-uri` turned gate 7 red; lockfile moved to `fast-uri` 3.1.8 and `undici` 7.30.0 after the supply-chain checks; merged by the owner (#129) before card 63 | Done |
+| Cards 67 to 70 | Filed: three open items from card 63's review and two moderate `vitest` advisories | To do |
+| Local links under `reference/` | `.gitignore` ignores anything added there except the two committed links, so a private repository's link never needs naming; merged by the owner (#131) | Done |
+| The second laptop | Python 3.11, PostgreSQL, Redis and Node from Miniforge, since Homebrew no longer installs on Intel Macs; the develop suite passed on it | Done, less the privacy hooks and the Railway link |
+
+### 2026-09-27, in one table
+
+The owner's overnight run, then a machine restart at 06:45 UTC that stopped every agent. The owner parked all but the release job, which finished the same day.
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| Card 58, Stop until the answer appears | Merged after a judge FAIL, one fix round and a fresh verifier's MERGE | Retest, query 98 |
+| Card 60, the web app's license notices | Merged | Retest, query 99 |
+| Phase 8.10, the command line and MCP on par with the web | Merged (#120), its ten verifier notes filed as card 61 | Retest, queries 90 to 97 and 60 |
+| License attribution and the README | The owner named in both repositories (#123, #124, data engineering #8); the README trimmed; queries 87 to 99 added and three rewritten | Done |
+| Branch protection | Rulesets on `develop` and `production` in both repositories; only the owner changes them | Done |
+| The release job, both repositories | Merged (#125, data engineering #9) with the verifier's findings named open | Card 65, before the next release |
+| Data engineering's first release | Default branch renamed to `develop`; v1.0.0 tagged by hand, `production` cut from it, the release published | Done |
+| Develop's daily spend cap | Raised from $10 to $25 for phase 8.7's golden run | Done |
+| Phase 8.7, cards 2, 50 and 5 | Three builders part-way when the machine restarted | Parked, `HANDOFF.md` |
+| Cards 63, 53 and 62 | Built; card 63's judge part-way | Parked, `HANDOFF.md` |
+| Cards 64 and 65 | Added: a card 58 test that may flake, and the release findings | To do |
+| The overnight plan of 2026-09-25 and its settings log | Deleted, no longer needed | Done |
+| The GraphQL engine pinned | `graphql-core` 3.3.0, published that afternoon, turned 21 unit tests red; 3.2.11 pinned (#127) | Done; moving to 3.3.0 is card 66 |
+| "Repository", never "repo" | Prose, comments and the session-start hook's two lines, in both repositories (#126, data engineering #10) | Done |
+| The parked worktree folders | Removed, with every branch kept | Done; `HANDOFF.md` says how to recreate one |
 
 ### The overnight build of 2026-09-25, in one table
 

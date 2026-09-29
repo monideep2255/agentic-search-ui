@@ -52,7 +52,7 @@ It is the one file here about the product rather than the process. It carries a 
 |------|-----------|-----------|
 | `Build_velocity_post_mortem.md` | Where the time actually went across the completed phases, and what changed as a result | When planning a phase estimate, or when a phase is running long and you want to know whether that is normal |
 
-For failures and their fixes rather than velocity, read `LEARNINGS.md` at the repo root, in particular the build phase 2.1 retrospective. For choices between alternatives, read `DECISIONS.md`.
+For failures and their fixes rather than velocity, read `LEARNINGS.md` at the repository root, in particular the build phase 2.1 retrospective. For choices between alternatives, read `DECISIONS.md`.
 
 ## The design segment
 

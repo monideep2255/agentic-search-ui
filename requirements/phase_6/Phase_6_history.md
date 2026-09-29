@@ -181,7 +181,7 @@ Closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28, the last
 - What shipped:
   - Section 9.1/9.2 provenance (the four `CitationPayload` fields, `evidence_kind`/`assertion_confidence`/`population_ancestry_context`/`license`) extended to all six Layer 2/3 tools via a shared per-tool default table (`synthesis/provenance_defaults.py`) and one `build_citation`/`build_layer2_citation` function per tool.
   - The F-2.2-A-05 fix (the flagship gene-disease claim now classifies `high` risk via the traversed `gene_associated_with_condition` edge label, read straight off the already-generated Cypher text, not the bare `Disease` node type).
-  - T-3.1-28 folded in, wiring `act_node` to dispatch `ncbi_efetch` as a second answer-bearing tool alongside `cypher_query` for a Gene-anchored question, the first dual-layer dispatch this repo has ever run.
+  - T-3.1-28 folded in, wiring `act_node` to dispatch `ncbi_efetch` as a second answer-bearing tool alongside `cypher_query` for a Gene-anchored question, the first dual-layer dispatch this repository has ever run.
   - Section 7.1 (live-wins-for-currency) and Section 7.4 (staleness auto-cross-verify) as `write_node` post-processing.
   - And Section 7.2 (conflict detection), a code-level field comparison that floors a genuine cross-layer disagreement's `trust_outcome` at `flag`.
 - Section 7.3's `as_of` wire marker was deliberately scoped out (T-3.4-06, `DECISIONS.md`, 2026-08-09): it needs a new SSE event type, a bigger contract decision than this phase's time budget could safely absorb.

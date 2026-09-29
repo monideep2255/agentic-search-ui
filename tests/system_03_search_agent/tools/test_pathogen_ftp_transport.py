@@ -67,7 +67,7 @@ This file deliberately does NOT exercise:
       `.text`/`.content`/`.json()`, which is a code-shape property this
       file's tests do not (and cannot) directly assert; it was verified by
       code inspection during the judge round instead.
-    - Real network latency, retries, or connection failures: this repo's
+    - Real network latency, retries, or connection failures: this repository's
       `pathogen_ftp_transport.py` performs no retry (Section 21.1: "not a
       request-rate API"), so there is no retry behavior to exercise.
 
