@@ -1198,9 +1198,25 @@ export function useRunView(events: AgentEvent[]): RunView {
       recoverable: "This run could not be completed. Try asking again, or rephrase the question.",
       unexpected: "This run could not be completed. Try asking again, or rephrase the question.",
     };
+    /*
+     * The honest wait (R-10's fix round, F-72-A01). When the service that
+     * checks each question is rate-limited, the error carries the provider's
+     * own wait in `retry_after_s`, and "Try asking again in a moment" sent
+     * the person straight back into the same limit. `retry_after_s` is a
+     * number on the wire, never free text, so reading it keeps the
+     * no-backend-text guarantee above: the sentence is still this file's own.
+     * "second" when the wait is one (F-72-J04).
+     */
+    const retryAfterS =
+      fatalError && fatalError.type === "error" ? fatalError.payload.retry_after_s : 0;
+    const waitSeconds =
+      Number.isFinite(retryAfterS) && retryAfterS > 0 ? Math.ceil(retryAfterS) : 0;
     const failure =
       fatalError && fatalError.type === "error"
-        ? (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
+        ? waitSeconds > 0
+          ? "This run could not be completed. Try asking again in about " +
+            `${waitSeconds} ${waitSeconds === 1 ? "second" : "seconds"}.`
+          : (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
         : null;
 
     const failedGuard = events.find(
