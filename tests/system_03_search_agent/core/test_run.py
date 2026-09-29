@@ -760,3 +760,88 @@ async def test_remember_turn_records_the_citations_the_answer_showed(
 
     assert captured["reported_record_ids"] == [url_a, url_b], captured
     assert captured["question"] == "What variants cause it?"
+
+
+# Card 73: a crashed search writes its reason to the log. The person's screen
+# stays generic (the tests above pin that); a developer traces the crash by
+# trace id. The fake secret below is shaped like a provider key and rides in
+# the exception MESSAGE, the way a provider error echoing a key would. It is
+# assembled from parts so no scanner mistakes the test file for a leak.
+_FAKE_KEY = "sk-" + "ant-" + "api03-" + "FAKEFAKEFAKE0123456789abcdefABCDEF"
+_FAKE_PASSWORD = "hunter" + "2"
+
+
+def _crash_records(caplog: pytest.LogCaptureFixture) -> list:
+    return [
+        r
+        for r in caplog.records
+        if r.name == "system_03_search_agent.core.run" and r.levelname == "ERROR"
+    ]
+
+
+def _install_crash(monkeypatch: pytest.MonkeyPatch, path: str) -> None:
+    import system_03_search_agent.core.run as run_module
+
+    message = f"provider rejected key {_FAKE_KEY} for dsn postgresql://u:{_FAKE_PASSWORD}@h/db"
+    if path == "run":
+
+        async def _boom(*args: object, **kwargs: object) -> None:
+            raise ValueError(message)
+
+        monkeypatch.setattr(run_module.compiled_graph, "ainvoke", _boom)
+    else:
+
+        async def _boom_astream(*args: object, **kwargs: object):
+            raise ValueError(message)
+            yield  # pragma: no cover
+
+        monkeypatch.setattr(run_module.compiled_graph, "astream", _boom_astream)
+
+
+async def _drain(path: str, query: Query) -> list:
+    entry = run if path == "run" else run_streaming
+    return [event async for event in entry(query, _valid_context())]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["run", "run_streaming"])
+async def test_a_crash_logs_one_error_record_with_trace_id_and_exception_class(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, path: str
+) -> None:
+    _install_crash(monkeypatch, path)
+    query = _valid_query()
+    with caplog.at_level("ERROR", logger="system_03_search_agent.core.run"):
+        events = await _drain(path, query)
+
+    records = _crash_records(caplog)
+    assert len(records) == 1
+    text = records[0].getMessage()
+    assert query.trace_id in text
+    assert "builtins.ValueError" in text
+    assert "test_run.py" in text  # a frame of the traceback is present
+    assert records[0].exc_info is None  # the formatter would print the message
+    # The person's screen is unchanged: the same generic pair, in order.
+    assert [e.type for e in events] == ["error", "done"]
+    assert (
+        events[0].payload["message"]
+        == "This query failed unexpectedly before it could complete."
+    )
+    assert events[0].payload["error_class"] == "unexpected"
+    assert _FAKE_KEY not in str(events[0].payload)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["run", "run_streaming"])
+async def test_a_crash_never_puts_a_secret_from_the_exception_message_in_the_log(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, path: str
+) -> None:
+    _install_crash(monkeypatch, path)
+    with caplog.at_level("DEBUG"):
+        await _drain(path, _valid_query())
+
+    assert _crash_records(caplog)
+    for record in caplog.records:
+        rendered = caplog.handler.format(record)
+        assert _FAKE_KEY not in rendered
+        assert _FAKE_PASSWORD not in rendered
+        assert "provider rejected" not in rendered

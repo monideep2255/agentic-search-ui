@@ -120,7 +120,9 @@ for why every exception is caught here rather than trusted to
 """
 
 import logging
+import os
 import time
+import traceback
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
@@ -195,6 +197,53 @@ def _crash_fallback_events(trace_id: str, elapsed_ms: int, start_seq: int = 0) -
 
 
 logger = logging.getLogger(__name__)
+
+
+#: Cap on the frames a crash log line carries. A crash deep inside a graph
+#: node, a provider client and an HTTP stack is about 20 frames; 30 keeps the
+#: whole path while bounding a runaway recursion's line.
+_CRASH_LOG_MAX_FRAMES = 30
+
+
+def _log_crash(trace_id: str, exc: BaseException) -> None:
+    """Write the reason a search crashed to the log, once, at error level.
+
+    Card 73. The two last-resort handlers below turn any uncaught exception
+    into the generic "failed unexpectedly" pair, which is right for the
+    person's screen and left a developer with nothing to trace (golden
+    question G-026, 2026-09-29, trace 2ff4e9d4).
+
+    What is logged: the trace id, the exception's class (module and name),
+    the class names down its cause chain, and the traceback's frames as
+    `file:line in function`. What is deliberately NOT logged: the exception's
+    message and the source text of each frame. A provider error can echo a
+    key and a driver error can echo a connection string, and the redaction
+    that exists in `observability/audit.py` describes itself as best effort
+    and not a control, so no scanner stands between a message and the log
+    here. A class name and a frame are developer-written, never assembled
+    from a response body, which is the same distinction `audit` and
+    `feedback/writer.py` already rely on. The record carries no `exc_info`
+    for the same reason: the standard formatter would print the message.
+    """
+    chain: list[str] = []
+    seen: set[int] = set()
+    link: BaseException | None = exc
+    while link is not None and id(link) not in seen and len(chain) < 8:
+        seen.add(id(link))
+        cls = type(link)
+        chain.append(f"{cls.__module__}.{cls.__qualname__}")
+        link = link.__cause__ or link.__context__
+    frames = [
+        f"{os.path.basename(frame.filename)}:{frame.lineno} in {frame.name}"
+        for frame in traceback.extract_tb(exc.__traceback__)
+    ][-_CRASH_LOG_MAX_FRAMES:]
+    logger.error(
+        "search crashed, trace_id=%s exception_class=%s chain=%s frames=%s",
+        trace_id,
+        chain[0],
+        " <- ".join(chain),
+        " > ".join(frames),
+    )
 
 
 def _observed_cost_usd(events: list[Event]) -> float:
@@ -611,7 +660,8 @@ async def run(query: Query, context: RequestContext) -> AsyncIterator[Event]:
                             trace_id=query.trace_id, run_name="core.run.run"
                         ),
                     )
-            except Exception:  # noqa: BLE001 - the deliberate last-resort catch F-2.0-11 requires
+            except Exception as crash:  # noqa: BLE001 - the deliberate last-resort catch F-2.0-11 requires
+                _log_crash(query.trace_id, crash)
                 elapsed_ms = int((time.monotonic() - start) * 1000)
                 crash_events = _crash_fallback_events(query.trace_id, elapsed_ms)
                 emitted.extend(crash_events)
@@ -798,7 +848,8 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
                             next_seq = max(next_seq, event.seq + 1)
                             seen_events.append(event)
                             yield event
-        except Exception:  # noqa: BLE001 - mirrors run()'s deliberate last-resort catch, F-2.0-11
+        except Exception as crash:  # noqa: BLE001 - mirrors run()'s deliberate last-resort catch, F-2.0-11
+            _log_crash(query.trace_id, crash)
             elapsed_ms = int((time.monotonic() - start) * 1000)
             crash_events = _crash_fallback_events(
                 query.trace_id, elapsed_ms, start_seq=next_seq
