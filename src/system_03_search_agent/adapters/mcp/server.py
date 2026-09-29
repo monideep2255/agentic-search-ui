@@ -195,7 +195,35 @@ logger = logging.getLogger(__name__)
 _MAX_CITATIONS = 100
 _MAX_ANSWER_LENGTH = 8000
 
-_AUTH_FAILURE_MESSAGE = "missing, malformed, or invalid bearer token"
+# Card 62, PR-8.10-11 (`tracker/phase_8.10.md`): a guest holding the token
+# `POST /auth/guest` gave them was told "missing, malformed, or invalid
+# bearer token", while the Integrations page says MCP needs an account. Each
+# refusal now says which of the three it is, that an account is needed, and
+# how to get a token, in the page's own terms. Only the words changed: the
+# same two checks refuse the same callers at the same point.
+#
+# Every message keeps the words "bearer token". `s3 mcp` renews its sign-in
+# when a refusal names them (`adapters/cli/mcp_bridge.py`,
+# `_is_token_refusal`), and so does every copy of `s3` already installed.
+# None discloses which check an invalid token failed: "a guest token cannot
+# be used here" is the rule, said to every invalid token alike, never a
+# verdict on this one.
+_HOW_TO_GET_A_TOKEN = (
+    "The MCP server needs a System 3 account: sign in with POST /auth/login, "
+    "using the email and password of your account on the web (create one "
+    "there if you have none), and send the access token it returns as "
+    "Authorization: Bearer <token>. A token lasts 15 minutes."
+)
+_NO_TOKEN_MESSAGE = f"no bearer token on this request. {_HOW_TO_GET_A_TOKEN}"
+_MALFORMED_TOKEN_MESSAGE = (
+    "malformed bearer token: the Authorization header must be the word Bearer, "
+    f"a space, then the token. {_HOW_TO_GET_A_TOKEN}"
+)
+_INVALID_TOKEN_MESSAGE = (
+    "invalid bearer token: it is not a current access token for a System 3 "
+    "account. A guest token cannot be used here, and an account's token "
+    f"expires after 15 minutes. {_HOW_TO_GET_A_TOKEN}"
+)
 
 # F-4.10-J-04 / F-4.10-A-08 (judge and adversary round 1, build phase
 # 4.10). `RunRegistry.create_run` gained a per-principal concurrent-run
@@ -812,12 +840,16 @@ async def _authenticate_mcp_caller(ctx: Context) -> User:
     """
     authorization = _extract_bearer_header(ctx)
     if not has_bearer_scheme(authorization):
-        raise MCPError(code=INVALID_REQUEST, message=_AUTH_FAILURE_MESSAGE)
+        # Card 62: the same refusal as before; the words say whether a
+        # header was there at all. `_extract_bearer_header` reads two
+        # headers as none, which "send ... as Authorization" also covers.
+        message = _NO_TOKEN_MESSAGE if authorization is None else _MALFORMED_TOKEN_MESSAGE
+        raise MCPError(code=INVALID_REQUEST, message=message)
     with session_scope() as session:
         try:
             return resolve_user_from_bearer_token(authorization, session)
         except InvalidBearerTokenError:
-            raise MCPError(code=INVALID_REQUEST, message=_AUTH_FAILURE_MESSAGE) from None
+            raise MCPError(code=INVALID_REQUEST, message=_INVALID_TOKEN_MESSAGE) from None
 
 
 def _reject_unknown_arguments(

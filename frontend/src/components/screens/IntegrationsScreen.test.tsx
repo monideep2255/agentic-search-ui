@@ -73,6 +73,11 @@ vi.mock("../../lib/api", async () => {
 });
 
 const CARD_TITLES = ["REST and SSE", "GraphQL", "MCP server", "Command line tools"];
+// Card 62, PR-8.10-09: a full path, since an agent app does not read the
+// shell's PATH. The card says to replace it with what `command -v s3` prints.
+const AGENT_CONFIG = {
+  mcpServers: { system3: { command: "/path/to/s3-env/bin/s3", args: ["mcp"] } },
+};
 const CHIP_LABELS = ["115M nodes", "693M edges", "3 data layers", "7 tools"];
 
 const cards = () => within(screen.getByTestId("integration-cards"));
@@ -129,22 +134,93 @@ describe("the integrations page, rebuilt from the reference layout", () => {
     render(<IntegrationsScreen />);
 
     const config = screen.getByRole("region", { name: /Agent configuration for s3 mcp/i });
-    expect(JSON.parse(config.textContent ?? "")).toEqual({
-      mcpServers: { system3: { command: "s3", args: ["mcp"] } },
-    });
+    expect(JSON.parse(config.textContent ?? "")).toEqual(AGENT_CONFIG);
     const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
     expect(card).toHaveTextContent(/not typed into a terminal/);
     expect(card).toHaveTextContent(/pasted into the agent's MCP settings/);
   });
 
-  it("says the MCP follow-up offers are coming rather than claiming the same parity", () => {
-    // F-8.10-J13: the follow-up offers wait for card 52's phase. Mutation
-    // that turns this red: put back "the same parity the web app has".
+  it("tells the reader to put the full path to s3 in the agent configuration", () => {
+    // Card 62, PR-8.10-09 (F-8.10-V10): an agent app opened from the Dock
+    // does not read the shell's PATH, so the bare `"command": "s3"` failed
+    // to start with "No such file or directory: 's3'". Mutation that turns
+    // this red: print the bare `s3` again, or drop the sentence naming
+    // `command -v s3`.
+    render(<IntegrationsScreen />);
+
+    const config = screen.getByRole("region", { name: /Agent configuration for s3 mcp/i });
+    const command = JSON.parse(config.textContent ?? "").mcpServers.system3.command;
+    expect(command.startsWith("/"), "the configuration names a full path").toBe(true);
+    const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
+    expect(card).toHaveTextContent(`replace ${command} with the full path that command -v s3 prints`);
+    // Card 62's fix round (F-62-A04): `command -v s3` prints nothing outside
+    // the environment, so the sentence says where to run it. Mutation that
+    // turns this red: drop "inside the virtual environment".
+    expect(card).toHaveTextContent(
+      "command -v s3 prints inside the virtual environment, after . s3-env/bin/activate",
+    );
+  });
+
+  it("says how to enter the environment again in a new terminal, before s3 login or s3 ask", () => {
+    // Card 62's fix round (F-62-A04): the page's `s3 login` and `s3 ask`
+    // gave "command not found: s3" in any terminal but the install's own.
+    // Mutation that turns this red: drop the sentence.
+    render(<IntegrationsScreen />);
+
+    const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
+    expect(card).toHaveTextContent(
+      "In a new terminal, enter it again with . s3-env/bin/activate from the same folder before s3 login or s3 ask.",
+    );
+  });
+
+  it("says what the install needs, before the commands: git, Python 3.11, macOS or Linux", () => {
+    // Card 62, PR-8.10-04: macOS's own Python 3.9 failed with "No matching
+    // distribution found for setuptools==83.0.0", and Homebrew's Python
+    // outside a virtual environment refused with
+    // "externally-managed-environment". Its fix round (F-62-J01, J07, A03):
+    // git and the platforms were never named. Mutation that turns this red:
+    // drop the sentence, or move it after the commands.
+    render(<IntegrationsScreen />);
+
+    const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
+    expect(card).toHaveTextContent(/works on macOS and Linux and needs git and Python 3\.11/);
+    expect(card).toHaveTextContent(/virtual environment/);
+    const needs = within(card as HTMLElement).getByText(/needs git and Python 3\.11/);
+    const install = within(card as HTMLElement).getByTestId("integration-copy-install");
+    expect(
+      needs.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING,
+      "the requirements come before the install command",
+    ).toBeTruthy();
+  });
+
+  it("says s3-kgx-export is not in the s3 install, and how a KGX file is had today", () => {
+    // Card 62, PR-8.10-03: the card said both commands were "installed once
+    // with pip", and after the page's own install `s3-kgx-export` was
+    // "command not found". Its fix round (F-62-J02, J03, A07): the page
+    // printed an install of the whole server with version floors, which
+    // also deleted `s3` when removed. No KGX install is printed now; the
+    // card says the operator runs it. Mutation that turns this red: put
+    // back the KGX copy, or "installed once with pip".
+    render(<IntegrationsScreen />);
+
+    const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
+    expect(card).not.toHaveTextContent(/installed once with pip/);
+    expect(card).toHaveTextContent(/s3-kgx-export is not in that install and has no download/);
+    expect(card).toHaveTextContent(/today a KGX file comes from the operator/);
+    expect(within(card as HTMLElement).queryByTestId("integration-copy-kgx")).toBeNull();
+  });
+
+  it("promises no schedule for the MCP follow-up offers, and claims no parity", () => {
+    // F-8.10-J13, then card 62 (F-8.10-V06, PR-8.10-15): "coming to MCP
+    // next" was a schedule promise no plan keeps. The card now says only
+    // what is true today. Mutation that turns this red: put back "coming to
+    // MCP next", or "the same parity the web app has".
     render(<IntegrationsScreen />);
 
     const card = cards().getByRole("heading", { name: "MCP server" }).parentElement;
     expect(card).not.toHaveTextContent(/same parity/i);
-    expect(card).toHaveTextContent(/follow-up offers.*are coming/);
+    expect(card).not.toHaveTextContent(/coming/i);
+    expect(card).toHaveTextContent(/follow-up offers the web app shows after an answer are not/);
   });
 
   it("puts the API documentation section on the page, with the real event names", () => {
@@ -221,7 +297,7 @@ describe("the integrations page, rebuilt from the reference layout", () => {
       expect(copied, "`question` was the old, wrong field name").not.toContain("question:");
     });
 
-    it("writes the REST curl, the MCP config and both console commands", async () => {
+    it("writes the REST curl, the MCP config and the s3 commands", async () => {
       const user = setupWithClipboard();
       render(<IntegrationsScreen />);
 
@@ -229,7 +305,6 @@ describe("the integrations page, rebuilt from the reference layout", () => {
         ["integration-copy-rest", "/v1/query"],
         ["integration-copy-mcp", "/mcp"],
         ["integration-copy-cli", "s3 ask"],
-        ["integration-copy-kgx", "s3-kgx-export"],
       ] as const) {
         writeText.mockClear();
         await user.click(cards().getByTestId(testId));
@@ -258,9 +333,29 @@ describe("the integrations page, rebuilt from the reference layout", () => {
 
       writeText.mockClear();
       await user.click(cards().getByTestId("integration-copy-mcp-stdio"));
-      expect(JSON.parse(writeText.mock.calls[0][0])).toEqual({
-        mcpServers: { system3: { command: "s3", args: ["mcp"] } },
-      });
+      expect(JSON.parse(writeText.mock.calls[0][0])).toEqual(AGENT_CONFIG);
+    });
+
+    it("installs s3 with python3.11 into a new virtual environment, and installs nothing else", async () => {
+      // Card 62, PR-8.10-03 and 04, and its fix round (F-62-J01, J02, A07).
+      // The install copy makes the venv with `python3.11` by name, since a
+      // bare `python3` is macOS's own 3.9, then activates it before pip
+      // runs, so Homebrew's Python does not refuse and `s3` is on the PATH
+      // for the next command. No other copy on the page installs anything.
+      const user = setupWithClipboard();
+      render(<IntegrationsScreen />);
+
+      await user.click(cards().getByTestId("integration-copy-install"));
+      const install = writeText.mock.calls[0][0].split("\n");
+      expect(install[0]).toBe("python3.11 -m venv s3-env");
+      expect(install[1]).toBe(". s3-env/bin/activate");
+      expect(install[2]).toMatch(/^pip install "git\+https:\/\/\S+#subdirectory=clients\/system3-cli"$/);
+
+      for (const testId of ["integration-copy-cli", "integration-copy-mcp-stdio"]) {
+        writeText.mockClear();
+        await user.click(cards().getByTestId(testId));
+        expect(writeText.mock.calls[0][0], `${testId} installs something`).not.toMatch(/pip install/);
+      }
     });
 
     it("says so when the clipboard is unavailable, rather than looking like nothing happened", async () => {
