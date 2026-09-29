@@ -1059,6 +1059,7 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 - Held: card 63's golden consistency run, which needs the accounts file still on the first laptop. Nothing else lands on develop until it runs.
 - New cards 67 to 70: the review's open items F-63-A03, A04 and J04, and two moderate `vitest` advisories.
 - The second laptop is an Intel Mac, where Homebrew no longer installs; it runs on Miniforge and a standalone Python 3.11. The develop suite passed on it.
+- Also merged by the owner: #130, this checkpoint, and #131, `.gitignore` keeping anything added under `reference/` local except the two committed links, so a link to a private repository stays out of git without its name being written anywhere public.
 - Decisions logged: seven rows dated 2026-09-29. Learnings logged: four rows, among them a rebase that replayed develop's published commits and was undone before any push.
 
 2026-09-27. CARD 58, CARD 60 AND PHASE 8.10 LIVE ON DEVELOP; THE RELEASE JOB AND DATA ENGINEERING'S v1.0.0 SHIPPED; EVERYTHING ELSE PARKED AFTER THE MACHINE RESTARTED. What is parked and where each piece stands: `HANDOFF.md`.
