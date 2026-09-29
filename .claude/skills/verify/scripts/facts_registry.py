@@ -23,6 +23,17 @@ actually runs on. Then add every place that states it, and run
 `check_facts.py --self-test`: it fails unless every new place can both
 pass and fail.
 
+A PLACE STATES ITS WHOLE SENTENCE. Write its pattern with `sent`, the
+sentence word for word with the value as a group, because the engine fails
+a place that touches a sentence it does not cover. When two facts read one
+sentence, build the pattern once (the helpers under "sentences" below) and
+give each fact its own group. A list of names is read with a strict parser
+(`names_only` and its users), where every word must be a known name or an
+allowed connective. A place that reads fields out of a structure, not a
+sentence, is marked `block=True`, and says so. `--self-test` proves each of
+these on every place, and `--mutation-test` replays `MUTATIONS`, the
+reviewers' break-it edits, at the end of this file.
+
 THE PLACES are named the way a person reaching them would: the screen's
 title, or "document" and "code copy" for restatements outside the app.
 """
@@ -77,6 +88,7 @@ from check_facts import (
     to_date,
     to_int,
     union,
+    visible,
     words_list,
 )
 
@@ -165,7 +177,7 @@ NOT_CALLED = ("LitSense",)
 
 # How a page names each programmatic surface in `RequestContext.surface`.
 SURFACE_NAMES: dict[str, tuple[str, ...]] = {
-    "rest_sse": ("REST", "the API"),
+    "rest_sse": ("REST", "REST and SSE", "the API"),
     "graphql": ("GraphQL",),
     "mcp": ("MCP",),
     "cli": ("command line", "Command line", "the export"),
@@ -203,18 +215,49 @@ CLIENT_OMITS_ON_PURPOSE = ("cost",)
 # ------------------------------------------------------------------ parsers
 
 
-def named_families(match: re.Match[str]) -> frozenset[str]:
-    """The API families a sentence names, each by its first display name, so
-    a report says "PubChem" rather than a transport key."""
-    text = match.group(1)
-    found = {names[0] for names in FAMILY_NAMES.values() if any(n in text for n in names)}
-    found |= {f"{n} (no code calls it)" for n in NOT_CALLED if n in text}
+# The only words a list of names may carry besides the names themselves.
+# Default deny: a word outside this set, such as "not", "never", "except" or
+# "excluded", is a word the registry cannot read, so the place FAILs rather
+# than passing on the names it happens to contain (F-53-J03). Allowing a new
+# connective word is a registry edit, reviewed like any other.
+LIST_WORDS = frozenset(
+    {"and", "or", "the", "NCBI", "v2", "API", "then", "record", "bulk", "snapshot", "over", "FTP"}
+)
+
+
+def names_only(
+    text: str, names: dict[str, tuple[str, ...]], allowed: frozenset[str] = LIST_WORDS
+) -> frozenset[str]:
+    """The names a list states, each by its first display name, where every
+    word of the list must be a known name or an allowed connective. A word
+    that is neither raises, which reports the place as a FAIL."""
+    aliases = sorted(
+        ((alias, key) for key, forms in names.items() for alias in forms),
+        key=lambda pair: -len(pair[0]),
+    )
+    rest = text
+    found: set[str] = set()
+    for alias, key in aliases:
+        pattern = re.compile(rf"(?<![A-Za-z0-9]){re.escape(alias)}(?![A-Za-z0-9])")
+        if pattern.search(rest):
+            found.add(names[key][0])
+            rest = pattern.sub(" ", rest)
+    unread = [w for w in re.findall(r"[A-Za-z0-9][A-Za-z0-9.\-]*", rest) if w not in allowed]
+    if unread:
+        raise ValueError(f"the list says {' '.join(unread)!r}, which is no name the registry reads")
     return frozenset(found)
 
 
+def named_families(match: re.Match[str]) -> frozenset[str]:
+    """The API families a list names, each by its first display name, so a
+    report says "PubChem" rather than a transport key. A name no code calls
+    is kept, marked, so the place FAILs on it."""
+    names = {**FAMILY_NAMES, **{f"{n} (no code calls it)": (n,) for n in NOT_CALLED}}
+    return names_only(match.group(1), names)
+
+
 def named_surfaces(match: re.Match[str]) -> frozenset[str]:
-    text = match.group(1)
-    return frozenset(names[0] for names in SURFACE_NAMES.values() if any(n in text for n in names))
+    return names_only(match.group(1), SURFACE_NAMES, LIST_WORDS | {"server", "tools"})
 
 
 def ts_union(match: re.Match[str]) -> frozenset[str]:
@@ -285,7 +328,13 @@ def citation_fields_named(match: re.Match[str]) -> frozenset[str]:
 
 
 def modes_named(match: re.Match[str]) -> frozenset[str]:
-    return frozenset(m for m in MODE_NAMES if m in match.group(0))
+    """The answer modes a sentence names, from its captured labels, each of
+    which must be a label the registry knows."""
+    named = frozenset(" ".join(g.split()) for g in match.groups() if g)
+    unknown = named - set(MODE_NAMES)
+    if unknown:
+        raise ValueError(f"no answer mode is called {sorted(unknown)}")
+    return named
 
 
 def ws(text: str) -> str:
@@ -320,8 +369,74 @@ def share_of(match: re.Match[str]) -> int:
 
 
 def snake_names(match: re.Match[str]) -> frozenset[str]:
-    """Every snake_case identifier a passage names, such as a tool's name."""
-    return frozenset(re.findall(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b", match.group(1)))
+    """A list of snake_case names, every item of which must be one name,
+    written bare or in backticks. Any other item raises."""
+    items: list[str] = []
+    for group in match.groups():
+        if group:
+            items += words_list(group)
+    names = set()
+    for item in items:
+        bare = item.strip("`")
+        if not re.fullmatch(r"[a-z][a-z0-9]*(?:_[a-z0-9]+)+", bare):
+            raise ValueError(f"the item {item!r} is not one tool name")
+        names.add(bare)
+    return frozenset(names)
+
+
+PIPELINE_WORDS = frozenset({"to", "BioLink", "KGX"})
+
+
+def pipeline_step_names(match: re.Match[str]) -> tuple[str, ...]:
+    """Each pipeline step's first word, where any further word must be one
+    the registry reads ("Map to BioLink", "Export KGX"); anything else in an
+    item raises."""
+    steps = []
+    for item in quoted(match.group(1)):
+        words = item.split()
+        extra = [x for x in words[1:] if x not in PIPELINE_WORDS]
+        if not words or extra:
+            raise ValueError(f"the step {item!r} says more than the registry reads")
+        steps.append(words[0])
+    return tuple(steps)
+
+
+def kgx_example_options(match: re.Match[str]) -> frozenset[str]:
+    """The options the KGX example command uses. Every token must be the
+    command, a seed CURIE, a line continuation, an option, or the value
+    after an option, so the example cannot carry prose the registry does
+    not read."""
+    tokens = match.group(1).split()
+    if not tokens or tokens[0] != "s3-kgx-export":
+        raise ValueError("the example does not start with s3-kgx-export")
+    options = set()
+    expecting_value = False
+    for token in tokens[1:]:
+        if expecting_value:
+            expecting_value = False
+        elif token.startswith("--"):
+            options.add(token)
+            expecting_value = True
+        elif token in {"\\", "\\\\"} or re.fullmatch(r"[A-Za-z]+:[A-Za-z0-9_.]+", token):
+            continue
+        else:
+            raise ValueError(f"the example carries {token!r}, which the registry does not read")
+    return frozenset(options)
+
+
+def sent(template: str, **slots: str) -> str:
+    """A whole sentence as a pattern: the template's words literal, any run
+    of white space between them (page prose wraps), and each «name» the
+    regex given for it. Every place that reads a sentence states all of
+    it, so the engine's whole-sentence rule has nothing left over."""
+    out = []
+    for i, part in enumerate(re.split(r"«(\w+)»", template)):
+        if i % 2:
+            out.append(slots[part])
+            continue
+        for piece in re.split(r"(\s+)", part):
+            out.append(r"\s+" if piece and piece.isspace() else re.escape(piece))
+    return "".join(out)
 
 
 def either(*phrases: str) -> str:
@@ -641,57 +756,413 @@ GRAPH_PY = f"{PKG}/core/graph.py"
 GATHER_FN = "_gather_planned_calls"
 
 
-def layer_one_read_first(repo: Repo) -> Truth:
-    """False when Act runs its planned calls together through
-    `asyncio.gather`, so no layer is read before another."""
-    module = "system_03_search_agent.core.graph"
-    graph = call_graph(repo)
-    node = graph.funcs.get(f"{module}:{GATHER_FN}")
+GRAPH_MODULE = "system_03_search_agent.core.graph"
+
+
+def _graph_function(repo: Repo, name: str) -> ast.AST:
+    node = call_graph(repo).funcs.get(f"{GRAPH_MODULE}:{name}")
     if node is None:
-        raise RegistryError(f"{GRAPH_PY}: no function {GATHER_FN}")
-    act = next(fn for name, fn, _ in loop_steps(repo) if name == "act")
-    together = graph.reaches(f"{module}:{act}", f"{module}:{GATHER_FN}") and any(
+        raise RegistryError(f"{GRAPH_PY}: no function {name}")
+    return node
+
+
+def _step_function(repo: Repo, step: str) -> str:
+    for name, fn, _ in loop_steps(repo):
+        if name == step:
+            return fn
+    raise RegistryError(f"{GRAPH_PY}: no loop step {step!r}")
+
+
+def layer_one_read_first(repo: Repo) -> Truth:
+    """False when Act sends its first round of planned calls, the graph
+    query among them, out together through `asyncio.gather`, so the graph
+    is not read before the live layers."""
+    graph = call_graph(repo)
+    node = _graph_function(repo, GATHER_FN)
+    act = _step_function(repo, "act")
+    together = graph.reaches(f"{GRAPH_MODULE}:{act}", f"{GRAPH_MODULE}:{GATHER_FN}") and any(
         isinstance(n, ast.Call) and getattr(n.func, "attr", "") == "gather" for n in ast.walk(node)
     )
-    note = "Act runs every planned call at once with asyncio.gather" if together else ""
+    note = "Act's first round goes out at once through asyncio.gather" if together else ""
     return Truth(not together, GRAPH_PY, node.lineno, note)
+
+
+def act_rounds(repo: Repo) -> Truth:
+    """True when the Act step gathers its planned calls in more than one
+    round: it calls `_gather_planned_calls` at least twice, the second time
+    for the follow-ups the first round's results feed (F-53-J06)."""
+    act = _graph_function(repo, _step_function(repo, "act"))
+    calls = [
+        n
+        for n in ast.walk(act)
+        if isinstance(n, ast.Call) and getattr(n.func, "id", "") == GATHER_FN
+    ]
+    return Truth(len(calls) >= 2, GRAPH_PY, act.lineno, f"act gathers {len(calls)} rounds")
+
+
+FOLLOW_UPS = "_BREADTH_FOLLOW_UPS"
+
+
+def pubmed_follow_ups(repo: Repo) -> Truth:
+    """What Act's second round does with a PubMed search's results, as the
+    purposes `_BREADTH_FOLLOW_UPS["pubmed_search"]` names."""
+    table = PyConst(GRAPH_PY, FOLLOW_UPS).read(repo)
+    rows = dict(table.value).get("pubmed_search")
+    if not rows:
+        raise RegistryError(f"{GRAPH_PY}: {FOLLOW_UPS} has no pubmed_search row")
+    return Truth(frozenset(row[3] for row in rows), GRAPH_PY, table.line)
+
+
+# How a page names each follow-up purpose.
+FOLLOW_UP_PHRASES = {
+    "the abstracts of the papers a PubMed search found": "pubmed_abstracts",
+    "PubTator3's markup of those papers": "pubtator_publications",
+}
+
+
+def follow_ups_named(match: re.Match[str]) -> frozenset[str]:
+    items = [i.strip() for i in re.split(r"\s+or\s+", " ".join(match.group(1).split()))]
+    named = set()
+    for item in items:
+        if item not in FOLLOW_UP_PHRASES:
+            raise ValueError(f"the example {item!r} is none the registry reads")
+        named.add(FOLLOW_UP_PHRASES[item])
+    return frozenset(named)
 
 
 LAYER3_PLANNER = "_build_layer_tool_calls"
 
 
-def layer3_planned_in_code(repo: Repo) -> Truth:
-    """True when the Plan step reaches `_build_layer_tool_calls`, and that
-    function plans every Layer 3 tool through `_layer_call` with the tool's
-    name written in the code. That is what "added in code rather than on
-    request" rests on. Which questions earn each call (a gene or disease for
-    PubTator3 and ClinicalTrials.gov, an rs id for LitVar2) was read from
-    the function by hand on 2026-09-27 and is stated on the pages; a static
-    reader cannot prove a condition, so it proves the wiring only."""
-    module = "system_03_search_agent.core.graph"
+def _layer3_call_site(repo: Repo) -> tuple[ast.AST, ast.Call, list[ast.AST]]:
+    """plan_node, its one call to `_build_layer_tool_calls`, and the chain of
+    statements that enclose that call inside plan_node."""
+    plan = _graph_function(repo, _step_function(repo, "plan"))
+    parents: dict[ast.AST, ast.AST] = {}
+    for parent in ast.walk(plan):
+        for child in ast.iter_child_nodes(parent):
+            parents[child] = parent
+    sites = [
+        n
+        for n in ast.walk(plan)
+        if isinstance(n, ast.Call) and getattr(n.func, "id", "") == LAYER3_PLANNER
+    ]
+    if len(sites) != 1:
+        raise RegistryError(f"{GRAPH_PY}: plan_node calls {LAYER3_PLANNER} {len(sites)} times")
+    chain = []
+    node: ast.AST = sites[0]
+    while node in parents:
+        node = parents[node]
+        chain.append(node)
+    return plan, sites[0], chain
+
+
+def layer3_not_every_question(repo: Repo) -> Truth:
+    """True when plan_node reaches `_build_layer_tool_calls` only inside a
+    branch, so some questions plan no layer 3 call at all (F-53-J02)."""
+    _, site, chain = _layer3_call_site(repo)
+    conditional = any(isinstance(n, (ast.If, ast.IfExp, ast.Match)) for n in chain)
+    return Truth(
+        conditional,
+        GRAPH_PY,
+        site.lineno,
+        f"plan_node calls {LAYER3_PLANNER} "
+        + ("inside a branch" if conditional else "on every path"),
+    )
+
+
+def _layer3_body(repo: Repo) -> ast.AST:
+    return _graph_function(repo, LAYER3_PLANNER)
+
+
+def _source(repo: Repo, node: ast.AST) -> str:
+    return ast.unparse(node)
+
+
+def layer3_triggers(repo: Repo) -> Truth:
+    """What earns the layer 3 calls, read from the code (F-53-A01):
+
+    - symbol: plan_node passes a gene symbol only for a mention with no
+      colon in it, so a gene named by an identifier has none.
+    - disease_fallback: `_build_layer_tool_calls` searches on the gene
+      symbol, else the disease text.
+    - rsid_cap: how many rs ids earn a LitVar2 call, the slice bound of
+      the loop over them."""
+    plan, _, _ = _layer3_call_site(repo)
+    body = _layer3_body(repo)
+    plan_src = _source(repo, plan)
+    body_src = _source(repo, body)
+    cap = None
+    for node in ast.walk(body):
+        if (
+            isinstance(node, ast.For)
+            and isinstance(node.iter, ast.Subscript)
+            and isinstance(node.iter.slice, ast.Slice)
+            and isinstance(node.iter.slice.upper, ast.Constant)
+        ):
+            cap = node.iter.slice.upper.value
+    if cap is None:
+        raise RegistryError(f"{GRAPH_PY}: {LAYER3_PLANNER} has no capped loop over rs ids")
+    return Truth(
+        {
+            "symbol": "':' not in mention" in plan_src,
+            "disease_fallback": "search_text = gene_symbol or disease_text" in body_src,
+            "rsid_cap": cap,
+        },
+        GRAPH_PY,
+        body.lineno,
+    )
+
+
+def layer3_other_ways(repo: Repo) -> Truth:
+    """The paths that plan no layer 3 call, each read from plan_node:
+
+    - identifier: a gene mention with a colon gets no symbol.
+    - isolates: an isolate question takes its own branch.
+    - papers: with no gene, the plan step reaches the literature decision,
+      which asks the classifier, and a question read as wanting papers
+      takes the topic branch instead."""
+    plan, _, chain = _layer3_call_site(repo)
+    plan_src = _source(repo, plan)
     graph = call_graph(repo)
-    node = graph.funcs.get(f"{module}:{LAYER3_PLANNER}")
-    if node is None:
-        raise RegistryError(f"{GRAPH_PY}: no function {LAYER3_PLANNER}")
-    plan = next(fn for name, fn, _ in loop_steps(repo) if name == "plan")
-    reached = graph.reaches(f"{module}:{plan}", f"{module}:{LAYER3_PLANNER}")
-    planned = {
-        call.args[0].value
-        for call in ast.walk(node)
-        if isinstance(call, ast.Call)
-        and getattr(call.func, "id", "") == "_layer_call"
-        and call.args
-        and isinstance(call.args[0], ast.Constant)
+    plan_key = f"{GRAPH_MODULE}:{_step_function(repo, 'plan')}"
+    literature = f"{GRAPH_MODULE}:_literature_choice"
+    papers = graph.reaches(plan_key, literature) and "classifier" in graph.tiers(literature)
+    return Truth(
+        {
+            "identifier": "':' not in mention" in plan_src,
+            "isolates": "elif isolate_question is not None" in plan_src
+            and any(isinstance(n, ast.If) for n in chain),
+            "papers": papers and "topic_term" in plan_src,
+        },
+        GRAPH_PY,
+        plan.lineno,
+    )
+
+
+# How a page says what each in-code layer 3 call returns, by the mode the
+# call is planned with.
+MODE_PHRASES = {
+    "pubtator_annotate": {
+        "looks the name up in its index of the genes and diseases found in published papers": (
+            "entity_lookup"
+        ),
+        "returns the papers that mention the name": "annotate_publications",
+    },
+    "litvar2_lookup": {
+        "finds a named variant and counts the papers that mention it": "variant_search",
+        "returns the papers that mention a named variant": "publications_lookup",
+    },
+}
+
+
+def layer3_modes(repo: Repo) -> Truth:
+    """The mode each in-code layer 3 call is planned with, read from the
+    `"mode"` key of the input `_build_layer_tool_calls` builds (F-53-A10)."""
+    body = _layer3_body(repo)
+    modes: dict[str, str] = {}
+    for node in ast.walk(body):
+        if (
+            isinstance(node, ast.Call)
+            and getattr(node.func, "id", "") == "_layer_call"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+        ):
+            for inner in ast.walk(node):
+                if isinstance(inner, ast.Dict):
+                    for key, value in zip(inner.keys, inner.values):
+                        if (
+                            isinstance(key, ast.Constant)
+                            and key.value == "mode"
+                            and isinstance(value, ast.Constant)
+                        ):
+                            modes[node.args[0].value] = value.value
+    wanted = set(MODE_PHRASES)
+    if not wanted <= set(modes):
+        raise RegistryError(
+            f"{GRAPH_PY}: {LAYER3_PLANNER} plans no mode for {sorted(wanted - set(modes))}"
+        )
+    return Truth({k: modes[k] for k in sorted(wanted)}, GRAPH_PY, body.lineno)
+
+
+def modes_stated(match: re.Match[str]) -> dict[str, str]:
+    said = {"pubtator_annotate": match.group(1), "litvar2_lookup": match.group(2)}
+    out = {}
+    for tool, phrase in said.items():
+        phrase = " ".join(phrase.split())
+        if phrase not in MODE_PHRASES[tool]:
+            raise ValueError(f"{tool}: the wording {phrase!r} is none the registry reads")
+        out[tool] = MODE_PHRASES[tool][phrase]
+    return out
+
+
+# How a page names a layer 3 tool.
+TOOL_DISPLAY = {
+    "pubtator_annotate": "PubTator3",
+    "litvar2_lookup": "LitVar2",
+    "clinicaltrials_search": "ClinicalTrials.gov",
+}
+NCBI_HOST = "ncbi.nlm.nih.gov"
+
+
+def layer3_non_ncbi_hosts(repo: Repo) -> Truth:
+    """The layer 3 tools whose API constants (module-level `..._URL` or
+    `..._BASE` strings) point at a host outside NCBI."""
+    tools = tools_in_layer(3)(repo).value
+    outside = set()
+    for tool in tools:
+        if tool not in TOOL_DISPLAY:
+            raise RegistryError(f"{tool}: a layer 3 tool with no display name in the registry")
+        path = f"{PKG}/tools/{tool}.py"
+        hosts = set()
+        for node in parse_python(repo, path).body:
+            target = (
+                node.targets[0] if isinstance(node, ast.Assign) else getattr(node, "target", None)
+            )
+            name = getattr(target, "id", "")
+            value = getattr(node, "value", None)
+            if not name.endswith(("_URL", "_BASE")) or value is None:
+                continue
+            try:
+                url = ast.literal_eval(value)
+            except (ValueError, TypeError, SyntaxError):
+                continue
+            m = re.match(r"https://([^/]+)", url) if isinstance(url, str) else None
+            if m:
+                hosts.add(m.group(1))
+        if not hosts:
+            raise RegistryError(f"{path}: no API host constant")
+        if any(not h.endswith(NCBI_HOST) for h in hosts):
+            outside.add(TOOL_DISPLAY[tool])
+    return Truth(frozenset(outside), TRANSPORT, 1, "layer 3 hosts outside ncbi.nlm.nih.gov")
+
+
+def planned_row_limit(repo: Repo) -> Truth:
+    """The most rows any graph call Plan builds asks for: every
+    `row_limit=` keyword in core/graph.py, a literal or a module constant."""
+    tree = parse_python(repo, GRAPH_PY)
+    values = []
+    line = 1
+    for node in ast.walk(tree):
+        if isinstance(node, ast.keyword) and node.arg == "row_limit":
+            if isinstance(node.value, ast.Constant):
+                values.append(node.value.value)
+            elif isinstance(node.value, ast.Name):
+                values.append(PyConst(GRAPH_PY, node.value.id).read(repo).value)
+            else:
+                raise RegistryError(
+                    f"{GRAPH_PY}: a row_limit that is neither a literal nor a constant"
+                )
+            line = node.value.lineno
+    if not values:
+        raise RegistryError(f"{GRAPH_PY}: no planned graph call passes a row_limit")
+    return Truth(max(values), GRAPH_PY, line, f"row limits planned: {sorted(set(values))}")
+
+
+def longest_budget(repo: Repo) -> Truth:
+    """Which source has the longest per-call limit: the graph query, a web
+    API call through the transport, or Pathogen Detection."""
+    budgets = {
+        "a graph query": PyConst(GRAPH_CONSTS, "CYPHER_QUERY_TIMEOUT_SECONDS").read(repo).value,
+        "a call to a live web API": PyConst(TRANSPORT, "DEFAULT_TIMEOUT_S").read(repo).value,
+        "Pathogen Detection": PyConst(PATHOGEN, "_TOTAL_BUDGET_S").read(repo).value,
     }
-    layer3 = set(tools_in_layer(3)(repo).value)
-    missing = sorted(layer3 - planned)
-    if not reached:
-        note = f"the plan step no longer reaches {LAYER3_PLANNER}"
-    elif missing:
-        note = f"{LAYER3_PLANNER} no longer plans: {', '.join(missing)}"
-    else:
-        note = f"plan_node reaches {LAYER3_PLANNER}, which plans {', '.join(sorted(layer3))}"
-    return Truth(reached and not missing, GRAPH_PY, node.lineno, note)
+    top = max(budgets, key=budgets.get)
+    return Truth(top, PATHOGEN, 1, ", ".join(f"{k} {v:g} s" for k, v in budgets.items()))
+
+
+def transport_retries(repo: Repo) -> Truth:
+    """How many retries a web API call gets: the attempts loop in
+    `_execute_with_retry`, `for attempt_index in range(N)`, less one."""
+    fn = next(
+        (
+            n
+            for n in ast.walk(parse_python(repo, TRANSPORT))
+            if isinstance(n, ast.AsyncFunctionDef | ast.FunctionDef)
+            and n.name == "_execute_with_retry"
+        ),
+        None,
+    )
+    if fn is None:
+        raise RegistryError(f"{TRANSPORT}: no _execute_with_retry")
+    for node in ast.walk(fn):
+        if (
+            isinstance(node, ast.For)
+            and isinstance(node.iter, ast.Call)
+            and getattr(node.iter.func, "id", "") == "range"
+            and len(node.iter.args) == 1
+            and isinstance(node.iter.args[0], ast.Constant)
+        ):
+            return Truth(node.iter.args[0].value - 1, TRANSPORT, node.lineno)
+    raise RegistryError(f"{TRANSPORT}: _execute_with_retry has no attempts loop")
+
+
+EXPORT_DIR = f"{PKG}/export"
+# The graph-side modules an export may import. Anything else under tools/
+# reaches a live API.
+GRAPH_SIDE_TOOLS = frozenset(
+    {"agtype", "graph_connection", "graph_schema_constants", "cypher_provenance", "cypher_query"}
+)
+
+
+def export_layer1_only(repo: Repo) -> Truth:
+    """True when no module of the KGX export imports a tool module that
+    reaches a live API: every `system_03_search_agent.tools` import is one
+    of the graph-side modules."""
+    reached = set()
+    for rel in repo.python_files(EXPORT_DIR):
+        for node in ast.walk(parse_python(repo, rel)):
+            names = []
+            if isinstance(node, ast.ImportFrom) and node.module:
+                names = [node.module] + [f"{node.module}.{a.name}" for a in node.names]
+            elif isinstance(node, ast.Import):
+                names = [a.name for a in node.names]
+            for name in names:
+                m = re.fullmatch(r"system_03_search_agent\.tools\.(\w+)(?:\.\w+)?", name)
+                if m:
+                    reached.add(m.group(1))
+    live = sorted(reached - GRAPH_SIDE_TOOLS)
+    return Truth(
+        not live,
+        EXPORT_DIR + "/kgx.py",
+        1,
+        "the export imports only graph-side tools" if not live else "it imports " + ", ".join(live),
+    )
+
+
+def redis_unused(repo: Repo) -> Truth:
+    """True when no Python module under src/ imports a Redis client."""
+    users = [
+        rel
+        for rel in repo.python_files("src")
+        for node in ast.walk(parse_python(repo, rel))
+        if (
+            isinstance(node, ast.Import)
+            and any(a.name.split(".")[0] in {"redis", "aioredis"} for a in node.names)
+        )
+        or (
+            isinstance(node, ast.ImportFrom)
+            and (node.module or "").split(".")[0] in {"redis", "aioredis"}
+        )
+    ]
+    return Truth(
+        not users,
+        PKG,
+        1,
+        "no module imports redis" if not users else "imported by " + ", ".join(users),
+    )
+
+
+def about_stop_count(repo: Repo) -> Truth:
+    """How many stops the About walk renders: `<JourneyStop` elements inside
+    `AboutScreen`, read from what a reader sees (comments excluded)."""
+    doc = visible(repo, INFO).text
+    start = doc.find("export function AboutScreen(")
+    if start < 0:
+        raise RegistryError(f"{INFO}: no AboutScreen")
+    nxt = doc.find("\nexport function ", start + 1)
+    body = doc[start : nxt if nxt > 0 else len(doc)]
+    count = len(re.findall(r"<JourneyStop\b", body))
+    return Truth(tuple(range(count)), INFO, line_of(doc, start))
 
 
 USE_AGENT_RUN = "frontend/src/hooks/useAgentRun.ts"
@@ -825,6 +1296,35 @@ def move_tool_layer(tool: str, new: str):
     return mutate
 
 
+def _layer3_on_every_path(repo: Repo) -> dict[str, str]:
+    """For the self-test: plan_node calls `_build_layer_tool_calls` first
+    thing, outside any branch, and the branch's own call is renamed."""
+    text = repo.text(GRAPH_PY)
+    text, one = re.subn(
+        r"layer_calls = _build_layer_tool_calls\(", "layer_calls = _mutant_calls(", text, count=1
+    )
+    text, two = re.subn(
+        r"(async def plan_node\(state: GraphState\) -> dict\[str, Any\]:\n)",
+        r'\1    _build_layer_tool_calls("", None, [], None)\n',
+        text,
+        count=1,
+    )
+    return {GRAPH_PY: text} if one and two else {}
+
+
+_merge_rounds = swap(
+    GRAPH_PY,
+    r"await _gather_planned_calls\(\[_run_one\(planned\) for planned in second_stage\]\)",
+    "pass",
+)
+_add_stop = swap(
+    INFO,
+    r"<JourneyStop index=\{7\} last",
+    '<JourneyStop index={8} title="mutant"><StopText>mutant</StopText></JourneyStop>\n'
+    "<JourneyStop index={7} last",
+)
+
+
 PATHOGEN_LAYER = move_tool_layer("pathogen_detection", "layer_3_enrichment")
 PUBTATOR_LAYER = move_tool_layer("pubtator_annotate", "layer_2_api")
 PUBCHEM_LAYER = swap(TRANSPORT, r'"pubchem": 2,', '"pubchem": 3,')
@@ -837,8 +1337,18 @@ def num(index: int = 1):
     return g(index, to_int)
 
 
-def w(place: str, path: str, pattern: str, cmp=EXACT, parse=None, collect=None, flags=0) -> Where:
-    return Where(place, path, pattern, cmp, parse or num(), collect, flags)
+def w(
+    place: str,
+    path: str,
+    pattern: str,
+    cmp=EXACT,
+    parse=None,
+    collect=None,
+    flags=0,
+    expect: int = 1,
+    block: bool = False,
+) -> Where:
+    return Where(place, path, pattern, cmp, parse or num(), collect, flags, expect, block)
 
 
 def everywhere(
@@ -846,6 +1356,268 @@ def everywhere(
 ) -> tuple[Where, ...]:
     return tuple(w(DOC, f, pattern, cmp, parse, flags=flags) for f in files)
 
+
+# ------------------------------------------------------------------ sentences
+#
+# Every place below states its WHOLE sentence (`sent`), because the engine
+# fails a place whose match touches a sentence it does not cover (card 53).
+# A sentence two facts read is written once here and used by both, each
+# with its own group, so the two can never drift apart.
+
+N = r"(\d+)"
+W = r"(\w+)"
+ANY_N = r"\d+"
+ANY_W = r"\w+"
+
+
+def claude_layer_one(nodes: str = ANY_N, edges: str = ANY_N, dbs: str = ANY_N) -> str:
+    return sent(
+        "Layer 1 provides the pre-ingested graph («n»M nodes, «e»M edges from «d» NCBI "
+        "databases), hosted on Hetzner CPX42 (`<server-ip>`) and queryable via openCypher "
+        "over psycopg2.",
+        n=nodes,
+        e=edges,
+        d=dbs,
+    )
+
+
+def schema_holds(
+    nodes: str = r"[\d,]+", edges: str = r"[\d,]+", v: str = ANY_N, e: str = ANY_N
+) -> str:
+    return sent(
+        "It holds «n» nodes and «m» edges across «v» vertex labels and «e» edge labels.",
+        n=nodes,
+        m=edges,
+        v=v,
+        e=e,
+    )
+
+
+def about_merged(nodes: str = ANY_N, edges: str = ANY_N, dbs: str = r"(?:five|5)") -> str:
+    return sent(
+        "«n»M nodes and «e»M edges merged from «d» NCBI databases.", n=nodes, e=edges, d=dbs
+    )
+
+
+def arch_downloaded(dbs: str = r"\w+", biolink: str = r"\d+\.x") -> str:
+    return sent(
+        "«d» NCBI databases are downloaded in full from NCBI's FTP servers, parsed, mapped to "
+        "the BioLink «b» model, validated against that schema, and written out as KGX files.",
+        d=dbs,
+        b=biolink,
+    )
+
+
+def arch_further(nodes: str = r"[\d,]+", labels: str = ANY_W, dbs: str = ANY_W) -> str:
+    return sent(
+        "Roughly «n» further nodes sit under «l» smaller labels: Gene Ontology terms, MeSH "
+        "headings and phenotypes that arrive with the «d» databases above, plus a small number "
+        "of stub records the merge left behind where an edge pointed at something no pipeline "
+        "had produced.",
+        n=nodes,
+        l=labels,
+        d=dbs,
+    )
+
+
+def arch_loaded(name: str = ANY_W, pg: str = ANY_N) -> str:
+    return sent(
+        "Those KGX files are merged and loaded into one graph, named «g», running on PostgreSQL "
+        "«p» with the Apache AGE extension on a single Hetzner server.",
+        g=name,
+        p=pg,
+    )
+
+
+def readme_databases(count: str = ANY_N, names: str = r"[^)]+") -> str:
+    return sent("| «c» NCBI databases («n») pre-ingested into PostgreSQL + AGE |", c=count, n=names)
+
+
+def seven_tools(tools: str = ANY_W, layers: str = ANY_W) -> str:
+    return sent(
+        "«t» tools cover the «l» layers, each one reaching exactly one of them.", t=tools, l=layers
+    )
+
+
+def mcp_history(tools: str = ANY_W) -> str:
+    return sent(
+        "list_past_searches, reopen_past_answer and send_answer_feedback reach your account's own "
+        "history, and the «t» internal tools are never separately reachable.",
+        t=tools,
+    )
+
+
+def about_budgets(
+    graph: str = ANY_N, live: str = ANY_N, pathogen: str = ANY_N, longest: str = r"[^,]+"
+) -> str:
+    return sent(
+        "Each source has its own time limit in code: «g» seconds for a graph query, «l» seconds "
+        "for a call to a live web API, and «p» seconds for «x», the longest.",
+        g=graph,
+        l=live,
+        p=pathogen,
+        x=longest,
+    )
+
+
+def arch_graph_budget(seconds: str = ANY_N, rows: str = ANY_N) -> str:
+    return sent(
+        "The search agent gives one graph query «s» seconds and asks it for at most «r» rows.",
+        s=seconds,
+        r=rows,
+    )
+
+
+def tool_card(tools: str, calls: str = r'[^"]*', budget: str | None = None) -> str:
+    """One tool card in architectureFacts.ts's LAYERS: its name and what it
+    calls, and its budget when the place reads it, each a whole string."""
+    card = rf'name: "(?:{tools})",\s*calls: "{calls}"'
+    return card + (rf',\s*budget: "{budget}"' if budget is not None else "")
+
+
+LIVE_TOOLS = "ncbi_efetch|ncbi_dbsnp|pubtator_annotate|litvar2_lookup|clinicaltrials_search"
+LIVE_BUDGET_TAILS = r"(?:, one retry| per call, two calls in sequence)?"
+
+
+def l3_stop_modes(pubtator: str = r"[^,]+?", litvar: str = r"[^,]+?") -> str:
+    return sent(
+        "PubTator3 «p», LitVar2 «l», and ClinicalTrials.gov lists the trials registered under "
+        "the name.",
+        p=pubtator,
+        l=litvar,
+    )
+
+
+def l3_stop_triggers(cap: str = ANY_W) -> str:
+    return sent(
+        "Plan decides which of them a question gets, from what Think found in it: PubTator3 and "
+        "ClinicalTrials.gov for a gene named by its symbol or, when no gene was found, for a "
+        "disease, and LitVar2 for up to «c» rs variant ids.",
+        c=cap,
+    )
+
+
+L3_OTHER_WAYS = sent(
+    "A gene named only by an identifier, a question about bacterial isolates, and a question "
+    "with no gene that a classifier reads as asking for papers are each searched another way."
+)
+
+
+def arch_second_round(
+    examples: str = r"[\s\S]+?", when: str = ws("in a second round once the first has returned")
+) -> str:
+    return sent(
+        "A call that needs another call's result, such as «x», goes out «w», and the answer "
+        "waits for both rounds.",
+        x=examples,
+        w=when,
+    )
+
+
+def about_second_round(
+    examples: str = r"[\s\S]+?", when: str = ws("in a second round once the first has returned")
+) -> str:
+    return sent(
+        "A call that needs another call's result, such as «x», goes out «w».", x=examples, w=when
+    )
+
+
+SECOND_ROUND = either(
+    "in a second round once the first has returned", "at the same time as the rest"
+)
+SECOND_ROUND_MEANS = wording(
+    {"in a second round once the first has returned": True, "at the same time as the rest": False}
+)
+
+
+def manifest_note(
+    l2: str = r"[^)]+", l3: str = r"[^)]+", present_in: str = ws("are not present")
+) -> str:
+    return sent(
+        "Layer 2 (live NCBI APIs: «a») and Layer 3 (enrichment APIs: «b») are fetched live at "
+        "query time by the search agent and «p» in this file.",
+        a=l2,
+        b=l3,
+        p=present_in,
+    )
+
+
+def plan_tier_line(
+    think: str = ws("Think's question analysis"),
+    act: str = ws("writing a graph query in Act when no template fits"),
+) -> str:
+    return sent("- Plan tier: mid-range model for «t», and for «a».", t=think, a=act)
+
+
+def arch_diagram_act(
+    plan: str = ws("Plan tier to write a graph query when no template fits"),
+    guard: str = ws("Guard tier to read article titles"),
+) -> str:
+    return sent("- Act: «p», and «g».", p=plan, g=guard)
+
+
+def about_steps(share: str = ws("Every one"), steps: str = ANY_W) -> str:
+    return sent(
+        "«s» of the «n» steps can ask a language model something, and the harness decides which "
+        "model each one gets.",
+        s=share,
+        n=steps,
+    )
+
+
+def tour_steps(count: str = ANY_W, names: str = r"[^.]+") -> str:
+    return sent("The next screen shows the «c» steps the system takes: «n».", c=count, n=names)
+
+
+def about_modes(default: str = r"[A-Z][a-z]+ [a-z]+", other: str = r"[A-Z][a-z]+") -> str:
+    return sent(
+        "You type a question and pick how the answer is written: «d», the default, or «o».",
+        d=default,
+        o=other,
+    )
+
+
+def tour_modes(default: str = r"[A-Z][a-z]+ [a-z]+", other: str = r"[A-Z][a-z]+") -> str:
+    return sent(
+        "«d», the default, gives the answer in simple terms, easy to understand. «o» gives it in "
+        "technical terms, with the specifics and the records listed or in tables.",
+        d=default,
+        o=other,
+    )
+
+
+def mcp_card(
+    count: str = ANY_W, first: str = r"\w+", rest: str = r"[a-z_, ]+?", internal: str = ANY_W
+) -> str:
+    return r'title="MCP server"\s+body="' + sent(
+        "«c» tools. «f» folds a whole run into a single cited answer at any depth, with the "
+        "session id to continue, the clarifying options and the trust line. «r» reach your "
+        "account's own history, and the «i» internal tools are never separately reachable.",
+        c=count,
+        f=first,
+        r=rest,
+        i=internal,
+    )
+
+
+def arch_diagram_mcp(count: str = ANY_W, names: str = r".+?") -> str:
+    return sent(
+        "- MCP server: «c» tools, «n», mounted at `/mcp` on the same application.", c=count, n=names
+    )
+
+
+S3_SENTENCE = sent(
+    "s3 asks a question and prints the answer, human-readable by default and JSON with «o».",
+    o=r"(--[a-z-]+)",
+)
+KGX_SENTENCE = sent(
+    "s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv "
+    "and a manifest, from seed CURIEs and bounded hops, and needs graph credentials only the "
+    "operator grants."
+)
+GUESTS_REFUSED = sent(
+    "GraphQL and the MCP server: an account is required, so a guest cannot reach either."
+)
 
 # ------------------------------------------------------------------ the facts
 
@@ -858,13 +1630,22 @@ FACTS: tuple[Fact, ...] = (
         stated=(
             w(ARCH_ABOUT, FACTS_TS, r'NODE_COUNT = "([\d,]+)"'),
             w(INTEGRATIONS, INFO, r'"(\d+)M nodes"', MILLIONS),
-            w(ABOUT, INFO, r"(\d+)M nodes and \d+M edges merged", MILLIONS),
+            w(ABOUT, INFO, about_merged(nodes=N), MILLIONS, expect=2),
             w(HOME, HOME_TSX, r'"(\d+)M nodes, \d+M edges"', MILLIONS),
         ),
         downstream=(
-            *everywhere(INSTRUCTION_FILES, r"\((\d+)M nodes, \d+M edges", MILLIONS),
-            w(DOC, README, r"across a (\d+)M-node knowledge graph", MILLIONS),
-            w(DOC, SCHEMA_VIS, r"It holds ([\d,]+) nodes"),
+            *everywhere(INSTRUCTION_FILES, claude_layer_one(nodes=N), MILLIONS),
+            w(
+                DOC,
+                README,
+                sent(
+                    "Agentic search agent for querying NCBI biomedical data across a «n»M-node "
+                    "knowledge graph and 30+ live APIs.",
+                    n=N,
+                ),
+                MILLIONS,
+            ),
+            w(DOC, SCHEMA_VIS, schema_holds(nodes=r"([\d,]+)")),
         ),
     ),
     Fact(
@@ -874,12 +1655,12 @@ FACTS: tuple[Fact, ...] = (
         stated=(
             w(ARCH_ABOUT, FACTS_TS, r'EDGE_COUNT = "([\d,]+)"'),
             w(INTEGRATIONS, INFO, r'"(\d+)M edges"', MILLIONS),
-            w(ABOUT, INFO, r"\d+M nodes and (\d+)M edges merged", MILLIONS),
+            w(ABOUT, INFO, about_merged(edges=N), MILLIONS, expect=2),
             w(HOME, HOME_TSX, r'"\d+M nodes, (\d+)M edges"', MILLIONS),
         ),
         downstream=(
-            *everywhere(INSTRUCTION_FILES, r"\(\d+M nodes, (\d+)M edges", MILLIONS),
-            w(DOC, SCHEMA_VIS, r"nodes and ([\d,]+) edges across"),
+            *everywhere(INSTRUCTION_FILES, claude_layer_one(edges=N), MILLIONS),
+            w(DOC, SCHEMA_VIS, schema_holds(edges=r"([\d,]+)")),
         ),
     ),
     Fact(
@@ -887,14 +1668,14 @@ FACTS: tuple[Fact, ...] = (
         "how many vertex labels the graph has",
         TextMatch(KG_REF, r"across (\d+) vertex labels", g(1, to_int)),
         stated=(w(ARCH, FACTS_TS, r'VERTEX_LABEL_COUNT = "(\d+)"'),),
-        downstream=(w(DOC, SCHEMA_VIS, r"across (\d+) vertex labels"),),
+        downstream=(w(DOC, SCHEMA_VIS, schema_holds(v=N)),),
     ),
     Fact(
         "graph.edge_labels",
         "how many edge labels the graph has",
         TextMatch(KG_REF, r"vertex labels and (\d+) edge labels", g(1, to_int)),
         stated=(w(ARCH, FACTS_TS, r'EDGE_LABEL_COUNT = "(\d+)"'),),
-        downstream=(w(DOC, SCHEMA_VIS, r"vertex labels and (\d+) edge labels"),),
+        downstream=(w(DOC, SCHEMA_VIS, schema_holds(e=N)),),
     ),
     Fact(
         "graph.database_nodes",
@@ -908,6 +1689,7 @@ FACTS: tuple[Fact, ...] = (
                 MAPPING,
                 lambda m: {m.group(1): to_int(m.group(2))},
                 merge_dicts,
+                expect=5,
             ),
         ),
     ),
@@ -917,14 +1699,16 @@ FACTS: tuple[Fact, ...] = (
         TextMatch(
             KG_REF, r"which were ([^.]+)\. It contains", lambda m: frozenset(words_list(m.group(1)))
         ),
-        stated=(w(ARCH_ABOUT, FACTS_TS, r'source: "(?:NCBI )?([^"]+)"', SET, g(), union),),
+        stated=(
+            w(ARCH_ABOUT, FACTS_TS, r'source: "(?:NCBI )?([^"]+)"', SET, g(), union, expect=5),
+        ),
         downstream=(
             w(
                 DOC,
                 README,
-                r"\| (\d+) NCBI databases \(([^)]+)\)",
+                readme_databases(names=r"([^)]+)"),
                 SET,
-                lambda m: frozenset(words_list(m.group(2))),
+                lambda m: frozenset(words_list(m.group(1))),
             ),
         ),
     ),
@@ -935,32 +1719,60 @@ FACTS: tuple[Fact, ...] = (
             KG_REF, r"which were ([^.]+)\. It contains", lambda m: tuple(words_list(m.group(1)))
         ),
         stated=(
-            w(ABOUT, INFO, r"\b(five|5) NCBI databases", COUNT, flags=re.IGNORECASE),
-            w(ARCH, ARCH_TSX, r"\b(Five) NCBI databases are downloaded", COUNT),
-            w(ARCH, ARCH_TSX, r"The (five) source databases", COUNT),
+            w(ABOUT, INFO, about_merged(dbs=r"(five|5)"), COUNT, expect=2),
+            w(
+                ABOUT,
+                INFO,
+                sent(
+                    "It is built from «d» NCBI databases: ${SOURCE_DATABASE_NAMES.slice(0, -1)"
+                    '.join(", ")} and ${SOURCE_DATABASE_NAMES[SOURCE_DATABASE_NAMES.length - 1]}.',
+                    d=W,
+                ),
+                COUNT,
+            ),
+            w(ARCH, ARCH_TSX, arch_downloaded(dbs=r"(Five)"), COUNT),
+            w(
+                ARCH,
+                ARCH_TSX,
+                sent("The «d» source databases, and what each contributes", d=W),
+                COUNT,
+            ),
+            w(ARCH, ARCH_TSX, arch_further(dbs=W), COUNT),
         ),
         downstream=(
-            *everywhere(INSTRUCTION_FILES, r"edges from (\d+) NCBI databases", COUNT),
-            w(DOC, README, r"\| (\d+) NCBI databases \(", COUNT),
+            *everywhere(INSTRUCTION_FILES, claude_layer_one(dbs=N), COUNT),
+            w(DOC, README, readme_databases(count=N), COUNT),
         ),
     ),
     Fact(
         "graph.minor_label_nodes",
         "how many nodes sit outside the five main labels",
         Computed(KG_REF, minor_label_nodes, GENE_ROW),
-        stated=(w(ARCH, ARCH_TSX, r"Roughly ([\d,]+) further nodes", THOUSANDS),),
+        stated=(w(ARCH, ARCH_TSX, arch_further(nodes=r"([\d,]+)"), THOUSANDS),),
     ),
     Fact(
         "graph.minor_label_count",
         "how many smaller labels hold those nodes",
         Computed(KG_REF, minor_label_count, DISEASE_ROW),
-        stated=(w(ARCH, ARCH_TSX, r"further nodes sit under (\w+)\s+smaller labels"),),
+        stated=(w(ARCH, ARCH_TSX, arch_further(labels=W)),),
     ),
     Fact(
         "graph.gene_rows",
         "how many Gene nodes an unindexed lookup would scan",
         Computed(KG_REF, gene_rows, GENE_ROW),
-        stated=(w(ARCH, ARCH_TSX, r"a scan of (\d+) million rows", MILLIONS),),
+        stated=(
+            w(
+                ARCH,
+                ARCH_TSX,
+                sent(
+                    "Every node identifier is indexed, so finding the starting point is a lookup "
+                    "rather than a scan of «n» million rows, and both ends of every edge are "
+                    "indexed too, so following one is a lookup as well.",
+                    n=N,
+                ),
+                MILLIONS,
+            ),
+        ),
     ),
     Fact(
         "graph.snapshot_date",
@@ -968,7 +1780,17 @@ FACTS: tuple[Fact, ...] = (
         PyConst(CYPHER_QUERY, "_DEFAULT_GRAPH_SNAPSHOT_VERSION", snapshot_date),
         stated=(
             w(ARCH_ABOUT, FACTS_TS, r'SNAPSHOT_DATE = "([^"]+)"', EXACT, g(1, to_date)),
-            w(ARCH, ARCH_TSX, r"A record that has changed since (\w+)", MONTH, g()),
+            w(
+                ARCH,
+                ARCH_TSX,
+                sent(
+                    "A record that has changed since «m», and every NCBI database the graph "
+                    "deliberately leaves out, is fetched from NCBI at the moment you ask.",
+                    m=W,
+                ),
+                MONTH,
+                g(),
+            ),
         ),
     ),
     Fact(
@@ -976,16 +1798,24 @@ FACTS: tuple[Fact, ...] = (
         "the name of the graph the agent queries",
         PyConst(GRAPH_CONSTS, "GRAPH_NAME"),
         stated=(
-            w(ARCH, ARCH_TSX, r"graph, named (\w+), running", EXACT, g()),
-            w(ARCH, FACTS_TS, r'calls: "the (\w+) graph, PostgreSQL', EXACT, g()),
+            w(ARCH, ARCH_TSX, arch_loaded(name=W), EXACT, g()),
+            w(ARCH, FACTS_TS, r'calls: "the (\w+) graph, PostgreSQL with Apache AGE"', EXACT, g()),
         ),
-        downstream=(w(DOC, SCHEMA_VIS, r"graph called `(\w+)`", EXACT, g()),),
+        downstream=(
+            w(
+                DOC,
+                SCHEMA_VIS,
+                sent("The graph is one Apache AGE graph called `«g»`.", g=W),
+                EXACT,
+                g(),
+            ),
+        ),
     ),
     Fact(
         "graph.postgres_version",
         "the PostgreSQL major version the graph runs on",
         TextMatch(KG_REF, r"\| PostgreSQL \| (\d+)\.\d+ \|", g(1, to_int)),
-        stated=(w(ARCH, ARCH_TSX, r"PostgreSQL (\d+) with the Apache AGE"),),
+        stated=(w(ARCH, ARCH_TSX, arch_loaded(pg=N)),),
     ),
     Fact(
         "graph.edge_label_speedup",
@@ -999,7 +1829,14 @@ FACTS: tuple[Fact, ...] = (
             w(
                 ARCH,
                 ARCH_TSX,
-                r"took (\d+) minutes and\s+(\d+) seconds without it, and (\d+) milliseconds",
+                sent(
+                    "Naming the edge label is the other half: the first version of this exact "
+                    "query took «a» minutes and «b» seconds without it, and «c» milliseconds "
+                    "with it.",
+                    a=N,
+                    b=N,
+                    c=N,
+                ),
                 EXACT,
                 lambda m: (int(m.group(1)), int(m.group(2)), int(m.group(3))),
             ),
@@ -1017,7 +1854,7 @@ FACTS: tuple[Fact, ...] = (
                 FACTS_TS,
                 r"PIPELINE_STEPS = \[(.*?)\]",
                 EXACT,
-                lambda m: tuple(s.split()[0] for s in quoted(m.group(1))),
+                pipeline_step_names,
                 flags=S,
             ),
         ),
@@ -1026,7 +1863,7 @@ FACTS: tuple[Fact, ...] = (
         "graph.biolink_version",
         "the BioLink model version the pipelines map to",
         TextMatch(REF_CLAUDE, r"BioLink (\d+\.x)", g()),
-        stated=(w(ARCH, ARCH_TSX, r"the BioLink (\d+\.x) model", EXACT, g()),),
+        stated=(w(ARCH, ARCH_TSX, arch_downloaded(biolink=r"(\d+\.x)"), EXACT, g()),),
     ),
     # ---- tools and layers
     Fact(
@@ -1035,16 +1872,45 @@ FACTS: tuple[Fact, ...] = (
         PyLiteral(EVENTS_PY, "ToolName"),
         stated=(
             w(INTEGRATIONS, INFO, r'"(\d+) tools"', COUNT),
-            w(INTEGRATIONS, INFO, r"the (\w+) internal tools", COUNT),
-            w(ABOUT, INFO, r"the descriptions of the (\w+) tools", COUNT),
-            w(ARCH, ARCH_TSX, r"(Seven) tools cover the three layers", COUNT),
+            w(INTEGRATIONS, INFO, mcp_history(tools=W), COUNT),
+            w(INTEGRATIONS, INFO, mcp_card(internal=W), COUNT),
+            w(
+                ABOUT,
+                INFO,
+                sent(
+                    "All of these calls open with the same unchanging block of text: the system "
+                    "instructions, the descriptions of the «t» tools, and the graph's own schema.",
+                    t=W,
+                ),
+                COUNT,
+            ),
+            w(ARCH, ARCH_TSX, seven_tools(tools=r"(Seven)"), COUNT),
         ),
         downstream=(
             *everywhere(INSTRUCTION_FILES, r"PLANNED, (\w+) tools\.", COUNT),
-            w(DOC, ARCH_DIAGRAM, r"## The three data layers and the (\w+) tools", COUNT),
-            w(DOC, SCHEMA_VIS, r"each of the (\w+) tools", COUNT),
+            w(DOC, ARCH_DIAGRAM, r"## The \w+ data layers and the (\w+) tools", COUNT),
+            w(
+                DOC,
+                SCHEMA_VIS,
+                sent(
+                    "It owns four of them: the event contract, the citation and provenance type, "
+                    "the user-data schema in PostgreSQL, then the input and output schema of each "
+                    "of the «t» tools.",
+                    t=W,
+                ),
+                COUNT,
+            ),
             w(DOC, SCHEMA_VIS, r'string tool "one of (\w+)"', COUNT),
-            w(DOC, README, r"Locked\. 25 sections, (\w+) tools", COUNT),
+            w(
+                DOC,
+                README,
+                sent(
+                    "Locked. 25 sections, «t» tools, six delivery surfaces (web UI, REST plus SSE "
+                    "API, GraphQL API, MCP server, KGX export, CLI), Section 25 build order",
+                    t=W,
+                ),
+                COUNT,
+            ),
         ),
     ),
     Fact(
@@ -1056,7 +1922,10 @@ FACTS: tuple[Fact, ...] = (
         ),
         downstream=(
             *everywhere(
-                INSTRUCTION_FILES, r"PLANNED, \w+ tools\. ([a-z0-9_, ]+)\. Build", SET, word_set
+                INSTRUCTION_FILES,
+                r"PLANNED, \w+ tools\. ([a-z0-9_, ]+)\.(?=\s+Build)",
+                SET,
+                word_set,
             ),
         ),
     ),
@@ -1072,6 +1941,7 @@ FACTS: tuple[Fact, ...] = (
                 MAPPING,
                 ts_layers("tools"),
                 flags=S,
+                block=True,
             ),
             w(
                 ARCH,
@@ -1080,6 +1950,7 @@ FACTS: tuple[Fact, ...] = (
                 MAPPING,
                 ts_layers("name"),
                 flags=S,
+                block=True,
             ),
         ),
         downstream=(
@@ -1091,6 +1962,7 @@ FACTS: tuple[Fact, ...] = (
                 lambda m: {int(m.group(2)): frozenset({m.group(1)})},
                 merge_dicts,
                 re.MULTILINE,
+                expect=7,
             ),
         ),
     ),
@@ -1100,11 +1972,32 @@ FACTS: tuple[Fact, ...] = (
         PyLiteral(EVENTS_PY, "Layer"),
         stated=(
             w(INTEGRATIONS, INFO, r'"(\d+) data layers"', COUNT),
-            w(ABOUT, INFO, r"crosses up to (\w+) data layers", COUNT),
-            w(ARCH, ARCH_TSX, r"(Three) data layers feed one search agent", COUNT),
+            w(ABOUT, INFO, sent("Every question crosses up to «n» data layers.", n=W), COUNT),
+            w(
+                ABOUT,
+                INFO,
+                sent(
+                    "Act sends out the calls Plan chose, across «n» layers of data, together "
+                    "rather than one after another.",
+                    n=W,
+                ),
+                COUNT,
+            ),
+            w(
+                ARCH,
+                ARCH_TSX,
+                sent(
+                    "«n» data layers feed one search agent: the pipelines and the knowledge graph "
+                    "they build, the live NCBI APIs, and the enrichment APIs.",
+                    n=r"(Three)",
+                ),
+                COUNT,
+            ),
+            w(ARCH, ARCH_TSX, seven_tools(layers=W), COUNT),
         ),
         downstream=(
-            *everywhere(INSTRUCTION_FILES, r"(Three)-layer data access", COUNT),
+            *everywhere(INSTRUCTION_FILES, r"(Three)-layer data access:", COUNT),
+            w(DOC, ARCH_DIAGRAM, r"## The (\w+) data layers and the \w+ tools", COUNT),
             w(DOC, SCHEMA_VIS, r'string layer "one of (\w+)"', COUNT),
         ),
     ),
@@ -1112,14 +2005,45 @@ FACTS: tuple[Fact, ...] = (
         "layers.l2_tools",
         "how many tools reach the live NCBI APIs",
         Computed(EVENTS_PY, tools_in_layer(2), PATHOGEN_LAYER),
-        stated=(w(ARCH, ARCH_TSX, r"(Three) tools cover that", COUNT),),
+        stated=(
+            w(
+                ABOUT,
+                INFO,
+                r'n: 2,\s*name: "Live NCBI APIs",\s*tools: "([^"]+)",\s*body: "'
+                + sent(
+                    "Fetched while you wait, so they are current. Used for anything the graph "
+                    "cannot name, such as turning a concept id into a disease name."
+                )
+                + '"',
+                COUNT,
+                lambda m: len(words_list(m.group(1))),
+            ),
+            w(
+                ARCH,
+                ARCH_TSX,
+                sent(
+                    "«n» tools cover that, and what they return is current by definition.",
+                    n=r"(Three)",
+                ),
+                COUNT,
+            ),
+        ),
     ),
     Fact(
         "layers.l3_tools",
         "how many tools add enrichment",
         Computed(EVENTS_PY, tools_in_layer(3), PUBTATOR_LAYER),
         stated=(
-            w(ARCH, ARCH_TSX, r"\b(three) further tools add evidence", COUNT, flags=re.IGNORECASE),
+            w(
+                ARCH,
+                ARCH_TSX,
+                sent(
+                    "«n» further tools add evidence around the gene, disease or variant a "
+                    "question names.",
+                    n=r"(Three)",
+                ),
+                COUNT,
+            ),
         ),
     ),
     Fact(
@@ -1127,22 +2051,46 @@ FACTS: tuple[Fact, ...] = (
         "which live NCBI APIs layer 2 calls",
         Computed(TRANSPORT, api_families(2), PUBCHEM_LAYER),
         stated=(
-            w(ABOUT, INFO, r'colour: designTokens\.layer2,\s*body: "([^"]+)"', SET, named_families),
+            w(
+                ABOUT,
+                INFO,
+                r'colour: designTokens\.layer2,\s*body: "'
+                + sent(
+                    "«l», called at the moment you ask. Narrower and slower, and always current.",
+                    l=r"(.+?)",
+                )
+                + '"',
+                SET,
+                named_families,
+            ),
             w(
                 ARCH,
                 FACTS_TS,
-                r"export const LAYERS[^=]*= \[(.*?)\n\];",
+                tool_card("ncbi_efetch|ncbi_dbsnp|pathogen_detection", calls=r'([^"]+)'),
                 SET,
-                layer_calls(2),
-                flags=S,
+                named_families,
+                union,
+                expect=3,
             ),
         ),
         downstream=(
             *everywhere(
-                INSTRUCTION_FILES, r"Layer 2: NCBI APIs live \(([^)]+)\)", SET, named_families
+                INSTRUCTION_FILES,
+                sent("Layer 2: NCBI APIs live («l», called at query time)", l=r"([^)]+?)"),
+                SET,
+                named_families,
             ),
-            w(DOC, README, r"\| Layer 2: on-demand NCBI APIs \| ([^|]+) \|", SET, named_families),
-            w(CODE, KGX_MANIFEST, r"Layer 2 \(live NCBI APIs: ([^)]+)\)", SET, named_families),
+            w(
+                DOC,
+                README,
+                sent(
+                    "| Layer 2: on-demand NCBI APIs | 30+ databases reached at query time via «l» |",
+                    l=r"([^|]+?)",
+                ),
+                SET,
+                named_families,
+            ),
+            w(CODE, KGX_MANIFEST, manifest_note(l2=r"([^)]+)"), SET, named_families),
         ),
     ),
     Fact(
@@ -1150,80 +2098,183 @@ FACTS: tuple[Fact, ...] = (
         "which enrichment APIs layer 3 calls",
         Computed(TRANSPORT, api_families(3), PATHOGEN_LAYER),
         stated=(
-            w(ABOUT, INFO, r'colour: designTokens\.layer3,\s*body: "([^"]+)"', SET, named_families),
+            w(
+                ABOUT,
+                INFO,
+                r'colour: designTokens\.layer3,\s*body: "'
+                + sent(
+                    "«l». Literature and trial evidence about the gene, disease or variant a "
+                    "question names, when Plan adds them.",
+                    l=r"(.+?)",
+                )
+                + '"',
+                SET,
+                named_families,
+            ),
             w(
                 ARCH,
                 FACTS_TS,
-                r"export const LAYERS[^=]*= \[(.*?)\n\];",
+                tool_card(
+                    "pubtator_annotate|litvar2_lookup|clinicaltrials_search", calls=r'([^"]+)'
+                ),
                 SET,
-                layer_calls(3),
-                flags=S,
+                named_families,
+                union,
+                expect=3,
             ),
         ),
         downstream=(
             *everywhere(
-                INSTRUCTION_FILES, r"Layer 3: Enrichment APIs \(([^)]+)\)", SET, named_families
+                INSTRUCTION_FILES,
+                sent("Layer 3: Enrichment APIs («l»)", l=r"([^)]+)"),
+                SET,
+                named_families,
             ),
-            w(DOC, README, r"\| Layer 3: enrichment APIs \| ([^|]+) \|", SET, named_families),
-            w(CODE, KGX_MANIFEST, r"Layer 3 \(enrichment APIs: ([^)]+)\)", SET, named_families),
+            w(
+                DOC,
+                README,
+                sent("| Layer 3: enrichment APIs | «l» |", l=r"([^|]+?)"),
+                SET,
+                named_families,
+            ),
+            w(CODE, KGX_MANIFEST, manifest_note(l3=r"([^)]+)"), SET, named_families),
         ),
     ),
     Fact(
-        "layers.l3_in_code",
-        "Plan adds the layer 3 calls in code, from the gene, disease or variant a question "
-        "names, rather than on request",
+        "layers.l3_not_every_question",
+        "Plan adds layer 3 calls on one branch only, so not every question gets them",
         Computed(
             GRAPH_PY,
-            layer3_planned_in_code,
-            swap(
-                GRAPH_PY, r"layer_calls = _build_layer_tool_calls\(", "layer_calls = _mutant_calls("
-            ),
+            layer3_not_every_question,
+            _layer3_on_every_path,
         ),
         stated=(
             w(
-                ABOUT,
-                INFO,
-                r"Literature and trial evidence, "
-                + either(
-                    "added in code rather than on request", "added when the question asks for it"
-                ),
+                ARCH,
+                ARCH_TSX,
+                either("Not every question gets them.", "Every question gets them."),
                 BOOL,
                 wording(
-                    {
-                        "added in code rather than on request": True,
-                        "added when the question asks for it": False,
-                    }
+                    {"Not every question gets them.": True, "Every question gets them.": False}
                 ),
             ),
             w(
                 ARCH,
                 FACTS_TS,
-                either(
-                    "Added in code rather than on request", "Called when the question asks for it"
+                sent(
+                    "Literature and trial evidence about the gene, disease or variant a question "
+                    "names. Plan decides whether a question gets it, and «w».",
+                    w=either("not every question does", "every question does"),
                 ),
                 BOOL,
-                wording(
-                    {
-                        "Added in code rather than on request": True,
-                        "Called when the question asks for it": False,
-                    }
-                ),
+                wording({"not every question does": True, "every question does": False}),
             ),
+            w(
+                ABOUT,
+                INFO,
+                sent(
+                    "Literature and trial evidence. Plan adds them here because the question "
+                    "names a gene by its symbol, BRCA1, though «w».",
+                    w=either("not every question gets them", "every question gets them"),
+                ),
+                BOOL,
+                wording({"not every question gets them": True, "every question gets them": False}),
+            ),
+            w(
+                ABOUT,
+                INFO,
+                sent(
+                    "Literature and trial evidence about the gene, disease or variant a question "
+                    "names, «w».",
+                    w=either("when Plan adds them", "for every question"),
+                ),
+                BOOL,
+                wording({"when Plan adds them": True, "for every question": False}),
+            ),
+        ),
+    ),
+    Fact(
+        "layers.l3_triggers",
+        "what earns the layer 3 calls: a gene named by its symbol, else a disease, and up to "
+        "a fixed number of rs ids for LitVar2",
+        Computed(
+            GRAPH_PY,
+            layer3_triggers,
+            swap(GRAPH_PY, r"for rsid in rsids\[:2\]:", "for rsid in rsids[:3]:"),
+        ),
+        stated=(
             w(
                 ARCH,
                 ARCH_TSX,
-                r"Plan adds them "
-                + either(
-                    "in code rather than on request",
-                    "only when the question asks for that evidence",
+                l3_stop_triggers(cap=W),
+                MAPPING,
+                lambda m: {
+                    "symbol": True,
+                    "disease_fallback": True,
+                    "rsid_cap": to_int(m.group(1)),
+                },
+            ),
+        ),
+    ),
+    Fact(
+        "layers.l3_other_ways",
+        "which questions plan no layer 3 call: a gene named by an identifier, an isolate "
+        "question, and a no-gene question the literature classifier reads as asking for papers",
+        Computed(
+            GRAPH_PY,
+            layer3_other_ways,
+            swap(GRAPH_PY, r'if mention and ":" not in mention:', "if mention:"),
+        ),
+        stated=(
+            w(
+                ARCH,
+                ARCH_TSX,
+                L3_OTHER_WAYS,
+                MAPPING,
+                lambda m: {"identifier": True, "isolates": True, "papers": True},
+            ),
+        ),
+    ),
+    Fact(
+        "layers.l3_modes",
+        "what the PubTator3 and LitVar2 calls Plan adds return, by the mode each is planned with",
+        Computed(
+            GRAPH_PY,
+            layer3_modes,
+            swap(GRAPH_PY, r'\{"mode": "entity_lookup"', '{"mode": "annotate_publications"'),
+        ),
+        stated=(
+            w(
+                ARCH,
+                ARCH_TSX,
+                l3_stop_modes(pubtator=r"([^,]+?)", litvar=r"([^,]+?)"),
+                MAPPING,
+                modes_stated,
+            ),
+        ),
+    ),
+    Fact(
+        "layers.l3_non_ncbi_host",
+        "which layer 3 source is not an NCBI host",
+        Computed(
+            TRANSPORT,
+            layer3_non_ncbi_hosts,
+            swap(
+                f"{PKG}/tools/litvar2_lookup.py",
+                r'_LITVAR2_BASE: Final\[str\] = "https://www\.ncbi\.nlm\.nih\.gov',
+                '_LITVAR2_BASE: Final[str] = "https://litvar.example.org',
+            ),
+        ),
+        stated=(
+            w(
+                ARCH,
+                ARCH_TSX,
+                sent(
+                    "«t» is the one source here that is not an NCBI host.",
+                    t=r"(ClinicalTrials\.gov|PubTator3|LitVar2)",
                 ),
-                BOOL,
-                wording(
-                    {
-                        "in code rather than on request": True,
-                        "only when the question asks for that evidence": False,
-                    }
-                ),
+                SET,
+                lambda m: frozenset({m.group(1)}),
             ),
         ),
     ),
@@ -1234,53 +2285,87 @@ FACTS: tuple[Fact, ...] = (
         PyConst(GRAPH_CONSTS, "CYPHER_QUERY_TIMEOUT_SECONDS", int),
         stated=(
             w(ARCH, FACTS_TS, r'budget: "(\d+) seconds, at most \d+ rows"'),
-            w(ARCH, ARCH_TSX, r"gives one graph query (\d+) seconds"),
-            w(ABOUT, INFO, r"(\d+) seconds for a graph query"),
+            w(ARCH, ARCH_TSX, arch_graph_budget(seconds=N)),
+            w(ABOUT, INFO, about_budgets(graph=N)),
         ),
         downstream=(
             w(DOC, ARCH_DIAGRAM, r'CQ\["cypher_query, (\d+) s"\]'),
-            w(DOC, ARCH_DIAGRAM, r"\| cypher_query \| Layer 1 \| (\d+) seconds"),
-            w(DOC, DEEP_DIVE, r"Cypher writing included \| (\d+) s \|"),
+            w(DOC, ARCH_DIAGRAM, r"\| cypher_query \| Layer 1 \| (\d+) seconds \|"),
+            w(
+                DOC,
+                DEEP_DIVE,
+                r"\| A whole `cypher_query` call, Cypher writing included \| (\d+) s \|",
+            ),
             w(CODE, CATALOGUE, r"_CYPHER_QUERY_BUDGET = \((\d+)\.0"),
         ),
     ),
     Fact(
         "budget.row_limit",
-        "the most rows one graph query may return",
+        "the most rows the cypher_query tool's schema lets one graph query return",
         PyConst(GRAPH_CONSTS, "MAX_ROW_LIMIT"),
+        downstream=(
+            w(DOC, ARCH_DIAGRAM, r"Row limit (\d+), plus a per-caller limit at the service"),
+        ),
+    ),
+    Fact(
+        "budget.planned_rows",
+        "the most rows any graph call Plan builds asks for",
+        Computed(
+            GRAPH_PY,
+            planned_row_limit,
+            swap(GRAPH_PY, r"_PLAN_TOOL_CALL_ROW_LIMIT = 100", "_PLAN_TOOL_CALL_ROW_LIMIT = 250"),
+        ),
         stated=(
             w(ARCH, FACTS_TS, r'budget: "\d+ seconds, at most (\d+) rows"'),
-            w(ARCH, ARCH_TSX, r"accepts at most (\d+) rows"),
+            w(ARCH, ARCH_TSX, arch_graph_budget(rows=N)),
         ),
-        downstream=(w(DOC, ARCH_DIAGRAM, r"Row limit (\d+)"),),
     ),
     Fact(
         "budget.live_call_s",
         "how long one live NCBI or enrichment call may take, in seconds",
         PyConst(TRANSPORT, "DEFAULT_TIMEOUT_S", int),
         stated=(
-            w(ABOUT, INFO, r"(\d+) seconds for a live NCBI call"),
+            w(ABOUT, INFO, about_budgets(live=N)),
             w(
                 ARCH,
                 FACTS_TS,
-                r'name: "(?:ncbi_efetch|ncbi_dbsnp|pubtator_annotate|litvar2_lookup|clinicaltrials_search)",'
-                r'\s*calls: "[^"]*",\s*budget: "(\d+) seconds',
+                tool_card(LIVE_TOOLS, budget=r"(\d+) seconds" + LIVE_BUDGET_TAILS),
                 flags=S,
+                expect=5,
             ),
         ),
         downstream=(
-            w(DOC, ARCH_DIAGRAM, r'(?:EF|DB|PT|LV|CT)\["\w+, (\d+) s'),
+            w(DOC, ARCH_DIAGRAM, r'(?:EF|DB|PT|LV|CT)\["\w+, (\d+) s(?: per call)?"\]', expect=5),
             w(
                 DOC,
                 ARCH_DIAGRAM,
-                r"\| (?:ncbi_efetch|ncbi_dbsnp|pubtator_annotate|litvar2_lookup|clinicaltrials_search)"
-                r" \| Layer \d \| (\d+) seconds",
+                rf"\| (?:{LIVE_TOOLS}) \| Layer \d \| (\d+) seconds"
+                r"(?:, one backoff retry| per call, two sequential calls)? \|",
+                expect=5,
             ),
-            w(DOC, DEEP_DIVE, r"One Layer 2 or Layer 3 HTTP call \| (\d+) s"),
+            w(DOC, DEEP_DIVE, r"\| One Layer 2 or Layer 3 HTTP call \| (\d+) s by default \|"),
             w(
                 CODE,
                 CATALOGUE,
                 r"_(?:NCBI_EFETCH|NCBI_DBSNP|PUBTATOR|LITVAR2|CLINICALTRIALS)_BUDGET = \(\s*(\d+)\.0",
+                expect=5,
+            ),
+        ),
+    ),
+    Fact(
+        "budget.live_retries",
+        "how many retries one live web API call gets",
+        Computed(
+            TRANSPORT,
+            transport_retries,
+            swap(TRANSPORT, r"for attempt_index in range\(2\):", "for attempt_index in range(3):"),
+        ),
+        stated=(w(ARCH, FACTS_TS, tool_card("ncbi_efetch", budget=r"\d+ seconds, (one) retry")),),
+        downstream=(
+            w(
+                DOC,
+                ARCH_DIAGRAM,
+                r"\| ncbi_efetch \| Layer \d \| \d+ seconds, (one) backoff retry \|",
             ),
         ),
     ),
@@ -1289,31 +2374,106 @@ FACTS: tuple[Fact, ...] = (
         "how long one Pathogen Detection call may take, in seconds",
         PyConst(PATHOGEN, "_TOTAL_BUDGET_S", int),
         stated=(
-            w(
-                ARCH,
-                FACTS_TS,
-                r'name: "pathogen_detection",\s*calls: "[^"]*",\s*budget: "(\d+) seconds"',
-                flags=S,
-            ),
+            w(ARCH, FACTS_TS, tool_card("pathogen_detection", budget=r"(\d+) seconds")),
+            w(ABOUT, INFO, about_budgets(pathogen=N)),
         ),
         downstream=(
             w(DOC, ARCH_DIAGRAM, r'PD\["pathogen_detection, (\d+) s"\]'),
-            w(DOC, ARCH_DIAGRAM, r"\| pathogen_detection \| Layer 2 \| (\d+) seconds total"),
-            w(DOC, DEEP_DIVE, r"Pathogen Detection isolate search \| (\d+) s"),
+            w(
+                DOC,
+                ARCH_DIAGRAM,
+                r"\| pathogen_detection \| Layer 2 \| (\d+) seconds total, \d+ seconds per transfer \|",
+            ),
+            w(
+                DOC,
+                DEEP_DIVE,
+                r"\| Pathogen Detection isolate search \| (\d+) s for all of one call's reads, and "
+                r"Act waits up to \d+ s \|",
+            ),
             w(CODE, CATALOGUE, r"_PATHOGEN_DETECTION_BUDGET = \(\s*(\d+)\.0"),
         ),
+    ),
+    Fact(
+        "budget.pathogen_transfer_s",
+        "how long one Pathogen Detection file transfer may take, in seconds",
+        PyConst(PATHOGEN_FTP, "DEFAULT_TIMEOUT_S", int),
+        downstream=(
+            w(
+                DOC,
+                ARCH_DIAGRAM,
+                r"\| pathogen_detection \| Layer 2 \| \d+ seconds total, (\d+) seconds per transfer \|",
+            ),
+        ),
+    ),
+    Fact(
+        "budget.pathogen_act_s",
+        "how long Act waits for a Pathogen Detection call, in seconds",
+        Computed(
+            GRAPH_PY,
+            lambda repo: PyConst(
+                GRAPH_PY, "_LAYER_TOOL_ACT_TIMEOUT_SECONDS", lambda d: int(d["pathogen_detection"])
+            ).read(repo),
+            swap(GRAPH_PY, r'"pathogen_detection": 150\.0,', '"pathogen_detection": 151.0,'),
+        ),
+        downstream=(
+            w(
+                DOC,
+                DEEP_DIVE,
+                r"\| Pathogen Detection isolate search \| \d+ s for all of one call's reads, and "
+                r"Act waits up to (\d+) s \|",
+            ),
+        ),
+    ),
+    Fact(
+        "budget.longest",
+        "which source has the longest per-call time limit",
+        Computed(
+            PATHOGEN,
+            longest_budget,
+            swap(
+                PATHOGEN,
+                r"_TOTAL_BUDGET_S: Final\[float\] = 120\.0",
+                "_TOTAL_BUDGET_S: Final[float] = 5.0",
+            ),
+        ),
+        stated=(w(ABOUT, INFO, about_budgets(longest=r"([^,]+)"), EXACT, g()),),
     ),
     Fact(
         "budget.live_calls_per_question",
         "how many live layer 2 and 3 calls one question may make",
         PyConst(CALL_BUDGET, "MAX_LAYER_2_3_CALLS_PER_QUERY"),
         stated=(
-            w(ABOUT, INFO, r"may make at most (\d+) live calls", flags=S),
-            w(INTEGRATIONS, INFO, r"capped at (\w+) Layer 2 and Layer 3 calls"),
+            w(ABOUT, INFO, sent("One question may make at most «n» live calls in total.", n=N)),
+            w(
+                INTEGRATIONS,
+                INFO,
+                sent(
+                    "Each tool carries its own per-call timeout and rate-limit pool, and a query is "
+                    "capped at «n» Layer 2 and Layer 3 calls.",
+                    n=W,
+                ),
+            ),
         ),
         downstream=(
-            w(DOC, ARCH_DIAGRAM, r"at most (\d+) Layer 2 and Layer 3 calls per query"),
-            w(DOC, DEEP_DIVE, r"at most (\d+) Layer 2 and Layer 3 calls per question"),
+            w(
+                DOC,
+                ARCH_DIAGRAM,
+                sent(
+                    "- Call budget: at most «n» Layer 2 and Layer 3 calls per query, counted at the "
+                    "transport rather than at Act, plus a queue wait ceiling derived from the "
+                    "calling query's own latency budget.",
+                    n=N,
+                ),
+            ),
+            w(
+                DOC,
+                DEEP_DIVE,
+                sent(
+                    "- The call ceiling: at most «n» Layer 2 and Layer 3 calls per question "
+                    "(`harness/call_budget.py`, `MAX_LAYER_2_3_CALLS_PER_QUERY`).",
+                    n=N,
+                ),
+            ),
         ),
     ),
     # ---- the event stream
@@ -1322,8 +2482,19 @@ FACTS: tuple[Fact, ...] = (
         "the kinds of event a run emits",
         PyLiteral(EVENTS_PY, "type", cls="Event"),
         stated=(
-            w(INTEGRATIONS, INFO, r"A run emits (\w+) kinds of event", COUNT),
-            w(INTEGRATIONS, INFO, r"kinds of event: ([a-z_, ]+?)\. Each SSE", SET, word_set),
+            w(
+                INTEGRATIONS,
+                INFO,
+                r"A run emits (\w+) kinds of event: [a-z_, ]+?\.(?=\s+Each SSE)",
+                COUNT,
+            ),
+            w(
+                INTEGRATIONS,
+                INFO,
+                r"A run emits \w+ kinds of event: ([a-z_, ]+?)\.(?=\s+Each SSE)",
+                SET,
+                word_set,
+            ),
         ),
         downstream=(w(DOC, SCHEMA_VIS, r'string type "one of (\w+)"', COUNT),),
     ),
@@ -1358,6 +2529,7 @@ FACTS: tuple[Fact, ...] = (
                 r'"payload":\{([^}]*)\}',
                 SET,
                 lambda m: frozenset(re.findall(r'"(\w+)":', m.group(1))),
+                block=True,
             ),
         ),
     ),
@@ -1366,7 +2538,15 @@ FACTS: tuple[Fact, ...] = (
         "the reasons a question can be turned away",
         PyLiteral(EVENTS_PY, "category", cls="GuardPayload"),
         stated=(
-            w(BANNER, BANNER_TSX, r"CATEGORY_COPY[^=]*= \{(.*?)\n\};", SET, ts_keys, flags=S),
+            w(
+                BANNER,
+                BANNER_TSX,
+                r"CATEGORY_COPY[^=]*= \{(.*?)\n\};",
+                SET,
+                ts_keys,
+                flags=S,
+                block=True,
+            ),
             w(CODE, EVENTS_TS, r"category:((?:\s*\|\s*\"\w+\")+);", SET, ts_union),
         ),
     ),
@@ -1390,7 +2570,7 @@ FACTS: tuple[Fact, ...] = (
         "how long a question may be, in characters",
         PyFieldKw(QUERY_PY, "Query", "text", "max_length"),
         stated=(
-            w(TOUR, TOUR_TSX, r"can run to about ([\d,]+) characters"),
+            w(TOUR, TOUR_TSX, sent("A question can run to about «n» characters.", n=r"([\d,]+)")),
             w(HOME, HOME_TSX, r"QUESTION_MAX_LENGTH = (\d+)"),
         ),
     ),
@@ -1398,7 +2578,7 @@ FACTS: tuple[Fact, ...] = (
         "modes.accepted",
         "the answer modes the web app sends are ones the server accepts",
         PyLiteral(QUERY_PY, "audience_depth", cls="Query"),
-        stated=(w(CODE, DEPTH_TSX, r'\{ value: "(\w+)", label: "[^"]+" \}', SUBSET, g(), union),),
+        stated=(w(CODE, DEPTH_TSX, r'\{ value: "(\w+)", label:', SUBSET, g(), union, expect=2),),
     ),
     Fact(
         "modes.default",
@@ -1413,14 +2593,8 @@ FACTS: tuple[Fact, ...] = (
             ),
         ),
         stated=(
-            w(
-                ABOUT,
-                INFO,
-                r"pick how the answer is written: ([A-Z][a-z]+ [a-z]+), the default",
-                EXACT,
-                g(),
-            ),
-            w(TOUR, TOUR_TSX, r'"([A-Z][a-z]+ [a-z]+), the default, gives', EXACT, g()),
+            w(ABOUT, INFO, about_modes(default=r"([A-Z][a-z]+ [a-z]+)"), EXACT, g()),
+            w(TOUR, TOUR_TSX, tour_modes(default=r"([A-Z][a-z]+ [a-z]+)"), EXACT, g()),
         ),
     ),
     Fact(
@@ -1430,8 +2604,20 @@ FACTS: tuple[Fact, ...] = (
             DEPTH_TSX, mode_labels, swap(DEPTH_TSX, r'label: "Researcher" \}', 'label: "Scholar" }')
         ),
         stated=(
-            w(ABOUT, INFO, r"pick how the answer is written: [^.]+\.", SET, modes_named, flags=S),
-            w(TOUR, TOUR_TSX, r'"Plain language, the default, gives[^"]+"', SET, modes_named),
+            w(
+                ABOUT,
+                INFO,
+                about_modes(default=r"([A-Z][a-z]+ [a-z]+)", other=r"([A-Z][a-z]+)"),
+                SET,
+                modes_named,
+            ),
+            w(
+                TOUR,
+                TOUR_TSX,
+                tour_modes(default=r"([A-Z][a-z]+ [a-z]+)", other=r"([A-Z][a-z]+)"),
+                SET,
+                modes_named,
+            ),
         ),
     ),
     # ---- how the agent is reached
@@ -1439,7 +2625,14 @@ FACTS: tuple[Fact, ...] = (
         "surfaces.count",
         "how many ways a program can reach the agent",
         Computed(QUERY_PY, programmatic_surfaces, NO_GRAPHQL),
-        stated=(w(INTEGRATIONS, INFO, r"reachable (\w+) ways", COUNT),),
+        stated=(
+            w(
+                INTEGRATIONS,
+                INFO,
+                sent("The same agent, reachable «n» ways, returning the same citations.", n=W),
+                COUNT,
+            ),
+        ),
     ),
     Fact(
         "surfaces.named",
@@ -1449,7 +2642,7 @@ FACTS: tuple[Fact, ...] = (
             w(
                 TOUR,
                 TOUR_TSX,
-                r"Integrations lists the other ways in: ([^.]+)\.",
+                sent("Integrations lists the other ways in: «l».", l=r"([^.]+)"),
                 SET,
                 named_surfaces,
             ),
@@ -1461,6 +2654,7 @@ FACTS: tuple[Fact, ...] = (
                 named_surfaces,
                 union,
                 S,
+                expect=4,
             ),
         ),
     ),
@@ -1473,19 +2667,19 @@ FACTS: tuple[Fact, ...] = (
             swap(MCP_SERVER, r"async def ask_biomedical_question\(", "async def ask_mutant("),
         ),
         stated=(
-            w(INTEGRATIONS, INFO, r'title="MCP server"\s+body="(\w+) tools\.', COUNT, flags=S),
+            w(INTEGRATIONS, INFO, mcp_card(count=W), COUNT, flags=S),
             w(
                 INTEGRATIONS,
                 INFO,
-                r'title="MCP server"\s+body="([^"]+)"',
+                mcp_card(first=r"(\w+)", rest=r"([a-z_, ]+?)"),
                 SET,
                 snake_names,
                 flags=S,
             ),
         ),
         downstream=(
-            w(DOC, ARCH_DIAGRAM, r"- MCP server: (\w+) tools,", COUNT),
-            w(DOC, ARCH_DIAGRAM, r"- MCP server: \w+ tools, (.+?), mounted at", SET, snake_names),
+            w(DOC, ARCH_DIAGRAM, arch_diagram_mcp(count=W), COUNT),
+            w(DOC, ARCH_DIAGRAM, arch_diagram_mcp(names=r"(.+?)"), SET, snake_names),
         ),
     ),
     Fact(
@@ -1497,15 +2691,31 @@ FACTS: tuple[Fact, ...] = (
             swap(PYPROJECT, r"\[project\.scripts\]\n", '[project.scripts]\nmutant = "x:y"\n'),
         ),
         stated=(
-            w(INTEGRATIONS, INFO, r"(Two) console commands", COUNT),
-            w(INTEGRATIONS, INFO, r"\b(s3(?:-[a-z]+)*) (?:asks|writes)", SET, g(), union),
+            w(
+                INTEGRATIONS,
+                INFO,
+                sent(
+                    "«n» console commands rather than HTTP routes, installed once with pip.",
+                    n=r"(Two)",
+                ),
+                COUNT,
+            ),
+            w(
+                INTEGRATIONS,
+                INFO,
+                r"(?:" + S3_SENTENCE.replace("(--[a-z-]+)", "--[a-z-]+") + "|" + KGX_SENTENCE + ")",
+                SET,
+                lambda m: frozenset({m.group(0).split()[0]}),
+                union,
+                expect=2,
+            ),
         ),
     ),
     Fact(
         "surfaces.s3_options",
         "the options the s3 command accepts",
         Computed(S3_CLI, cli_options(S3_CLI), swap(S3_CLI, r'"--depth",', '"--json",')),
-        stated=(w(INTEGRATIONS, INFO, r"JSON with (--[a-z-]+)", MEMBER, g()),),
+        stated=(w(INTEGRATIONS, INFO, S3_SENTENCE, MEMBER, g()),),
     ),
     Fact(
         "surfaces.kgx_options",
@@ -1517,7 +2727,7 @@ FACTS: tuple[Fact, ...] = (
                 INFO,
                 r"export const KGX_EXAMPLE = `([^`]*)`",
                 SUBSET,
-                lambda m: frozenset(re.findall(r"--[a-z-]+", m.group(1))),
+                kgx_example_options,
             ),
         ),
     ),
@@ -1529,7 +2739,19 @@ FACTS: tuple[Fact, ...] = (
             auth_routes,
             swap(AUTH_ROUTER, r'@router\.post\("/login"', '@router.post("/mutant"'),
         ),
-        stated=(w(INTEGRATIONS, INFO, r"POST (/auth/\w+) exchanges", MEMBER, g()),),
+        stated=(
+            w(
+                INTEGRATIONS,
+                INFO,
+                sent(
+                    "POST «r» exchanges the same email and password you use here for that token "
+                    "and a refresh token.",
+                    r=r"(/auth/\w+)",
+                ),
+                MEMBER,
+                g(),
+            ),
+        ),
     ),
     Fact(
         "access.graphql_refuses_guests",
@@ -1543,15 +2765,7 @@ FACTS: tuple[Fact, ...] = (
             ),
             swap(GRAPHQL_CONTEXT, r"this bearer token is a guest credential", "mutant"),
         ),
-        stated=(
-            w(
-                INTEGRATIONS,
-                INFO,
-                r"GraphQL and the MCP server: an account is required",
-                BOOL,
-                present,
-            ),
-        ),
+        stated=(w(INTEGRATIONS, INFO, GUESTS_REFUSED, BOOL, present),),
     ),
     Fact(
         "access.mcp_refuses_guests",
@@ -1565,15 +2779,7 @@ FACTS: tuple[Fact, ...] = (
             ),
             swap(MCP_SERVER, r"return resolve_user_from_bearer_token\(", "return mutant("),
         ),
-        stated=(
-            w(
-                INTEGRATIONS,
-                INFO,
-                r"GraphQL and the MCP server: an account is required",
-                BOOL,
-                present,
-            ),
-        ),
+        stated=(w(INTEGRATIONS, INFO, GUESTS_REFUSED, BOOL, present),),
     ),
     Fact(
         "access.rest_admits_guests",
@@ -1585,7 +2791,15 @@ FACTS: tuple[Fact, ...] = (
             "POST /v1/query resolves its caller with get_caller, which admits a guest token",
         ),
         stated=(
-            w(INTEGRATIONS, INFO, r"a guest may run queries without an account", BOOL, present),
+            w(
+                INTEGRATIONS,
+                INFO,
+                sent(
+                    "REST and SSE: a guest may run queries without an account, within the anonymous daily cap."
+                ),
+                BOOL,
+                present,
+            ),
         ),
     ),
     Fact(
@@ -1597,14 +2811,22 @@ FACTS: tuple[Fact, ...] = (
             swap(WEB_APP, r'@app\.get\("/v1/history"', '@app.get("/v1/mutant"'),
         ),
         stated=(
-            w(TOUR, TOUR_TSX, r"Log in keeps your search history across reloads", BOOL, present),
+            w(
+                TOUR,
+                TOUR_TSX,
+                sent("Log in keeps your search history across reloads."),
+                BOOL,
+                present,
+            ),
             w(
                 ABOUT,
                 INFO,
-                r"if you are signed in\s+the question is kept in your history",
+                sent(
+                    "Below the answer, a follow-up field carries the conversation forward, and if "
+                    "you are signed in the question is kept in your history."
+                ),
                 BOOL,
                 present,
-                flags=S,
             ),
         ),
     ),
@@ -1614,7 +2836,16 @@ FACTS: tuple[Fact, ...] = (
         Computed(
             WEB_APP, api_reference_served, swap(WEB_APP, r"FastAPI\(", "FastAPI(docs_url=None, ")
         ),
-        stated=(w(INTEGRATIONS, INFO, r"\$\{API_ORIGIN\}/(?:docs|openapi\.json)`", BOOL, present),),
+        stated=(
+            w(
+                INTEGRATIONS,
+                INFO,
+                r"\$\{API_ORIGIN\}/(?:docs|openapi\.json)`",
+                BOOL,
+                present,
+                expect=2,
+            ),
+        ),
     ),
     Fact(
         "access.stream_resumes",
@@ -1626,7 +2857,9 @@ FACTS: tuple[Fact, ...] = (
             ),
             swap(WEB_APP, r'alias="Last-Event-ID"', 'alias="X-Mutant"'),
         ),
-        stated=(w(INTEGRATIONS, INFO, r"Resumable after a dropped connection", BOOL, present),),
+        stated=(
+            w(INTEGRATIONS, INFO, sent("Resumable after a dropped connection."), BOOL, present),
+        ),
     ),
     # ---- the loop and its models
     Fact(
@@ -1644,12 +2877,12 @@ FACTS: tuple[Fact, ...] = (
             w(
                 TOUR,
                 TOUR_TSX,
-                r"the five steps the system takes: ([^.]+)\.",
+                tour_steps(names=r"([^.]+)"),
                 STEPS,
                 lambda m: tuple(words_list(m.group(1))),
             ),
-            w(TOUR, TOUR_TSX, r"shows the (five) steps", COUNT),
-            w(ABOUT, INFO, r"Every one of the (\w+) steps can ask", COUNT),
+            w(TOUR, TOUR_TSX, tour_steps(count=W), COUNT),
+            w(ABOUT, INFO, about_steps(steps=W), COUNT),
         ),
         downstream=(
             *everywhere(
@@ -1664,20 +2897,18 @@ FACTS: tuple[Fact, ...] = (
         "loop.steps_asking_a_model",
         "how many of the steps can ask a language model something",
         steps_reaching_model(),
-        stated=(
-            w(
-                ABOUT,
-                INFO,
-                r"(Every one|\w+) of the (\w+) steps can ask a language model",
-                COUNT,
-                share_of,
-            ),
-        ),
+        stated=(w(ABOUT, INFO, about_steps(share=r"(Every one|\w+)", steps=W), COUNT, share_of),),
         downstream=(
             w(
                 DOC,
                 ARCH_DIAGRAM,
-                r"and (every one|\w+) of the (\w+) can ask a model something",
+                sent(
+                    "Every query runs the same «n» nodes in a fixed sequence, and «s» of the «m» "
+                    "can ask a model something, on the tier that matches the work.",
+                    n=ANY_W,
+                    s=r"(every one|\w+)",
+                    m=W,
+                ),
                 COUNT,
                 share_of,
             ),
@@ -1687,30 +2918,59 @@ FACTS: tuple[Fact, ...] = (
         "loop.tier_count",
         "how many model tiers the harness has",
         PyLiteral(TIERS_PY, "Tier"),
-        stated=(w(ABOUT, INFO, r"There are (three) tiers", COUNT),),
-        downstream=(*everywhere(INSTRUCTION_FILES, r"harness with (three) tiers", COUNT),),
+        stated=(
+            w(
+                ABOUT,
+                INFO,
+                sent("There are «n» tiers, matched to how hard the step is.", n=r"(three)"),
+                COUNT,
+            ),
+        ),
+        downstream=(
+            *everywhere(INSTRUCTION_FILES, r"Multi-model harness with (three) tiers:", COUNT),
+        ),
     ),
     Fact(
         "loop.guardrail_on_guard_tier",
         "the guardrail step asks the guard-tier model",
         step_uses_tier("guardrail", "guard"),
         stated=(
-            w(ABOUT, INFO, r'name: "Guard tier",[^}]*?Runs the guardrail', BOOL, present, flags=S),
+            w(
+                ABOUT,
+                INFO,
+                r'name: "Guard tier",\s*kind: "a fast, inexpensive model",\s*body: "Runs the guardrail\.',
+                BOOL,
+                present,
+            ),
         ),
     ),
     Fact(
         "loop.think_on_plan_tier",
         "the think step asks the plan-tier model",
         step_uses_tier("think", "plan"),
-        stated=(w(ABOUT, INFO, r'name: "Plan tier",[^}]*?Runs Think', BOOL, present, flags=S),),
-        downstream=(
-            *everywhere(
-                INSTRUCTION_FILES,
-                r"Plan tier: mid-range model for Think's question analysis",
+        stated=(
+            w(
+                ABOUT,
+                INFO,
+                r'name: "Plan tier",\s*kind: "a mid-range model",\s*body: "'
+                + sent(
+                    "Runs Think, which works out the shape of the question and which real records "
+                    "its words point at, so BRCA1 becomes NCBI Gene 672, confirmed by a live lookup "
+                    "rather than recalled."
+                ),
                 BOOL,
                 present,
             ),
-            w(DOC, ARCH_DIAGRAM, r"- Think: Plan tier, per-step budget", BOOL, present),
+        ),
+        downstream=(
+            *everywhere(INSTRUCTION_FILES, plan_tier_line(), BOOL, present),
+            w(
+                DOC,
+                ARCH_DIAGRAM,
+                sent("- Think: Plan tier, per-step budget 45 seconds."),
+                BOOL,
+                present,
+            ),
         ),
     ),
     Fact(
@@ -1721,7 +2981,12 @@ FACTS: tuple[Fact, ...] = (
             w(
                 ABOUT,
                 INFO,
-                r"Plan itself " + either("never calls", "also calls") + r" this tier",
+                sent(
+                    "Plan itself «w» this tier: it picks the tools in code, and passes the odd "
+                    "yes-or-no question, such as whether you want papers, to the guard tier or a "
+                    "dedicated classifier.",
+                    w=either("never calls", "also calls"),
+                ),
                 BOOL,
                 wording({"never calls": False, "also calls": True}),
             ),
@@ -1737,7 +3002,11 @@ FACTS: tuple[Fact, ...] = (
             w(
                 DOC,
                 ARCH_DIAGRAM,
-                r"though it " + either("never calls", "also calls") + r" the plan tier",
+                sent(
+                    "- Plan: per-step budget 45 seconds, the plan tier's figure, though it «w» the "
+                    "plan tier.",
+                    w=either("never calls", "also calls"),
+                ),
                 BOOL,
                 wording({"never calls": False, "also calls": True}),
             ),
@@ -1758,30 +3027,23 @@ FACTS: tuple[Fact, ...] = (
             w(
                 ABOUT,
                 INFO,
-                r"In Act it " + either("also writes", "never writes") + r" a graph query",
+                sent(
+                    "In Act it «w» a graph query, but only when no ready-made template fits the "
+                    "question.",
+                    w=either("also writes", "never writes"),
+                ),
                 BOOL,
                 wording({"also writes": True, "never writes": False}),
             ),
         ),
         downstream=(
-            *everywhere(
-                INSTRUCTION_FILES,
-                r"for writing a graph query in Act when no template fits",
-                BOOL,
-                present,
-            ),
+            *everywhere(INSTRUCTION_FILES, plan_tier_line(), BOOL, present),
             w(DOC, ARCH_DIAGRAM, r'AC\["Act, Plan and Guard tiers"\]', BOOL, present),
-            w(
-                DOC,
-                ARCH_DIAGRAM,
-                r"- Act: Plan tier to write a graph query when no template fits",
-                BOOL,
-                present,
-            ),
+            w(DOC, ARCH_DIAGRAM, arch_diagram_act(), BOOL, present),
             w(
                 DOC,
                 DEEP_DIVE,
-                r"\| Act \|[^|\n]+\| The plan tier writes Cypher only when no template fits",
+                r"The plan tier writes Cypher only when no template fits\.",
                 BOOL,
                 present,
             ),
@@ -1793,7 +3055,7 @@ FACTS: tuple[Fact, ...] = (
         step_uses_tier("act", "guard"),
         downstream=(
             w(DOC, ARCH_DIAGRAM, r'AC\["Act, Plan and Guard tiers"\]', BOOL, present),
-            w(DOC, ARCH_DIAGRAM, r"and Guard tier to read article titles", BOOL, present),
+            w(DOC, ARCH_DIAGRAM, arch_diagram_act(), BOOL, present),
             w(DOC, DEEP_DIVE, r"The guard tier reads article titles from the graph", BOOL, present),
         ),
     ),
@@ -1801,7 +3063,17 @@ FACTS: tuple[Fact, ...] = (
         "loop.write_on_synth_tier",
         "the write step asks the synth-tier model",
         step_uses_tier("write", "synth"),
-        stated=(w(ABOUT, INFO, r'name: "Synth tier",[^}]*?Runs Write', BOOL, present, flags=S),),
+        stated=(
+            w(
+                ABOUT,
+                INFO,
+                r'name: "Synth tier",\s*kind: "the strongest model",\s*body: "'
+                + sent("Runs Write, which composes the answer once the records are back.")
+                + '"',
+                BOOL,
+                present,
+            ),
+        ),
     ),
     Fact(
         "loop.layer_one_read_first",
@@ -1819,33 +3091,67 @@ FACTS: tuple[Fact, ...] = (
             w(
                 ARCH,
                 ARCH_TSX,
-                r"The agent reads " + either("all three layers at once", "layer 1 first"),
+                sent(
+                    "The agent reads «w»: the calls Plan chose go out together, so the graph query "
+                    "and the live layer 2 and 3 calls run in parallel.",
+                    w=either("all three layers at once", "layer 1 first"),
+                ),
                 BOOL,
                 wording({"all three layers at once": False, "layer 1 first": True}),
             ),
             w(
                 ABOUT,
                 INFO,
-                r"while the live layers are searched " + either("at the same time", "afterwards"),
+                sent(
+                    "One query returns the stored links from BRCA1 to its diseases, while the live "
+                    "layers are searched «w».",
+                    w=either("at the same time", "afterwards"),
+                ),
                 BOOL,
                 wording({"at the same time": False, "afterwards": True}),
             ),
             w(
                 ABOUT,
                 INFO,
-                r"searched " + either("alongside", "after") + r" the first two layers",
+                sent(
+                    "Act sends out the calls Plan chose, across «n» layers of data, «w».",
+                    n=ANY_W,
+                    w=either("together rather than one after another", "one layer after another"),
+                ),
                 BOOL,
-                wording({"alongside": False, "after": True}),
+                wording(
+                    {
+                        "together rather than one after another": False,
+                        "one layer after another": True,
+                    }
+                ),
             ),
-            w(
-                ARCH,
-                FACTS_TS,
-                r"and searched "
-                + either("at the same time as", "after")
-                + r" the other two layers",
-                BOOL,
-                wording({"at the same time as": False, "after": True}),
+        ),
+    ),
+    Fact(
+        "loop.act_second_round",
+        "Act sends the calls that need another call's result in a second round",
+        Computed(GRAPH_PY, act_rounds, _merge_rounds),
+        stated=(
+            w(ARCH, ARCH_TSX, arch_second_round(when=SECOND_ROUND), BOOL, SECOND_ROUND_MEANS),
+            w(ABOUT, INFO, about_second_round(when=SECOND_ROUND), BOOL, SECOND_ROUND_MEANS),
+        ),
+    ),
+    Fact(
+        "loop.pubmed_follow_ups",
+        "what Act's second round does with a PubMed search's results",
+        Computed(
+            GRAPH_PY,
+            pubmed_follow_ups,
+            swap(
+                GRAPH_PY,
+                r'\("pubtator_annotate", "layer_3_enrichment", "pa", "pubtator_publications"\),',
+                "",
             ),
+        ),
+        stated=(
+            w(ARCH, ARCH_TSX, arch_second_round(examples=r"([\s\S]+?)"), SUBSET, follow_ups_named),
+            w(ABOUT, INFO, about_second_round(examples=r"([\s\S]+?)"), SUBSET, follow_ups_named),
         ),
     ),
     Fact(
@@ -1856,8 +3162,12 @@ FACTS: tuple[Fact, ...] = (
             w(
                 DOC,
                 DEEP_DIVE,
-                r"and "
-                + either("asks it itself only when Think did not start it", "never asks it itself"),
+                sent(
+                    "When no gene resolved, it reads the literature decision Think started, and «w».",
+                    w=either(
+                        "asks it itself only when Think did not start it", "never asks it itself"
+                    ),
+                ),
                 BOOL,
                 wording(
                     {
@@ -1869,8 +3179,12 @@ FACTS: tuple[Fact, ...] = (
             w(
                 DOC,
                 ARCH_DIAGRAM,
-                either(
-                    "asking it itself only when Think did not start it", "never asking it itself"
+                sent(
+                    "When no gene resolved, it reads the literature decision Think started, «w».",
+                    w=either(
+                        "asking it itself only when Think did not start it",
+                        "never asking it itself",
+                    ),
                 ),
                 BOOL,
                 wording(
@@ -1890,9 +3204,11 @@ FACTS: tuple[Fact, ...] = (
             w(
                 ABOUT,
                 INFO,
-                ws("One that passes but was reworded is then judged by")
-                + r"\s+"
-                + either("a model", "code alone"),
+                sent(
+                    "One that passes but was reworded is then judged by «w», and kept only when the "
+                    "model finds it adds nothing beyond the record's own words.",
+                    w=either("a model", "code alone"),
+                ),
                 BOOL,
                 wording({"a model": False, "code alone": True}),
             ),
@@ -1911,6 +3227,7 @@ FACTS: tuple[Fact, ...] = (
                 lambda m: {m.group(1).lower(): m.group(2)},
                 merge_dicts,
                 re.MULTILINE,
+                expect=3,
             ),
             w(
                 DOC,
@@ -1920,22 +3237,405 @@ FACTS: tuple[Fact, ...] = (
                 lambda m: {m.group(1).lower(): m.group(2)},
                 merge_dicts,
                 re.MULTILINE,
+                expect=3,
+                block=True,
             ),
         ),
     ),
-    # ---- the people and the questions on screen
+    # ---- the KGX export's own manifest
+    Fact(
+        "export.layer1_only",
+        "a KGX export holds the graph alone: no export module imports a tool that reaches a live API",
+        Computed(
+            f"{EXPORT_DIR}/kgx.py",
+            export_layer1_only,
+            swap(
+                f"{EXPORT_DIR}/kgx.py",
+                r"(from system_03_search_agent\.tools\.graph_connection import ConnectionFactory)",
+                r"\1\nfrom system_03_search_agent.tools import ncbi_transport",
+            ),
+        ),
+        downstream=(
+            w(
+                CODE,
+                KGX_MANIFEST,
+                sent(
+                    "This export covers «l», the pre-ingested knowledge graph, only.",
+                    l=either("Layer 1", "Layers 1 and 2", "every layer"),
+                ),
+                BOOL,
+                wording({"Layer 1": True, "Layers 1 and 2": False, "every layer": False}),
+            ),
+            w(
+                CODE,
+                KGX_MANIFEST,
+                manifest_note(present_in=either("are not present", "are present")),
+                BOOL,
+                wording({"are not present": True, "are present": False}),
+            ),
+        ),
+    ),
+    # ---- the people, the questions on screen, the walk and the stack
     Fact(
         "personas.historical",
         "each session's scientist is a historical figure",
         Computed(PERSONAS, personas_historical, swap(PERSONAS, r'"died": \d+', '"died": 9999')),
         stated=(
-            w(TOUR, TOUR_TSX, r"a scientist from the history of biomedical science", BOOL, present),
+            w(
+                TOUR,
+                TOUR_TSX,
+                sent("Each session works as a scientist from the history of biomedical science."),
+                BOOL,
+                present,
+            ),
         ),
     ),
     Fact(
         "seeds.count",
         "how many example questions the Home screen shows",
         Computed(HOME_TSX, home_seeds, _add_seed),
-        stated=(w(TOUR, TOUR_TSX, r"Try one of these (\w+) example questions", COUNT),),
+        stated=(w(TOUR, TOUR_TSX, sent("Try one of these «n» example questions.", n=W), COUNT),),
+    ),
+    Fact(
+        "about.stop_count",
+        "how many stops the About walk shows",
+        Computed(INFO, about_stop_count, _add_stop),
+        stated=(
+            w(ABOUT, INFO, sent("«n» stops, each naming who is acting.", n=r"(Seven)"), COUNT),
+        ),
+    ),
+    Fact(
+        "stack.redis_unused",
+        "no code under src/ reads Redis, so the README names no Redis cache",
+        Computed(
+            PKG,
+            redis_unused,
+            lambda repo: {f"{PKG}/harness/__mutant__.py": "import redis\n"},
+        ),
+        downstream=(
+            w(
+                DOC,
+                README,
+                sent(
+                    "| Caching | In-process caches only. A Redis service is provisioned on Railway, "
+                    "but «w» |",
+                    w=either(
+                        "no code under `src/` reads it yet", "the code caches responses in it"
+                    ),
+                ),
+                BOOL,
+                wording(
+                    {
+                        "no code under `src/` reads it yet": True,
+                        "the code caches responses in it": False,
+                    }
+                ),
+            ),
+        ),
+    ),
+)
+
+
+# ------------------------------------------------------------------ break-it edits
+#
+# `check_facts.py --mutation-test` applies each edit below in memory, never
+# on disk, and requires the checker to stop passing. They are the edits card
+# 53's judge and adversary used to show the checker passing a false page
+# (testing/Developer/reports/2026-09-29_card53/), rewritten for the pages as
+# they now read, plus one per finding the fix round closed. An edit whose
+# `old` text is no longer in its file is a failure of the test, not a skip:
+# it means the page moved and this list must follow it.
+#
+# Each entry: (label, finding, ((path, old, new), ...)).
+
+MUTATIONS: tuple[tuple[str, str, tuple[tuple[str, str, str], ...]], ...] = (
+    (
+        "a negation inside the manifest's layer 2 list",
+        "F-53-J03",
+        ((KGX_MANIFEST, 'PubChem, dbSNP and "', 'PubChem and dbSNP, not "'),),
+    ),
+    (
+        "a negation inside CLAUDE.md's layer 3 list",
+        "F-53-J03",
+        (
+            (
+                CLAUDE_MD,
+                "(PubTator3, LitVar2, ClinicalTrials.gov)",
+                "(PubTator3, LitVar2, never ClinicalTrials.gov)",
+            ),
+        ),
+    ),
+    (
+        "an exclusion added to the README's layer 2 list",
+        "F-53-J03",
+        (
+            (
+                README,
+                "Datasets, PubChem, dbSNP and Pathogen Detection |",
+                "Datasets, dbSNP and Pathogen Detection (PubChem excluded) |",
+            ),
+        ),
+    ),
+    (
+        "the page says every question gets layer 3",
+        "F-53-J02",
+        ((ARCH_TSX, "Not every question gets them.", "Every question gets them."),),
+    ),
+    (
+        "the page says every gene question gets PubTator3 and ClinicalTrials.gov",
+        "F-53-A01",
+        ((ARCH_TSX, "for a gene named by its symbol or,", "for every gene or,"),),
+    ),
+    (
+        "the isolate path is dropped from the list of questions searched another way",
+        "F-53-A02",
+        ((ARCH_TSX, "a question about bacterial isolates, ", ""),),
+    ),
+    (
+        "M03: twenty live calls in each layer rather than in total",
+        "F-53-A03",
+        ((INFO, "at most 20 live calls in total.", "at most 20 live calls in each layer."),),
+    ),
+    (
+        "M04: five retries on the ncbi_efetch card",
+        "F-53-A03",
+        ((FACTS_TS, 'budget: "15 seconds, one retry"', 'budget: "15 seconds, five retries"'),),
+    ),
+    (
+        "M04: the dbSNP card's two calls said to run at once",
+        "F-53-A03",
+        (
+            (
+                FACTS_TS,
+                'budget: "15 seconds per call, two calls in sequence"',
+                'budget: "15 seconds per call, all at once"',
+            ),
+        ),
+    ),
+    (
+        "M05: a Researcher-only clause added to the layer 3 triggers",
+        "F-53-A03",
+        (
+            (
+                ARCH_TSX,
+                "up to two rs variant ids.",
+                "up to two rs variant ids, but only in Researcher mode.",
+            ),
+        ),
+    ),
+    (
+        "M06: the live layers searched only once the graph has answered",
+        "F-53-A03",
+        (
+            (
+                INFO,
+                "while the live layers are searched at the same time.",
+                (
+                    "while the live layers are searched at the same time as each other, once the graph "
+                    "has answered."
+                ),
+            ),
+        ),
+    ),
+    (
+        "M08: the ncbi_efetch card's 15 seconds becomes 15 minutes",
+        "F-53-A04",
+        ((FACTS_TS, 'budget: "15 seconds, one retry"', 'budget: "15 minutes, one retry"'),),
+    ),
+    (
+        "M12: a false layer 3 summary with the true one kept in an unused constant",
+        "F-53-A05",
+        (
+            (
+                FACTS_TS,
+                (
+                    '"Literature and trial evidence about the gene, disease or variant a question names. '
+                    'Plan decides whether a question gets it, and not every question does.",'
+                ),
+                (
+                    '"Literature and trial evidence, called for every question, after the graph has '
+                    'answered.",'
+                ),
+            ),
+            (
+                FACTS_TS,
+                "export const LAYERS: {",
+                (
+                    'const _UNUSED = "Literature and trial evidence about the gene, disease or variant a '
+                    "question names. Plan decides whether a question gets it, and not every question "
+                    'does.";\nexport const LAYERS: {'
+                ),
+            ),
+        ),
+    ),
+    (
+        "M13: a false graph budget with the true sentence kept in a JSX comment",
+        "F-53-A05",
+        (
+            (
+                ARCH_TSX,
+                "The search agent gives one graph query 30 seconds and asks it for at most 100 rows.",
+                (
+                    "{/* The search agent gives one graph query 30 seconds and asks it for at most 100 "
+                    "rows. */}\n            The search agent allows a graph query two minutes and up to "
+                    "5,000 rows."
+                ),
+            ),
+        ),
+    ),
+    (
+        "M14: layer 3 conditions narrowed to diseases and ten rs ids",
+        "F-53-A06",
+        (
+            (
+                ARCH_TSX,
+                (
+                    "for a gene named by its symbol or, when no gene was found, for a\n            disease, "
+                    "and LitVar2 for up to two rs variant ids."
+                ),
+                "only for a question that names a disease, and LitVar2 for up to ten rs variant ids.",
+            ),
+        ),
+    ),
+    (
+        "M14: PubTator3 named as the source that is not an NCBI host",
+        "F-53-A06",
+        (
+            (
+                ARCH_TSX,
+                "ClinicalTrials.gov is the\n            one source here that is not an NCBI host.",
+                "PubTator3 is the one source here that is not an NCBI host.",
+            ),
+        ),
+    ),
+    (
+        "M15: the manifest says the export covers layers 1 and 2",
+        "F-53-A06",
+        (
+            (
+                KGX_MANIFEST,
+                "This export covers Layer 1, the pre-ingested knowledge graph, only. ",
+                "This export covers Layers 1 and 2, the pre-ingested knowledge graph, only. ",
+            ),
+        ),
+    ),
+    (
+        "M15: the manifest says the live layers are present in the file",
+        "F-53-A06",
+        (
+            (
+                KGX_MANIFEST,
+                "agent and are not present in this file.",
+                "agent and are present in this file.",
+            ),
+        ),
+    ),
+    (
+        "M16: PubTator3 moved into the manifest's layer 2 list",
+        "F-53-A06",
+        ((KGX_MANIFEST, "PubChem, dbSNP and ", "PubChem, PubTator3, dbSNP and "),),
+    ),
+    (
+        "M18: Plan said to use this tier to choose every tool",
+        "F-53-A03",
+        (
+            (
+                INFO,
+                "Plan itself never calls this tier: it picks the tools in code,",
+                "Plan itself never calls this tier, except to choose every tool it plans,",
+            ),
+        ),
+    ),
+    (
+        "M19: nine stops",
+        "F-53-A07",
+        (
+            (
+                INFO,
+                "Seven stops, each naming who is acting.",
+                "Nine stops, each naming who is acting.",
+            ),
+        ),
+    ),
+    (
+        "M20: five queries return the stored links",
+        "F-53-A07",
+        ((INFO, "One query returns the stored links", "Five queries return the stored links"),),
+    ),
+    (
+        "M20: layer 2 fetched overnight",
+        "F-53-A07",
+        (
+            (
+                INFO,
+                "Fetched while you wait, so they are current.",
+                "Fetched overnight, so they are a day old.",
+            ),
+        ),
+    ),
+    (
+        "Pathogen Detection's limit stated as 15 seconds",
+        "F-53-A08",
+        (
+            (
+                INFO,
+                "and 120 seconds for Pathogen Detection, the",
+                "and 15 seconds for Pathogen Detection, the",
+            ),
+        ),
+    ),
+    (
+        "the graph budget named the longest",
+        "F-53-A08",
+        (
+            (
+                INFO,
+                "for Pathogen Detection, the\n            longest.",
+                "for a graph query, the\n            longest.",
+            ),
+        ),
+    ),
+    (
+        "one access path per tool comes back",
+        "F-53-A09",
+        (
+            (
+                ARCH_TSX,
+                "each one reaching exactly one of them.",
+                "each one reaching exactly one of them and one access path within it.",
+            ),
+        ),
+    ),
+    (
+        "LitVar2 said to return the papers",
+        "F-53-A10",
+        (
+            (
+                ARCH_TSX,
+                "LitVar2 finds a named variant and counts the papers that mention it",
+                "LitVar2 returns the papers that mention a named variant",
+            ),
+        ),
+    ),
+    (
+        "500 rows back",
+        "F-53-A12",
+        ((ARCH_TSX, "asks it for at most 100 rows.", "asks it for at most 500 rows."),),
+    ),
+    (
+        "the second round said to go out with the first",
+        "F-53-J06",
+        (
+            (
+                INFO,
+                "goes out in a second round once the first has\n            returned.",
+                "goes out at the same time as the rest.",
+            ),
+        ),
+    ),
+    (
+        "the README says the code caches in Redis",
+        "F-53-J04",
+        ((README, "no code under `src/` reads it yet", "the code caches responses in it"),),
     ),
 )
