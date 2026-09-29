@@ -38,10 +38,19 @@ flat input model whose `query_type` field selects among three Variation
 Services endpoint families, so it is catalogued as one action whose
 schema itself carries the `query_type` enum, not three separate actions.
 
-Every action's `timeout_s` and `rate_limit_pool` are read from
-`.claude/rules/tool-call-budgets.md`'s per-tool timeout table, copied
-here as literal values (that rule's table is the source of truth; this
-module restates it, it does not compute it).
+Every action's `timeout_s` is the budget the tool's own code enforces,
+restated here as a literal value: `CYPHER_QUERY_TIMEOUT_SECONDS` in
+`graph_schema_constants.py` for `cypher_query`, `DEFAULT_TIMEOUT_S` in
+`ncbi_transport.py` for the five tools that call a web API through it, and
+`_TOTAL_BUDGET_S` in `pathogen_detection.py` for Pathogen Detection. Those
+constants are the source of truth, not this module and not the rule
+`.claude/rules/tool-call-budgets.md`, whose table gives Pathogen Detection
+only a floor ("60 seconds or more") where the code enforces 120 seconds.
+`tests/system_03_search_agent/tools/test_catalogue.py` compares every value
+here with its constant, and the facts checker
+(`.claude/skills/verify/scripts/check_facts.py`) does the same. Each
+`rate_limit_pool` is a description of the pool the rule's table names,
+worded for a reader rather than copied character for character.
 
 Sorted by name and fixed in code, per `.claude/rules/
 prompt-cache-discipline.md`: "never reorder the tool array at runtime for
@@ -116,10 +125,11 @@ def _entry(name: str, tool: str, description: str, model: type[BaseModel], *, ti
     )
 
 
-# Per-tool timeout and rate-limit pool, copied literally from
-# `.claude/rules/tool-call-budgets.md`'s table. One tuple entry per tool,
-# reused across that tool's own action rows below so the number is stated
-# once per tool rather than repeated per action.
+# Per-tool timeout and rate-limit pool. The timeout is the budget the code
+# enforces (see the module docstring for the constant behind each one); the
+# pool describes the one `.claude/rules/tool-call-budgets.md`'s table names.
+# One tuple entry per tool, reused across that tool's own action rows below
+# so the number is stated once per tool rather than repeated per action.
 _CYPHER_QUERY_BUDGET = (30.0, "Not rate-limited by NCBI; the graph is not an NCBI API")
 _NCBI_EFETCH_BUDGET = (
     15.0,
