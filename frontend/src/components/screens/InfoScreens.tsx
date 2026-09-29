@@ -871,9 +871,11 @@ export function IntegrationsScreen() {
 //     confirmed by a live lookup" does not contribute one. NCBIGene:672 for
 //     BRCA1 appears in `tools/cypher_query.py`'s own examples.
 //   - Timeouts and the call budget: `CYPHER_QUERY_TIMEOUT_SECONDS` is 30
-//     seconds (`tools/cypher_query.py`), `tools/ncbi_transport.py` carries the
-//     15-second per-call budget with one backoff retry, and
-//     `harness/call_budget.py`'s `MAX_LAYER_2_3_CALLS_PER_QUERY` is 20.
+//     seconds (`tools/graph_schema_constants.py`), `tools/ncbi_transport.py`
+//     carries the 15-second per-call budget with one backoff retry for every
+//     web API, `tools/pathogen_detection.py`'s `_TOTAL_BUDGET_S` is 120
+//     seconds, the longest, and `harness/call_budget.py`'s
+//     `MAX_LAYER_2_3_CALLS_PER_QUERY` is 20.
 //   - Results come back typed and bounded: each tool has its own `*_schemas.py`
 //     input and output models, and `harness/coordinator_worker.py` caps a
 //     finding at `_MAX_FINDING_TOTAL_BYTES` and records that it cut.
@@ -887,15 +889,20 @@ export function IntegrationsScreen() {
 //   - The event stream: `contracts/events.py`'s envelope `type` union carries
 //     guard, think, plan, step, tool_start, tool_result, token, citation,
 //     trust_signal, cost, error and done.
-//   - All three layers go out together (card 53, 2026-09-27): Act's planned
-//     calls run through `core/graph.py`'s `_gather_planned_calls`, which
-//     awaits them with `asyncio.gather`, so no layer is read before another.
-//   - When layer 3 runs (card 53, 2026-09-27): `plan_node` calls
-//     `_build_layer_tool_calls` in `core/graph.py`, which plans
+//   - Act runs in two rounds (card 53): the first round's planned calls,
+//     the graph query among them, go out together through `core/graph.py`'s
+//     `_gather_planned_calls`; a follow-up that needs a first-round result,
+//     such as the abstracts of the papers a PubMed search found, goes out in
+//     a second round after it.
+//   - When layer 3 runs (card 53): `plan_node` reaches
+//     `_build_layer_tool_calls` only on its last branch, which plans
 //     `pubtator_annotate` and `clinicaltrials_search` on the gene's symbol,
 //     or on the disease's MedGen name when no gene resolved, and one
-//     `litvar2_lookup` for each of the first two rs ids in the question. No
-//     decision and no request gates them.
+//     `litvar2_lookup` for each of the first two rs ids in the question.
+//     Isolate and accession questions, a gene named only by an identifier,
+//     and a no-gene question the `plan.literature` classifier reads as
+//     asking for papers plan none of those three calls. BRCA1, named by its
+//     symbol, gets PubTator3 and ClinicalTrials.gov.
 //   - The scientist is presentation only: `shell/PersonaChip.tsx`'s docstring,
 //     "the persona never changes which tools run, which records are
 //     retrieved, or what the trust signal says".
@@ -947,7 +954,7 @@ const JOURNEY_LAYERS: { n: 1 | 2 | 3; name: string; tools: string; body: string 
     n: 3,
     name: "Enrichment",
     tools: "pubtator_annotate, litvar2_lookup, clinicaltrials_search",
-    body: "Literature and trial evidence, added in code rather than on request whenever a question names a gene, a disease or an rs variant, this one included.",
+    body: "Literature and trial evidence. Plan adds them here because the question names a gene by its symbol, BRCA1, though not every question gets them.",
   },
 ];
 
@@ -1198,7 +1205,7 @@ export function AboutScreen({
       n: 3,
       name: "Enrichment",
       colour: designTokens.layer3,
-      body: "PubTator3, LitVar2 and ClinicalTrials.gov. Literature and trial evidence about the gene, disease or variant a question names, searched alongside the first two layers.",
+      body: "PubTator3, LitVar2 and ClinicalTrials.gov. Literature and trial evidence about the gene, disease or variant a question names, when Plan adds them.",
     },
   ];
 
@@ -1284,11 +1291,14 @@ export function AboutScreen({
 
         <JourneyStop index={3} title="The search goes out">
           <StopText>
-            Act runs the tools Plan chose, across three layers of data, together rather than one
-            after another. Each call carries its own time limit, 30 seconds for a graph query and
-            15 seconds for a live NCBI call, and one question may make at most 20 live calls in
-            total. A call that would exceed either of those fails fast and says which limit it hit,
-            rather than leaving you waiting. This is the part you watch on the progress screen.
+            Act sends out the calls Plan chose, across three layers of data, together rather than
+            one after another. A call that needs another call's result, such as the abstracts of
+            the papers a PubMed search found, goes out in a second round once the first has
+            returned. Each source has its own time limit in code: 30 seconds for a graph query, 15
+            seconds for a call to a live web API, and 120 seconds for Pathogen Detection, the
+            longest. One question may make at most 20 live calls in total. A call that reaches its
+            limit stops there and says which limit it hit, rather than leaving you waiting. This is
+            the part you watch on the progress screen.
           </StopText>
           <Box
             data-testid="about-journey-layers"
