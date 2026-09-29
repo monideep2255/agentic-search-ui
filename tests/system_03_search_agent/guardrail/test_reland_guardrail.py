@@ -30,6 +30,7 @@ the relevancy decision where one is asked.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 import uuid
@@ -42,11 +43,13 @@ from system_03_search_agent.contracts.events import DecisionRecord
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.guardrail import classifier, forbidden, prefilter
 from system_03_search_agent.harness import cost_control
+from system_03_search_agent.harness import decide as decide_module
 from system_03_search_agent.harness import harness as harness_module
 from tests.system_03_search_agent.model_stub import (
     COMPLIANT_GUARD_CLASSIFICATION,
     fake_response,
 )
+from tests.system_03_search_agent.virtual_clock import run_virtual
 
 # ---------------------------------------------------------------------------
 # Fixtures and helpers, self-contained so this file does not lean on another
@@ -128,7 +131,7 @@ async def _run_guardrail(
         "context": RequestContext(surface="rest_sse", session_memory=session_memory),
         "harness": harness,
         "seq": 0,
-        "start_monotonic": time.monotonic(),
+        "start_monotonic": graph_module.time.monotonic(),
     }
     result = await graph_module.guardrail_node(state)  # type: ignore[arg-type]
     return list(result.get("events", [])), result, harness
@@ -651,15 +654,16 @@ async def test_with_the_default_provider_an_off_topic_refusal_waits_on_no_decisi
 
 
 # ---------------------------------------------------------------------------
-# R-01 (golden G-005), since R-10 and card 72: a slow or briefly failing
-# guard classifier call gets one more request, inside the guardrail's
-# unchanged budget. A first request still unanswered after
-# `_CLASSIFIER_HEDGE_AFTER_S` gets an identical second beside it, the first
-# not cancelled; one that fails or comes back unusable earlier gets its
-# second then. Two requests at most. A second failure, or no time left,
-# still ends in the fatal step error: no verdict is no answer. Most arms
-# shrink the budget to one second and the hedge to 0.3 s so they run fast;
-# the first arm keeps the real budget and the real hedge.
+# R-01 (golden G-005), since R-10, card 72 and R-10's fix round: a slow or
+# briefly failing guard classifier call gets one more request, inside the
+# guardrail's unchanged budget. A first request not ended at the hedge
+# point (`harness.decide.GUARD_HEDGE_SHARE` of the budget, where develop
+# cut it) gets an identical second beside it, the first not cancelled; one
+# that fails or comes back unusable earlier gets its second then. Two
+# requests at most. A second failure, or no time left, still ends in the
+# fatal step error: no verdict is no answer. Most arms shrink the budget to
+# one second and the hedge to 0.3 s so they run fast; the first arm keeps
+# the real budget and the real hedge, on the virtual clock.
 # ---------------------------------------------------------------------------
 
 _SHRUNK_BUDGET_S = 1.0
@@ -667,16 +671,20 @@ _SHRUNK_HEDGE_S = 0.3
 
 
 def _shrink_budget(monkeypatch: pytest.MonkeyPatch, hedge_s: float | None = _SHRUNK_HEDGE_S) -> None:
-    """The guardrail's budget shrunk to one second, and the hedge with it
-    unless `hedge_s` is None (the real 4 s hedge then never fires)."""
+    """The guardrail's budget shrunk to one second, the hedge to `hedge_s`
+    and the backoffs and floors with it; with `hedge_s` None the hedge's
+    two-second floor is left as it is, so no hedge fires."""
     real_budget = graph_module.budget_for_step
 
     def _budget(step: str, query_class: Any) -> float:
         return _SHRUNK_BUDGET_S if step == "guardrail" else real_budget(step, query_class)
 
     monkeypatch.setattr(graph_module, "budget_for_step", _budget)
+    monkeypatch.setattr(decide_module, "GUARD_RETRY_BACKOFF_S", 0.1)
+    monkeypatch.setattr(decide_module, "GUARD_MIN_SECOND_ATTEMPT_S", 0.15)
     if hedge_s is not None:
-        monkeypatch.setattr(graph_module, "_CLASSIFIER_HEDGE_AFTER_S", hedge_s)
+        monkeypatch.setattr(decide_module, "GUARD_HEDGE_SHARE", hedge_s / _SHRUNK_BUDGET_S)
+        monkeypatch.setattr(decide_module, "GUARD_MIN_HEDGE_S", 0.1)
 
 
 def _classifier_calls(monkeypatch: pytest.MonkeyPatch, *behaviours: Any) -> list[int]:
@@ -715,30 +723,31 @@ _REFUSE_INJECTION = json.dumps(
 )
 
 
-@pytest.mark.asyncio
-async def test_a_hung_first_attempt_gets_a_second_within_the_real_budget(
+def test_a_hung_first_attempt_gets_a_second_within_the_real_budget(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """G-005's shape with the guardrail's real budget and the real hedge:
-    the first classifier request hangs, the hedge sent beside it at
-    `_CLASSIFIER_HEDGE_AFTER_S` answers at once, and the question is
-    admitted on that verdict, about four seconds in, not ten.
+    """G-005's shape with the guardrail's real budget and the real hedge, on
+    the virtual clock: the first classifier request hangs, the hedge sent
+    beside it at 10 s, two thirds of the 15 s, answers at once, and the
+    question is admitted on that verdict at 10 s, as develop's second
+    attempt was (R-10's fix round, F-72-A04).
 
     MUTATION PROOF: never sending the hedge (`_send()` in the hedge arm of
-    `_classify_within_budget`) turns this red on the step error.
+    `ask_guard_model`) turns this red on the step error.
     """
-    hedge = graph_module._CLASSIFIER_HEDGE_AFTER_S
-    assert hedge == 4.0
+    assert decide_module.GUARD_HEDGE_SHARE == pytest.approx(2 / 3)
     count = _classifier_calls(monkeypatch, "hang", _ADMIT)
 
-    started = time.monotonic()
-    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
-    elapsed = time.monotonic() - started
+    async def _go() -> tuple[list[Any], dict[str, Any], float]:
+        started = asyncio.get_running_loop().time()
+        events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+        return events, result, asyncio.get_running_loop().time() - started
 
+    events, result, elapsed = run_virtual(monkeypatch, _go)
     assert result.get("step_error") is None
     assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
     assert count[0] == 2
-    assert hedge - 0.2 < elapsed < hedge + 1.0, elapsed
+    assert elapsed == pytest.approx(10.0)
 
 
 @pytest.mark.asyncio

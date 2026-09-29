@@ -448,7 +448,6 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-import email.utils
 import json
 import logging
 import math
@@ -512,7 +511,14 @@ from system_03_search_agent.harness.coordinator_worker import (
     ToolExecutionResult,
     coordinator_worker_execute,
 )
-from system_03_search_agent.harness.decide import check_jev_per_query_cap, decide, jev_decides
+from system_03_search_agent.harness.decide import (
+    GUARD_MAX_REQUESTS,
+    UnusableGuardReply,
+    ask_guard_model,
+    check_jev_per_query_cap,
+    decide,
+    jev_decides,
+)
 from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
@@ -866,7 +872,7 @@ _GUARDRAIL_NO_USABLE_VERDICT_MESSAGE: Final[str] = (
 #: once met the same limit.
 _GUARDRAIL_RATE_LIMITED_WAIT_MESSAGE: Final[str] = (
     "The service that checks each question is busy right now. "
-    "Try the query again in about {seconds} seconds, not straight away."
+    "Try the query again in about {seconds} {unit}, not straight away."
 )
 
 #: The same, when the provider rate-limited the question and named no wait:
@@ -1191,6 +1197,7 @@ async def _decide_point(
     text: str,
     *,
     jev_failed: asyncio.Event | None = None,
+    deadline: float | None = None,
 ) -> DecisionRecord | None:
     """One decision through the seam, recorded for the `done` event.
 
@@ -1199,9 +1206,13 @@ async def _decide_point(
     decision with no usable pick (`_usable_choice`). `decide` already
     bounds `text` to its own state limit before either model reads it.
     `jev_failed`, when given, is handed to `decide`, which sets it once
-    Jev's own pick can no longer come (re-land follow-up R-10).
+    Jev's own pick can no longer come (re-land follow-up R-10). `deadline`,
+    when given, is the calling step's own, which the guard tier's pick is
+    asked to (fix round, F-72-A02).
     """
-    signal: dict[str, asyncio.Event] = {} if jev_failed is None else {"jev_failed": jev_failed}
+    signal: dict[str, Any] = {} if jev_failed is None else {"jev_failed": jev_failed}
+    if deadline is not None:
+        signal["deadline"] = deadline
     try:
         record = await decide(
             harness,
@@ -1440,160 +1451,36 @@ def _drop_features_decision(harness: Any) -> None:
 _JEV_INJECTION_WAIT_S: Final[float] = JEV_TOTAL_TIMEOUT_S + 0.5
 
 
-#: How long the guard classifier's first request may go unanswered before
-#: an identical second request is sent beside it, WITHOUT cancelling the
-#: first (card 72, option A; re-land follow-up R-10, F-8.6-FJ11). Whichever
-#: usable reply comes first decides; the other request is cancelled and
-#: charged as `call_tier` charges any cancelled call. Both run to the one
-#: guardrail budget, `budget_for_step("guardrail", ...)`, the owner's to
-#: change and not changed here.
+#: The guard classifier's requests go through the one guard-model path,
+#: `harness.decide.ask_guard_model`, which the relevancy decision's guard
+#: pick shares (card 72; R-10 and its fix round, F-72-A02, J05). Its policy,
+#: stated there and pinned against develop's by the dominance sweep
+#: (`tests/system_03_search_agent/guardrail/test_guard_request_dominance.py`):
 #:
-#: Why a hedge rather than R-01's split (two thirds of the budget for the
-#: first attempt, the rest for the second): card 72's diagnosis measured
-#: the guard model's upstream answering in slow bursts, 11 of 150 first
-#: attempts cut at 10 s on 2026-09-29 and 4 of those failing again in the
-#: 5 s left, while a fresh request usually answered in 0.6 to 3.0 s. The
-#: split threw away a slow first request that might still answer, and left
-#: the second too little. The hedge keeps the first and gives the second
-#: at least 11 of the 15 s. Why about 4 s: the guard verdict's median is
-#: about 1.5 s and on a normal evening only 4 to 8 of 150 took longer than
-#: 4 s, so the hedge costs a second request on roughly 3 to 5 in 100
-#: questions, a fraction of a cent each.
-_CLASSIFIER_HEDGE_AFTER_S: Final[float] = 4.0
-
-#: The most requests the guard classifier sends for one question: the first
-#: and one more, a hedge, a retry after an error or an unusable reply, or a
-#: retry after a rate limit. Never more in flight or in total (R-10,
-#: F-8.6-FJ04: a persistent 429 used to cost four requests per question).
-#: `call_tier` is called with `retry=False`, so each request is one request.
-_CLASSIFIER_MAX_REQUESTS: Final[int] = 2
-
-#: How long the guard classifier's second request waits after the first
-#: failed with an ERROR before the hedge was due (re-land follow-up, R-05;
-#: F-8.6-RJ01, RJ08, RA02). Two seconds outlasts an error of about a second.
-#: Since R-10 the wait never carries the second request past the moment the
-#: hedge would have sent it (`_CLASSIFIER_HEDGE_AFTER_S` after the first),
-#: so the backoff can never take time from the second request that a hedge
-#: would have given it (F-8.6-FJ11). A first request that fails after the
-#: hedge is due has its second already running, and waits for nothing.
-_CLASSIFIER_RETRY_BACKOFF_S: Final[float] = 2.0
-
-#: The least time a second request must keep for itself after any wait
-#: before it. Phase 8.6's golden run put the guard verdict's median at 1.53
-#: seconds; three seconds covers most replies. A wait that would leave less
-#: is shortened, or, when it is the provider's own `Retry-After`, the second
-#: request is not made at all, since asking before the provider said to is
-#: exactly the hammering R-05 removes.
-_CLASSIFIER_MIN_SECOND_ATTEMPT_S: Final[float] = 3.0
+#: - Two requests at most, in flight and in total, a rate limit included
+#:   (F-8.6-FJ04). `call_tier` is called with `retry=False`.
+#: - The first request runs to the guardrail's own budget and is never cut.
+#: - A first request not ended at the hedge point, two thirds of the budget
+#:   left when it was sent, gets an identical second beside it, the first
+#:   NOT cancelled (F-72-A04: an earlier hedge lost searches develop
+#:   answered). None with less than two seconds left (F-72-A05).
+#: - A first request that ended earlier: an unusable reply is asked again at
+#:   once; a `Retry-After` is honoured when it fits (FA05, FA02); any other
+#:   transient error is asked again when develop's last request would have
+#:   gone, never later than the hedge point (FJ11, RJ08).
+#: - Every usable reply in hand when the question is decided is read, and a
+#:   refusal beats an admission (F-72-J01, J10).
+_CLASSIFIER_MAX_REQUESTS: Final[int] = GUARD_MAX_REQUESTS
 
 
-def _rate_limit_behind(exc: BaseException) -> BaseException | None:
-    """The provider's HTTP 429 behind a classifier call's failure, or None.
-
-    `call_tier` raises `HarnessCallError` from the provider's own exception,
-    so the 429 is on the cause chain; `litellm.RateLimitError` carries
-    `status_code` 429. Read by status, not by class, so this module needs no
-    import of the provider library.
-    """
-    cause = exc.__cause__
-    for _ in range(5):
-        if cause is None:
-            return None
-        if getattr(cause, "status_code", None) == 429:
-            return cause
-        cause = cause.__cause__
-    return None
-
-
-def _header_value(headers: Any, name: str) -> str | None:
-    """One header's value from an `httpx.Headers` or a plain mapping, matched
-    without regard to case; None when absent or unreadable."""
-    if headers is None:
-        return None
-    try:
-        items = headers.items()
-    except AttributeError:
-        return None
-    try:
-        for key, value in items:
-            if str(key).lower() == name:
-                return str(value)
-    except Exception:  # noqa: BLE001 - an odd header object states no wait
-        return None
-    return None
-
-
-def _provider_retry_after_s(error: BaseException) -> float | None:
-    """The wait, in seconds, a rate-limiting provider asked for in its
-    `Retry-After` header: a number of seconds or an HTTP date. None when the
-    error carries no such header or one that is not a usable wait.
-
-    litellm keeps the provider's headers in one of three places depending
-    on how the error was raised; each is read in turn.
-    """
-    sources = (
-        getattr(error, "litellm_response_headers", None),
-        getattr(error, "headers", None),
-        getattr(getattr(error, "response", None), "headers", None),
-    )
-    for headers in sources:
-        raw = _header_value(headers, "retry-after")
-        if raw is None:
-            continue
-        try:
-            seconds = float(raw)
-        except ValueError:
-            try:
-                when = email.utils.parsedate_to_datetime(raw)
-            except (TypeError, ValueError):
-                continue
-            if when.tzinfo is None:
-                when = when.replace(tzinfo=UTC)
-            seconds = (when - datetime.now(UTC)).total_seconds()
-        if math.isfinite(seconds):
-            return max(0.0, seconds)
-    return None
-
-
-def _classifier_retry_wait_s(
-    exc: HarnessCallError, remaining_s: float, first_elapsed_s: float = 0.0
-) -> float | None:
-    """How long the guard classifier's second request waits after the first
-    failed with `exc`, a transient `HarnessCallError`, `first_elapsed_s`
-    after it was sent, with `remaining_s` of the guardrail's budget left;
-    None when no second request is made (re-land follow-up, R-05; R-10).
-
-    - A first attempt cut by its own budget: 0.0. The time has already
-      passed, and R-01's fix for a hung request (G-005) stands.
-    - A provider that rate-limited and said when to come back (`Retry-After`):
-      that wait, at least `_CLASSIFIER_RETRY_BACKOFF_S`, when it still leaves
-      the second attempt `_CLASSIFIER_MIN_SECOND_ATTEMPT_S`; otherwise None,
-      and the question ends at once in the step error rather than asking
-      before the provider said to.
-    - Any other transient error, a rate limit that named no wait included:
-      `_CLASSIFIER_RETRY_BACKOFF_S`, never past the moment the hedge would
-      have sent the second request (`_CLASSIFIER_HEDGE_AFTER_S` after the
-      first, R-10, F-8.6-FJ11), shortened so the second request keeps
-      `_CLASSIFIER_MIN_SECOND_ATTEMPT_S`, and 0.0 when even that is not left.
-    """
-    if exc.source.startswith("harness.enforce_timeout"):
-        return 0.0
-    rate_limit = _rate_limit_behind(exc)
-    stated = _provider_retry_after_s(rate_limit) if rate_limit is not None else None
-    if stated is not None:
-        wait_s = max(stated, _CLASSIFIER_RETRY_BACKOFF_S)
-        return wait_s if wait_s + _CLASSIFIER_MIN_SECOND_ATTEMPT_S <= remaining_s else None
-    backoff_s = min(_CLASSIFIER_RETRY_BACKOFF_S, max(0.0, _CLASSIFIER_HEDGE_AFTER_S - first_elapsed_s))
-    return max(0.0, min(backoff_s, remaining_s - _CLASSIFIER_MIN_SECOND_ATTEMPT_S))
-
-
-@dataclass
-class _GuardRequest:
-    """One guard classification request in flight (card 72)."""
-
-    number: int
-    task: asyncio.Task[Any]
-    sent_at: float
+def _classifier_strictness(value: tuple[classifier.InjectionClassification, GuardVerdict]) -> int:
+    """How strict a classifier verdict is, for `ask_guard_model`: injection
+    highest, then any other refusal, then an admission. When two usable
+    replies are in hand, the stricter decides (fix round, F-72-J01, J10)."""
+    classification, verdict = value
+    if classification.is_injection:
+        return 2
+    return 0 if verdict.admitted else 1
 
 
 def _rate_limited_step_error(stated_waits: Sequence[tuple[float, float]]) -> dict[str, Any]:
@@ -1603,16 +1490,22 @@ def _rate_limited_step_error(stated_waits: Sequence[tuple[float, float]]) -> dic
     `stated_waits` holds every `Retry-After` any request carried, with the
     moment it was read, whichever request carried it. The longest wait still
     left is what the person is told and what `retry_after_s` carries, at
-    least a second and at most `_RATE_LIMIT_WAIT_STATED_MAX_S`. With none
-    stated, the message still says to wait and `retry_after_s` stays 0.
+    least a second and at most `_RATE_LIMIT_WAIT_STATED_MAX_S`, "second"
+    when it is one (fix round, F-72-J04). With none stated, the message
+    still says to wait and `retry_after_s` stays 0.
     """
     now = time.monotonic()
-    left_s = max((wait - (now - read_at) for wait, read_at in stated_waits), default=None)
+    left_s = max(
+        (wait - (now - read_at) for wait, read_at in stated_waits if math.isfinite(wait)),
+        default=None,
+    )
     if left_s is None:
         message, seconds = _GUARDRAIL_RATE_LIMITED_MESSAGE, 0
     else:
-        seconds = min(_RATE_LIMIT_WAIT_STATED_MAX_S, max(1, math.ceil(left_s)))
-        message = _GUARDRAIL_RATE_LIMITED_WAIT_MESSAGE.format(seconds=seconds)
+        seconds = int(min(_RATE_LIMIT_WAIT_STATED_MAX_S, max(1, math.ceil(left_s))))
+        message = _GUARDRAIL_RATE_LIMITED_WAIT_MESSAGE.format(
+            seconds=seconds, unit="second" if seconds == 1 else "seconds"
+        )
     return {
         "fatal": True,
         "scope": "step",
@@ -1623,93 +1516,42 @@ def _rate_limited_step_error(stated_waits: Sequence[tuple[float, float]]) -> dic
     }
 
 
-def _log_guard_request(
-    request: _GuardRequest, trace_id: str, outcome: str, upstream: str | None = None
-) -> None:
-    """Card 72, D's logging: one line per guard classification request, with
-    its elapsed time and the upstream host OpenRouter named, if it named
-    one, so the next slow spell can be tied to a host. The trace id, the
-    request's number and code-authored outcome words only: never a key, a
-    token or the question's text.
-
-    WARNING, not INFO, on purpose: the service configures no logging of its
-    own, and the only configuration applied on develop is alembic's, run
-    in-process at start-up, which sets the root level to WARN. An INFO line
-    would never reach the log the diagnosis was read from."""
-    logger.warning(
-        "guard classification request %d of %d (trace %s): %s after %.2fs, upstream %s",
-        request.number,
-        _CLASSIFIER_MAX_REQUESTS,
-        trace_id,
-        outcome,
-        time.monotonic() - request.sent_at,
-        upstream or "not named",
-    )
+def _parse_guard_reply(
+    trace_id: str, response: Any
+) -> tuple[classifier.InjectionClassification, GuardVerdict]:
+    """One classifier reply's verdict, or `UnusableGuardReply` with the
+    parse error logged: the reply's length and its first 200 characters,
+    the model's own words, never the question's."""
+    try:
+        classification = classifier.parse_classification(response.content)
+        return classification, classifier.verdict_for(classification)
+    except classifier.ClassificationUnavailableError as exc:
+        content = response.content if isinstance(response.content, str) else ""
+        logger.warning(
+            "guard classification unusable (trace %s): %s; reply length %d, starts %r",
+            trace_id,
+            exc,
+            len(content),
+            content[:200],
+        )
+        raise UnusableGuardReply(str(exc)) from exc
 
 
 async def _classify_within_budget(
     harness: Harness, trace_id: str, guard_messages: list[Message], step_deadline: float
 ) -> tuple[classifier.InjectionClassification, GuardVerdict] | dict[str, Any]:
-    """The guard classifier's verdict on the question, asked with at most
-    `_CLASSIFIER_MAX_REQUESTS` requests, all inside the guardrail's budget
-    (`step_deadline`); or, when no request gave a usable verdict, the state
-    delta that ends the question (card 72, option A; re-land follow-up
-    R-10, F-8.6-FJ11, FJ04, FA05, FA02).
+    """The guard classifier's verdict on the question, asked through
+    `ask_guard_model` inside the guardrail's budget (`step_deadline`); or,
+    when no request gave a usable verdict, the state delta that ends the
+    question (card 72; R-10 and its fix round). See the policy above.
 
-    - The first request is sent at once and may run to the step's deadline.
-    - If it has not answered `_CLASSIFIER_HEDGE_AFTER_S` after it was sent,
-      an identical second request goes beside it. The first is not
-      cancelled: whichever usable reply comes first decides.
-    - If the first ends before the hedge with an unusable reply, the second
-      is sent at once; with a transient error, after
-      `_classifier_retry_wait_s` (a provider's `Retry-After` honoured, or
-      no second request when it does not fit); with any other error, none.
-    - A reply that decides cancels the other request, which `call_tier`
-      charges as it charges any cancelled call.
-    - No verdict is no answer: the step error, never an admission. A rate
-      limit on either request ends in `_rate_limited_step_error`, with the
-      longest `Retry-After` either request carried.
+    No verdict is no answer: the step error, never an admission. A rate
+    limit on either request ends in `_rate_limited_step_error`, with the
+    longest `Retry-After` either request carried.
 
     Returns `(classification, verdict)` on a usable reply, else
     `{"cap_exceeded": True}` or `{"step_error": ...}`.
     """
-    requests: list[_GuardRequest] = []
-    in_flight: dict[asyncio.Task[Any], _GuardRequest] = {}
-    stated_waits: list[tuple[float, float]] = []
-    first_failure: tuple[HarnessCallError, float] | None = None
-    last_failure: HarnessCallError | None = None
-    rate_limited = False
-    unusable_reply = False
-    # Whether the last request to END came back with an unusable reply,
-    # which decides the step error's words as it did before: an unusable
-    # last reply says "could not complete", an error its own class. A cut
-    # at the deadline of a request still running after another reply came
-    # back unusable does not override that reply.
-    last_was_unusable = False
-    cap_refused = False
-    stopped_because = "the question ended"
-
-    def _send() -> None:
-        budget_s = max(0.0, step_deadline - time.monotonic())
-        task = asyncio.create_task(
-            _dispatch_tier_call(
-                harness,
-                trace_id,
-                "guard",
-                "guardrail",
-                guard_messages,
-                budget_s=budget_s,
-                # No stable prefix ahead of the classifier's instruction:
-                # see `_dispatch_tier_call`.
-                cache_prefix=None,
-                # One request per call: this function owns the second.
-                retry=False,
-            )
-        )
-        request = _GuardRequest(number=len(requests) + 1, task=task, sent_at=time.monotonic())
-        requests.append(request)
-        in_flight[task] = request
-
     if step_deadline - time.monotonic() <= 0:
         return {
             "step_error": _step_error_kwargs(
@@ -1722,155 +1564,39 @@ async def _classify_within_budget(
                 ),
             )
         }
-    _send()
-    try:
-        while True:
-            if in_flight:
-                first = requests[0]
-                hedge_at = first.sent_at + _CLASSIFIER_HEDGE_AFTER_S
-                hedge_due = (
-                    len(requests) == 1 and first.task in in_flight and hedge_at < step_deadline
-                )
-                wait_until = hedge_at if hedge_due else step_deadline
-                done, _ = await asyncio.wait(
-                    set(in_flight),
-                    timeout=max(0.0, wait_until - time.monotonic()),
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-                if not done:
-                    if not hedge_due or time.monotonic() >= step_deadline:
-                        # The budget is spent. Every request still running
-                        # is cut, and charged as a cancelled call.
-                        if not unusable_reply:
-                            last_failure = HarnessCallError(
-                                "step 'guardrail' exceeded its budget with no usable guard "
-                                "classification; retry the query",
-                                error_class="transient",
-                                source="harness.enforce_timeout:guardrail",
-                            )
-                        stopped_because = "cut at the guardrail's budget"
-                        break
-                    logger.warning(
-                        "guard classification call slow (attempt 1 of 2, trace %s): no answer "
-                        "after %.1fs; sending an identical second request without "
-                        "cancelling the first",
-                        trace_id,
-                        _CLASSIFIER_HEDGE_AFTER_S,
-                    )
-                    _send()
-                    continue
-                for task in sorted(done, key=lambda finished: in_flight[finished].number):
-                    request = in_flight.pop(task)
-                    if task.cancelled():
-                        _log_guard_request(request, trace_id, "cancelled")
-                        continue
-                    exc = task.exception()
-                    if isinstance(exc, cost_control.QueryCapExceededError):
-                        _log_guard_request(request, trace_id, "not sent, the per-query cost cap")
-                        if request.number == 1:
-                            return {"cap_exceeded": True}
-                        cap_refused = True
-                        continue
-                    if isinstance(exc, HarnessCallError):
-                        rate_limit = _rate_limit_behind(exc)
-                        stated = _provider_retry_after_s(rate_limit) if rate_limit is not None else None
-                        if rate_limit is not None:
-                            rate_limited = True
-                        if stated is not None:
-                            stated_waits.append((stated, time.monotonic()))
-                        last_failure = exc
-                        if not (unusable_reply and exc.source.startswith("harness.enforce_timeout")):
-                            last_was_unusable = False
-                        if request.number == 1:
-                            first_failure = (exc, time.monotonic() - request.sent_at)
-                        _log_guard_request(
-                            request,
-                            trace_id,
-                            f"failed ({exc.source}, {exc.error_class}"
-                            + (", rate-limited" if rate_limit is not None else "")
-                            + (f", Retry-After {stated:.1f}s" if stated is not None else "")
-                            + ")",
-                        )
-                        continue
-                    if exc is not None:
-                        raise exc
-                    response = task.result()
-                    upstream = getattr(response, "upstream_provider", None)
-                    try:
-                        classification = classifier.parse_classification(response.content)
-                        verdict = classifier.verdict_for(classification)
-                    except classifier.ClassificationUnavailableError as parse_exc:
-                        unusable_reply = True
-                        last_was_unusable = True
-                        content = response.content if isinstance(response.content, str) else ""
-                        logger.warning(
-                            "guard classification unusable (attempt %d of 2, trace %s): "
-                            "%s; reply length %d, starts %r",
-                            request.number,
-                            trace_id,
-                            parse_exc,
-                            len(content),
-                            content[:200],
-                        )
-                        _log_guard_request(request, trace_id, "answered, unusable", upstream)
-                        continue
-                    _log_guard_request(request, trace_id, "answered", upstream)
-                    stopped_because = "cancelled, the other request answered first"
-                    return classification, verdict
-                continue
 
-            # Nothing in flight and no verdict: one more request, or the end.
-            if len(requests) >= _CLASSIFIER_MAX_REQUESTS or cap_refused:
-                break
-            remaining_s = step_deadline - time.monotonic()
-            if remaining_s <= 0:
-                break
-            if first_failure is None:
-                # The first reply came back unusable: ask once more at once.
-                _send()
-                continue
-            failure, failed_after_s = first_failure
-            if failure.error_class != "transient":
-                break
-            wait_s = _classifier_retry_wait_s(failure, remaining_s, failed_after_s)
-            if wait_s is None:
-                logger.warning(
-                    "guard classification call rate-limited (attempt 1 of 2, trace %s) and "
-                    "the provider asked for a wait the guardrail's budget cannot fit; "
-                    "not asking again",
-                    trace_id,
-                )
-                break
-            logger.warning(
-                "guard classification call failed (attempt 1 of 2, trace %s, %s, %s); "
-                "asking once more within the guardrail's budget after %.1fs",
-                trace_id,
-                failure.source,
-                failure.error_class,
-                wait_s,
-            )
-            if wait_s > 0:
-                await asyncio.sleep(wait_s)
-            _send()
-    finally:
-        # A request nobody will read is stopped, so it spends nothing more;
-        # `call_tier`'s cancellation arm charges it (F-2.1-B02). Awaited, so
-        # the charge is on the question before its cost event is built.
-        leftover = dict(in_flight)
-        in_flight.clear()
-        for task in leftover:
-            task.cancel()
-        if leftover:
-            await asyncio.gather(*leftover, return_exceptions=True)
-        for request in leftover.values():
-            _log_guard_request(request, trace_id, stopped_because)
+    def _send(budget_s: float) -> Any:
+        return _dispatch_tier_call(
+            harness,
+            trace_id,
+            "guard",
+            "guardrail",
+            guard_messages,
+            budget_s=budget_s,
+            # No stable prefix ahead of the classifier's instruction: see
+            # `_dispatch_tier_call`.
+            cache_prefix=None,
+            # One request per call: `ask_guard_model` owns the second.
+            retry=False,
+        )
+
+    asked = await ask_guard_model(
+        trace_id=trace_id,
+        send=_send,
+        parse=lambda response: _parse_guard_reply(trace_id, response),
+        strictness=_classifier_strictness,
+        deadline=step_deadline,
+        what="guard classification",
+    )
+    if asked.decided and asked.value is not None:
+        return asked.value
 
     # No verdict is no answer.
-    if cap_refused:
+    if asked.cap_refused:
         return {"cap_exceeded": True}
-    if rate_limited:
-        return {"step_error": _rate_limited_step_error(stated_waits)}
-    if last_was_unusable or last_failure is None:
+    if asked.rate_limited:
+        return {"step_error": _rate_limited_step_error(asked.stated_waits)}
+    if asked.last_was_unusable or asked.last_failure is None:
         # Re-land follow-up, R-08 (F-8.6-RJ10): the person is told what to
         # do next, in the words every other step error uses, not the parse
         # error's own text. The parse error is in each unusable line above.
@@ -1884,7 +1610,7 @@ async def _classify_within_budget(
                 "retry_after_s": 0,
             }
         }
-    return {"step_error": _step_error_kwargs("guardrail", last_failure)}
+    return {"step_error": _step_error_kwargs("guardrail", asked.last_failure)}
 
 
 #: The same bound `decide()` puts on every decision's state. `Query.text`
@@ -1948,12 +1674,21 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
 
 
 async def _relevancy_decision(
-    harness: Harness, trace_id: str, text: str, jev_failed: asyncio.Event
+    harness: Harness,
+    trace_id: str,
+    text: str,
+    jev_failed: asyncio.Event,
+    step_deadline: float | None = None,
 ) -> DecisionRecord | None:
     """`guardrail.relevancy` through the seam, exactly as `_decide_point`
     asks it, with `jev_failed` for `decide()` to set the moment Jev's own
-    pick can no longer come (re-land follow-up R-10, F-8.6-FA03)."""
-    return await _decide_point(harness, trace_id, _RELEVANCY, text, jev_failed=jev_failed)
+    pick can no longer come (re-land follow-up R-10, F-8.6-FA03), and the
+    guardrail's own deadline, so the guard tier's pick is asked through the
+    classifier's own hedged path to that deadline (fix round, F-72-A02,
+    J05)."""
+    return await _decide_point(
+        harness, trace_id, _RELEVANCY, text, jev_failed=jev_failed, deadline=step_deadline
+    )
 
 
 async def _await_jev_own_pick(
@@ -2129,7 +1864,11 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     if not prefilter.clears_biomedical_allowlist(query.text):
         relevancy_task = asyncio.create_task(
             _relevancy_decision(
-                harness, trace_id, _relevancy_state(query.text, state), relevancy_jev_failed
+                harness,
+                trace_id,
+                _relevancy_state(query.text, state),
+                relevancy_jev_failed,
+                step_deadline,
             )
         )
     # guardrail.injection (build phase 8.6, T-8.6-04; fix round, F-8.6-A05,
@@ -2198,14 +1937,14 @@ async def _guardrail_after_prefilter(
     guard_messages = classifier.build_messages(query.text)
 
     # Two requests at most, never more in flight or in total (re-land
-    # follow-up R-10; card 72, option A). The first is sent at once and may
-    # run to the guardrail's own budget (`step_deadline`), which is not
-    # changed. If it has not answered after `_CLASSIFIER_HEDGE_AFTER_S`, an
-    # identical second request goes beside it, the first NOT cancelled, and
-    # whichever usable reply comes first decides. A first request that ends
-    # earlier in an unusable reply or a transient error gets its second then
-    # instead, after a short backoff or the provider's own `Retry-After`.
-    # See `_classify_within_budget`.
+    # follow-up R-10; card 72, option A; its fix round). The first is sent
+    # at once and may run to the guardrail's own budget (`step_deadline`),
+    # which is not changed. If it has not ended at the hedge point, where
+    # develop cut it, an identical second request goes beside it, the first
+    # NOT cancelled. A first request that ends earlier in an unusable reply
+    # or a transient error gets its second then instead. When two usable
+    # replies are in hand, the stricter decides. See `_classify_within_budget`
+    # and `harness.decide.ask_guard_model`.
     #
     # History, kept because each step was measured:
     # - 2026-09-13: a second attempt on an UNUSABLE reply, mirroring
@@ -2224,6 +1963,12 @@ async def _guardrail_after_prefilter(
     #   requests (FJ04) and hid the first request's `Retry-After` (FA05).
     #   The hedge keeps the first request, and `call_tier` sends one request
     #   per call.
+    # - R-10's fix round (2026-09-29): the hedge at 4 s lost searches in a
+    #   4 to 10 s slow spell that develop answered at 10.6 s (F-72-A04), so
+    #   it moved to develop's own cut point; two usable replies in the same
+    #   pass admitted a question one of them refused (F-72-J01), so the
+    #   stricter now decides; and the relevancy decision's guard pick goes
+    #   through the same path (F-72-A02, J05).
     #
     # No verdict is still no answer: every path without a usable reply ends
     # in the step error, never an admission, and Jev's pick below can add

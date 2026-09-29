@@ -10,6 +10,12 @@ Depends on:
       per_query_cost_cap_usd, QueryCapExceededError)
     - system_03_search_agent.harness.jev_client (call_jev, JevCallError,
       JevResult, MAX_JEV_COST_USD, wait_counting_free_time)
+
+Depended on by:
+    - system_03_search_agent.core.graph: `decide` at every decision point,
+      and `ask_guard_model` for the guardrail's own classifier requests, so
+      every guard-tier request the guardrail makes takes one path (card 72;
+      R-10's fix round).
     - system_03_search_agent.harness.tiers (resolve_jev_model)
     - system_03_search_agent.contracts.events (DecisionRecord)
 
@@ -60,13 +66,16 @@ multiple-choice question over a capped string.
 from __future__ import annotations
 
 import asyncio
+import email.utils
 import logging
+import math
 import os
 import re
 import time
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
-from typing import Final
+from collections.abc import Awaitable, Callable, Mapping, Sequence
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import Any, Final, Generic, TypeVar
 
 from system_03_search_agent.contracts.events import DecisionRecord
 from system_03_search_agent.harness import cost_control
@@ -231,6 +240,482 @@ def _parse_guard_choice(raw: str, options: Sequence[str]) -> str | None:
     return opt
 
 
+# ---------------------------------------------------------------------------
+# Guard-model requests: at most two, the second sent when the old policy's
+# would have been, a provider's Retry-After honoured (card 72; R-10 and its
+# fix round). Every guard-tier request the guardrail makes goes through
+# `ask_guard_model`: its own classifier (`core/graph.py`,
+# `_classify_within_budget`) and every guard pick asked through this seam
+# (`_run_guard_pick`), the relevancy decision's included.
+# ---------------------------------------------------------------------------
+
+#: The most requests one guard-model question sends: the first and one more.
+#: Never more in flight or in total (R-10, F-8.6-FJ04: a persistent 429 used
+#: to cost four). Each request is one `call_tier(..., retry=False)` call.
+GUARD_MAX_REQUESTS: Final[int] = 2
+
+#: Where the second request goes beside a first that has not ended: this
+#: share of what was left of the budget when the first was sent. It is the
+#: moment develop's policy before card 72 (re-land R-01) cut its first
+#: attempt and sent a fresh one, and it is kept on purpose (fix round,
+#: F-72-A04). With two requests at most, a hedge sent earlier lands inside
+#: a slow spell that develop's later request outlasts: a spell of 4 to 10 s
+#: in which every request sent hangs lost the search on the 4-second hedge
+#: and was answered on develop at 10.6 s. No two-request policy that sends
+#: its second before this point can answer every spell develop answers.
+#: What card 72 still gains here: the first request is never cut, so a slow
+#: first reply at 10 to 15 s now decides instead of being thrown away.
+GUARD_HEDGE_SHARE: Final[float] = 2 / 3
+
+#: The backoff after an error, as develop's R-05 used it (F-8.6-RJ01, RJ08,
+#: RA02); see `second_request_at` for how it now enters the second
+#: request's time.
+GUARD_RETRY_BACKOFF_S: Final[float] = 2.0
+
+#: The least time a second request must keep after a provider's own
+#: `Retry-After` wait. A stated wait that would leave less means no second
+#: request: asking before the provider said to is the hammering R-05
+#: removed. Phase 8.6's golden run put the guard verdict's median at 1.53 s.
+GUARD_MIN_SECOND_ATTEMPT_S: Final[float] = 3.0
+
+#: No hedge goes out with less than this left of the budget (fix round,
+#: F-72-A05). A request that cannot answer in the time left only adds load
+#: to a provider already slow, and is charged as a cancelled call.
+GUARD_MIN_HEDGE_S: Final[float] = 2.0
+
+
+def _header_value(headers: Any, name: str) -> str | None:
+    """One header's value from an `httpx.Headers` or a plain mapping, matched
+    without regard to case; None when absent or unreadable."""
+    if headers is None:
+        return None
+    try:
+        items = headers.items()
+    except AttributeError:
+        return None
+    try:
+        for key, value in items:
+            if str(key).lower() == name:
+                return str(value)
+    except Exception:  # noqa: BLE001 - an odd header object states no wait
+        return None
+    return None
+
+
+def rate_limit_behind(exc: BaseException) -> BaseException | None:
+    """The provider's HTTP 429 behind a guard request's failure, or None.
+
+    `call_tier` raises `HarnessCallError` from the provider's own exception,
+    so the 429 is on the cause chain; `litellm.RateLimitError` carries
+    `status_code` 429. Read by status, not by class, so this module needs no
+    import of the provider library.
+    """
+    cause = exc.__cause__
+    for _ in range(5):
+        if cause is None:
+            return None
+        if getattr(cause, "status_code", None) == 429:
+            return cause
+        cause = cause.__cause__
+    return None
+
+
+def provider_retry_after_s(error: BaseException) -> float | None:
+    """The wait, in seconds, a rate-limiting provider asked for in its
+    `Retry-After` header: a number of seconds or an HTTP date. None when the
+    error carries no such header or one that is not a usable wait.
+
+    litellm keeps the provider's headers in one of three places depending
+    on how the error was raised; each is read in turn.
+    """
+    sources = (
+        getattr(error, "litellm_response_headers", None),
+        getattr(error, "headers", None),
+        getattr(getattr(error, "response", None), "headers", None),
+    )
+    for headers in sources:
+        raw = _header_value(headers, "retry-after")
+        if raw is None:
+            continue
+        try:
+            seconds = float(raw)
+        except ValueError:
+            try:
+                when = email.utils.parsedate_to_datetime(raw)
+            except (TypeError, ValueError):
+                continue
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=UTC)
+            seconds = (when - datetime.now(UTC)).total_seconds()
+        if math.isfinite(seconds):
+            return max(0.0, seconds)
+    return None
+
+
+def _develop_last_send(sent_at: float, failed_at: float, hedge_at: float, deadline: float) -> float:
+    """When develop's policy before card 72 (R-01 and R-05) would have sent
+    its LAST request, had each of its requests failed the way this first one
+    did, `failed_at - sent_at` after it went out.
+
+    That policy sent up to four: `call_tier`'s immediate resend inside the
+    first attempt; the first attempt cut at `hedge_at`, or ended by the
+    resend's failure; a backoff of `GUARD_RETRY_BACKOFF_S`, shortened to
+    keep `GUARD_MIN_SECOND_ATTEMPT_S`; a fresh attempt; and its own
+    immediate resend.
+    """
+    took = failed_at - sent_at
+    resend_failed_at = failed_at + took
+    if resend_failed_at >= hedge_at:
+        # The first attempt was cut at the hedge point with its resend still
+        # running, and a fresh attempt went out there at once.
+        return hedge_at + took if hedge_at + took < deadline else hedge_at
+    wait_s = max(0.0, min(GUARD_RETRY_BACKOFF_S, deadline - resend_failed_at - GUARD_MIN_SECOND_ATTEMPT_S))
+    fresh_at = resend_failed_at + wait_s
+    return fresh_at + took if fresh_at + took < deadline else fresh_at
+
+
+def second_request_at(
+    error: HarnessCallError | None,
+    *,
+    sent_at: float,
+    failed_at: float,
+    hedge_at: float,
+    deadline: float,
+) -> float | None:
+    """When the second request goes out after the first ended at
+    `failed_at` without a verdict and before the hedge point, on the
+    monotonic clock; None when no second request is made (fix round,
+    F-72-A04; before it R-05 and R-10).
+
+    - `error` None, an unusable reply: at once, as develop did.
+    - An error that is not transient (a refused key, a bad request): none.
+    - A rate limit whose provider named a wait (`Retry-After`): that wait,
+      at least `GUARD_RETRY_BACKOFF_S`, when it still leaves
+      `GUARD_MIN_SECOND_ATTEMPT_S`; otherwise none, and the question ends at
+      once saying when to come back (R-10, F-8.6-FA02).
+    - Any other transient error, a rate limit that named no wait included:
+      when develop's policy would have sent its last request
+      (`_develop_last_send`), so an error spell develop's four requests
+      outlast, the second outlasts too; but never so late that it keeps
+      less time than develop gave its own second chance, which is
+      `failed_at` plus what the hedge point leaves (`deadline - hedge_at`),
+      and never after the hedge point itself (F-8.6-FJ11: a slow failure is
+      followed at the hedge point, never a backoff past it). An error
+      lasting about a second (RJ08's blip) is outlasted, and a first request
+      that failed at 9.8 s gets its second at 10 s.
+    """
+    if error is None:
+        return failed_at
+    if error.error_class != "transient":
+        return None
+    rate_limit = rate_limit_behind(error)
+    stated = provider_retry_after_s(rate_limit) if rate_limit is not None else None
+    if stated is not None:
+        wait_s = max(stated, GUARD_RETRY_BACKOFF_S)
+        return failed_at + wait_s if failed_at + wait_s + GUARD_MIN_SECOND_ATTEMPT_S <= deadline else None
+    at = min(
+        _develop_last_send(sent_at, failed_at, hedge_at, deadline),
+        failed_at + (deadline - hedge_at),
+        hedge_at,
+    )
+    return max(failed_at, at)
+
+
+class UnusableGuardReply(Exception):
+    """Raised by the `parse` given to `ask_guard_model` when a reply came
+    back from the guard model but cannot be used. The next request, if
+    there is one, goes at once."""
+
+
+_V = TypeVar("_V")
+
+
+@dataclass
+class GuardAsked(Generic[_V]):
+    """What `ask_guard_model` got: the verdict, or why there is none.
+
+    - `decided` and `value`: a usable reply's parsed value, the strictest of
+      every usable reply in hand when the question was decided.
+    - `cap_refused`: a request was refused by the per-query cost cap before
+      it was sent; `cap_refused_first` when it was the first.
+    - `rate_limited` and `stated_waits`: the provider rate-limited a request,
+      with every `Retry-After` any request carried and when it was read.
+    - `last_failure`, `last_was_unusable`: the error, or the unusable reply,
+      that the question ends on when no request gave a verdict.
+    """
+
+    decided: bool = False
+    value: _V | None = None
+    requests: int = 0
+    cap_refused: bool = False
+    cap_refused_first: bool = False
+    rate_limited: bool = False
+    stated_waits: list[tuple[float, float]] = field(default_factory=list)
+    last_failure: HarnessCallError | None = None
+    last_was_unusable: bool = False
+
+
+@dataclass
+class _GuardRequest:
+    """One guard-model request in flight."""
+
+    number: int
+    task: asyncio.Future[Any]
+    sent_at: float
+
+
+async def ask_guard_model(
+    *,
+    trace_id: str,
+    send: Callable[[float], Awaitable[Any]],
+    parse: Callable[[Any], _V],
+    strictness: Callable[[_V], int],
+    deadline: float,
+    what: str,
+) -> GuardAsked[_V]:
+    """Ask the guard model one question with at most `GUARD_MAX_REQUESTS`
+    requests, all inside `deadline` (card 72; R-10 and its fix round).
+
+    `send(budget_s)` makes one request, one `call_tier(..., retry=False)`
+    call with its own per-query cap check, and returns the reply. `parse`
+    turns a reply into a value or raises `UnusableGuardReply`. `strictness`
+    ranks values: when more than one usable reply is in hand at the moment
+    of deciding, the higher wins, so a refusal beats an admission whatever
+    order or tick the replies came in (fix round, F-72-J01, J10). `what`
+    names the question in the log, code-authored words only.
+
+    - The first request is sent at once and may run to `deadline`.
+    - Not ended at the hedge point (`GUARD_HEDGE_SHARE` of the budget left
+      when it was sent), a second goes beside it, the first NOT cancelled,
+      unless less than `GUARD_MIN_HEDGE_S` would be left (F-72-A05).
+    - Ended earlier without a verdict, the second goes at
+      `second_request_at` (an unusable reply at once; a `Retry-After`
+      honoured; other errors when develop's last request would have gone).
+    - Every request that has ended is read, not only the ones a wait
+      returned, and when a usable reply decides, any other request that has
+      already ended is read too before the verdict is chosen (F-72-J01). The
+      requests still running are then cancelled, which `call_tier` charges
+      as it charges any cancelled call, and awaited so that charge lands
+      first. A request never sent is never charged.
+    - One log line per request, with its time, its outcome and the upstream
+      host OpenRouter named (card 72, D's logging), at WARNING because
+      develop's log keeps WARNING and above only.
+
+    Raises whatever `send` raises other than `HarnessCallError` and
+    `QueryCapExceededError`, which are recorded on the result.
+    """
+    asked: GuardAsked[_V] = GuardAsked()
+    started = time.monotonic()
+    if deadline - started <= 0:
+        return asked
+    hedge_at = started + (deadline - started) * GUARD_HEDGE_SHARE
+    hedge_allowed = deadline - hedge_at >= GUARD_MIN_HEDGE_S
+    requests: list[_GuardRequest] = []
+    in_flight: dict[asyncio.Future[Any], _GuardRequest] = {}
+    usable: list[tuple[_GuardRequest, _V, str | None]] = []
+    unusable_seen = False
+    retry_at: float | None = None
+    stopped_because = "the question ended"
+
+    def _log(request: _GuardRequest, outcome: str, upstream: str | None = None) -> None:
+        logger.warning(
+            "%s request %d of %d (trace %s): %s after %.2fs, upstream %s",
+            what,
+            request.number,
+            GUARD_MAX_REQUESTS,
+            trace_id,
+            outcome,
+            time.monotonic() - request.sent_at,
+            upstream or "not named",
+        )
+
+    def _send() -> None:
+        budget_s = max(0.0, deadline - time.monotonic())
+        task = asyncio.ensure_future(send(budget_s))
+        request = _GuardRequest(number=len(requests) + 1, task=task, sent_at=time.monotonic())
+        requests.append(request)
+        in_flight[task] = request
+        asked.requests = len(requests)
+
+    def _read(request: _GuardRequest) -> None:
+        """Record one ended request: a usable value, an unusable reply, or
+        a failure, and when the first ends alone, when the second goes."""
+        nonlocal unusable_seen, retry_at
+        task = request.task
+        if task.cancelled():
+            _log(request, "cancelled")
+            return
+        exc = task.exception()
+        if isinstance(exc, QueryCapExceededError):
+            _log(request, "not sent, the per-query cost cap")
+            asked.cap_refused = True
+            asked.cap_refused_first = asked.cap_refused_first or request.number == 1
+            return
+        alone = len(requests) == 1
+        if isinstance(exc, HarnessCallError):
+            rate_limit = rate_limit_behind(exc)
+            stated = provider_retry_after_s(rate_limit) if rate_limit is not None else None
+            if rate_limit is not None:
+                asked.rate_limited = True
+            if stated is not None:
+                asked.stated_waits.append((stated, time.monotonic()))
+            asked.last_failure = exc
+            # A cut at the deadline of a request still running after another
+            # reply came back unusable does not override that reply.
+            if not (unusable_seen and exc.source.startswith("harness.enforce_timeout")):
+                asked.last_was_unusable = False
+            _log(
+                request,
+                f"failed ({exc.source}, {exc.error_class}"
+                + (", rate-limited" if rate_limit is not None else "")
+                + (f", Retry-After {stated:.1f}s" if stated is not None else "")
+                + ")",
+            )
+            if alone:
+                retry_at = second_request_at(
+                    exc,
+                    sent_at=request.sent_at,
+                    failed_at=time.monotonic(),
+                    hedge_at=hedge_at,
+                    deadline=deadline,
+                )
+                if retry_at is None and stated is not None:
+                    logger.warning(
+                        "%s rate-limited (trace %s) and the provider asked for a wait "
+                        "the budget cannot fit; not asking again",
+                        what,
+                        trace_id,
+                    )
+            return
+        if exc is not None:
+            raise exc
+        response = task.result()
+        upstream = getattr(response, "upstream_provider", None)
+        try:
+            value = parse(response)
+        except UnusableGuardReply:
+            unusable_seen = True
+            asked.last_was_unusable = True
+            _log(request, "answered, unusable", upstream)
+            if alone:
+                retry_at = time.monotonic()
+            return
+        usable.append((request, value, upstream))
+
+    _send()
+    try:
+        while not usable:
+            if in_flight:
+                first = requests[0]
+                hedge_due = len(requests) == 1 and hedge_allowed and first.task in in_flight
+                wait_until = hedge_at if hedge_due else deadline
+                await asyncio.wait(
+                    set(in_flight),
+                    timeout=max(0.0, wait_until - time.monotonic()),
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                # Every request that has ended, not only those the wait
+                # returned: two replies can end in the same pass (F-72-J01).
+                ended = [request for task, request in in_flight.items() if task.done()]
+                for request in sorted(ended, key=lambda r: r.number):
+                    del in_flight[request.task]
+                    _read(request)
+                if ended:
+                    continue
+                now = time.monotonic()
+                if now >= deadline:
+                    if not unusable_seen:
+                        asked.last_failure = HarnessCallError(
+                            f"{what} got no usable reply within its budget; retry the query",
+                            error_class="transient",
+                            source="harness.enforce_timeout:guardrail",
+                        )
+                    stopped_because = "cut at the budget"
+                    break
+                if hedge_due and now >= hedge_at:
+                    logger.warning(
+                        "%s slow (trace %s): no answer after %.1fs; sending an identical "
+                        "second request without cancelling the first",
+                        what,
+                        trace_id,
+                        now - first.sent_at,
+                    )
+                    _send()
+                continue
+
+            # Nothing in flight and no verdict: the second request, or the end.
+            if len(requests) >= GUARD_MAX_REQUESTS or asked.cap_refused or retry_at is None:
+                break
+            wait_s = retry_at - time.monotonic()
+            if wait_s > 0:
+                logger.warning(
+                    "%s failed (trace %s); asking once more within the budget after %.1fs",
+                    what,
+                    trace_id,
+                    wait_s,
+                )
+                await asyncio.sleep(wait_s)
+            if time.monotonic() >= deadline:
+                break
+            _send()
+
+        if usable:
+            # Decided. Any other request that ended before the verdict is
+            # acted on is read too; the rest are stopped first, so what
+            # they cost is charged before the question's cost is read.
+            stopped_because = "cancelled, the other request answered first"
+            leftover = dict(in_flight)
+            in_flight.clear()
+            for task in leftover:
+                task.cancel()
+            if leftover:
+                await asyncio.gather(*leftover, return_exceptions=True)
+            for request in sorted(leftover.values(), key=lambda r: r.number):
+                task = request.task
+                if task.cancelled() or task.exception() is not None:
+                    _log(request, stopped_because)
+                    continue
+                _read(request)
+            chosen = max(usable, key=lambda item: strictness(item[1]))
+            for request, value, upstream in usable:
+                if request is chosen[0]:
+                    _log(request, "answered", upstream)
+                elif strictness(value) < strictness(chosen[1]):
+                    _log(request, "answered, a stricter reply decided", upstream)
+                else:
+                    _log(request, "answered, the same verdict", upstream)
+            asked.decided = True
+            asked.value = chosen[1]
+            return asked
+    finally:
+        # A request nobody will read is stopped, so it spends nothing more;
+        # `call_tier`'s cancellation arm charges it (F-2.1-B02). Awaited, so
+        # the charge is on the question before its cost event is built.
+        leftover = dict(in_flight)
+        in_flight.clear()
+        for task in leftover:
+            task.cancel()
+        if leftover:
+            await asyncio.gather(*leftover, return_exceptions=True)
+        for request in leftover.values():
+            _log(request, stopped_because)
+    return asked
+
+
+def _pick_strictness(default: str | None) -> Callable[[str | None], int]:
+    """A guard pick's rank for `ask_guard_model`: a reply naming no single
+    option lowest, the caller's fail-open default next, any other pick
+    highest. For `guardrail.relevancy` that is: off topic beats on topic,
+    the refusal over the admission (fix round, F-72-J01)."""
+
+    def _rank(choice: str | None) -> int:
+        if choice is None:
+            return 0
+        return 1 if choice == default else 2
+
+    return _rank
+
+
 async def _run_guard_pick(
     harness: Harness,
     trace_id: str,
@@ -238,29 +723,46 @@ async def _run_guard_pick(
     options: Sequence[str],
     instructions: str | None = None,
     criteria: Mapping[str, str] | None = None,
+    *,
+    point: str = "decision",
+    default: str | None = None,
+    deadline: float | None = None,
 ) -> str | None:
-    """The guard tier's own pick for the same closed-option question.
+    """The guard tier's own pick for the same closed-option question,
+    asked through `ask_guard_model`, the guardrail classifier's own path
+    (fix round, F-72-A02, J05): at most two requests, a hedge at the hedge
+    point, a `Retry-After` honoured, one log line per request.
 
-    Checks the per-query cost cap first, exactly like
+    Each request checks the per-query cost cap first, exactly like
     `core/graph.py`'s `_dispatch_tier_call` does for every other guard-tier
-    call in the loop. Returns None (never raises) when the cap is
-    exceeded, the call times out, or the call fails: `decide()` records a
-    None guard pick as no pick, and when Jev made none either, fills
-    `chosen` with the caller's fail-open default. In Jev mode this runs
-    only after Jev has failed.
+    call in the loop. `deadline` is the caller's own, the guardrail's for
+    `guardrail.relevancy`; without one, `_GUARD_BUDGET_S` from now. Returns
+    None (never raises for a cap, a timeout or a failed call): `decide()`
+    records a None guard pick as no pick, and when Jev made none either,
+    fills `chosen` with the caller's fail-open default. A reply that names
+    no single option is final, no pick, as before: it came back, so no
+    second request is sent for it. In Jev mode this runs only after Jev
+    has failed.
     """
-    try:
-        cost_control.check_per_query_cap(harness, trace_id, "guard")
-    except QueryCapExceededError:
-        return None
     messages = _build_guard_messages(state, options, instructions, criteria)
-    try:
-        response = await harness.enforce_timeout(
-            "guardrail", harness.call_tier("guard", messages), _GUARD_BUDGET_S
+    if deadline is None:
+        deadline = time.monotonic() + _GUARD_BUDGET_S
+
+    async def _send(budget_s: float) -> Any:
+        cost_control.check_per_query_cap(harness, trace_id, "guard")
+        return await harness.enforce_timeout(
+            "guardrail", harness.call_tier("guard", messages, retry=False), budget_s
         )
-    except HarnessCallError:
-        return None
-    return _parse_guard_choice(response.content, options)
+
+    asked = await ask_guard_model(
+        trace_id=trace_id,
+        send=_send,
+        parse=lambda response: _parse_guard_choice(response.content, options),
+        strictness=_pick_strictness(default),
+        deadline=deadline,
+        what=f"guard pick for {point}",
+    )
+    return asked.value if asked.decided else None
 
 
 def check_jev_per_query_cap(harness: Harness, trace_id: str) -> None:
@@ -407,19 +909,39 @@ async def _guard_fallback_pick(
     options: Sequence[str],
     instructions: str | None,
     criteria: Mapping[str, str] | None,
+    *,
+    point: str = "decision",
+    default: str | None = None,
+    deadline: float | None = None,
 ) -> str | None:
     """The guard tier's pick, or None. `decide()` asks it only once Jev has
     failed; `compare_models` asks it beside Jev, offline.
 
     `_run_guard_pick` already returns None on the cost cap, a timeout of its
-    own step budget and a failed call; the outer wait and the broad catch
-    are nets for anything that slips past those, so a failed fallback reads
-    as "no usable pick", never as an exception out of `decide()`.
+    own budget and a failed call; the outer wait and the broad catch are
+    nets for anything that slips past those, so a failed fallback reads as
+    "no usable pick", never as an exception out of `decide()`. With a
+    `deadline`, the net is that deadline plus the same one-second margin.
     """
+    net_s = (
+        _GUARD_FALLBACK_WAIT_S
+        if deadline is None
+        else max(0.0, deadline - time.monotonic()) + (_GUARD_FALLBACK_WAIT_S - _GUARD_BUDGET_S)
+    )
     try:
         return await asyncio.wait_for(
-            _run_guard_pick(harness, trace_id, state, options, instructions, criteria),
-            timeout=_GUARD_FALLBACK_WAIT_S,
+            _run_guard_pick(
+                harness,
+                trace_id,
+                state,
+                options,
+                instructions,
+                criteria,
+                point=point,
+                default=default,
+                deadline=deadline,
+            ),
+            timeout=net_s,
         )
     except TimeoutError:
         return None
@@ -438,6 +960,7 @@ async def decide(
     criteria: Mapping[str, str] | None = None,
     default: str | None = None,
     jev_failed: asyncio.Event | None = None,
+    deadline: float | None = None,
 ) -> DecisionRecord:
     """Decide one closed-option question, `point`, over the bounded `state`.
 
@@ -487,6 +1010,12 @@ async def decide(
     still delivers. It is never set when Jev made a pick: the record is
     then already returned.
 
+    `deadline` (fix round, F-72-A02, J05): the caller's own deadline on the
+    monotonic clock, the guardrail's for `guardrail.relevancy`. The guard
+    tier's pick is asked through `ask_guard_model` to that deadline, with a
+    hedge at its hedge point; without one, to `_GUARD_BUDGET_S` from when
+    the guard tier is asked, as before.
+
     Raises:
         ValueError: if `options` is empty (there is nothing to decide
             between), the description does not fit the options (see
@@ -507,7 +1036,15 @@ async def decide(
         if jev_failed is not None:
             jev_failed.set()
         guard_choice = await _run_guard_pick(
-            harness, trace_id, bounded_state, options, instructions, criteria
+            harness,
+            trace_id,
+            bounded_state,
+            options,
+            instructions,
+            criteria,
+            point=point,
+            default=fallback_default,
+            deadline=deadline,
         )
         return DecisionRecord(
             name=point,
@@ -537,7 +1074,15 @@ async def decide(
         jev,
     )
     guard_choice = await _guard_fallback_pick(
-        harness, trace_id, bounded_state, options, instructions, criteria
+        harness,
+        trace_id,
+        bounded_state,
+        options,
+        instructions,
+        criteria,
+        point=point,
+        default=fallback_default,
+        deadline=deadline,
     )
     return _jev_mode_record(point, options, jev, guard_choice, fallback_default)
 
