@@ -9,7 +9,7 @@ here before it is built. The detail behind the architecture cards sits under
 To do, below its table. Every other item's detail, every closed item and every
 note behind the board are in `testing/UI_fixes_done.md`.
 
-Last updated: 2026-09-27.
+Last updated: 2026-09-29.
 
 ## To do
 
@@ -17,7 +17,6 @@ In priority order.
 
 | # | Feature, in plain words | Item | Waiting on |
 |---|---|---|---|
-| 63 | Every one of eight live answers on develop came back "not yet confirmed" because a background PubMed or ClinVar search did not finish, and an answer marked that way is never saved, so none of those searches can be reopened from history or through MCP | Phase 8.10's product review, 2026-09-27, PR-8.10-12 and PR-8.10-10 (`tracker/phase_8.10.md`): the `s3` run shows `pubmed_search` and `clinvar_search` ending "error - search: 0 id(s)", and `feedback/capture.py:74` saves only confirmed answers | Nobody on it: an answer-path diagnosis first, of whether those searches fail on develop only or on production too, and of whether a not-yet-confirmed answer should be saved |
 | 2 | Every answer opens with the code-built "Found N ... records for X" line, whatever the writing model, so its first sentence never answers the question | `testing/Developer/reports/2026-09-25_writer_bench/results.md` and the 8.1 product review; the design: `testing/Developer/reports/2026-09-26_phase_8.7/design.md`; phase 8.10's product review, PR-8.10-02 (`tracker/phase_8.10.md`): the Plain language BRCA1 answer opens "I found 4 conditions related to BRCA1" and names no disease | You said go, 2026-09-25, and on 2026-09-26 the answer speed plan joined it (`DECISIONS.md`): phase 8.7, next after 8.6's follow-up, carries cards 2 and 50 together |
 | 4 | Tell the reader when the system wrote its own search rather than using a checked one | the drafted search | Nobody on it |
 | 5 | Models chosen per task by tier: open source where an equivalent is available, frontier models where they are needed | [direction, point d](#the-product-owners-direction-on-the-model-architecture-2026-09-23) | Your decision of 2026-09-27 (`DECISIONS.md`): Claude Opus 5.5 at minimal effort becomes the writer if the bench's finalist round confirms it. Phase 8.7 builds the per-model effort setting and raises the per-question cap to 25 cents, on develop first. Bench: `testing/Developer/reports/2026-09-26_writer_bench_3/`. Earlier: Your decision of 2026-09-26 (`DECISIONS.md`): frontier models from Anthropic, OpenAI, xAI and Google are candidates, chosen by measured quality and speed. A third bench follows the answer speed diagnosis (card 50) and covers the tiers it names; its spend comes to you first. Earlier: Your decision, after phase 8.9: the second bench (`testing/Developer/reports/2026-09-26_writer_bench_2/results.md`) favours Kimi K2.5 on cost, but its Opus rows measured a request bug, and the writer is not the constraint while its input lacks the answer |
@@ -74,6 +73,10 @@ In priority order.
 | 64 | One of card 58's Stop tests, "keeps Stop on through the writing wait", passes only because its fake-time loop runs longer than a real timer's remaining delay, so on a faster machine it would fail though Stop works | Card 58's fresh verifier, F-58-V01, `testing/Developer/reports/2026-09-27_card58_stop/review.md`: 6 of 6 passes at the committed loop step, 1 of 6 at a longer one | Nobody on it: test only, switch to fake timers before the run arrives and give the arm the 30 second timeout its siblings have |
 | 65 | A release can silently drop an earlier release's section from the changelog: when two releases in a row leave their changelog pull requests unmerged and the changelog is edited on develop in between, only the latest sections survive, though the GitHub Release notes keep them. Three smaller release-job defects ride along: a squash-merged changelog pull request makes a release run develop's unreleased scripts; re-running a failed release after production moved skips the older release's GitHub Release; one test's description claims more than it checks | The release fix's fresh verifier, 2026-09-27: F-REL-V05, V01, V02, V03 and V04 in `testing/Developer/reports/2026-09-27_release_fix/review.md` | Nobody on it: must land before the next release of either repository, in both copies together; dial position 3, since it changes `.github/` (`DECISIONS.md`, 2026-09-27) |
 | 66 | Move `graphql-core`, the engine under the GraphQL library, from the pinned 3.2.11 to 3.3.0, which rewords GraphQL's own error messages that the error mask passes through by their exact text | The pin of 2026-09-27, #127: 3.3.0 turned 21 unit tests red the afternoon it was published (`DECISIONS.md`) | Nobody on it: a reviewed change of its own, once 3.3.0 has a few weeks' track record; update the error mask's list of passed-through messages and their tests together |
+| 67 | A reopened "not yet confirmed" answer written during an NCBI outage still says the database is down "right now" and to try again later, with no date, so a person reopening it days later reads a stale warning as current | Card 63's adversary, F-63-A03 (`testing/Developer/reports/2026-09-27_card63/adversary.md`) | Nobody on it: decide whether a saved answer's outage note is dated or reworded when reopened |
+| 68 | An NCBI outage reported as an XML error body is not recognised as an outage, so its note keeps "Ask again to retry" | Card 63's adversary, F-63-A04 | Nobody on it: first, whether NCBI's EFetch ever answers an outage that way |
+| 69 | A failed fetch, summary or link still hands NCBI's own error text, up to 500 characters, to the synthesis prompt's structured fields | Card 63's judge, F-63-J04, pre-existing (`core/graph.py`, `_ncbi_efetch_output_to_structured_fields` and its Cypher twin) | Nobody on it: a diagnosis first, of whether any of that text can reach the answer |
+| 70 | Two moderate advisories remain in the frontend's test tools, `vitest` and `@vitest/mocker`; clearing them needs a major version bump | #129 on 2026-09-29 cleared the high one, `fast-uri`, which had turned gate 7 red; these sit below gate 7's high threshold | Nobody on it: a reviewed upgrade of its own, with the frontend suite run on the new major |
 
 Below sits the detail behind architecture cards 8 to 13 and card 14, 11.11.
 It moved here from `testing/UI_fixes_done.md` on 2026-09-24 without a word
@@ -403,7 +406,6 @@ as the answer to a failure the harness has not been worked on yet.
 | What | Cards | Where |
 |---|---|---|
 | Phase 8.7: the first sentence answers the question, the records show at about 8 seconds, and Opus writes | 2, 50, 5 | `tracker/phase_8.7.md`, branch `phase/8.7-answers-sooner`; parked 2026-09-27 with its three builders part-way, each listed in `HANDOFF.md` |
-| Card 63: every "not yet confirmed" answer saved, and a search down at NCBI said so | 63 | branch `fix/card63-tested`: built and tested, adversary PASS; parked 2026-09-27 with the judge's round part-way (`HANDOFF.md`) |
 | Card 53: stale facts on the pages and in the documents | 53 | branch `fix/card53-stale-facts`, parked 2026-09-27 (`HANDOFF.md`) |
 | Card 62: install and connect from the Integrations page on the first try | 62 | branch `fix/card62-install-first-try`, parked 2026-09-27 (`HANDOFF.md`) |
 | Two reviews of the harness, since "I do not think our harness works well right now": the product's, which turns a question into an answer, and the build's, which is how the product gets built; each ends in ranked changes and questions for you | the product owner, 2026-09-25 | `testing/Developer/reports/2026-09-25_harness_review/product_harness.md` and `build_harness.md` |
@@ -416,50 +418,51 @@ the last column.
 
 | # | What to check, in plain words | Item | Queries |
 |---|---|---|---|
-| 1 | Stop works until the first sentence of the answer is on screen, and a stop in that window shows "Search stopped" and nothing of the answer | card 58 | 98 |
-| 2 | The web app carries its libraries' license notices: React, React DOM and MUI, each with its version and license text | card 60 | 99 |
-| 3 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | cards 49 and 21, phase 8.10 | 90 to 97, and 60 |
-| 4 | An answer about something else never says "MedGen lists no clinical features for ..." | card 1, T-8.6-06 | 87 |
-| 5 | At Researcher depth, a question about a disease's features names them in the written answer too | card 31, T-8.6-06 | 81 |
-| 6 | A question carrying hidden instructions, or asking to change the graph, is refused, and Jev makes that call | T-8.6-04, T-8.6-05, R-02 | 88, 89 |
-| 7 | A graph search that cannot finish gives up after 30 seconds, not 90 | card 45, R-09 | 59 |
-| 8 | The second writing call runs only when it can change the answer | card 3, T-8.6-07 | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-07 |
-| 9 | Jev's and DeepSeek's picks are compared offline instead of racing the answer | card 34, T-8.6-03 | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-03 |
-| 10 | The Answer modes card gives each mode its own block and says what the mode gives, never who the reader is; on a phone it now fits on screen | 13.2 | 86 |
-| 11 | A question the biomedical word list does not know is judged by the classifier, not refused: the tree of life is answered, pizza is refused, and off-topic follow-ups are refused | Jev as the classifier, golden row G-038 | 83 |
-| 12 | "Recent papers" asks how far back to search, and the choice narrows the papers | 12.15 | 84 |
-| 13 | Whether a question wants papers is a classifier's choice, not a word list | 12.16 part 3 | 85 |
-| 14 | Jev makes the small choices on develop and DeepSeek's pick is recorded beside it: read the comparison table | Jev, the probability model trial | Nothing to try by hand: `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md` |
-| 15 | The NCBI and enrichment calls are listed once as typed functions the classifier can choose from | 11.32, the function catalogue | Nothing to try by hand: `src/system_03_search_agent/tools/catalogue.py` |
-| 16 | Golden row G-035 accepts the Taxonomy link the product cites | the golden rows | Nothing to try by hand |
-| 17 | The graph's data gaps are handed to the repository that writes the graph | disease names, the hand-over | Nothing to try by hand: read `docs/data-engineering/Graph_data_hand_over_2026-09-25.md` |
-| 18 | The design card's four type values match the shipped code | 2.13, the four type values | Nothing to try by hand |
-| 19 | `/phase-checkpoint` names the counts line by what it holds | the checkpoint line | Nothing to try by hand |
-| 20 | A question about a disease's features names them, each cited to MedGen: in the written answer at Plain language, in the list at Researcher | 12.14 | 81 |
-| 21 | A good question is never refused because the think step's reply was malformed | 12.17 | 80 |
-| 22 | An answer can cite up to 30 sources, and a question about papers reaches them | the ceiling, the byte ceiling | 82 |
-| 23 | An NCBI outage no longer turns the build red | the live NCBI unit test | Nothing to try by hand: CI's unit gate deselects the live test |
-| 24 | "Based on N sources" equals the SOURCES count on the page | 12.11, 12.8 | 74 |
-| 25 | No broken sentences and no restatement paragraph | 12.12 | 75 |
-| 26 | The answer answers the question in plain sentences drawn from the papers, each cited | 12.10 | 73 |
-| 27 | A search clicked in the history rail, in the same tab, opens its saved answer | 12.13 | 67 |
-| 28 | Plain language and researcher differ on every question | 12.9 | 72 |
-| 29 | A one-to-three-word question is asked back, with choices written for its subject | 12.3 | 76 |
-| 30 | The seven questions your skip manager asked all answer | 12.1 | 68, 69, 73 |
-| 31 | A literature question typed in lowercase is not refused as "Outside biomedical research" | 12.2 | 70 |
-| 32 | A refusal says "Ask another question" | 12.4 | 71 |
-| 33 | A question naming no gene and no disease finds the papers, each shown once | 12.7 | 69 |
-| 34 | The MCP configuration on the Integrations page connects, and never sends you to an `http://` address | 11.30 | 60 |
-| 35 | History shows the saved answer at once, with Run again | 10.2 | 67 |
-| 36 | MeSH terms show as real terms, each linked to its MeSH record | G-019 | 64 |
-| 37 | The opening sentence's count agrees with the list beneath it | the opening count | 65 |
-| 38 | The Marfan phenotype question no longer says "I could not find evidence"; what it answers instead is 12.14 in To do | the phenotype template | 66 |
-| 39 | Two questions keep their own graph search: MLH1 and MSH2, and GEO datasets for TP53 | G-033, G-037 | 24, 25 |
-| 40 | A chromosome range is answered with its genes and records, and a range with no assembly asks which | the coordinate range | 27, 28, 29 |
-| 41 | An answer never lists the question's own words as diseases it did not address | the question's own words | 23, 25 |
-| 42 | A BioProject or BioSample accession is answered, and an unknown one is named as not found | the accessions | 30, 31, 32 |
-| 43 | Pathogen Detection isolate questions answer with a table of isolates and their resistance genes | G-035 | 33, 35, 36, 38, 39, 40, 44, and `testing/Product/queries/Isolate_search_queries_and_workflow.md` |
-| 44 | Copy an answer and paste it somewhere: no "Source 1, layer 2" text | 11.14 | 6 |
-| 45 | Open the answer-modes info button: no promise of a word count | 11.36 | 3 |
-| 46 | Change the mode while a search is running: it cannot change mid-search | 9.12 | 4 |
-| 47 | Open the app twice: different scientists, the same answer | 8.4 | 9 |
+| 1 | A "not yet confirmed" answer reopens from your searches with its trust line and notes, and during an NCBI outage the note says the database is down and may be missing things, never that the answer has none | card 63, #128 | 100, 67 |
+| 2 | Stop works until the first sentence of the answer is on screen, and a stop in that window shows "Search stopped" and nothing of the answer | card 58 | 98 |
+| 3 | The web app carries its libraries' license notices: React, React DOM and MUI, each with its version and license text | card 60 | 99 |
+| 4 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | cards 49 and 21, phase 8.10 | 90 to 97, and 60 |
+| 5 | An answer about something else never says "MedGen lists no clinical features for ..." | card 1, T-8.6-06 | 87 |
+| 6 | At Researcher depth, a question about a disease's features names them in the written answer too | card 31, T-8.6-06 | 81 |
+| 7 | A question carrying hidden instructions, or asking to change the graph, is refused, and Jev makes that call | T-8.6-04, T-8.6-05, R-02 | 88, 89 |
+| 8 | A graph search that cannot finish gives up after 30 seconds, not 90 | card 45, R-09 | 59 |
+| 9 | The second writing call runs only when it can change the answer | card 3, T-8.6-07 | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-07 |
+| 10 | Jev's and DeepSeek's picks are compared offline instead of racing the answer | card 34, T-8.6-03 | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-03 |
+| 11 | The Answer modes card gives each mode its own block and says what the mode gives, never who the reader is; on a phone it now fits on screen | 13.2 | 86 |
+| 12 | A question the biomedical word list does not know is judged by the classifier, not refused: the tree of life is answered, pizza is refused, and off-topic follow-ups are refused | Jev as the classifier, golden row G-038 | 83 |
+| 13 | "Recent papers" asks how far back to search, and the choice narrows the papers | 12.15 | 84 |
+| 14 | Whether a question wants papers is a classifier's choice, not a word list | 12.16 part 3 | 85 |
+| 15 | Jev makes the small choices on develop and DeepSeek's pick is recorded beside it: read the comparison table | Jev, the probability model trial | Nothing to try by hand: `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md` |
+| 16 | The NCBI and enrichment calls are listed once as typed functions the classifier can choose from | 11.32, the function catalogue | Nothing to try by hand: `src/system_03_search_agent/tools/catalogue.py` |
+| 17 | Golden row G-035 accepts the Taxonomy link the product cites | the golden rows | Nothing to try by hand |
+| 18 | The graph's data gaps are handed to the repository that writes the graph | disease names, the hand-over | Nothing to try by hand: read `docs/data-engineering/Graph_data_hand_over_2026-09-25.md` |
+| 19 | The design card's four type values match the shipped code | 2.13, the four type values | Nothing to try by hand |
+| 20 | `/phase-checkpoint` names the counts line by what it holds | the checkpoint line | Nothing to try by hand |
+| 21 | A question about a disease's features names them, each cited to MedGen: in the written answer at Plain language, in the list at Researcher | 12.14 | 81 |
+| 22 | A good question is never refused because the think step's reply was malformed | 12.17 | 80 |
+| 23 | An answer can cite up to 30 sources, and a question about papers reaches them | the ceiling, the byte ceiling | 82 |
+| 24 | An NCBI outage no longer turns the build red | the live NCBI unit test | Nothing to try by hand: CI's unit gate deselects the live test |
+| 25 | "Based on N sources" equals the SOURCES count on the page | 12.11, 12.8 | 74 |
+| 26 | No broken sentences and no restatement paragraph | 12.12 | 75 |
+| 27 | The answer answers the question in plain sentences drawn from the papers, each cited | 12.10 | 73 |
+| 28 | A search clicked in the history rail, in the same tab, opens its saved answer | 12.13 | 67 |
+| 29 | Plain language and researcher differ on every question | 12.9 | 72 |
+| 30 | A one-to-three-word question is asked back, with choices written for its subject | 12.3 | 76 |
+| 31 | The seven questions your skip manager asked all answer | 12.1 | 68, 69, 73 |
+| 32 | A literature question typed in lowercase is not refused as "Outside biomedical research" | 12.2 | 70 |
+| 33 | A refusal says "Ask another question" | 12.4 | 71 |
+| 34 | A question naming no gene and no disease finds the papers, each shown once | 12.7 | 69 |
+| 35 | The MCP configuration on the Integrations page connects, and never sends you to an `http://` address | 11.30 | 60 |
+| 36 | History shows the saved answer at once, with Run again | 10.2 | 67 |
+| 37 | MeSH terms show as real terms, each linked to its MeSH record | G-019 | 64 |
+| 38 | The opening sentence's count agrees with the list beneath it | the opening count | 65 |
+| 39 | The Marfan phenotype question no longer says "I could not find evidence"; what it answers instead is 12.14 in To do | the phenotype template | 66 |
+| 40 | Two questions keep their own graph search: MLH1 and MSH2, and GEO datasets for TP53 | G-033, G-037 | 24, 25 |
+| 41 | A chromosome range is answered with its genes and records, and a range with no assembly asks which | the coordinate range | 27, 28, 29 |
+| 42 | An answer never lists the question's own words as diseases it did not address | the question's own words | 23, 25 |
+| 43 | A BioProject or BioSample accession is answered, and an unknown one is named as not found | the accessions | 30, 31, 32 |
+| 44 | Pathogen Detection isolate questions answer with a table of isolates and their resistance genes | G-035 | 33, 35, 36, 38, 39, 40, 44, and `testing/Product/queries/Isolate_search_queries_and_workflow.md` |
+| 45 | Copy an answer and paste it somewhere: no "Source 1, layer 2" text | 11.14 | 6 |
+| 46 | Open the answer-modes info button: no promise of a word count | 11.36 | 3 |
+| 47 | Change the mode while a search is running: it cannot change mid-search | 9.12 | 4 |
+| 48 | Open the app twice: different scientists, the same answer | 8.4 | 9 |
