@@ -146,3 +146,11 @@ testing/User-feedback/
 
 # Internal NCBI proposal, budget, and strategy notes: owner's machine only, never committed.
 requirements/context/Private_NCBI_context.md
+
+# Reference material linked in on the owner's machine: only the two links below
+# are committed. Anything else placed in reference/ stays local, whatever its
+# name, so a link to a private repository can never be committed and its name
+# never has to be written here.
+reference/*
+!reference/agentic-search-data-engineering
+!reference/ncbi_ai_agents-ncbi-kg
