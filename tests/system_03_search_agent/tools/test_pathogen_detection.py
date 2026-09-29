@@ -4,7 +4,7 @@ The real `pathogen_ftp_transport.py` exists and is imported below in the
 normal case; the `try`/`except ModuleNotFoundError` block that follows
 installs a minimal placeholder module into `sys.modules` ONLY as a defensive
 fallback should that import ever fail (mirroring how an optional/plugin
-dependency is stubbed for a test run), never as evidence about this repo's
+dependency is stubbed for a test run), never as evidence about this repository's
 actual state. Every individual test still installs its OWN scripted
 behavior via `monkeypatch.setattr` on whichever module object (real or
 placeholder) ended up bound as `pathogen_detection.pathogen_ftp_transport`,

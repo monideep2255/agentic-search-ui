@@ -18,7 +18,7 @@
 #
 # NOTE: unlike Claude's own Bash tool calls, a SessionStart hook's internal
 # commands are not gated by block-bash-delete.sh. The move-to-Trash branch
-# below is the one place in this repo's hook set that mutates the filesystem
+# below is the one place in this repository's hook set that mutates the filesystem
 # unattended, and it was built and reviewed on that understanding (see the
 # chore/auto-clear-duplicate-copies PR). It never calls rm; it only relocates
 # verified-identical files to Trash.

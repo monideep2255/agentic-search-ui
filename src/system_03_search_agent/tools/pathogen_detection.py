@@ -82,7 +82,7 @@ property of the shipped module. Full narrative: `tracker/phase_3.5.md`
 Design decisions, live-verified against the real API and the real
 `pathogen_ftp_transport.py` (not guessed):
 
-1. ASYNC throughout, matching every other Layer 2 tool in this repo
+1. ASYNC throughout, matching every other Layer 2 tool in this repository
    (`ncbi_transport.execute_get`): `pathogen_ftp_transport`'s functions
    are `await`ed, and `client` is a fresh `httpx.AsyncClient()` opened
    once per `pathogen_detection` call and reused across every FTP read

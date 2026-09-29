@@ -2,7 +2,7 @@
 
 Claude Code instructions for `agentic-search-ui`. This IS a software project.
 
-This repo covers System 3 (search agent, API, UI). System 1 (data pipelines) and System 2 (knowledge graph) live in a separate repository symlinked at `reference/agentic-search-data-engineering`.
+This repository covers System 3 (search agent, API, UI). System 1 (data pipelines) and System 2 (knowledge graph) live in a separate repository symlinked at `reference/agentic-search-data-engineering`.
 
 Stack: Python 3.11+, FastAPI, LangGraph, React, PostgreSQL (user data), psycopg2 (AGE graph read-only), LiteLLM/multi-model harness.
 
@@ -66,7 +66,7 @@ Multi-model harness with three tiers:
 | `architecture/Multi_agent_system_design_explained.md` | Converted external reading on how groups of AI agents fail in a shared environment: correlated failure, tacit collusion, trust and dissent errors, turf wars, and the bounded-swarm architecture that contains them | Before designing anything that runs more than one agent against a shared resource: the bossman-mode builder fan-out, tool-call rate-limit pools, or any future multi-agent retrieval path |
 | `data-engineering/Knowledge_graph_on_server_reference.md` | A-Z operations reference for the live graph on Hetzner CPX42: SSH access, Cypher query examples, index listing, node/edge counts, cost breakdown | Before writing cypher_query tool or debugging graph access |
 | `ncbi/NCBI_databases_and_APIs_reference.md` | All 39 NCBI databases, API endpoints, rate limits, record counts | Before implementing Layer 2 tools (ncbi_efetch, ncbi_dbsnp) |
-| `ncbi/NCBI_repos_deep_dive.md` | Analysis of 13 NCBI GitHub repos: code to reuse, architecture decisions informed, patterns to adopt, what not to build locally | Before implementing any Layer 2 or Layer 3 tool; before making architecture decisions about entity resolution or data access |
+| `ncbi/NCBI_repos_deep_dive.md` | Analysis of 13 NCBI GitHub repositories: code to reuse, architecture decisions informed, patterns to adopt, what not to build locally | Before implementing any Layer 2 or Layer 3 tool; before making architecture decisions about entity resolution or data access |
 | `data-engineering/Project_overview_A_to_Z.md` | Navigation hub with pointers into every doc in the project | First doc to read for project orientation |
 | `build/Agent_teams_tmux_quickstart.md` | tmux launch guide so bossman-mode parallel builders show in live panes | Before running `/bossman-mode` with 2 or more builder tasks |
 | `Claude_security_plugin_usage.md` | Reference for the on-demand `claude-security` scan plugin: how to run a scan, apply patches, and how it complements the always-on `security-guidance` plugin | Before the release-workflow Step 3 security scan gate, or before opening a pull request |
@@ -184,7 +184,7 @@ The invocation is always the skill's exact name. A shortened alias does not reso
 | learnings | Capture what broke and what fixed it in LEARNINGS.md, and recall it before a phase | `/learnings` |
 | dev-standards | Production readiness review (6 lenses) | `/dev-standards` |
 | objective-review | Critical feedback, not agreement | `/objective-review` |
-| repo-dive | First-principles analysis of a reference repo | `/repo-dive <path>` |
+| repo-dive | First-principles analysis of a reference repository | `/repo-dive <path>` |
 | skill-adapt-verify | Verify adapted skill for stale paths and style violations | `/skill-adapt-verify <path>` |
 | ship | Run the CI gates locally (ruff over the whole repository, isort, the unit suite when Python changed, `npm run build` when the frontend changed, and the doc structure check), sync the four canonical docs, commit with a Conventional Commit subject, push (develop for a card alone at dial position one or two, a branch with a pull request for a numbered phase or position three), prove the remote advanced, confirm the deploy, and clear leftover agent worktrees. A push needs no checkpoint first; at a session end, `HANDOFF.md` is rewritten before the push, and no other document needs today's date | `/ship` |
 | first-principles | Explain concepts from fundamentals | `/first-principles` |
@@ -234,7 +234,7 @@ Portable content, Claude-Code-coupled invocation:
 
 Does not port, and this is the blocker:
 
-- The four security hooks (`scan-secrets.sh`, `scan-write-secrets.sh`, `block-bash-delete.sh`, `block-sensitive-read.sh`) are wired to Claude Code's PreToolUse and PostToolUse contract, and a fifth, `scan-duplicate-copies.sh`, is wired to SessionStart. These five are the only structural enforcement in this repo; every other control is an instruction a model chooses to obey. `scan-duplicate-copies.sh` is also the one hook that mutates the filesystem unattended (moving verified byte-identical duplicate-copy artifacts to Trash, never `rm`), since a SessionStart hook's internal commands are not gated by `block-bash-delete.sh`, which only fires on Bash calls Claude itself issues. Under another harness none of the five run, and nothing reports that they did not.
+- The four security hooks (`scan-secrets.sh`, `scan-write-secrets.sh`, `block-bash-delete.sh`, `block-sensitive-read.sh`) are wired to Claude Code's PreToolUse and PostToolUse contract, and a fifth, `scan-duplicate-copies.sh`, is wired to SessionStart. These five are the only structural enforcement in this repository; every other control is an instruction a model chooses to obey. `scan-duplicate-copies.sh` is also the one hook that mutates the filesystem unattended (moving verified byte-identical duplicate-copy artifacts to Trash, never `rm`), since a SessionStart hook's internal commands are not gated by `block-bash-delete.sh`, which only fires on Bash calls Claude itself issues. Under another harness none of the five run, and nothing reports that they did not.
 - `sync-agents-md.sh`, the same way. Its absence is quieter but leaves a stale `AGENTS.md`. It does not sync an agent worktree either, since it resolves its root to the main checkout, so a worktree regenerates `AGENTS.md` by running the hook with `--force` and `CLAUDE_PROJECT_DIR` pointed at itself.
 - `sync-board.sh` is no longer wired in any harness: its entry left `.claude/settings.json` on 2026-09-26, when the board it re-rendered was frozen. It runs only by hand, with `--force`.
 - Agent teams and the tmux pane display. Parallel execution would need whatever the other agent provides instead.

@@ -51,7 +51,7 @@ the citable record host (`clinicaltrials.gov/study/{nctId}`) share a
 domain but not a path, so the path requirement alone is enough to keep the
 two apart.
 
-Design decision 4, `eligibility_summary` is this repo's own bounded
+Design decision 4, `eligibility_summary` is this repository's own bounded
 projection of ClinicalTrials.gov's full free-text eligibility criteria
 block, not a field the API itself returns pre-summarized. Confirmed live
 2026-08-08 (`tracker/phase_3.5.md`'s pre-build probes): `eligibilityModule.
@@ -220,7 +220,7 @@ class ClinicalTrialsSearchOutput(BaseModel):
     `status`, `studies`, `study_count`, `total_count`, and `truncated` are
     Section 6.7's own `required` list (line ~1379); every other field
     defaults to an empty collection, `None`, or `False`, the same
-    discipline every sibling tool's output schema in this repo already
+    discipline every sibling tool's output schema in this repository already
     follows.
     """
 

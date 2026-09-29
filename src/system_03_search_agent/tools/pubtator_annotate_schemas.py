@@ -42,7 +42,7 @@ Design decision 2, `minLength: 1` on `entity_lookup.query` (F-3.3-02,
 returns HTTP 400 with a bare JSON array of strings,
 `["query is a mandatory parameter."]`, a THIRD PubTator3 error-body shape
 neither this tool's `annotate_publications` branch (`{"detail": ...}`) nor
-any other tool in this repo's error-message extraction
+any other tool in this repository's error-message extraction
 (`ncbi_transport._extract_status_coded_error_message`) recognizes; a caller
 that reached it would get the generic `"HTTP 400 with no structured error
 body"` fallback message, a safe but non-specific outcome. Rejecting an empty
@@ -202,7 +202,7 @@ naming every withheld field; this tool set an over-cap `entities[]` or
 reconsideration this was a scoping accident, not a considered product
 tradeoff: T-3.3-03's original authorization named exactly one additive
 field (`pmids_not_found`) because that was the finding on the table at the
-time, not because per-item disclosure was weighed and declined. This repo
+time, not because per-item disclosure was weighed and declined. This repository
 has now used the withhold-and-disclose pattern three times (`ncbi_dbsnp`
 in build phase 3.2, `litvar2_lookup` earlier in this same phase), so the
 two sibling Layer 3 tools now agree.
@@ -507,7 +507,7 @@ class PubtatorAnnotateOutput(BaseModel):
 
     Only `status` and `mode` are required, per Section 6.4 line 1117.
     `status` uses the same three-value pattern-constraint style as every
-    other tool's output in this repo (`cypher_schemas.CypherQueryOutput`,
+    other tool's output in this repository (`cypher_schemas.CypherQueryOutput`,
     `NcbiEfetchOutput`, `NcbiDbsnpOutput`), for the same reason: it is a bare
     string in the wire format, and a regex pattern is the direct
     implementation of the spec's `enum`.

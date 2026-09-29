@@ -252,8 +252,37 @@ Reads:
       overrides, optional)
 
 Writes:
-    - Nothing. Outbound HTTPS requests only; no local file or database
-      writes.
+    - Nothing to a file or a database. Outbound HTTPS requests only.
+    - One warning log line when an E-utilities success response carries an
+      `ERROR` body (card 63): the database name and the failure kind, never
+      a key, never a URL, never NCBI's own text. See "Failure kinds" below.
+
+## Failure kinds (card 63, 2026-09-27)
+
+A failed call is told to a person in one of four plain sentences, and the
+choice between them is made here, from facts this module already holds,
+never from a string a later step has to parse:
+
+- `service_down`: E-utilities answered with a success status and an
+  `ERROR` body saying its own search is unavailable. Measured from 02:24
+  UTC on 2026-09-27: every ESearch answered HTTP 200 with an `ERROR` that
+  read "Search Backend failed ... Search is temporarily unavailable ...
+  Cannot connect to SOLR".
+- `rate_limited`: HTTP 429, or this module's own limiter refused the call.
+- `timed_out`: the call ran past its timeout budget, after its one retry.
+- `other`: anything else, including an `ERROR` body that names a bad
+  request rather than an outage.
+
+NOT EVERY `ERROR` BODY IS AN OUTAGE, and that is why `service_down` reads
+the body rather than trusting the key alone. The same prefix, "Search
+Backend failed", also opens "Search Backend failed: ... Empty Term in the
+request" (`test_ncbi_eutils_actions.py`'s own fixture), which is a request
+NCBI could not run, not a service that is down. Telling a person "PubMed is
+down, try later" for that would be a confident wrong statement. So the body
+is matched against a short fixed list of outage phrases
+(`_SERVICE_DOWN_MARKERS`), and everything else is `other`. The text is
+untrusted and is only ever MATCHED, never echoed: a crafted body can at
+most pick one of these four words.
 
 Depended by:
     - system_03_search_agent.tools.ncbi_eutils_actions (T-3.1-03)
@@ -277,6 +306,7 @@ import json
 import logging
 import math
 import os
+import re
 import time
 import urllib.parse
 from collections.abc import Awaitable, Callable, Mapping
@@ -470,6 +500,85 @@ def audit_error_code(exc: BaseException) -> str:
     return UNEXPECTED_ERROR_CODE
 
 
+# ---------------------------------------------------------------------------
+# Failure kinds (card 63). See the module docstring's "Failure kinds".
+# ---------------------------------------------------------------------------
+
+#: What went wrong with one failed call, in a small fixed set a person can be
+#: told about in plain words. `ncbi_efetch_schemas.NcbiEfetchOutput` carries
+#: it on an error output, and `core/graph.py` turns it into the tool result
+#: summary and the note under the answer.
+FailureKind = Literal["service_down", "rate_limited", "timed_out", "other"]
+FAILURE_KINDS: Final[tuple[FailureKind, ...]] = (
+    "service_down",
+    "rate_limited",
+    "timed_out",
+    "other",
+)
+
+#: The phrases, lower case, that mark an E-utilities `ERROR` body as the
+#: service itself being down rather than a request it refused. Both come
+#: from the body NCBI served during the 2026-09-27 outage ("Search is
+#: temporarily unavailable", "Cannot connect to SOLR"). A body with neither
+#: is `other`, so a new outage wording costs a person the older, generic
+#: note, never a false "it is down".
+_SERVICE_DOWN_MARKERS: Final[tuple[str, ...]] = ("unavailable", "cannot connect")
+
+#: How much of an `ERROR` value is read when matching the markers above. The
+#: value is untrusted and unbounded; the measured one is under 200 characters.
+_MAX_ERROR_TEXT_MATCHED: Final[int] = 2000
+
+#: A database name as it may appear in a log line. Every database this
+#: module is asked about comes from a schema-validated input, so this is
+#: defence in depth: anything else is logged as `unrecognised`, never as
+#: the value itself.
+_LOGGABLE_DATABASE: Final[re.Pattern[str]] = re.compile(r"^[a-z0-9_]{1,32}$")
+
+
+def failure_kind_for_exception(exc: BaseException) -> FailureKind:
+    """The failure kind of a `TransportError` (or anything else) raised by a call.
+
+    A connection failure is `other`, not `service_down`: a refused or reset
+    connection is as often our own network as NCBI's, and "it is down at
+    NCBI" is a claim this module can only make when NCBI itself says so.
+    """
+    if isinstance(exc, TransportTimeoutError):
+        return "timed_out"
+    if isinstance(exc, TransportRateLimitedError):
+        return "rate_limited"
+    return "other"
+
+
+def failure_kind_for_status(status_code: int) -> FailureKind | None:
+    """The failure kind of an HTTP status, or None for a success status.
+
+    Only 429 is `rate_limited`. A 5xx stays `other`: after this module's own
+    retry it may still be a passing blip, and asking again can help, which
+    is exactly the advice the `other` note gives.
+    """
+    if status_code == 429:
+        return "rate_limited"
+    if status_code >= 400:
+        return "other"
+    return None
+
+
+def _error_body_failure_kind(error_text: str) -> FailureKind:
+    """`service_down` when an `ERROR` body says the service is unavailable, else `other`."""
+    lowered = error_text[:_MAX_ERROR_TEXT_MATCHED].lower()
+    if any(marker in lowered for marker in _SERVICE_DOWN_MARKERS):
+        return "service_down"
+    return "other"
+
+
+def _loggable_database(database: str | None) -> str:
+    if database is None:
+        return "unspecified"
+    if _LOGGABLE_DATABASE.match(database):
+        return database
+    return "unrecognised"
+
+
 @dataclass(frozen=True)
 class ClassificationResult:
     """The outcome of classifying one response body (or status).
@@ -488,12 +597,19 @@ class ClassificationResult:
     never "retry immediately". Its client-side twin is
     `TransportRateLimitedError.retry_after`, which this module produces on
     its own when a call cannot be scheduled at all.
+
+    `failure_kind` (card 63) is set by the E-utilities classifier when the
+    body carried an `ERROR`, the one error this module can say more about
+    than "it failed". It is None on `ok` and `empty`, and None on an error
+    that this classifier has no more to say about, which a caller reads as
+    `other`.
     """
 
     status: Literal["ok", "empty", "error"]
     error_message: str | None = None
     body: Any = None
     retry_after: float | None = None
+    failure_kind: FailureKind | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -681,7 +797,7 @@ def _retry_after_hint(response: httpx.Response) -> str:
 # ---------------------------------------------------------------------------
 
 # Known-good top-level JSON envelope keys. Only "esearchresult" is
-# independently live-verified in this repo's capability sheet (premise
+# independently live-verified in this repository's capability sheet (premise
 # gate cases 7 and 9). "result" (ESummary) and "linksets" (ELink) follow
 # documented E-utilities convention but are NOT independently verified
 # here; T-3.1-03 (ncbi_eutils_actions) should live-verify them before its
@@ -705,7 +821,9 @@ _DOCTYPE_MARKER: Final[str] = "<!doctype"
 _ENTITY_MARKER: Final[str] = "<!entity"
 
 
-def classify_eutils_response(*, content_type: str, text: str) -> ClassificationResult:
+def classify_eutils_response(
+    *, content_type: str, text: str, database: str | None = None
+) -> ClassificationResult:
     """Classify an E-utilities response body. Deliberately takes no status.
 
     E-utilities returns HTTP 200 for a genuine empty result and for
@@ -716,6 +834,11 @@ def classify_eutils_response(*, content_type: str, text: str) -> ClassificationR
     comes from the body alone, decided by allowlist: a body matching
     neither a known-good success shape nor a recognized error shape is
     `status: "error"`, fail closed, never a silent `"ok"`.
+
+    `database` (card 63) is used for one thing only: the warning logged
+    when the body carries an `ERROR`, so an outage shows up in the logs by
+    database. It never changes a verdict. A caller that omits it logs
+    `unspecified`.
     """
     sniffed_json = "json" in content_type or (
         not content_type and text.lstrip().startswith(("{", "["))
@@ -723,7 +846,7 @@ def classify_eutils_response(*, content_type: str, text: str) -> ClassificationR
     sniffed_xml = "xml" in content_type or (not content_type and text.lstrip().startswith("<"))
 
     if sniffed_json:
-        return _classify_eutils_json(text)
+        return _classify_eutils_json(text, database)
     if sniffed_xml:
         return _classify_eutils_xml(text)
     return ClassificationResult(
@@ -735,7 +858,29 @@ def classify_eutils_response(*, content_type: str, text: str) -> ClassificationR
     )
 
 
-def _classify_eutils_json(text: str) -> ClassificationResult:
+def _error_body_result(error_value: Any, body: Any, database: str | None) -> ClassificationResult:
+    """The verdict for an E-utilities success response whose body carries `ERROR`.
+
+    Card 63: this response was never logged, so a PubMed outage that made
+    every ESearch answer HTTP 200 with an `ERROR` body left no trace in the
+    logs for hours. The warning names the database and the failure kind and
+    nothing else: not the key, not the URL (this function never sees
+    either), and not NCBI's own text, which is untrusted external content.
+    """
+    error_text = str(error_value)
+    kind = _error_body_failure_kind(error_text)
+    logger.warning(
+        "E-utilities answered with an ERROR body (database %s, failure kind %s); "
+        "NCBI's own text is not logged",
+        _loggable_database(database),
+        kind,
+    )
+    return ClassificationResult(
+        status="error", error_message=error_text, body=body, failure_kind=kind
+    )
+
+
+def _classify_eutils_json(text: str, database: str | None = None) -> ClassificationResult:
     try:
         body = json.loads(text)
     except (json.JSONDecodeError, ValueError):
@@ -774,10 +919,10 @@ def _classify_eutils_json(text: str) -> ClassificationResult:
     # before the envelope type check, so it fires regardless of what the
     # envelope type is.
     if isinstance(body, dict) and "ERROR" in body:
-        return ClassificationResult(status="error", error_message=str(body["ERROR"]), body=body)
+        return _error_body_result(body["ERROR"], body, database)
 
     if isinstance(envelope, dict) and "ERROR" in envelope:
-        return ClassificationResult(status="error", error_message=str(envelope["ERROR"]), body=body)
+        return _error_body_result(envelope["ERROR"], body, database)
 
     # The near-miss twin of the ERROR case above: a genuine zero-hit
     # ESearch carries no ERROR key at all, only count "0" and an empty

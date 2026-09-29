@@ -3,7 +3,7 @@ paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", 
 ---
 ## System design patterns
 
-Mental models for designing the search agent, API routes, UI components, and tool integrations in this repo.
+Mental models for designing the search agent, API routes, UI components, and tool integrations in this repository.
 
 ### 1. Three-state permissions (allow / deny / ask)
 
@@ -70,7 +70,7 @@ The strongest constraint on an agent is removing the ability, not asking it not 
 
 When designing an agent, restrict its tools list first, then write the prompt for what remains:
 
-- The repo's read-only reviewer agents (`objective-review`, `first-principles`, `socratic`) get Read, Grep, and Glob only, never Write. They cannot modify a file even if a prompt injection in a reviewed document tried to talk them into it.
+- The repository's read-only reviewer agents (`objective-review`, `first-principles`, `socratic`) get Read, Grep, and Glob only, never Write. They cannot modify a file even if a prompt injection in a reviewed document tried to talk them into it.
 - Untrusted-source readers, any tool that ingests a Layer 3 enrichment fetch, a scraped abstract, or an NCBI record body, get Read access and the relevant API tool only, never Write and never the ability to call other tools directly (see the multi-agent pipeline gate in `production-standards`).
 - Layer 1 graph access is read-only by design at the connection level, not only by instruction. The credential itself cannot write, so no prompt, injected or otherwise, can talk the agent into a graph mutation.
 

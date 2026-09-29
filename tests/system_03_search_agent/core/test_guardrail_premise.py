@@ -104,7 +104,7 @@ Deliberately omitted, each with a reason:
   F-2.2-R-02 was an ASCII-only tokenizer that made every non-Latin script
   invisible to both of that phase's gates. A Section 10.2 allowlist is a
   keyword matcher and is structurally exposed to the same defect. Not covered
-  here because there is no pinned non-English ground truth in the repo to
+  here because there is no pinned non-English ground truth in the repository to
   assert against, and inventing one would assert a translation nobody has
   verified. Filed for the adversary rather than silently skipped.
 - Boundary-length queries at the 2000-character `Query.text` cap.

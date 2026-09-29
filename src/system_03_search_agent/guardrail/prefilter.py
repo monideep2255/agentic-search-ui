@@ -126,7 +126,7 @@ def normalize(text: str) -> str:
 # Check 1: injection markers.
 # ---------------------------------------------------------------------------
 
-# Literal phrases from Section 10.2, plus the specific shapes this repo has
+# Literal phrases from Section 10.2, plus the specific shapes this repository has
 # actually been attacked with. Each entry is matched against `normalize()`
 # output, so it is written in normalized form: lowercase, single spaces.
 _INJECTION_PHRASES: Final[tuple[str, ...]] = (
@@ -570,7 +570,7 @@ def _candidate_stems(token: str) -> tuple[str, ...]:
     and the flagship question of the entire product was rejected by one
     trailing character.
 
-    Hand-listing plurals is the wrong fix, and this repo already recorded why
+    Hand-listing plurals is the wrong fix, and this repository already recorded why
     on 2026-08-03: enumerating the shapes you thought of leaves every shape
     you did not. Stemming the input is finite; the plural list is not.
 

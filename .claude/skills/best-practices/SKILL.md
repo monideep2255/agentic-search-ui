@@ -20,11 +20,11 @@ If any check fails, fix the environment before writing new code.
 
 ## 2. Scope discipline
 
-This repo is System 3 (search agent, API, UI) only.
+This repository is System 3 (search agent, API, UI) only.
 
-The knowledge graph (System 1 + System 2) lives in a separate repo, symlinked at `reference/agentic-search-data-engineering`. System 3 connects to the live graph as a read-only client via psycopg2.
+The knowledge graph (System 1 + System 2) lives in a separate repository, symlinked at `reference/agentic-search-data-engineering`. System 3 connects to the live graph as a read-only client via psycopg2.
 
-Never add to this repo:
+Never add to this repository:
 
 - ETL pipeline code (FTP downloads, bulk parsers, KGX exporters)
 - Schema validation or BioLink mapping code
@@ -73,7 +73,7 @@ Every answer must trace back to specific records in NCBI databases. Functions th
 ## 6. Three-state permissions
 
 Allow:
-- Read any file in the repo.
+- Read any file in the repository.
 - Run tests, linters, type checkers.
 - Append to `DECISIONS.md`.
 - Start the dev server locally.

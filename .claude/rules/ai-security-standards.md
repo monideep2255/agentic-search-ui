@@ -39,7 +39,7 @@ This is a direct, load-bearing requirement for System 3, not a generic best prac
 - Grant agents, tools, and integrations the minimum permissions for the approved task. No admin-scoped tokens for convenience.
 - Nothing is allowed unless explicitly authorized. Document each agent's purpose, scope, and authorized actions before enabling autonomy: what it reads, what it can call, and what it must never do.
 - Rate-limit agent workflows. Watch for recursive loops and runaway execution, which is also a cost control concern (see `system-design-patterns`, pattern 4).
-- Layer 1 access is read-only by design: the graph connection never gets write credentials. Treat this as the concrete instance of least privilege for this repo, not just a principle.
+- Layer 1 access is read-only by design: the graph connection never gets write credentials. Treat this as the concrete instance of least privilege for this repository, not just a principle.
 
 ### Require human approval for high-risk actions
 

@@ -1,3 +1,0 @@
-[
-  {"phase": "8.2", "service": "search-agent-api", "name": "CLASSIFIER_PROVIDER", "before": null, "after": "jev"}
-]

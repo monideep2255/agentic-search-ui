@@ -78,7 +78,7 @@ import { useAgentRun } from "./hooks/useAgentRun";
 import { useRunView, EMPTY_RUN_VIEW } from "./hooks/useRunView";
 import { useAnswerReveal } from "./hooks/useAnswerReveal";
 import { usePacedEvents } from "./hooks/usePacedEvents";
-import { deriveStopEnabled } from "./components/chat/StopButton";
+import { deriveStopOffered } from "./components/chat/StopButton";
 import { AuthGate } from "./components/auth/AuthGate";
 import { AppShell } from "./components/shell/AppShell";
 import { useScreenRoute } from "./lib/routing";
@@ -1021,17 +1021,6 @@ export function App() {
     reducedMotion,
   });
   const pacedView = useRunView(pacedEvents);
-  /*
-   * Stop follows the REAL stream, not the paced one: once `done` has arrived
-   * the run is over on the server, and offering Stop while its last stages
-   * are still being shown would stop a finished run.
-   */
-  const realStopEnabled = deriveStopEnabled(events);
-  const streamed = useMemo(
-    () =>
-      pacedView.stopEnabled === realStopEnabled ? pacedView : { ...pacedView, stopEnabled: realStopEnabled },
-    [pacedView, realStopEnabled],
-  );
 
   /**
    * F-4.8-J-03. `useAgentRun` does not clear its buffer when `runId` goes null,
@@ -1044,7 +1033,7 @@ export function App() {
    * Gating on `runId` closes that window at the point of use, without reaching
    * into a hook other screens share.
    */
-  const liveView = runId === null ? EMPTY_RUN_VIEW : streamed;
+  const liveView = runId === null ? EMPTY_RUN_VIEW : pacedView;
   /*
    * 2026-09-14. The write step's sentences arrive as one burst, usually with
    * `done`, after a long silent gap. `useAnswerReveal` shows them one at a
@@ -1052,12 +1041,45 @@ export function App() {
    * one is on screen, so every consumer below sees one consistent state.
    * Once revealed, it returns `liveView` itself, unchanged.
    */
-  const view = useAnswerReveal(liveView, {
+  const revealedView = useAnswerReveal(liveView, {
     runKey: runId,
     stopped,
     flush: status === "error",
     reducedMotion,
   });
+  /*
+   * Card 58, 2026-09-27: Stop follows the SCREEN, not the stream.
+   *
+   * It used to follow the arrived stream, on the reasoning that once `done`
+   * had arrived the run was over on the server. It was, but the reader had
+   * not seen it: the pacing and the reveal above hold the answer back, and
+   * on develop Stop went grey up to 13 seconds before the first sentence
+   * was on screen. The product owner: "a user should be able to stop the
+   * answer at any point of time until the answer pops out."
+   *
+   * So Stop is offered until the first sentence is on screen or the view
+   * lands (`deriveStopOffered` has the full rule). Pressing it after the
+   * server finished discards the held answer, which is what the reader
+   * asked for; the server's record of that run is a known gap, carried in
+   * the card 58 report. The discarding is `useAnswerReveal`'s
+   * `withholdAnswer`, which holds for every shape of run, including one with
+   * no sentences at all (F-58-J02). Gated on `runId` because `useAgentRun`
+   * keeps the previous run's events until a new run replaces them
+   * (F-4.8-J-03).
+   */
+  const stopOffered =
+    runId !== null &&
+    deriveStopOffered(events, {
+      landed: revealedView.landed,
+      claimsShown: revealedView.claims.length,
+    });
+  const view = useMemo(
+    () =>
+      revealedView.stopEnabled === stopOffered
+        ? revealedView
+        : { ...revealedView, stopEnabled: stopOffered },
+    [revealedView, stopOffered],
+  );
 
   /*
    * What the tour is told about the run it is watching, derived from the

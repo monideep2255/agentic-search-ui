@@ -5,7 +5,7 @@
 # PreToolUse (Bash) hook: block commands containing secret patterns.
 # jq-free. Fails closed: if the command field cannot be parsed, scans the raw
 # input so a token cannot slip through on a parse failure. Catches both known
-# vendor token prefixes and this repo's secret-named-field shapes (PG_PASSWORD,
+# vendor token prefixes and this repository's secret-named-field shapes (PG_PASSWORD,
 # AUTH_SECRET, NCBI_API_KEY, LANGSMITH_API_KEY) assigned a literal value.
 #
 # A search names a field in order to find it, so the field check skips a

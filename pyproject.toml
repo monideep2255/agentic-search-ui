@@ -42,7 +42,7 @@ dependencies = [
     # T-4.3-06, build phase 4.3: exact pin, not a floor, per
     # tracker/phase_4.3.md's supply-chain review (no compromise report, MIT
     # licensed, no install-time execution surface in the wheel) and this
-    # repo's own `strawberry-graphql==0.324.0` published-docs-mismatch
+    # repository's own `strawberry-graphql==0.324.0` published-docs-mismatch
     # finding: the published docs available to that review were forty-odd
     # releases behind, so every API name the GraphQL surface depends on was
     # probed directly against this exact installed version rather than

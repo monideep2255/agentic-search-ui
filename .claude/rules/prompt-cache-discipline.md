@@ -49,7 +49,7 @@ Obligation 2: tool schemas are sorted alphabetically and fixed in code.
 
 Obligation 3: the few-shot pool loads once at process start from a versioned file.
 
-- The v1 few-shot pool (the seven or eight must-pass moat questions, seeded from the evaluation playbook) lives as a versioned file in the repo, loaded once into memory at process start.
+- The v1 few-shot pool (the seven or eight must-pass moat questions, seeded from the evaluation playbook) lives as a versioned file in the repository, loaded once into memory at process start.
 - Never read the pool from a live database on every request. The pool sits inside the stable prefix precisely because it does not change within a session, and a per-request database read defeats that: a changing prefix source, even one that happens to return the same content, is a liveness risk the caching design does not tolerate.
 - A promoted competency question is appended to the pool file at the weekly review cadence and takes effect on the next deploy, never a live hot reload mid-session.
 

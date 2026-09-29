@@ -49,6 +49,7 @@ How the two deploy:
 - Develop: merging to `develop` deploys the develop app.
 - Production: moves only when a release branch is cut from `develop` and merged into `production`.
 - A release also creates: a version tag, a changelog entry and a GitHub Release.
+- The changelog reaches `develop` through a pull request the release opens. The release job never pushes to `production`.
 
 The full procedure is [`docs/build/Release_flow.md`](docs/build/Release_flow.md).
 
@@ -295,17 +296,17 @@ Cost caps enforced per-query via the multi-model harness. Guard tier uses the ch
 
 ## Connection to System 1 and System 2
 
-- The knowledge graph that System 3 queries was built by the data engineering repo (System 1 + System 2).
-- That repo is symlinked at `reference/agentic-search-data-engineering` for documentation access.
+- The knowledge graph that System 3 queries was built by the data engineering repository (System 1 + System 2).
+- That repository is symlinked at `reference/agentic-search-data-engineering` for documentation access.
 - System 3 connects to the graph as a read-only client via psycopg2.
 
-Do not add any of these to this repo:
+Do not add any of these to this repository:
 
 - ETL pipeline code
 - Graph loading code
 - Data ingestion logic
 
-That belongs in the data engineering repo.
+That belongs in the data engineering repository.
 
 ## License
 

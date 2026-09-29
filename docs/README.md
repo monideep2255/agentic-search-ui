@@ -58,14 +58,14 @@ Last updated: 2026-09-26.
 |-----|-----------|
 | `Tool_implementation_mechanics.md` | Nineteen per-tool API traps from tech spec section 6. Facts a builder needs before wiring a tool. The policy versions live in the rules; this holds only the facts |
 | `NCBI_databases_and_APIs_reference.md` | All 39 NCBI databases: endpoints, rate limits, record counts |
-| `NCBI_repos_deep_dive.md` | Thirteen NCBI GitHub repos analyzed: what to reuse, what to adapt, what not to build locally |
+| `NCBI_repos_deep_dive.md` | Thirteen NCBI GitHub repositories analyzed: what to reuse, what to adapt, what not to build locally |
 
 ### `data-engineering/` the graph System 3 queries
 
 | Doc | What it is |
 |-----|-----------|
 | `Knowledge_graph_on_server_reference.md` | Operating the live graph: SSH access, Cypher examples, indexes, node and edge counts, cost |
-| `Project_overview_A_to_Z.md` | The navigation hub with pointers into every doc across the whole project, including the data engineering repo |
+| `Project_overview_A_to_Z.md` | The navigation hub with pointers into every doc across the whole project, including the data engineering repository |
 
 ### `rules/` a rule read on demand
 
@@ -79,7 +79,7 @@ Last updated: 2026-09-26.
 |------|-----------|
 | `Claude_security_plugin_usage.md` | How to run the on-demand security scan and apply patches. Pinned here, see below |
 | `Claude_Code_model_fallback_setup.md` | Personal dev-workflow note on switching Claude Code to a cheaper model backend past a weekly usage limit, without spending real money on prototype development |
-| `publish_body.sh` | Derives the publishable fragment from a standalone HTML page in this repo |
+| `publish_body.sh` | Derives the publishable fragment from a standalone HTML page in this repository |
 
 ## What is not here
 
@@ -88,16 +88,16 @@ Last updated: 2026-09-26.
 | The PRD, tech spec, evaluation playbook, strategic memo | `requirements/` |
 | The build order and its 26 phases | `requirements/Technical_specification.md` section 25 |
 | The gate list, every obligation mapped to its owner | `requirements/phase_5/Coverage_map.md` |
-| Decisions and their rationale | `DECISIONS.md` at the repo root |
-| What broke during the build and what fixed it | `LEARNINGS.md` at the repo root |
+| Decisions and their rationale | `DECISIONS.md` at the repository root |
+| What broke during the build and what fixed it | `LEARNINGS.md` at the repository root |
 | Current build status | `HANDOFF.md` for what is live and the next action; the board, `testing/UI_fix_plan.md`; an open phase's ledger, `tracker/phase_N.M.md`. `tracker/BOARD.md` and its kanban view `tracker/board.html` are frozen as the record of build phases through 6.2 |
-| Pipeline, parser, and graph-loading docs | The System 1 and 2 repo, symlinked at `reference/agentic-search-data-engineering` |
+| Pipeline, parser, and graph-loading docs | The System 1 and 2 repository, symlinked at `reference/agentic-search-data-engineering` |
 
 ## Two things to know about this folder
 
 `Claude_security_plugin_usage.md` cannot move. The locked technical specification references it at this exact path, and that spec is frozen until the Plan.md step 6.2 reconciliation. It is also a symlink into the owner's private reference repository rather than a real file here, so it resolves only on a machine with that repository checked out alongside this one, and will dangle in a fresh clone or in CI. `data-engineering/` is pinned for the same reason.
 
-HTML pages here are the source, not a copy. The file in this folder is what gets edited and version controlled. Publishing derives a fragment from it with `publish_body.sh`, into a temp path rather than into the repo. Never edit a published page and expect the repo to follow; the dependency runs one way.
+HTML pages here are the source, not a copy. The file in this folder is what gets edited and version controlled. Publishing derives a fragment from it with `publish_body.sh`, into a temp path rather than into the repository. Never edit a published page and expect the repository to follow; the dependency runs one way.
 
 ## Moved paths
 

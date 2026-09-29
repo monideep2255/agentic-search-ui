@@ -25,7 +25,7 @@ A first-principles walk through the System 3 (search agent) architecture, captur
 
 ## Why this document exists
 
-System 1 and System 2 are finishing up in this repo. The 5-database knowledge graph is being loaded on the Hetzner VPS as this doc is written. System 3 (the search agent, API, UI) lives in a separate repository that does not exist yet. Before that repository is created, some architectural choices benefit from being written down. The goal is not to lock in decisions. The goal is to have the first System 3 commit land with clear intent rather than with a drift of week-one improvisation.
+System 1 and System 2 are finishing up in this repository. The 5-database knowledge graph is being loaded on the Hetzner VPS as this doc is written. System 3 (the search agent, API, UI) lives in a separate repository that does not exist yet. Before that repository is created, some architectural choices benefit from being written down. The goal is not to lock in decisions. The goal is to have the first System 3 commit land with clear intent rather than with a drift of week-one improvisation.
 
 If you are reading this document and planning to start System 3, treat every choice as a proposal you can override. The axioms below are the part to challenge first.
 
@@ -408,7 +408,7 @@ The cadence that makes "consistently improved with feedback" actually happen:
 Three discipline rules make the cadence work:
 
 1. The agent prompt lives in git, versioned and tagged. Every change is a PR that must not regress the golden dataset.
-2. SME findings route into one of three buckets: agent change, UI change, KG change. Different repos, different cadences. If everything looks like an agent change, the system is over-tuning.
+2. SME findings route into one of three buckets: agent change, UI change, KG change. Different repositories, different cadences. If everything looks like an agent change, the system is over-tuning.
 3. User thumbs up and thumbs down are not ground truth. They are a signal for which answers deserve SME attention. SMEs decide what is correct. Users decide what is useful.
 
 ## Shipping all three parts from day one
@@ -474,13 +474,13 @@ What it already has:
 
 What it does not have:
 
-1. Golden dataset and nightly regression evaluation. Nothing matching `*golden*` or `*eval*` exists in the repo file tree. This is the most important gap to close.
+1. Golden dataset and nightly regression evaluation. Nothing matching `*golden*` or `*eval*` exists in the repository file tree. This is the most important gap to close.
 
 What has to change to adapt it to the current Layer 1 on PostgreSQL plus AGE:
 
 1. Swap the Neo4j client layer. Replace `services/neo4jApi.ts` with an AGE equivalent. The agent code for NL to Cypher, entity extraction, and query expansion carries over almost verbatim because AGE speaks openCypher. The wrapper change is that every query goes through `SELECT * FROM cypher(...)` on the server side.
 2. Swap user data storage from Firebase to a serverless PostgreSQL. Small refactor.
-3. Replace the Neo4j data loader scripts with the AGE loader already built in System 2 of this repo.
+3. Replace the Neo4j data loader scripts with the AGE loader already built in System 2 of this repository.
 4. Adapt the integrations page to show the 5 databases ingested by the new System 1, not the smaller PoC set.
 
 ## Five delivery modes and what each one actually exposes
@@ -491,7 +491,7 @@ The innovation proposal names five delivery channels for System 3. Each one has 
 |------|-----------------|--------------|---------------|
 | Web UI | The agent loop with access to all three layers, plus citations and graph views | Researchers asking ad hoc questions | Core product. Ship first. |
 | CLI agent | Same agent loop over a terminal interface, pipeable into shell workflows | Researchers scripting bulk investigations | Thin wrapper on the FastAPI endpoint |
-| MCP server | Individual tools (Cypher query, NCBI E-utilities fetch, enrichment lookups) exposed over the Model Context Protocol | External agent hosts that want to call this graph as a tool | Reference repo already has the pattern. Adapt the tools to the AGE client. |
+| MCP server | Individual tools (Cypher query, NCBI E-utilities fetch, enrichment lookups) exposed over the Model Context Protocol | External agent hosts that want to call this graph as a tool | Reference repository already has the pattern. Adapt the tools to the AGE client. |
 | API | REST or GraphQL endpoints wrapping the agent, plus a passthrough Cypher endpoint for power users | Internal teams, automated pipelines, third-party integrations | FastAPI already exists. Add `/cypher` for direct queries. |
 | KGX export | A downloadable snapshot of Layer 1 as nodes.tsv plus edges.tsv | Researchers building derivative graphs, reproducibility workflows | The merge pipeline already produces this. Expose it as a file download. |
 
@@ -546,7 +546,7 @@ At a sustainable pace, a small team with LLM-assisted coding can ship the shape 
 
 Four discipline gates are worth establishing on commit one, because retrofitting them later is painful:
 
-1. Branch protection on the System 3 repo's main branch. Every change is a PR.
+1. Branch protection on the System 3 repository's main branch. Every change is a PR.
 2. A golden dataset CI check that runs the eval harness on every PR and blocks merge on regression. Even at v0.1 with only 5 questions, the gate creates the habit.
 3. Agent prompt lives in git. Production reads the prompt from a tagged commit, never from a hand-edited environment variable. If a prompt change is needed, it is a PR.
 4. An override rule: if a regression needs to ship despite failing the golden dataset, exactly one named human can approve the override, and the reason is logged in the PR description. No silent overrides.
