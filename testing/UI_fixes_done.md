@@ -157,6 +157,7 @@ decisions in its To do column.
 | card 63 | A "not yet confirmed" answer reopens from your searches with its trust line and notes, and during an NCBI outage the note says the database is down and may be missing things, never that the answer has none | Live, awaiting the golden run and your retest | 100, 67 |
 | card 62 | The Integrations page's install works on the first try, and `s3` shows the web's trust line for each answer | Live, awaiting your retest | 101 |
 | card 53 | The Architecture and About pages, the KGX manifest and the project documents state what the code does | Live, awaiting your retest | 102 |
+| card 73 | A search that crashes writes its reason and trace id to the log | Live, awaiting your retest | none, nothing to try by hand |
 | cards 49 and 21, phase 8.10 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | Live, awaiting your retest | 90 to 97, and 60 |
 | card 1, T-8.6-06 | An answer about something else never says "MedGen lists no clinical features for ..." | Live, awaiting your retest | 87 |
 | card 31, T-8.6-06 | At Researcher depth, a question about a disease's features names them in the written answer too | Live, awaiting your retest | 81 |
