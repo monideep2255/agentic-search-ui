@@ -402,7 +402,10 @@ def second_request_at(
       and never after the hedge point itself (F-8.6-FJ11: a slow failure is
       followed at the hedge point, never a backoff past it). An error
       lasting about a second (RJ08's blip) is outlasted, and a first request
-      that failed at 9.8 s gets its second at 10 s.
+      that failed at 9.8 s gets its second at 10 s. At a hedge share of two
+      thirds the first two terms already keep the time at or before the
+      hedge point; the third states the promise so a different share
+      cannot break it.
     """
     if error is None:
         return failed_at

@@ -299,8 +299,8 @@ def _call_error(cause: BaseException | None, source: str = "harness.call_tier", 
 def test_when_the_second_request_goes(error: HarnessCallError | None, failed_at: float, second_at: float | None) -> None:
     """The first request was sent at 0 with 15 s of budget, so the hedge
     point is 10 s. MUTATION PROOF: sending the second at once after any
-    error turns every error arm red, and dropping the hedge-point cap turns
-    "a slow error at 9.8 s" red."""
+    error turns every error arm red, and R-05's backoff (2 s after the
+    failure) turns "a slow error at 9.8 s" red."""
     assert decide_module.GUARD_RETRY_BACKOFF_S == 2.0
     assert decide_module.GUARD_MIN_SECOND_ATTEMPT_S == 3.0
     got = decide_module.second_request_at(error, sent_at=0.0, failed_at=failed_at, hedge_at=10.0, deadline=15.0)
@@ -537,8 +537,8 @@ def test_a_slow_failure_then_an_answer_is_admitted(monkeypatch: pytest.MonkeyPat
     15.8 s, past the budget. The second now goes at the hedge point, 10 s,
     and the question is admitted at 14 s.
 
-    MUTATION PROOF: dropping the hedge-point cap from `second_request_at`
-    turns this red on the step error."""
+    MUTATION PROOF: R-05's backoff again (the second request 2 s after the
+    failure) turns this red on the step error."""
     times = _classifier(monkeypatch, (9.8, _unavailable), (4.0, _ADMIT))
     events, result, _, elapsed = _node(monkeypatch)
     assert result.get("step_error") is None
@@ -1066,6 +1066,7 @@ _STALLS = [
     ("in the cap check inside Jev's wait", 0.8),
     ("while Jev's reply is read", 0.6),
     ("while Jev's reply is read", 1.0),
+    ("before Jev's reply arrives", 0.6),
 ]
 
 
@@ -1079,15 +1080,17 @@ def test_with_jev_a_stall_anywhere_in_jevs_wait_never_turns_its_admission_into_a
     request, inside its own 3-second bound. The server's event loop stalls
     once, blocking, somewhere inside Jev's wait: where the builder's test put
     it (resolving Jev's model, before `decide()`'s net is armed), where the
-    judge put it (the cap check inside that net, before Jev's request), or
-    while Jev's reply is being read. Before, the 0.6 s and 0.8 s stalls in
-    the cap check spent the net's half-second margin and the question was
-    refused as off topic. Now every clock on Jev counts only the time the
-    loop was free, and Jev's admission stands.
+    judge put it (the cap check inside that net, before Jev's request),
+    while Jev's reply is being read, or just before it arrives. Before, the
+    0.6 s and 0.8 s stalls in the cap check spent the net's half-second
+    margin and the question was refused as off topic. Now every clock on
+    Jev counts only the time the loop was free, and Jev's admission stands.
 
     MUTATION PROOF: `wait_counting_free_time` counting real time again
-    (`counted += now - last`) turns the cap-check and reply-read arms red:
-    the question is refused as off topic."""
+    (`counted += now - last`) turns the 0.8 s cap-check arm and the "before
+    Jev's reply arrives" arm red: the question is refused as off topic. The
+    reply-read arms stay green under it, because a reply already in hand
+    wins over the clock whatever the time."""
     _classifier(monkeypatch, _OFF_TOPIC)
     _jev_injection(monkeypatch, "not_injection")
     fallback = AsyncMock(side_effect=AssertionError("the guard fallback is never asked"))
@@ -1110,6 +1113,10 @@ def test_with_jev_a_stall_anywhere_in_jevs_wait_never_turns_its_admission_into_a
         if where == "while Jev's reply is read":
             await asyncio.sleep(2.5)
             _stall()  # the reply arrives at 2.9 s, inside the stall
+        elif where == "before Jev's reply arrives":
+            await asyncio.sleep(2.5)
+            _stall()  # the stall ends at 3.1 s, past Jev's own bound on the wall clock
+            await asyncio.sleep(0.1)  # and the reply comes at 3.2 s, 2.6 s of free time
         else:
             await asyncio.sleep(2.9)
         return await reply(headers, body)
