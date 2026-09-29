@@ -729,7 +729,7 @@ class TestPastSearchesAreYoursAlone:
     @pytest.mark.asyncio
     async def test_no_token_lists_nothing(self) -> None:
         message = await _call_expecting_error(None, "list_past_searches", {})
-        assert message == server_module._AUTH_FAILURE_MESSAGE
+        assert message == server_module._NO_TOKEN_MESSAGE
 
 
 @_needs_database
@@ -758,7 +758,9 @@ class TestGuestsGetNoMoreThanRest:
             ("send_answer_feedback", {"run_id": str(uuid.uuid4()), "rating": "up"}),
         ):
             message = await _call_expecting_error(guest, name, arguments)
-            assert message == server_module._AUTH_FAILURE_MESSAGE, name
+            # Card 62: a guest token fails to verify as an account's, so it
+            # gets the invalid-token words, which say an account is needed.
+            assert message == server_module._INVALID_TOKEN_MESSAGE, name
 
 
 @_needs_database

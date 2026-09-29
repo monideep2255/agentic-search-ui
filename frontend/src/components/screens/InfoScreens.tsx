@@ -70,8 +70,9 @@
  * bound, the session id, the clarifying question and its options, and the
  * trust line, plus tools to list past searches, reopen an answer and send
  * feedback. The follow-up offers the web shows after an answer are not on
- * MCP yet; card 52's phase adds them to every surface, so the card says they
- * are coming rather than claiming the same parity (F-8.10-J13). The config
+ * MCP, and the card says so plainly rather than claiming the same parity
+ * (F-8.10-J13) or promising them "next", which no plan schedules (card 62,
+ * F-8.10-V06). The config
  * below carries the bearer header a caller needs, and a token lasts 15
  * minutes.
  */
@@ -184,11 +185,25 @@ export const MCP_CONFIG = `{
   }
 }`;
 
-/** The install line for `system3-cli`, until the owner's first release makes
- *  a published name possible (`tracker/phase_8.10.md`, T-8.10-04 and
+/** The install for `system3-cli`, until the owner's first release makes a
+ *  published name possible (`tracker/phase_8.10.md`, T-8.10-04 and
  *  T-8.10-07). Never `pip install s3`, which is a stranger's package on
- *  PyPI, not this repository's. */
-export const INSTALL_EXAMPLE = `pip install "git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli"`;
+ *  PyPI, not this repository's.
+ *
+ *  Card 62, PR-8.10-04: the bare pip line failed two ways on a Mac. The
+ *  system's Python 3.9 gave "No matching distribution found for
+ *  setuptools==83.0.0" (the package needs 3.11), and Homebrew's Python
+ *  refused with "externally-managed-environment". So the copy makes and
+ *  enters a virtual environment first, which also puts `s3` on the PATH for
+ *  the next command, and the card says 3.11 is needed.
+ *
+ *  Card 62's fix round (F-62-J01): `python3` is macOS's own 3.9 under a
+ *  default PATH, so the copied lines still failed with the setuptools
+ *  error. The venv is made with `python3.11` by name, which either works or
+ *  says "command not found", naming what is missing. */
+export const INSTALL_EXAMPLE = `python3.11 -m venv s3-env
+. s3-env/bin/activate
+pip install "git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli"`;
 
 /** Typed into a terminal. `--base-url` names the page's own API origin, so
  *  every example here points at one server (F-8.10-J06): `s3` defaults to
@@ -201,18 +216,46 @@ s3 ask "diseases linked to BRCA1"`;
 /** The agent side of `s3 mcp` (F-8.10-J10, A12): what a person pastes into
  *  an AI agent's MCP configuration so the agent starts `s3 mcp` itself and
  *  speaks MCP to it over stdio. It carries no token, because `s3 mcp` uses
- *  the sign-in `s3 login` stored and renews it. */
+ *  the sign-in `s3 login` stored and renews it.
+ *
+ *  Card 62, PR-8.10-09 (F-8.10-V10): the bare `"command": "s3"` did not
+ *  start under the PATH an app opened from the Dock gets
+ *  (`FileNotFoundError: 's3'`), since such an app does not read the shell's
+ *  PATH and `s3` sits in a virtual environment. So the command is a full
+ *  path, shaped like the one `INSTALL_EXAMPLE` makes, and the card says to
+ *  replace it with what `command -v s3` prints. */
 export const MCP_STDIO_CONFIG = `{
   "mcpServers": {
     "system3": {
-      "command": "s3",
+      "command": "/path/to/s3-env/bin/s3",
       "args": ["mcp"]
     }
   }
 }`;
 
-export const KGX_EXAMPLE = `s3-kgx-export NCBIGene:672 \\
-  --hops 1 --output-dir ./kgx-out`;
+/** The command line card's words, in the order a reader needs them: what
+ *  the install needs before it runs, how to get back into the environment
+ *  later, then each command.
+ *
+ *  Card 62's fix round. F-62-J01, J07 and A03: the install runs
+ *  `python3.11` and `git`, and its activate line is POSIX, so the card says
+ *  so before the commands. F-62-A04: a new terminal does not have `s3` on
+ *  its PATH until the environment is entered again, which is also where
+ *  `command -v s3` prints the full path. F-62-J02, J03 and A07: the page no
+ *  longer prints an install for `s3-kgx-export`. The only package that
+ *  carries it is the server's own, whose dependencies are version floors,
+ *  and it owns the same files as `s3`, so uninstalling it deleted `s3`. It
+ *  also reads the graph directly with credentials only the operator holds,
+ *  so an outside reader could never run it; the card says how a KGX file
+ *  is had today instead. */
+export const CLI_CARD_BODY =
+  "Two console commands rather than HTTP routes. The install works on macOS and Linux and needs git and Python 3.11: its first line runs python3.11 by name, so if python3.11 --version fails, install Python 3.11 first, or put the name of a newer Python, such as python3.12, in that line. " +
+  "Its first two lines make and enter a virtual environment, since many systems refuse a pip install outside one. In a new terminal, enter it again with . s3-env/bin/activate from the same folder before s3 login or s3 ask. " +
+  "s3 asks a question and prints the answer, human-readable by default and JSON with --json. " +
+  "s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent: it is not typed into a terminal, where it only waits for input, but started by the agent from the configuration below, pasted into the agent's MCP settings. " +
+  "An agent app does not read your shell's PATH, so replace /path/to/s3-env/bin/s3 with the full path that command -v s3 prints inside the virtual environment, after . s3-env/bin/activate. " +
+  "s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops. " +
+  "s3-kgx-export is not in that install and has no download: it reads the knowledge graph directly with credentials only the operator holds, so today a KGX file comes from the operator, who runs it for the seed CURIEs you name.";
 
 /** The event stream frame, transcribed from `adapters/web_sse/app.py`'s own
  *  emitter (`{"id": seq, "event": type, "data": envelope_json}`) and
@@ -692,7 +735,7 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<PlugIcon />}
           title="MCP server"
-          body="Four tools. ask_biomedical_question folds a whole run into a single cited answer at any depth, with the session id to continue, the clarifying options and the trust line. list_past_searches, reopen_past_answer and send_answer_feedback reach your account's own history, and the seven internal tools are never separately reachable. The follow-up offers the web app shows after an answer are coming to MCP next. An account is required, and a bearer token lasts 15 minutes."
+          body="Four tools. ask_biomedical_question folds a whole run into a single cited answer at any depth, with the session id to continue, the clarifying options and the trust line. list_past_searches, reopen_past_answer and send_answer_feedback reach your account's own history, and the seven internal tools are never separately reachable. The follow-up offers the web app shows after an answer are not part of MCP. An account is required, and a bearer token lasts 15 minutes."
           code={MCP_CONFIG}
           codeLabel="MCP server configuration"
           copies={[
@@ -707,7 +750,7 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<TerminalIcon />}
           title="Command line tools"
-          body="Two console commands rather than HTTP routes, installed once with pip. s3 asks a question and prints the answer, human-readable by default and JSON with --json. s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent: it is not typed into a terminal, where it only waits for input, but started by the agent from the configuration below, pasted into the agent's MCP settings. s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops, and needs graph credentials only the operator grants."
+          body={CLI_CARD_BODY}
           code={MCP_STDIO_CONFIG}
           codeLabel="Agent configuration for s3 mcp"
           copies={[
@@ -728,12 +771,6 @@ export function IntegrationsScreen() {
               text: MCP_STDIO_CONFIG,
               accessibleName: "Copy the agent configuration for s3 mcp",
               testId: "integration-copy-mcp-stdio",
-            },
-            {
-              label: "Copy KGX command",
-              text: KGX_EXAMPLE,
-              accessibleName: "Copy the KGX export command",
-              testId: "integration-copy-kgx",
             },
           ]}
         />
