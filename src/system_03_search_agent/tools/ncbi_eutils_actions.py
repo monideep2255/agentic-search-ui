@@ -621,7 +621,16 @@ def _truncate_error(message: str | None) -> str:
     return message[:500]
 
 
-def _error_output(action: str, message: str | None) -> NcbiEfetchOutput:
+def _error_output(
+    action: str,
+    message: str | None,
+    failure_kind: ncbi_transport.FailureKind | None = None,
+) -> NcbiEfetchOutput:
+    """A `status: "error"` output. `failure_kind` is card 63's fixed set.
+
+    Omitted (None) wherever this module has nothing more to say than "it
+    failed", such as a refused field tag; a reader takes None as `other`.
+    """
     return NcbiEfetchOutput(
         status="error",
         action=action,
@@ -629,6 +638,7 @@ def _error_output(action: str, message: str | None) -> NcbiEfetchOutput:
         record_count=0,
         truncated=False,
         error=_truncate_error(message),
+        failure_kind=failure_kind,
     )
 
 
@@ -653,12 +663,22 @@ async def _get_or_error(
             url, params, family="eutils", include_api_key=True
         )
     except ncbi_transport.TransportError as exc:
-        return _error_output(action, str(exc))
+        return _error_output(action, str(exc), ncbi_transport.failure_kind_for_exception(exc))
     status_message = ncbi_transport.http_status_error_message("E-utilities", response)
     if status_message is not None:
-        return _error_output(action, status_message)
+        return _error_output(
+            action,
+            status_message,
+            ncbi_transport.failure_kind_for_status(getattr(response, "status_code", 200)),
+        )
+    # Card 63: the database is passed for the classifier's log line only, so
+    # an `ERROR` body is logged by database. ELink's request carries both
+    # `dbfrom` and `db`; `db` is the one searched.
+    database = params.get("db")
     return ncbi_transport.classify_eutils_response(
-        content_type=response.headers.get("content-type", ""), text=response.text
+        content_type=response.headers.get("content-type", ""),
+        text=response.text,
+        database=database if isinstance(database, str) else None,
     )
 
 
@@ -697,7 +717,7 @@ async def search(params: NcbiEfetchSearchInput) -> NcbiEfetchOutput:
     if isinstance(result, NcbiEfetchOutput):
         return result
     if result.status == "error":
-        return _error_output("search", result.error_message)
+        return _error_output("search", result.error_message, result.failure_kind)
     if result.status == "empty":
         return _empty_output("search")
 
@@ -1093,7 +1113,7 @@ async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
     if isinstance(result, NcbiEfetchOutput):
         return result
     if result.status == "error":
-        return _error_output("summary", result.error_message)
+        return _error_output("summary", result.error_message, result.failure_kind)
     if result.status == "empty":
         return _empty_output("summary")
 
@@ -1289,7 +1309,7 @@ async def fetch(params: NcbiEfetchFetchInput) -> NcbiEfetchOutput:
     if isinstance(result, NcbiEfetchOutput):
         return result
     if result.status == "error":
-        return _error_output("fetch", result.error_message)
+        return _error_output("fetch", result.error_message, result.failure_kind)
     if result.status == "empty":
         # Trap 4: an empty <PubmedArticleSet> (or an unrecognized-but-empty
         # body) fabricates zero records. Never a placeholder with a
@@ -1355,7 +1375,7 @@ async def link(params: NcbiEfetchLinkInput) -> NcbiEfetchOutput:
     if isinstance(result, NcbiEfetchOutput):
         return result
     if result.status == "error":
-        return _error_output("link", result.error_message)
+        return _error_output("link", result.error_message, result.failure_kind)
     if result.status == "empty":
         return _empty_output("link")
 
