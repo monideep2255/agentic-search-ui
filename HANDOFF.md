@@ -13,25 +13,22 @@ Last updated: 2026-09-29.
 
 ## What is live
 
-- Develop's product code is card 63's merge, #128 at 25800026: every "not yet confirmed" answer is saved and reopens, and an NCBI outage is said plainly. `git log --merges --first-parent develop` lists what came before.
+- Develop's product code is card 53's merge, #134 at be9dd6fb, after card 62's, #133: the Integrations page's install works on the first try, `s3` shows the web's trust line, and the pages and documents state what the code does. Before them, card 63 (#128): every "not yet confirmed" answer is saved and reopens. `git log --merges --first-parent develop` lists what came before.
 - Card 63 passed test queries 100 and 67 on develop on 2026-09-29, and its golden run answered 98 of 150, below its floor of 101. The owner kept card 63 and accepted that run; the floor for the next change stays 101 (`DECISIONS.md`, 2026-09-29). The lost runs are guard-model timeouts and a crash that logs no reason, now cards 72 and 73.
 - Golden runs and test queries sign in with fresh test accounts made on develop; their sign-ins live only in the lead's scratch folder, never committed. A new session makes its own the same way (`LEARNINGS.md`, 2026-09-29).
 - Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`. Both Railway services redeploy on every push to `develop`.
 - Production: `v0.2.0`, tag `cde4f59`, released 2026-09-20. Nothing since is on it.
-- Merging into develop: the owner merges each pull request in the browser; the assistant never passes `--admin` (`DECISIONS.md`, 2026-09-29).
+- Merging into develop: the lead merges with `gh pr merge --merge --admin --delete-branch` once checks pass; develop's ruleset stays for outside contributors (`DECISIONS.md`, 2026-09-29). The harness's auto-mode check may still ask for the owner's approval in the conversation.
 - Releases: the release job tags `production` and never pushes to it. Card 65 fixes the release fix's open findings before the next release.
 - Parked tags, on the first laptop only: `parked/phase-8.4-2026-09-25`, `parked/phase-8.8-snippets-2026-09-25` and `parked/verify-facts-118-2026-09-27`.
 - Nothing is being built between sessions. Check `gh run list --branch develop --limit 3` before trusting that CI is green.
 
-### Open pull requests and parked work
+### Parked work
 
 Every branch below is on GitHub. To pick one up: `git worktree add .claude/worktrees/<name> <branch>`. Delete each on both sides when it merges or is dropped (`git-workflow`).
 
 | Work | State | Where | Not done |
 |---|---|---|---|
-| Card 62: install and connect from the Integrations page on the first try | Reviewed: judge, adversary, one fix round, fresh verifier; its MCP fix dropped by the owner (card 75) | #133, `fix/card62-install-first-try` | The owner's merge |
-| Card 53: the pages and documents state what the code does | Reviewed the same way; checker gaps and two sentences named open (cards 76 to 78) | #134, `fix/card53-stale-facts` | The owner's merge. Whichever of #133 and #134 lands second is updated to drop the facts checker's `surfaces.kgx_options` fact, which reads the KGX example #133 removed |
-| Two rules name the APIs each layer calls | Approved by the owner item by item | #135, `chore/rules-api-lists` | The owner's merge |
 | Phase 8.7 builder A: the first sentence answers the question | Built, not reviewed; its unit suite never finished | `feat/8.7-s1` at 32e5945e | Review its own diff, run the suite, commit it properly |
 | Phase 8.7 builder B: records on screen while the summary is written | The `placement` field (1e030148); the screen work, not reviewed | `feat/8.7-s2` at cb407508 | The screen and App-level Stop tests, reshaping `App.stopUntilAnswer.test.tsx`, the mutation reds, the gates |
 | Phase 8.7 builder C: shorter waits, the Opus writer | Six commits, every mutation red | `feat/8.7-s3` at da2c04f6 | Its final gates |
@@ -41,14 +38,13 @@ The reviewers' probes from 2026-09-27 are gone, so any resumed phase 8.7 reviewe
 
 ## What awaits the product owner
 
-- Merges: #133, then #134, then #135, and the checkpoint pull request that carries this file.
 - The privacy pre-commit and commit-msg hooks on the second laptop, from your private notes. Until they are in, every commit there is checked by hand.
 - `~/.local/bin/railway link` on the second laptop, choosing `system3-search-agent-develop`, so `/ship` can confirm deploys.
-- Retests: the Retest column of `testing/UI_fix_plan.md`, newest first. Card 63 is at the top, queries 100 and 67; card 58 is next, query 98.
+- Retests: the Retest column of `testing/UI_fix_plan.md`, newest first. Cards 53 and 62 are at the top, queries 102 and 101; card 63 is next, queries 100 and 67.
 
 ## The one next action
 
-Once #133 and #134 have both landed, update whichever landed second so the facts checker no longer reads the removed KGX example, then open phase 8.7 from its ledger, `tracker/phase_8.7.md`, two agents at a time and one unit suite at a time. Cards 72 and 73, the guard timeouts behind card 63's lost golden runs, lead the board's To do column and may go first if the owner says so.
+Open phase 8.7 from its ledger, `tracker/phase_8.7.md`, two agents at a time and one unit suite at a time, unless the owner puts cards 72 and 73 first: the guard-model timeouts and the unlogged crash behind card 63's lost golden runs, which lead the board's To do column.
 
 ### Starting on another computer
 

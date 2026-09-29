@@ -155,6 +155,8 @@ decisions in its To do column.
 | card 58 | Stop works until the first sentence of the answer is on screen, and a stop in that window shows "Search stopped" and nothing of the answer | Live, awaiting your retest | 98 |
 | card 60 | The web app carries its libraries' license notices: React, React DOM and MUI, each with its version and license text | Live, awaiting your retest | 99 |
 | card 63 | A "not yet confirmed" answer reopens from your searches with its trust line and notes, and during an NCBI outage the note says the database is down and may be missing things, never that the answer has none | Live, awaiting the golden run and your retest | 100, 67 |
+| card 62 | The Integrations page's install works on the first try, and `s3` shows the web's trust line for each answer | Live, awaiting your retest | 101 |
+| card 53 | The Architecture and About pages, the KGX manifest and the project documents state what the code does | Live, awaiting your retest | 102 |
 | cards 49 and 21, phase 8.10 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | Live, awaiting your retest | 90 to 97, and 60 |
 | card 1, T-8.6-06 | An answer about something else never says "MedGen lists no clinical features for ..." | Live, awaiting your retest | 87 |
 | card 31, T-8.6-06 | At Researcher depth, a question about a disease's features names them in the written answer too | Live, awaiting your retest | 81 |
@@ -418,7 +420,7 @@ fixed.
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-09-29. THE ONE THING TO KNOW: card 63 stays on develop. Its test queries 100 and 67 passed, and its golden run answered 98 of 150, below its floor of 101; the owner kept it and accepted the run, and the floor for the next change stays 101 (`DECISIONS.md`). Cards 62 and 53 finished their review rounds and wait on the owner's merge as #133 and #134, with the two rule lists card 53 named as #135. Phase 8.7 is the parked work still to resume, and `HANDOFF.md` lists each piece.
+LAST UPDATED 2026-09-29. THE ONE THING TO KNOW: card 63 stays on develop. Its test queries 100 and 67 passed, and its golden run answered 98 of 150, below its floor of 101; the owner kept it and accepted the run, and the floor for the next change stays 101 (`DECISIONS.md`). Cards 62 and 53 finished their review rounds and are live on develop (#133, #134), with the two rule lists card 53 named (#135); both await the owner's retest, queries 101 and 102. Phase 8.7 is the parked work still to resume, and `HANDOFF.md` lists each piece.
 
 What is live on develop:
 
@@ -426,7 +428,7 @@ What is live on develop:
 - What each numbered phase delivered and what stays open: its ledger, `tracker/phase_N.M.md`. Phase 8.7's ledger says where each builder stopped.
 - Production is unchanged on `v0.2.0`. The release job tags `production` and never pushes to it, and only the owner changes `develop` and `production`: the owner merges each pull request in the browser, and the assistant never passes `--admin`.
 
-What awaits the product owner is their merge of #133, #134 and #135, and their retests: the Retest column of `testing/UI_fix_plan.md`, newest first, card 63 at the top; each card names its query numbers in `testing/Test_queries_and_workflows.md`.
+What awaits the product owner's retest is the Retest column of `testing/UI_fix_plan.md`, newest first, cards 53 and 62 at the top; each card names its query numbers in `testing/Test_queries_and_workflows.md`.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -495,7 +497,6 @@ option rather than a queued task.
 
 Checked 2026-09-29 against `DECISIONS.md`:
 
-- Merges: #133 (card 62), then #134 (card 53), then #135 (the two rule lists).
 - The privacy pre-commit hooks on the second laptop, and `railway link` there so deploys can be confirmed.
 - Retests: the board's Retest column, newest first, card 63 at the top.
 - Four checks of under a minute each, the only rows still not approved:
@@ -606,7 +607,7 @@ board on 2026-09-24.
 
 ### Next, in order
 
-Written 2026-09-25 in the order of that day's To do column, and not re-ordered since. The board's To do column now leads with newer cards, card 2 first. Where the two differ, the board's order wins. Ahead of every item below, since 2026-09-29: the merges of #133 and #134, with whichever lands second updated to drop the facts checker's KGX example fact, then phase 8.7 from `HANDOFF.md`; cards 72 and 73, the guard timeouts behind card 63's lost golden runs, lead the board's To do column. The items below keep the reasons behind the older cards.
+Written 2026-09-25 in the order of that day's To do column, and not re-ordered since. The board's To do column now leads with newer cards, card 2 first. Where the two differ, the board's order wins. Ahead of every item below, since 2026-09-29: phase 8.7 from `HANDOFF.md`; cards 72 and 73, the guard timeouts behind card 63's lost golden runs, lead the board's To do column. The items below keep the reasons behind the older cards.
 
 The earlier framing of this list, kept because it still holds:
 
@@ -2046,9 +2047,9 @@ Back on the first laptop. Card 63's two checks ran, and cards 62 and 53 were res
 | Item | What happened | Where it stands |
 |---|---|---|
 | Card 63, every "not yet confirmed" answer saved and an NCBI outage said plainly | Test queries 100 and 67 passed on develop; the golden run answered 98 of 150 against a floor of 101, the lost runs guard-model timeouts, one unlogged crash and G-006's graph timeouts; the owner kept it and accepted the run | Retest |
-| Card 62, install and connect on the first try | Builder's report, judge, adversary, one fix round, fresh verifier; the round's MCP fix broke silent renewal against production and the owner had it reverted | #133, waiting on the owner's merge |
-| Card 53, the pages and documents state what the code does | The same rounds; every rewritten page sentence true on every path the verifier ran; checker gaps and two sentences named open | #134, waiting on the owner's merge |
-| Two rules naming LitSense | The owner approved correcting the two API lists, one line each | #135, waiting on the owner's merge |
+| Card 62, install and connect on the first try | Builder's report, judge, adversary, one fix round, fresh verifier; the round's MCP fix broke silent renewal against production and the owner had it reverted | Live on develop (#133), Retest |
+| Card 53, the pages and documents state what the code does | The same rounds; every rewritten page sentence true on every path the verifier ran; checker gaps and two sentences named open | Live on develop (#134), Retest |
+| Two rules naming LitSense | The owner approved correcting the two API lists, one line each | Merged (#135) |
 | Cards 71 to 78 | Filed: a reopened answer that differs from the one read (71), guard timeouts (72), a crash with no logged reason (73), G-006 (74), card 62's dropped MCP fix (75), two page sentences (76), the silent layer 3 skip (77), the facts checker's gaps (78) | To do |
 | The AirDrop steps in `HANDOFF.md` | Removed at the owner's word | Done |
 

@@ -10,6 +10,7 @@ The single fix round after the judge (`judge.md`, F-62-J01 to J07) and the adver
 - [Break-it results](#break-it-results)
 - [Gates](#gates)
 - [Left open, and why](#left-open-and-why)
+- [After the fresh verifier, 2026-09-29](#after-the-fresh-verifier-2026-09-29)
 
 ## Commits
 
