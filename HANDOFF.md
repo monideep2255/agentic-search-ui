@@ -13,7 +13,7 @@ Last updated: 2026-09-29.
 
 ## What is live
 
-- Develop's product code is card 53's merge, #134 at be9dd6fb, after card 62's, #133: the Integrations page's install works on the first try, `s3` shows the web's trust line, and the pages and documents state what the code does. Before them, card 63 (#128): every "not yet confirmed" answer is saved and reopens. `git log --merges --first-parent develop` lists what came before.
+- Develop's product code is card 73's merge, #139 at ca85a03d: a crashed search writes its reason and trace id to the log. Before it, card 53 (#134) and card 62 (#133): truthful pages, a first-try install and `s3`'s trust line. `git log --merges --first-parent develop` lists what came before.
 - Card 63 passed test queries 100 and 67 on develop on 2026-09-29, and its golden run answered 98 of 150, below its floor of 101. The owner kept card 63 and accepted that run; the floor for the next change stays 101 (`DECISIONS.md`, 2026-09-29). The lost runs are guard-model timeouts and a crash that logs no reason, now cards 72 and 73.
 - Golden runs and test queries sign in with fresh test accounts made on develop; their sign-ins live only in the lead's scratch folder, never committed. A new session makes its own the same way (`LEARNINGS.md`, 2026-09-29).
 - Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`. Both Railway services redeploy on every push to `develop`.
@@ -29,6 +29,7 @@ Every branch below is on GitHub. To pick one up: `git worktree add .claude/workt
 
 | Work | State | Where | Not done |
 |---|---|---|---|
+| R-10 and card 72's first guard fix: a hedged guard request, R-10's eight flags | Built and reviewed; the fresh verifier found an off-topic question could be admitted in a slow spell (F-72-V08), so the owner chose not to merge | `fix/card72-r10-guardrail` at 1961518c; records in `testing/Developer/reports/2026-09-29_card72/` | Reused by card 84 (R-10's sound parts) and card 72's redesign; not merged as is |
 | Phase 8.7 builder A: the first sentence answers the question | Built, not reviewed; its unit suite never finished | `feat/8.7-s1` at 32e5945e | Review its own diff, run the suite, commit it properly |
 | Phase 8.7 builder B: records on screen while the summary is written | The `placement` field (1e030148); the screen work, not reviewed | `feat/8.7-s2` at cb407508 | The screen and App-level Stop tests, reshaping `App.stopUntilAnswer.test.tsx`, the mutation reds, the gates |
 | Phase 8.7 builder C: shorter waits, the Opus writer | Six commits, every mutation red | `feat/8.7-s3` at da2c04f6 | Its final gates |
@@ -40,11 +41,11 @@ The reviewers' probes from 2026-09-27 are gone, so any resumed phase 8.7 reviewe
 
 - The privacy pre-commit and commit-msg hooks on the second laptop, from your private notes. Until they are in, every commit there is checked by hand.
 - `~/.local/bin/railway link` on the second laptop, choosing `system3-search-agent-develop`, so `/ship` can confirm deploys.
-- Retests: the Retest column of `testing/UI_fix_plan.md`, newest first. Cards 53 and 62 are at the top, queries 102 and 101; card 63 is next, queries 100 and 67.
+- Retests: the Retest column of `testing/UI_fix_plan.md`, newest first. Card 73 is at the top, nothing to try by hand; then cards 53 and 62, queries 102 and 101; then card 63, queries 100 and 67.
 
 ## The one next action
 
-Open phase 8.7 from its ledger, `tracker/phase_8.7.md`, two agents at a time and one unit suite at a time, unless the owner puts cards 72 and 73 first: the guard-model timeouts and the unlogged crash behind card 63's lost golden runs, which lead the board's To do column.
+Card 84: re-cut R-10's sound parts from develop as their own change, reusing the parked branch `fix/card72-r10-guardrail`, without the hedge. Then card 72's redesigned hedge, where any refusal beats an admit on every guard call. Then phase 8.7 from `tracker/phase_8.7.md`. Why: `DECISIONS.md`, 2026-09-29.
 
 ### Starting on another computer
 
