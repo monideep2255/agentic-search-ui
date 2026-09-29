@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-09-25.
+Kick-off: 2026-05-06. Last updated: 2026-09-29.
 
 ## Status at a glance
 
@@ -1049,6 +1049,17 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-09-29. CARD 63 ON DEVELOP, ITS GOLDEN RUN STILL TO COME; A SECOND LAPTOP SET UP; THE FRONTEND AUDIT GREEN AGAIN. What awaits the owner and the next action: `HANDOFF.md`.
+
+- Merged to develop, both by the owner in the browser, since develop's ruleset blocks the assistant's merge and the owner chose not to allow `--admin`:
+  - #129, `fast-uri` 3.1.6 to 3.1.8 and `undici` 7.29.0 to 7.30.0, lockfile only, after a high advisory against the dev-only `fast-uri` turned gate 7 red on develop and every pull request. The owner chose to land it before card 63.
+  - #128, card 63: every "not yet confirmed" answer is saved and reopens, and an NCBI outage is said plainly. Landed by pull request at the owner's choice, all four CI jobs green.
+- Card 63's review: both rounds ran again, because no adversary row survived the 2026-09-27 restart. The judge passed it; the adversary failed it on F-63-A01, an outage note saying "this answer has no papers from it" under a table of papers. One fix round reworded the note to "may be missing papers" and the refusal to "A source I needed is down", and added the judge's three missing tests; a fresh verifier said MERGE; the full unit suite passed (`testing/Developer/reports/2026-09-27_card63/review.md`).
+- Held: card 63's golden consistency run, which needs the accounts file still on the first laptop. Nothing else lands on develop until it runs.
+- New cards 67 to 70: the review's open items F-63-A03, A04 and J04, and two moderate `vitest` advisories.
+- The second laptop is an Intel Mac, where Homebrew no longer installs; it runs on Miniforge and a standalone Python 3.11. The develop suite passed on it.
+- Decisions logged: seven rows dated 2026-09-29. Learnings logged: four rows, among them a rebase that replayed develop's published commits and was undone before any push.
 
 2026-09-27. CARD 58, CARD 60 AND PHASE 8.10 LIVE ON DEVELOP; THE RELEASE JOB AND DATA ENGINEERING'S v1.0.0 SHIPPED; EVERYTHING ELSE PARKED AFTER THE MACHINE RESTARTED. What is parked and where each piece stands: `HANDOFF.md`.
 

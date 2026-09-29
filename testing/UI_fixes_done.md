@@ -154,6 +154,7 @@ decisions in its To do column.
 | 12.13 | Clicking a search in the history rail re-runs it instead of showing the saved answer | Live, awaiting your retest | 67 |
 | card 58 | Stop works until the first sentence of the answer is on screen, and a stop in that window shows "Search stopped" and nothing of the answer | Live, awaiting your retest | 98 |
 | card 60 | The web app carries its libraries' license notices: React, React DOM and MUI, each with its version and license text | Live, awaiting your retest | 99 |
+| card 63 | A "not yet confirmed" answer reopens from your searches with its trust line and notes, and during an NCBI outage the note says the database is down and may be missing things, never that the answer has none | Live, awaiting the golden run and your retest | 100, 67 |
 | cards 49 and 21, phase 8.10 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | Live, awaiting your retest | 90 to 97, and 60 |
 | card 1, T-8.6-06 | An answer about something else never says "MedGen lists no clinical features for ..." | Live, awaiting your retest | 87 |
 | card 31, T-8.6-06 | At Researcher depth, a question about a disease's features names them in the written answer too | Live, awaiting your retest | 81 |
@@ -417,15 +418,15 @@ fixed.
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-09-27. THE ONE THING TO KNOW: everything in flight is parked, and `HANDOFF.md` lists each piece, where it is and what is left. The machine restarted at 06:45 UTC with seven agents running, and the owner parked all but the release job, which finished the same day.
+LAST UPDATED 2026-09-29. THE ONE THING TO KNOW: card 63 is on develop (#128) and its golden consistency run has not run, because the accounts file it signs in with is still on the first laptop. Until it runs and answers 101 or more of 150, nothing else lands on develop; below 101, card 63 is reverted. The work parked on 2026-09-27 is still parked, now on GitHub, and `HANDOFF.md` lists each piece.
 
 What is live on develop:
 
-- Product code through card 58's merge (`e116b9d9`) and the `graphql-core==3.2.11` pin (#127), plus documents and comment wording after them. Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`.
+- Product code through card 63's merge (`25800026`), after #129 (`fbe85117`) moved two dev-only frontend packages past a high advisory that had turned gate 7 red. Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`.
 - What each numbered phase delivered and what stays open: its ledger, `tracker/phase_N.M.md`. Phase 8.7's ledger says where each builder stopped.
-- Production is unchanged on `v0.2.0`. In both repositories the release job now tags `production` and never pushes to it, and only the owner changes `develop` and `production`. Data engineering released v1.0.0 on 2026-09-27.
+- Production is unchanged on `v0.2.0`. The release job tags `production` and never pushes to it, and only the owner changes `develop` and `production`: the owner merges each pull request in the browser, and the assistant never passes `--admin`.
 
-What awaits the product owner's retest is the Retest column of `testing/UI_fix_plan.md`, newest first, card 58 at the top; each card names its query numbers in `testing/Test_queries_and_workflows.md`.
+What awaits the product owner's retest is the Retest column of `testing/UI_fix_plan.md`, newest first, card 63 at the top; each card names its query numbers in `testing/Test_queries_and_workflows.md`.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -474,7 +475,7 @@ option rather than a queued task.
 
 ### What is parked, and why
 
-- EVERYTHING IN FLIGHT ON 2026-09-27: phase 8.7's three builders, cards 53, 62 and 63, and card 58's product review. The owner parked them after the machine restarted, so only the release job ran that day. Each piece, its branch and what is left: `HANDOFF.md`.
+- WHAT WAS IN FLIGHT ON 2026-09-27, less card 63, which landed on 2026-09-29: phase 8.7's three builders, cards 53 and 62, and card 58's product review. The owner parked them after the machine restarted, and they wait behind card 63's golden run. Each piece, its branch on GitHub and what is left: `HANDOFF.md`.
 - Older work parked at tags: `parked/phase-8.4-2026-09-25`, `parked/phase-8.8-snippets-2026-09-25` and `parked/verify-facts-118-2026-09-27`.
 - THE ARCHITECTURE WORK IS NOT PARKED. The product owner will build it, so
   its six cards, 8 to 13 in the board's To do, wait on nobody. Corrected
@@ -492,10 +493,11 @@ option rather than a queued task.
 
 ### What is waiting on the product owner
 
-Checked 2026-09-27 against `DECISIONS.md`. None of it blocks work:
+Checked 2026-09-29 against `DECISIONS.md`. The first item blocks everything that would land on develop:
 
-- Retests: the board's Retest column, newest first, card 58 at the top.
-- When to resume the parked work in `HANDOFF.md`.
+- The golden run's accounts file, copied privately from the first laptop, for card 63's golden run.
+- The privacy pre-commit hooks on the second laptop, and `railway link` there so deploys can be confirmed.
+- Retests: the board's Retest column, newest first, card 63 at the top.
 - Four checks of under a minute each, the only rows still not approved:
   - Copy an answer and paste it somewhere (11.14)
   - Open the answer-modes info button (11.36)
@@ -604,7 +606,7 @@ board on 2026-09-24.
 
 ### Next, in order
 
-Written 2026-09-25 in the order of that day's To do column, and not re-ordered since. The board's To do column now leads with newer cards, card 63 first. Where the two differ, the board's order wins. The items below keep the reasons behind the older cards.
+Written 2026-09-25 in the order of that day's To do column, and not re-ordered since. The board's To do column now leads with newer cards, card 2 first. Where the two differ, the board's order wins. Ahead of every item below, since 2026-09-29: card 63's golden run, then the parked work in `HANDOFF.md`. The items below keep the reasons behind the older cards.
 
 The earlier framing of this list, kept because it still holds:
 
@@ -722,7 +724,8 @@ a standing option, not as queued work.
 1. Read `HANDOFF.md`, then "Where we stopped" above, then the session tables
    under "Session history" below, newest first.
 2. Run `git status` and `git worktree list`. Both should be clean, with local
-   carrying `develop` plus the parked branches `HANDOFF.md` lists.
+   carrying `develop` alone and the parked branches `HANDOFF.md` lists on
+   GitHub, listed by `git branch -r`.
 3. Read "What is parked, and why" before picking anything up. OMIM is live
    WITH its title filter; the two ship together and neither is re-enabled or
    removed without the other.
@@ -2033,6 +2036,17 @@ Evidence, with a full transcript per question and a re-runnable script:
 | 12.5 | Can these questions be answered at all, and how? | ANSWERED, and this is the encouraging half | ONE ALREADY DOES (`reflux disease`, eight cited MedGen concepts). YES for the other six, with tools already built and data that exists. `Any trials for GERD?`: `clinicaltrials_search` with `query_cond` taken from a disease anchor rather than only a gene symbol. `reflux disease` and `GERD`: a live MedGen lookup for the concept, plus PubMed, plus the trials registry. `papers on caffeine and exercise` and the two population questions: a PubMed search on the topic, no gene anchor needed. THE HONEST LIMIT on `Does coffee help make exercise more effective?`: the product can return what has been published and must never return a verdict on whether coffee works. SO THE CONSTRAINT IS ROUTING AND VOCABULARY, NOT CAPABILITY, which is the opposite of the graph disease-name finding from the same day that cannot be fixed from this repository at all |
 
 ## Session history
+
+### 2026-09-29, in one table
+
+The first session on a second laptop, an Intel Mac, set up from nothing. Card 63 was the one piece of parked work resumed.
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| Card 63, every "not yet confirmed" answer saved and an NCBI outage said plainly | Both rounds rerun, since no adversary row survived the restart; judge PASS, adversary FAIL on an outage note contradicting the papers above it; one fix round, a fresh verifier's MERGE, the full suite green; merged by the owner (#128) | Retest, queries 100 and 67; its golden run still to come |
+| The frontend dependency audit | A high advisory against the dev-only `fast-uri` turned gate 7 red; lockfile moved to `fast-uri` 3.1.8 and `undici` 7.30.0 after the supply-chain checks; merged by the owner (#129) before card 63 | Done |
+| Cards 67 to 70 | Filed: three open items from card 63's review and two moderate `vitest` advisories | To do |
+| The second laptop | Python 3.11, PostgreSQL, Redis and Node from Miniforge, since Homebrew no longer installs on Intel Macs; the develop suite passed on it | Done, less the privacy hooks and the Railway link |
 
 ### 2026-09-27, in one table
 

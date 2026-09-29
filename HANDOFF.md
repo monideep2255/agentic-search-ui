@@ -2,7 +2,7 @@
 
 What a fresh session needs, and nothing else. Rewritten in place at every `/phase-checkpoint`, never appended to. It states no fact another file owns beyond the pointers in the last section; history goes to `requirements/Plan.md`'s Revision history and `testing/UI_fixes_done.md`, never here.
 
-Last updated: 2026-09-28.
+Last updated: 2026-09-29.
 
 ## Table of contents
 
@@ -13,20 +13,18 @@ Last updated: 2026-09-28.
 
 ## What is live
 
-- Develop's product code is card 58's merge, e116b9d9 (Stop works until the answer appears), plus the `graphql-core==3.2.11` pin, #127 at 2f6955ec. After those, develop carries only documents and comment wording (#126). `git log --merges --first-parent develop` lists what came before.
-- Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`, raised from $10 on 2026-09-27. Both Railway services redeploy on every push to `develop`.
+- Develop's product code is card 63's merge, #128 at 25800026: every "not yet confirmed" answer is saved and reopens, and an NCBI outage is said plainly. Before it, #129 at fbe85117 moved two dev-only frontend packages past a high advisory that had turned gate 7 red. `git log --merges --first-parent develop` lists what came before.
+- Card 63 is an answer-path change and its golden consistency run has NOT run: the accounts file it signs in with is still on the other laptop. Until it runs and answers 101 or more of 150, nothing else lands on develop, and below 101 card 63 is reverted (`DECISIONS.md`, 2026-09-27).
+- Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`. Both Railway services redeploy on every push to `develop`.
 - Production: `v0.2.0`, tag `cde4f59`, released 2026-09-20. Nothing since is on it.
-- Releases, in both repositories: the release job tags `production` and never pushes to it, and only the owner's account changes `develop` and `production`. Data engineering released v1.0.0 on 2026-09-27. The release fix merged with its verifier's findings open; card 65 fixes them before the next release of either repository.
-- Parked tags: `parked/phase-8.4-2026-09-25`, `parked/phase-8.8-snippets-2026-09-25` and `parked/verify-facts-118-2026-09-27`.
-- Nothing is being built between sessions. The machine restarted at 06:45 UTC on 2026-09-27 with seven agents running, and the owner parked everything except the release job, which finished the same day (`DECISIONS.md`).
-- PubMed answers again, since 06:26 UTC on 2026-09-27. Check `gh run list --branch develop --limit 3` before trusting that CI is green.
+- Merging into develop: develop's ruleset blocks `gh pr merge` from the assistant, and the owner merges each pull request in the browser. The assistant never passes `--admin` (`DECISIONS.md`, 2026-09-29).
+- Releases: the release job tags `production` and never pushes to it. Card 65 fixes the release fix's open findings before the next release.
+- Parked tags, on the first laptop only: `parked/phase-8.4-2026-09-25`, `parked/phase-8.8-snippets-2026-09-25` and `parked/verify-facts-118-2026-09-27`.
+- Nothing is being built between sessions. Check `gh run list --branch develop --limit 3` before trusting that CI is green.
 
 ### Parked work, to pick up later
 
-Every branch below is on GitHub. The phase branch already was; the other six were pushed on 2026-09-28 so the build can continue on another computer. None of it is merged. The worktree folders were removed on 2026-09-27.
-
-- To pick one up: `git worktree add .claude/worktrees/<name> <branch>`. On a fresh clone the same command also creates the local branch from `origin`.
-- These are the only branches on GitHub besides `develop` and `production`. Delete each one on both sides when it merges or is dropped (`git-workflow`).
+Every branch below is on GitHub and none is merged. To pick one up: `git worktree add .claude/worktrees/<name> <branch>`, which also creates the local branch on a fresh clone. These are the only branches on GitHub besides `develop` and `production`; delete each on both sides when it merges or is dropped (`git-workflow`).
 
 | Work | Done | Where | Not done |
 |---|---|---|---|
@@ -34,23 +32,25 @@ Every branch below is on GitHub. The phase branch already was; the other six wer
 | Phase 8.7 builder B: records on screen while the summary is written | The `placement` field (1e030148); the screen work, not reviewed | `feat/8.7-s2` at cb407508 | The screen and App-level Stop tests (one new test file's write was refused), reshaping `App.stopUntilAnswer.test.tsx`, the mutation reds, the gates |
 | Phase 8.7 builder C: shorter waits, the Opus writer | Six commits, every mutation red | `feat/8.7-s3` at da2c04f6 | Its final gates |
 | Phase 8.7 as a whole | Tickets, findings and every decision | `tracker/phase_8.7.md`, branch `phase/8.7-answers-sooner` | Merge the three builders into the phase branch, then the judge, the adversary and one fix-and-verify; then the golden run at 101 or more plus test queries 1, 2, 17, 72 and 98, reverting on failure; then the product review. At merge, set `PER_QUERY_COST_CAP_USD=0.25` on develop. Up to 12 dispatches |
-| Card 63: every "not yet confirmed" answer saved, and an NCBI outage said so | Built and tested; the adversary passed it | `fix/card63-tested` at 1c1558a4 | The judge's round (cut part-way), a fix round if it finds anything, a fresh verifier, the merge, then the golden run at 101 or more plus its test queries, reverting on failure |
 | Card 53: stale facts on the pages and in the documents | Eight commits | `fix/card53-stale-facts` at a470c82e | The builder's report, the review, the gates, the merge |
 | Card 62: install and connect from the Integrations page on the first try | Five commits | `fix/card62-install-first-try` at 4f749a7f | Its test run, its report, the judge and the adversary, the merge |
-| Card 58: Stop works until the answer appears | Live on develop | The board's Retest column | The product review of develop, then your retest with query 98 |
 
-The reviewers' probes lived in the temporary folder the restart cleared, so any resumed reviewer reruns its probes.
+The reviewers' probes from 2026-09-27 are gone, so any resumed reviewer reruns its own.
 
 ## What awaits the product owner
 
-- Retests: the Retest column of `testing/UI_fix_plan.md`, newest first. Card 58 is at the top, query 98.
-- When to resume the parked work above.
+- The golden run's accounts file, copied from the first laptop privately (AirDrop), never through git or a chat. Card 63's golden run waits on it, and so does everything else that would land on develop.
+- The privacy pre-commit and commit-msg hooks on the second laptop, from your private notes. Until they are in, every commit there is checked by hand.
+- `~/.local/bin/railway link` on the second laptop, choosing `system3-search-agent-develop`, so `/ship` can confirm deploys. The sign-in itself is done.
+- Retests: the Retest column of `testing/UI_fix_plan.md`, newest first. Card 63 is at the top, queries 100 and 67; card 58 is next, query 98.
 
 ## The one next action
 
-Resume the parked work two agents at a time, card 63's judge first, since card 63 is closest to landing. Run one unit suite at a time: several at once took the machine down on 2026-09-27. On a computer that has not run this build before, set it up first, as below.
+Run card 63's golden consistency run once the accounts file is on this laptop: 101 or more of 150 keeps it, fewer reverts it on develop with the per-question table left for the owner. Only then resume the parked work, two agents at a time and one unit suite at a time, card 53 and card 62 as a pair before phase 8.7.
 
 ### Starting on another computer
+
+On an Intel Mac, step 1 cannot run: Homebrew's installer stops with "Homebrew on macOS is only supported on Apple Silicon processors!". The second laptop, set up on 2026-09-29, used a standalone Python 3.11 from python-build-standalone and Miniforge from conda-forge for PostgreSQL, Redis and Node, all in the home folder, with `cryptography` held at 48.0.1 for the local install (`DECISIONS.md` and `LEARNINGS.md`, 2026-09-29). Every other step below applies unchanged.
 
 For a laptop with nothing installed. The commands are for macOS on Apple silicon, like the laptop this build ran on. Git carries the code, the documents and every parked branch; everything else below is installed or copied by hand. Run the steps in order, in one terminal.
 
@@ -150,6 +150,7 @@ For a laptop with nothing installed. The commands are for macOS on Apple silicon
 | Phase 8.7's tickets, findings, decisions and where each builder stopped | `tracker/phase_8.7.md` |
 | Phases 8.6 and 8.10, and earlier numbered phases | `tracker/phase_N.M.md`; `tracker/BOARD.md` is frozen at 6.2 |
 | Phase 8.9's plan, not yet opened | `tracker/phase_8.9.md` |
+| Card 63's reviews, fix round and verifier | `testing/Developer/reports/2026-09-27_card63/review.md` |
 | Card 58's reviews | `testing/Developer/reports/2026-09-27_card58_stop/review.md` |
 | The release fix's reviews and its open findings | `testing/Developer/reports/2026-09-27_release_fix/review.md`, card 65 |
 | Which model does what, and how the calls hand off | `docs/architecture/Model_architecture.md` |
@@ -163,4 +164,4 @@ For a laptop with nothing installed. The commands are for macOS on Apple silicon
 | How a phase or a card runs | `.claude/skills/bossman-mode/SKILL.md` and its `reference/` files |
 | How a release is cut | `docs/build/Release_flow.md` |
 
-How to start: read this file, then `git status --short` and `git worktree list`. On the laptop that parked the work, expect `develop` plus the parked branches above. On a fresh clone, expect `develop` alone locally, with the parked branches listed by `git branch -r`. Then read the board's Retest and To do columns. Run `/phase-checkpoint` then `/ship` at the session's end.
+How to start: read this file, then `git status --short` and `git worktree list`. Expect `develop` alone locally, with the parked branches listed by `git branch -r`; on the first laptop, the parked branches are local too. Then read the board's Retest and To do columns. Run `/phase-checkpoint` then `/ship` at the session's end.

@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-09-27.
+Last updated: 2026-09-29.
 
 ## Table of contents
 
@@ -50,6 +50,11 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+NEW ON 29 SEPTEMBER, on the practice site, waiting for its answer check and the product owner's retest:
+
+- Every answer that came back "not yet confirmed", about six in ten, is now saved, so it can be reopened from your past searches, with its confidence line and notes, instead of being lost.
+- When one of NCBI's databases is down, the answer says so in plain words, says it may be missing papers or records from it, and asks you to try again later, rather than telling you to ask again straight away.
 
 NEW ON 26 AND 27 SEPTEMBER, on the practice site, waiting for the product owner's retest:
 
@@ -195,7 +200,11 @@ All six live-government-API connections the plan called for are now built. That 
 
 ## What does not work yet
 
-THE HONEST HEADLINE AS OF 27 SEPTEMBER, in one sentence: answers still open with a stock line of counts and take about seventeen seconds before their first word.
+THE HONEST HEADLINE AS OF 29 SEPTEMBER, in one sentence: answers still open with a stock line of counts and take about seventeen seconds before their first word, and the one change that went live today has not yet had its fifty-question answer check.
+
+What went wrong on 29 September, in plain words: the change that saves "not yet confirmed" answers was reviewed again from scratch, because the record of its first review was lost when the computer restarted. The second review caught a real problem the first had not written down: during an NCBI outage, the note under an answer could say it had no papers directly beneath a list of papers. It was fixed and checked before it went live. The fifty-question check that decides whether it stays needs a file still on the other computer, so nothing else goes live until it runs.
+
+THE HONEST HEADLINE AS OF 27 SEPTEMBER, kept for the record, in one sentence: answers still open with a stock line of counts and take about seventeen seconds before their first word.
 
 The work that fixes both was part-built when the owner's computer restarted, and it is parked until the next session.
 
@@ -367,6 +376,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| Saved answers that were not yet confirmed, and a plain word when NCBI is down | Answers marked "not yet confirmed" are now saved and can be reopened. During an NCBI outage the answer says which database is down and that it may be missing things from it. The work was reviewed twice over, because the first review's record was lost in the restart, and the second review found and fixed a note that contradicted the answer above it. A security warning about one of the building tools was cleared the same day. The work moved to a second computer, set up from nothing | 29 September |
 | Stop that works, the same answers from a terminal, and a safer release | Stop now works until the answer appears. People can ask from a terminal or their own AI assistant. Only the owner can change the main copies of both projects' code, and a release no longer rewrites the published copy. The data project had its first release, version 1.0.0. The rest of the day's work was parked when the computer restarted. A software library the site depends on released a new version that afternoon and broke the automatic checks, so the site was held on the version it had used all month | 27 September |
 | The decision model back, with its problems fixed | The small decision model that makes the system's small choices came back after its three problems were reworked, and the stray "no clinical features" sentence went with it | 26 September |
 | A decision model for every small choice: built, measured, and held back | The fix for the stray "no clinical features" sentence, and a change that lets a small, cheap decision model make every small choice, were built and reviewed. The reviews caught that a question disguised as a fake chat conversation could slip past the gatekeeper, and that was fixed before anything reached the practice site. Once live, the fifty-question check answered 99 of 150 tries against the floor of 102, so by the rule the change came back off the practice site the same hour, keeping its written record. The same day the building crew's own safety guards were tightened, and the product owner asked for the crew to check the product the way a person uses it before they see anything. Earlier, the session had stopped overnight and lost its working files, and everything was rebuilt from its own record | 26 September |
@@ -682,8 +692,8 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. Pick the parked work back up, two helpers at a time. First: every answer is saved so it can be reopened, and an answer says plainly when NCBI's search is down. Then: answers that answer sooner, with the records on screen in about eight seconds, a first sentence that answers the question, and a stronger writing model. The old steps about the opening line of counts, the writing model and the slower answers are all inside this work.
-2. The product owner retests what went live: Stop that works until the answer appears, the list of open-source libraries the site is built on, and asking from a terminal or an AI assistant.
+1. Run the fifty-question answer check on the change that went live on 29 September, once the file it needs is copied from the other computer. If fewer than 101 of 150 answers come back, the change is taken back out. Only then pick the parked work back up, two helpers at a time: tidier pages and documents, and a first-try install from the Integrations page, then answers that answer sooner, with the records on screen in about eight seconds and a first sentence that answers the question.
+2. The product owner retests what went live: reopening a "not yet confirmed" answer, Stop that works until the answer appears, the list of open-source libraries the site is built on, and asking from a terminal or an AI assistant.
 3. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
 4. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting for the owner's yes.
 5. Finish and merge the overnight work that is built but not yet on the practice site: the plain-language and researcher switch on the answer itself, counts that say what they count, a calmer trust line, and narrowing bacterial sample searches by place and year.
@@ -978,6 +988,7 @@ One person used the deployed site for an afternoon. These are their words, kept 
 | The integrations page is not right | Five ways of connecting to this system exist and work, but that page did not present them properly | Fixed. The page now names the five real ways in, instead of a command that never existed and a web address that was never built |
 | Every page has the same web address | Clicking to another page does not change the address bar, so you cannot bookmark or share a particular page | Fixed. Every page now has its own address, and the back button works |
 | One gene works on our machines and not on the live site | The gene GCK. We know it is not the network and not an out-of-date copy, because a different gene works fine there | Fixed the same week, in an earlier piece of work than the other six rows above. The gene has two nicknames shared with two other genes, and the system was refusing to guess among the three matches. It now asks NCBI which of the three actually owns that name |
+| When you reopen a saved answer that was written during an NCBI outage, its note still says the database is down "right now", with no date, so days later it can read as a current warning | Next time saved answers are touched: the note will either carry its date or be reworded when reopened |
 
 ### The gap underneath all of the above
 
