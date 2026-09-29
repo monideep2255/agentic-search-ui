@@ -52,25 +52,93 @@ Resume the parked work two agents at a time, card 63's judge first, since card 6
 
 ### Starting on another computer
 
-Git carries the code, the documents and every parked branch. It does not carry the things below, so set them up before the first build step.
+For a laptop with nothing installed. The commands are for macOS on Apple silicon, like the laptop this build ran on. Git carries the code, the documents and every parked branch; everything else below is installed or copied by hand. Run the steps in order, in one terminal.
 
-1. Location: clone outside any iCloud-synced folder, into a path with no space in it. On the first laptop, iCloud made " 2" copies inside `.git` that broke `git fetch` (`LEARNINGS.md`, 2026-09-25), and the worktree isolation guard cannot read a path with a space in it. Clone the data engineering repository beside this one, since `reference/agentic-search-data-engineering` is a relative link to `../agentic-search-data-engineering` from the repository root.
-2. Commit identity: set `git config user.email` to the GitHub noreply address before the first commit (`public-repository-privacy`).
-3. Privacy hook: `.git/hooks/` is never cloned, so the local pre-commit and commit-msg hooks are missing. Reinstall them from the owner's private notes (not published) before the first commit. GitHub push protection still blocks secrets, but nothing else catches a local path or a name.
-4. Secrets: copy these by hand over a private channel, never through git or a chat:
-   - `.env` at the root. `env.example` names every key if you rebuild it instead.
+1. System tools. Install Apple's command line tools, then Homebrew with the one command on https://brew.sh, and run the two lines Homebrew prints at the end, which put `brew` on the PATH. Then install what this build uses and start the database:
+
+   ```bash
+   xcode-select --install
+   brew install git gh python@3.11 node postgresql@15 tmux railway
+   brew link --force postgresql@15
+   brew services start postgresql@15
+   ```
+
+   - Python 3.11 is what CI runs. Node must be 22 or newer; the first laptop ran 24.
+   - PostgreSQL 15 is keg-only in Homebrew, so the `link` line puts `psql` and `createdb` on the PATH.
+   - Skip Redis. `README.md` lists it, but no code uses it and the first laptop never had it.
+   - The assistant's own command-line tool installs separately, by its own instructions.
+
+2. Sign-ins and commit identity. Sign in to GitHub as the owner's account, which pushes, merges pull requests and reads CI, and to Railway, which `/ship` uses to confirm a deploy. Commits use the GitHub noreply address, never a work address (`public-repository-privacy`):
+
+   ```bash
+   gh auth login
+   gh auth setup-git
+   railway login
+   git config --global user.name "Monideep Chakraborti"
+   git config --global user.email "65699118+monideep2255@users.noreply.github.com"
+   ```
+
+3. Clone both repositories side by side, in a folder outside iCloud with no space in its path. On the first laptop, iCloud made " 2" copies inside `.git` that broke `git fetch` (`LEARNINGS.md`, 2026-09-25), and the worktree isolation guard cannot read a path with a space in it. The data engineering repository goes beside this one because `reference/agentic-search-data-engineering` is a relative link to it.
+
+   ```bash
+   cd <parent-folder>
+   gh repo clone monideep2255/agentic-search-ui
+   gh repo clone monideep2255/agentic-search-data-engineering
+   cd agentic-search-ui
+   ```
+
+4. Privacy hook. `.git/hooks/` is never cloned, so the local pre-commit and commit-msg hooks are missing. Reinstall them from the owner's private notes (not published) before the first commit. GitHub push protection still blocks secrets, but nothing else catches a local path or a name.
+
+5. Secrets. Three files hold the keys and private context, and nothing runs without the first. Never send them through git, email or a chat:
+   - `.env` at the root: the model provider keys, the graph query service address and token, the auth secret. `env.example` names every key if you rebuild it instead.
    - `frontend/.env`, one line, `VITE_API_BASE_URL`.
    - `requirements/context/Private_NCBI_context.md`.
-5. Packages: build them fresh, the way CI does. Do not copy `venv/` or `frontend/node_modules/`, which were built for the old machine.
-   - Python 3.11: `python3.11 -m venv venv`, `source venv/bin/activate`, then `.github/gates/setup_python.sh`.
-   - Node 22 or newer: `npm ci --prefix frontend`, then `npx --prefix frontend playwright install chromium` for `/verify`.
-6. Local services: PostgreSQL 15 or newer and Redis, as `README.md` lists. Create the user database with `createdb search_agent_users`, then run `alembic upgrade head`. The unit suite talks to a real database.
-7. Sign-ins: `gh auth login` as the owner's account, which merges pull requests and reads CI, and the Railway connection `/ship` uses to confirm a deploy.
-8. The assistant's own setup lives outside the repository, on each machine:
+
+   The easiest way between two Macs is AirDrop. On the old laptop, from the repository folder, zip the three into the system's temporary folder, which iCloud does not sync, and show the zip in Finder:
+
+   ```bash
+   zip -q "$TMPDIR/secrets.zip" .env frontend/.env requirements/context/Private_NCBI_context.md
+   open -R "$TMPDIR/secrets.zip"
+   ```
+
+   Right-click the zip, then Share, then AirDrop to the new laptop, where it lands in Downloads. From the new clone's folder, run `unzip <the zip in Downloads> -d .`, which puts each file back at its own path, then move the zip to the Trash on both laptops.
+
+   With `.env` in place, the app and the preflight reach the graph over the HTTPS query service, so the new laptop needs no SSH tunnel. The direct-connection graph keys in `.env` are only the rollback path (`env.example`).
+
+6. Packages. Build them fresh, the way CI does. Never copy `venv/` or `frontend/node_modules/` across, since they were built for the old machine. The last line installs the browser `/verify` takes its screenshots with.
+
+   ```bash
+   python3.11 -m venv venv
+   source venv/bin/activate
+   .github/gates/setup_python.sh
+   npm ci --prefix frontend
+   npx --prefix frontend playwright install chromium
+   ```
+
+7. The user database. Create it and build its tables. The migration reads the database address from the environment, not from `.env`, so it is set on the same line:
+
+   ```bash
+   createdb search_agent_users
+   USER_DB_URL=postgresql://localhost:5432/search_agent_users alembic upgrade head
+   ```
+
+8. The assistant's own setup, which lives outside the repository on each machine:
    - Its memory folder, which holds the owner's standing feedback. Copy it by hand, or the first session starts without it.
    - Its user-level settings for agent teams in tmux (`docs/build/Agent_teams_tmux_quickstart.md`), its plugins, and the gitignored `.claude/settings.local.json`.
 
-Then prove the setup: `python3 tracker/preflight.py` exits 0, and `.github/gates/gate04_unit_suite.sh` passes on `develop`.
+9. Prove it. The preflight probes the model providers and the graph, and the unit suite needs the database from step 7. Both read `.env` themselves. Both must pass before any build work:
+
+   ```bash
+   python3 tracker/preflight.py
+   .github/gates/gate04_unit_suite.sh
+   ```
+
+   To see the app, run the API in this terminal and the frontend in a second one, then open http://localhost:5173:
+
+   ```bash
+   uvicorn system_03_search_agent.adapters.web_sse.app:app --reload
+   npm run dev --prefix frontend
+   ```
 
 ## Where the facts live
 
