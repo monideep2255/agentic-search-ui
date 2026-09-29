@@ -32,7 +32,7 @@ Two conflicting E-utilities rate-limit figures exist in the source material: a 2
 
 ### Provisional throttle for undocumented APIs
 
-The Datasets API v2 and each of the four enrichment APIs (PubTator3, LitVar2, LitSense, ClinicalTrials.gov v2) have no published numeric rate limit in the capability sheet. Until a published figure is confirmed, treat each as an interactive HTTPS API and apply the same provisional throttle used for PubChem: about 5 requests per second (Section 21.1). A tool for one of these APIs that ships with no throttle at all is not honoring this rule, even though no vendor-published number exists yet to violate.
+The Datasets API v2 and each of the three enrichment APIs (PubTator3, LitVar2, ClinicalTrials.gov v2) have no published numeric rate limit in the capability sheet. Until a published figure is confirmed, treat each as an interactive HTTPS API and apply the same provisional throttle used for PubChem: about 5 requests per second (Section 21.1). A tool for one of these APIs that ships with no throttle at all is not honoring this rule, even though no vendor-published number exists yet to violate.
 
 ### Wait queues and fail-fast
 
