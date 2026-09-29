@@ -38,7 +38,7 @@ REFUSE_MESSAGE = (
 # - The question named nothing the product could look up. The graph tool's
 #   own error text says so (`NO_ENTITY_REASON_MARKER` is its opening
 #   clause), and the honest reply is to ask for a name.
-# - NCBI itself said a search is down (card 63, `SEARCH_DOWN_MESSAGE`
+# - NCBI itself said a source is down (card 63, `SEARCH_DOWN_MESSAGE`
 #   below). The honest reply is to say so and ask the person to try later.
 # - A search failed for any other reason, a timeout being the measured one.
 #   The honest reply is to say so and invite a retry.
@@ -57,15 +57,17 @@ FAILED_SEARCH_MESSAGE = (
 # search was down at NCBI for hours. `FAILED_SEARCH_MESSAGE` invites a retry,
 # which is right for a timeout and wrong during an outage: asking again at
 # once sends the person straight back into it. So when the act step recorded
-# that NCBI itself said a search is down (`failed_searches[].kind ==
+# that NCBI itself said a source is down (`failed_searches[].kind ==
 # "service_down"`, decided in `tools/ncbi_transport.py` from a fixed list of
 # outage phrases), the refusal says so and asks them to try later. It is
 # decided from that typed value, never from the `reason` text, and every word
 # is ours: nothing NCBI wrote reaches it. It does not name the database, so
-# it stays true when more than one search is down.
+# it stays true when more than one source is down, and it says "a source",
+# not "a search", because the failed call can equally be a record fetch, a
+# summary or a link (F-63-A02).
 SERVICE_DOWN_KIND = "service_down"
 SEARCH_DOWN_MESSAGE = (
-    "A search I needed is down at NCBI right now, so I could not find "
+    "A source I needed is down at NCBI right now, so I could not find "
     "grounded evidence this time. Try again later, or try NCBI's "
     "cross-database search:"
 )
@@ -200,12 +202,12 @@ def refusal_message_for(
     own `reason`. A no-entity reason outranks any other, since a question
     the product could not read is the thing to fix before retrying.
 
-    Card 63: when any failed search carries `kind == "service_down"`, NCBI
-    itself said that search is down, so the refusal says so and asks the
+    Card 63: when any failed call carries `kind == "service_down"`, NCBI
+    itself said that source is down, so the refusal says so and asks the
     person to try later (`SEARCH_DOWN_MESSAGE`) rather than to ask again.
     "Any" rather than "all" matches the note under an answer that still
     stands (`core/graph.py`'s `_build_failed_search_note`): asking again at
-    once cannot help while one of the searches is down. A mapping with no
+    once cannot help while one of the sources is down. A mapping with no
     `kind`, the shape every caller built before card 63, is read as a
     failure asking again can help, so it keeps `FAILED_SEARCH_MESSAGE`.
 

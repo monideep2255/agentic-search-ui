@@ -9158,8 +9158,8 @@ def _build_repair_cap_note(omission_remains: bool = True) -> str:
     return base + ", and the records it would have added are listed below as found"
 
 
-#: Card 63: the NCBI databases a failed search note can name, as a person
-#: names them, and what the answer is missing without them. Keyed by the
+#: Card 63: the NCBI databases a failed-call note can name, as a person
+#: names them, and what the answer may be missing without them. Keyed by the
 #: `db` the call asked (`failed_searches[].source`). A database not listed
 #: here is still disclosed, in the unnamed sentence below.
 _DOWN_SOURCE_WORDS: Final[dict[str, tuple[str, str]]] = {
@@ -9173,18 +9173,27 @@ _DOWN_SOURCE_WORDS: Final[dict[str, tuple[str, str]]] = {
 
 
 def _build_failed_search_note(failed_searches: list[dict[str, str]]) -> str:
-    """The note under an answer that lost a background search (card 63).
+    """The note under an answer that lost a background call (card 63).
 
     Decided from the user's chair on 2026-09-27, the day PubMed's search was
     down at NCBI for hours: the note used to say "Ask again to retry" for
     every failure, which sent a person straight back into the same outage.
     So the note now depends on what the act step recorded:
 
-    - Any search NCBI itself said is down (`kind == "service_down"`): name
-      the database, say what the answer has none of, and say "Try again
-      later". Never "ask again", which cannot help until NCBI recovers.
+    - Any call NCBI itself said is down (`kind == "service_down"`): name the
+      database, say NCBI is down and that the answer MAY be missing what it
+      holds, and say "Try again later". Never "ask again", which cannot help
+      until NCBI recovers.
     - Only other failures, a timeout or a rate limit among them:
       `FAILED_SEARCH_NOTE`, unchanged, because asking again can help.
+
+    The wording is decided by category, not by which step failed (F-63-A01,
+    F-63-A02). The recorded failure can be a search, a record fetch, a
+    summary or a link, and a fetch or summary can fail AFTER the search on
+    the same database succeeded, with those records on screen above the
+    note. So the note never asserts an absence and never names which step
+    failed: it says what NCBI said and that the answer may be missing
+    things, which is true whichever step failed.
 
     Decided from the typed `kind` and `source` keys, never from the
     `reason` text, and every word is ours: nothing NCBI wrote reaches it.
@@ -9206,7 +9215,7 @@ def _build_failed_search_note(failed_searches: list[dict[str, str]]) -> str:
         name, missing = named[0]
         sentences = [
             (
-                f"{name}'s search is down at NCBI right now, so this answer has no "
+                f"{name} is down at NCBI right now, so this answer may be missing "
                 f"{missing} from it."
             )
         ]
@@ -9215,14 +9224,14 @@ def _build_failed_search_note(failed_searches: list[dict[str, str]]) -> str:
         joined = ", ".join(names[:-1]) + " and " + names[-1]
         sentences = [
             (
-                f"The {joined} searches are down at NCBI right now, so this answer has "
-                "nothing from them."
+                f"{joined} are down at NCBI right now, so this answer may be missing "
+                "sources from them."
             )
         ]
     else:
         sentences = [
             (
-                "Some of NCBI's searches are down right now, so this answer may be "
+                "Some of NCBI's databases are down right now, so this answer may be "
                 "missing sources from them."
             )
         ]
@@ -12576,7 +12585,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     failed_search_note: str | None = None
     if failed_searches and trust_outcome != "refuse":
         trust_outcome = aggregate([trust_outcome, "ask"])
-        # Card 63: "Try again later" when NCBI said a search is down, the
+        # Card 63: "Try again later" when NCBI said a database is down, the
         # original "Ask again to retry" otherwise. See the builder.
         failed_search_note = _build_failed_search_note(failed_searches)
     if repair_cap_exceeded and trust_outcome != "refuse":

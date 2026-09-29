@@ -233,7 +233,7 @@ class TestSearch:
     ) -> None:
         """Card 63: the body every ESearch returned from 02:24 UTC on
         2026-09-27. The tool says `service_down`, so the answer can tell a
-        person PubMed's search is down rather than invite them to ask again
+        person PubMed is down at NCBI rather than invite them to ask again
         straight into the outage."""
         _install(
             monkeypatch,

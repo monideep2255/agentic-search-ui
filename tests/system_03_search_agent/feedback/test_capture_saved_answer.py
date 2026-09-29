@@ -336,7 +336,7 @@ def test_a_refusal_and_a_clarifying_question_store_nothing(text: str) -> None:
 
 _NOT_YET_CONFIRMED = "Based on 2 sources, not yet confirmed"
 _DOWN_NOTE = (
-    "PubMed's search is down at NCBI right now, so this answer has no papers "
+    "PubMed is down at NCBI right now, so this answer may be missing papers "
     "from it. Try again later."
 )
 

@@ -1112,7 +1112,7 @@ async def test_a_topic_search_down_at_ncbi_refuses_with_try_later(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Card 63, end to end through the real loop. A topic question searches
-    PubMed and nothing else, so while PubMed's search is down at NCBI the
+    PubMed and nothing else, so while PubMed is down at NCBI the
     run refuses. The refusal must say so and ask the person to try later,
     not invite them straight back into the outage, and none of NCBI's own
     text may reach the stream."""

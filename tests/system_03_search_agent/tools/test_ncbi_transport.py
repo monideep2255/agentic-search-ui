@@ -80,6 +80,7 @@ Writes:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from datetime import UTC
 from typing import Any, Self
@@ -206,6 +207,31 @@ def test_an_eutils_error_body_saying_the_search_is_unavailable_is_service_down()
     # Unchanged: the tool's own `error` text still carries NCBI's words for
     # a developer; only the person-facing words are ours.
     assert result.error_message is not None and "SOLR" in result.error_message
+
+
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        # F-63-J01: each outage marker on its OWN. The measured body carries
+        # both phrases, so with only that fixture, dropping either marker
+        # from `_SERVICE_DOWN_MARKERS` left every test green. Neither phrase
+        # below contains the other's text, so each arm can only pass through
+        # its own marker.
+        "Search Backend failed: Cannot connect to SOLR",
+        "Search Backend failed: the service is temporarily unavailable",
+    ],
+    ids=["cannot_connect_only", "unavailable_only"],
+)
+def test_each_outage_marker_alone_makes_an_error_body_service_down(phrase: str) -> None:
+    lowered = phrase.lower()
+    assert ("cannot connect" in lowered) != ("unavailable" in lowered), phrase
+    result = ncbi_transport.classify_eutils_response(
+        content_type="application/json",
+        text=json.dumps({"esearchresult": {"ERROR": phrase, "count": "0"}}),
+        database="pubmed",
+    )
+    assert result.status == "error"
+    assert result.failure_kind == "service_down", phrase
 
 
 @pytest.mark.parametrize(

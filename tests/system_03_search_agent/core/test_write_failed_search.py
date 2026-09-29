@@ -18,8 +18,8 @@ state with no failed search, and the note arm asserts absence on the same
 state with the failure removed, so neither direction can pass vacuously.
 
 Card 63 (2026-09-27), the outage arms at the end of this file: when NCBI
-itself says a search is down, the note names the database, says what the
-answer has none of, and says "Try again later", never "Ask again to
+itself says a database is down, the note names the database, says the
+answer may be missing what it holds, and says "Try again later", never "Ask again to
 retry", which during an outage sends a person straight back into it. A
 timeout or a rate limit keeps the original note, where asking again can
 help. The note is chosen from the typed `kind` and `source` keys the act
@@ -183,7 +183,7 @@ _PUBMED_DOWN = {
 }
 _CLINVAR_DOWN = {**_PUBMED_DOWN, "source": "clinvar"}
 _PUBMED_DOWN_NOTE = (
-    "PubMed's search is down at NCBI right now, so this answer has no papers "
+    "PubMed is down at NCBI right now, so this answer may be missing papers "
     "from it. Try again later."
 )
 
@@ -234,15 +234,15 @@ def test_the_outage_note_names_each_database_that_is_down_once() -> None:
     build = graph_module._build_failed_search_note
     assert build([_PUBMED_DOWN]) == _PUBMED_DOWN_NOTE
     assert build([_PUBMED_DOWN, _CLINVAR_DOWN, _PUBMED_DOWN]) == (
-        "The PubMed and ClinVar searches are down at NCBI right now, so this "
-        "answer has nothing from them. Try again later."
+        "PubMed and ClinVar are down at NCBI right now, so this answer may be "
+        "missing sources from them. Try again later."
     )
 
 
 def test_the_outage_note_says_when_another_search_also_failed() -> None:
     note = graph_module._build_failed_search_note([_PUBMED_DOWN, _TIMED_OUT])
     assert note == (
-        "PubMed's search is down at NCBI right now, so this answer has no papers "
+        "PubMed is down at NCBI right now, so this answer may be missing papers "
         "from it. Another background search did not finish, so other sources may "
         "be missing too. Try again later."
     )
@@ -252,7 +252,7 @@ def test_the_outage_note_says_when_another_search_also_failed() -> None:
 def test_an_outage_on_a_database_the_note_cannot_name_is_still_disclosed() -> None:
     note = graph_module._build_failed_search_note([{**_PUBMED_DOWN, "source": "bioproject"}])
     assert note == (
-        "Some of NCBI's searches are down right now, so this answer may be "
+        "Some of NCBI's databases are down right now, so this answer may be "
         "missing sources from them. Try again later."
     )
 
@@ -280,6 +280,17 @@ def test_the_refusal_chooser_says_try_later_when_ncbi_said_a_search_is_down() ->
     assert refusal_message_for([_PUBMED_DOWN, _NO_ENTITY]) == UNRESOLVED_QUESTION_MESSAGE
     assert "ask again" not in SEARCH_DOWN_MESSAGE.lower()
     assert "try again later" in SEARCH_DOWN_MESSAGE.lower()
+
+
+def test_the_outage_refusal_says_a_source_is_down_not_a_search() -> None:
+    """F-63-A02: the failed call can be a record fetch, a summary or a link,
+    so the refusal names a "source", never a "search"."""
+    assert SEARCH_DOWN_MESSAGE == (
+        "A source I needed is down at NCBI right now, so I could not find "
+        "grounded evidence this time. Try again later, or try NCBI's "
+        "cross-database search:"
+    )
+    assert "A search I needed" not in SEARCH_DOWN_MESSAGE
 
 
 @pytest.mark.parametrize("kind", ["timed_out", "rate_limited", "other"])
