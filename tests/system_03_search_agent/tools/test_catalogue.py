@@ -10,6 +10,9 @@ from system_03_search_agent.tools.catalogue import (
     get_catalogue,
     resource_options,
 )
+from system_03_search_agent.tools.graph_schema_constants import CYPHER_QUERY_TIMEOUT_SECONDS
+from system_03_search_agent.tools.ncbi_transport import DEFAULT_TIMEOUT_S
+from system_03_search_agent.tools.pathogen_detection import _TOTAL_BUDGET_S
 
 _EXPECTED_TOOLS = {
     "cypher_query",
@@ -80,15 +83,22 @@ def test_every_action_has_a_valid_input_json_schema() -> None:
         assert action.rate_limit_pool is not None
 
 
-def test_timeouts_match_tool_call_budgets_rule() -> None:
+def test_timeouts_match_the_budgets_the_code_enforces() -> None:
+    """Each catalogued timeout is the constant its tool's code enforces,
+    never a copy of the rule's table, which gives Pathogen Detection only a
+    floor (card 53, F-53-J01)."""
     by_name = {action.name: action for action in CATALOGUE}
-    assert by_name["cypher_query.query"].timeout_s == 30.0
-    assert by_name["ncbi_efetch.search"].timeout_s == 15.0
-    assert by_name["ncbi_dbsnp.query"].timeout_s == 15.0
-    assert by_name["pubtator_annotate.entity_lookup"].timeout_s == 15.0
-    assert by_name["litvar2_lookup.variant_search"].timeout_s == 15.0
-    assert by_name["pathogen_detection.isolate_lookup"].timeout_s == 60.0
-    assert by_name["clinicaltrials_search.search"].timeout_s == 15.0
+    assert by_name["cypher_query.query"].timeout_s == CYPHER_QUERY_TIMEOUT_SECONDS
+    for name in (
+        "ncbi_efetch.search",
+        "ncbi_dbsnp.query",
+        "pubtator_annotate.entity_lookup",
+        "litvar2_lookup.variant_search",
+        "clinicaltrials_search.search",
+    ):
+        assert by_name[name].timeout_s == DEFAULT_TIMEOUT_S, name
+    assert by_name["pathogen_detection.isolate_lookup"].timeout_s == _TOTAL_BUDGET_S
+    assert _TOTAL_BUDGET_S == 120.0
 
 
 def test_resource_options_returns_the_seven_tool_names_sorted() -> None:

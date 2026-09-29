@@ -31,6 +31,26 @@ fact names:
     each run, so an edited page is checked as edited.
   - every downstream document that restates it, checked the same way.
 
+WHAT A PLACE IS READ FROM, since card 53's fix round (2026-09-29): the text
+a person reads, never the raw file. Comments, docstrings and a constant
+nothing uses are blanked first (`visible`), so a sentence kept in a comment
+cannot vouch for a page that says something else. Four rules then make a
+place FAIL rather than pass on part of what it says:
+
+  - WHOLE SENTENCES. A place's match must cover every sentence it touches,
+    whole, so a clause added before or after the guarded words, or a
+    negation anywhere in the sentence, fails (`sentence_problem`). A place
+    marked `block` reads fields out of a structure and is exempt; the prose
+    inside such a structure is guarded only where a place of its own names
+    it.
+  - EVERY WORD READ. A list of names (APIs, surfaces, tools, modes) must
+    consist of known names and a closed set of connective words; "not",
+    "never" or "excluded" is a word the registry cannot read, so it fails.
+  - EXACT COUNT. Each place says how many times its statement appears. One
+    card of five dropping out is a FAIL, never a smaller count.
+  - GONE IS FAIL. A statement that no longer matches, or reads as a wording
+    the registry does not know, is a FAIL, not an ERROR the run shrugs at.
+
 WHY THE REGISTRY IS PYTHON RATHER THAN JSON OR YAML. A fact's truth is
 rarely a plain lookup: a count is the length of a `Literal`, "115M" is a
 rounding of 115,406,761, "which steps ask a model" is a walk of the call
@@ -52,16 +72,17 @@ as a whole, where a GAP line the model writes, for a screen with no design
 or an unread deploy record, names a gap without failing the verdict.
 
   PASS   what the place says matches the source.
-  FAIL   it does not: the page or document is stale.
+  FAIL   it does not: the page or document is stale, or the place no longer
+         says what the registry reads there (see the four rules above).
   GAP    the source could not be read here, for example the data-engineering
          repository behind `reference/` is not checked out. The place is
          unchecked, so the run does not pass.
-  ERROR  the registry no longer matches the code, or a source cannot be read
-         without running it: a pattern finds nothing, a place reads as
-         nothing, a constant is gone or is not a literal. The registry must
-         be updated, which is the point: a fact cannot silently stop being
-         checked. When a fact's truth cannot be computed, every one of its
-         places gets its own ERROR line, so none is silently dropped.
+  ERROR  the registry no longer matches the CODE, or a source cannot be read
+         without running it: a constant is gone or is not a literal, a
+         function the truth reads has moved. The registry must be updated,
+         which is the point: a fact cannot silently stop being checked. When
+         a fact's truth cannot be computed, every one of its places gets its
+         own ERROR line, so none is silently dropped.
 
 EXIT CODES: 0 every place PASS; 1 at least one FAIL; 2 at least one ERROR,
 or bad arguments, or a Python older than 3.11; 3 at least one GAP and no
@@ -79,7 +100,13 @@ WHAT THIS SCRIPT DOES NOT CHECK, stated so a gap is arguable:
   - Facts the page reads from the API at run time, such as the search limit
     (`GET /v1/allowance`) and the scientist's name. They cannot go stale.
   - Prose it has no pattern for. A new sentence stating a new number is not
-    checked until the registry names it.
+    checked until the registry names it. Some guarded sentences are pinned
+    word for word rather than computed (the tier cards' kinds, the layer 2
+    walk's "fetched while you wait"): an edit to them fails, which sends
+    the change to review, but their words are not derived from code.
+  - Conditions a static read cannot prove. The layer 3 facts read the
+    branches, the symbol test and the rs id cap in `core/graph.py`, but not
+    what a model will decide on a given question.
   - The live graph's counts. The graph owner's reference document is the
     source; querying the graph would need its credential.
   - Calls the static call graph cannot see: a function reached through a
@@ -98,9 +125,15 @@ USAGE
                                   does not resolve (an agent worktree); a DIR that
                                   does not exist is refused, never ignored
   check_facts.py --root DIR       check another checkout
-  check_facts.py --self-test      prove every check can pass and can fail; exits 1
-                                  unless every reader is proven, so run it with
+  check_facts.py --self-test      prove every check can pass and can fail, and prove
+                                  each category above on every place (a clause
+                                  added, the statement deleted, moved into a
+                                  comment or an unused constant, negated); exits
+                                  1 unless every reader is proven, so run it with
                                   the reference repository present
+  check_facts.py --mutation-test  apply the registry's named break-it edits, the
+                                  ones card 53's reviewers used, and prove each
+                                  one fails the check
 
 Run it with the repository's virtual environment, `venv/bin/python`, or any
 Python 3.11 or later. An older Python is refused with exit code 2.
@@ -112,6 +145,7 @@ import argparse
 import ast
 import datetime as dt
 import hashlib
+import itertools
 import json
 import re
 import subprocess
@@ -149,6 +183,13 @@ class Gap(Exception):
 
 class RegistryError(Exception):
     """The registry names something the code no longer has."""
+
+
+class PlaceFail(Exception):
+    """A place no longer says what the registry reads there: its statement
+    is gone, is there a different number of times, has words around it the
+    registry does not read, or reads as something no known wording means.
+    Reported as FAIL, never dropped from the count (card 53, F-53-A04)."""
 
 
 # ------------------------------------------------------------------ repository
@@ -271,6 +312,435 @@ def parse_python(repo: Repo, rel: str) -> ast.Module:
 
 def line_of(text: str, offset: int) -> int:
     return text.count("\n", 0, offset) + 1
+
+
+# ------------------------------------------------------------------ what a reader sees
+#
+# A place is read from the text a person actually reads, never from the raw
+# file (card 53, F-53-A05). Comments, docstrings and a constant nothing uses
+# are replaced by spaces of the same length, so every offset and line number
+# still points at the file, and a pattern cannot find its claim in a comment
+# while the rendered sentence says something else.
+#
+# The same pass finds the PROSE UNITS a reader reads as one run of text: a
+# string literal, a run of JSX text, a markdown line or table cell, a Python
+# string with its implicit concatenations joined. A place's match must cover
+# every sentence of those units it touches, whole (`sentence_problem`), so a
+# clause added before or after the guarded words fails the place.
+
+
+@dataclass(frozen=True)
+class Visible:
+    text: str
+    units: tuple[tuple[int, int], ...]
+
+
+def _blank(text: str, spans: Iterable[tuple[int, int]]) -> str:
+    chars = list(text)
+    for start, end in spans:
+        for i in range(start, min(end, len(chars))):
+            if chars[i] != "\n":
+                chars[i] = " "
+    return "".join(chars)
+
+
+def _skip_quoted(text: str, i: int) -> int:
+    """The offset just past the string literal opening at `i`. An
+    unterminated string ends at the line's end, so one stray apostrophe
+    cannot swallow the rest of the file."""
+    quote = text[i]
+    j = i + 1
+    while j < len(text):
+        if text[j] == "\\":
+            j += 2
+            continue
+        if text[j] == quote:
+            return j + 1
+        if text[j] == "\n":
+            return j
+        j += 1
+    return j
+
+
+def _skip_template(text: str, i: int) -> int:
+    depth = 0
+    j = i + 1
+    while j < len(text):
+        if text[j] == "\\":
+            j += 2
+            continue
+        if text.startswith("${", j):
+            depth += 1
+            j += 2
+            continue
+        if text[j] == "}" and depth:
+            depth -= 1
+        elif text[j] == "`" and not depth:
+            return j + 1
+        j += 1
+    return j
+
+
+# The tokens after which a `<` opens a JSX element rather than comparing.
+_JSX_BEFORE = frozenset({"", "(", ",", "=", "=>", "?", ":", "&&", "||", "{", "[", "return", ";"})
+
+
+def _scan_script(text: str) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+    """Comments and prose units of a TypeScript, TSX or JavaScript file.
+
+    A small context scanner, enough for these screens: plain code, the inside
+    of a JSX tag, and JSX children, whose text is prose. Apostrophes in JSX
+    text are text, not quotes; `//` straight after a colon is a URL, not a
+    comment."""
+    comments: list[tuple[int, int]] = []
+    units: list[tuple[int, int]] = []
+    stack = ["js"]
+    braces = [0]
+    last = ""
+    i, n = 0, len(text)
+    while i < n:
+        ctx = stack[-1]
+        c = text[i]
+        if ctx == "children":
+            j = i
+            while j < n and text[j] not in "<{":
+                j += 1
+            if j > i:
+                units.append((i, j))
+            if j >= n:
+                break
+            if text[j] == "{":
+                stack.append("js")
+                braces.append(0)
+                last = "{"
+                i = j + 1
+            elif text.startswith("</", j):
+                k = text.find(">", j)
+                i = n if k < 0 else k + 1
+                stack.pop()
+                if stack[-1] == "js":
+                    last = ")"
+            else:
+                stack.append("tag")
+                i = j + 1
+            continue
+        if ctx == "tag":
+            if c in "\"'":
+                end = _skip_quoted(text, i)
+                units.append((i + 1, max(i + 1, end - 1)))
+                i = end
+            elif c == "{":
+                stack.append("js")
+                braces.append(0)
+                last = "{"
+                i += 1
+            elif text.startswith("/>", i):
+                stack.pop()
+                if stack[-1] == "js":
+                    last = ")"
+                i += 2
+            elif c == ">":
+                stack[-1] = "children"
+                i += 1
+            else:
+                i += 1
+            continue
+        if text.startswith("//", i) and not (i and text[i - 1] == ":"):
+            end = text.find("\n", i)
+            end = n if end < 0 else end
+            comments.append((i, end))
+            i = end
+        elif text.startswith("/*", i):
+            end = text.find("*/", i + 2)
+            end = n if end < 0 else end + 2
+            comments.append((i, end))
+            i = end
+        elif c in "\"'":
+            end = _skip_quoted(text, i)
+            units.append((i + 1, max(i + 1, end - 1)))
+            i, last = end, "v"
+        elif c == "`":
+            end = _skip_template(text, i)
+            units.append((i + 1, max(i + 1, end - 1)))
+            i, last = end, "v"
+        elif c == "{":
+            braces[-1] += 1
+            last = "{"
+            i += 1
+        elif c == "}":
+            if braces[-1] == 0 and len(stack) > 1:
+                stack.pop()
+                braces.pop()
+            else:
+                braces[-1] = max(0, braces[-1] - 1)
+                last = "}"
+            i += 1
+        elif (
+            c == "<"
+            and last in _JSX_BEFORE
+            and i + 1 < n
+            and (text[i + 1].isalpha() or text[i + 1] == ">")
+        ):
+            if text[i + 1] == ">":
+                stack.append("children")
+                i += 2
+            else:
+                stack.append("tag")
+                i += 1
+        elif text.startswith("=>", i):
+            last = "=>"
+            i += 2
+        elif text.startswith("&&", i) or text.startswith("||", i):
+            last = text[i : i + 2]
+            i += 2
+        elif c.isalnum() or c in "_$":
+            j = i
+            while j < n and (text[j].isalnum() or text[j] in "_$"):
+                j += 1
+            last = "return" if text[i:j] == "return" else "v"
+            i = j
+        elif c.isspace():
+            i += 1
+        else:
+            last = c
+            i += 1
+    return comments, units
+
+
+_TOP_CONST = re.compile(r"^(export\s+)?const\s+(\w+)\b", re.MULTILINE)
+_TOP_START = re.compile(r"^[A-Za-z_@$]", re.MULTILINE)
+FRONTEND_SRC = "frontend/src"
+
+
+def _frontend_texts(repo: Repo, path: str) -> list[str]:
+    """Every other non-test script under frontend/src, for "is this exported
+    constant used anywhere"."""
+    found = []
+    for p in sorted((repo.root / FRONTEND_SRC).rglob("*")):
+        rel = p.relative_to(repo.root).as_posix()
+        if (
+            rel == path
+            or p.suffix not in {".ts", ".tsx"}
+            or ".test." in p.name
+            or "__tests__" in p.parts
+        ):
+            continue
+        found.append(repo.overlay.get(rel) or p.read_text(encoding="utf-8"))
+    return found
+
+
+def _unused_constants(repo: Repo, path: str, text: str) -> list[tuple[int, int]]:
+    """The spans of top-level `const` declarations nothing reads: not this
+    file outside the declaration, and, for an exported one, no other
+    non-test script. A reader never sees an unused constant, so a sentence
+    kept in one cannot vouch for the page (F-53-A05)."""
+    starts = [m.start() for m in _TOP_START.finditer(text)]
+    spans = []
+    others: list[str] | None = None
+    for m in _TOP_CONST.finditer(text):
+        later = [s for s in starts if s > m.start()]
+        end = later[0] if later else len(text)
+        name = m.group(2)
+        pattern = re.compile(rf"(?<![\w$.]){re.escape(name)}(?![\w$])")
+        rest = text[: m.start()] + text[end:]
+        if pattern.search(rest):
+            continue
+        if m.group(1):
+            if others is None:
+                others = _frontend_texts(repo, path)
+            if any(pattern.search(other) for other in others):
+                continue
+        spans.append((m.start(), end))
+    return spans
+
+
+def _python_visible(text: str) -> Visible:
+    """A Python file with comments and docstrings blanked, and each run of
+    implicitly concatenated string literals joined into one prose unit, its
+    joins (closing quote, white space, opening quote) blanked too."""
+    import io
+    import tokenize
+
+    lines = text.splitlines(keepends=True)
+    starts = [0]
+    for line in lines:
+        starts.append(starts[-1] + len(line))
+
+    def at(row: int, col: int) -> int:
+        prefix = (
+            lines[row - 1].encode("utf-8")[:col].decode("utf-8", errors="ignore")
+            if row <= len(lines)
+            else ""
+        )
+        return starts[row - 1] + len(prefix) if row <= len(lines) else len(text)
+
+    blank: list[tuple[int, int]] = []
+    strings: list[tuple[int, int, str]] = []
+    try:
+        tokens = list(tokenize.generate_tokens(io.StringIO(text).readline))
+    except (tokenize.TokenError, SyntaxError):
+        return Visible(text, ())
+    fstring: tuple[int, str] | None = None
+    for tok in tokens:
+        kind = tokenize.tok_name[tok.type]
+        start, end = at(*tok.start), at(*tok.end)
+        if kind == "COMMENT":
+            blank.append((start, end))
+        elif kind == "STRING":
+            strings.append((start, end, tok.string))
+        elif kind == "FSTRING_START":
+            fstring = (start, tok.string)
+        elif kind == "FSTRING_END" and fstring is not None:
+            strings.append((fstring[0], end, text[fstring[0] : end]))
+            fstring = None
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        tree = None
+    docstrings: set[int] = set()
+    if tree is not None:
+        for node in [tree, *ast.walk(tree)]:
+            body = getattr(node, "body", None)
+            if (
+                isinstance(body, list)
+                and body
+                and isinstance(body[0], ast.Expr)
+                and isinstance(body[0].value, ast.Constant)
+                and isinstance(body[0].value.value, str)
+                and isinstance(
+                    node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+                )
+            ):
+                docstrings.add(at(body[0].lineno, body[0].col_offset))
+    units: list[tuple[int, int]] = []
+    run: list[tuple[int, int, str]] = []
+
+    def close_run() -> None:
+        if not run:
+            return
+        first_open = _string_open(run[0][2])
+        last_close = _string_close(run[-1][2])
+        inner_start = run[0][0] + first_open
+        inner_end = run[-1][1] - last_close
+        for (_, a_end, a_src), (b_start, _, b_src) in itertools.pairwise(run):
+            blank.append((a_end - _string_close(a_src), b_start + _string_open(b_src)))
+        units.append((inner_start, max(inner_start, inner_end)))
+        run.clear()
+
+    for start, end, src in strings:
+        if start in docstrings:
+            close_run()
+            blank.append((start, end))
+            continue
+        if run and not text[run[-1][1] : start].strip(" \t\r\n\\"):
+            run.append((start, end, src))
+        else:
+            close_run()
+            run.append((start, end, src))
+    close_run()
+    return Visible(_blank(text, blank), tuple(sorted(units)))
+
+
+def _string_open(src: str) -> int:
+    m = re.match(r"[A-Za-z]*('''|\"\"\"|'|\")", src)
+    return m.end() if m else 0
+
+
+def _string_close(src: str) -> int:
+    for quote in ('"""', "'''", '"', "'"):
+        if src.endswith(quote):
+            return len(quote)
+    return 0
+
+
+def _markdown_visible(text: str) -> Visible:
+    blank = [(m.start(), m.end()) for m in re.finditer(r"<!--.*?-->", text, re.DOTALL)]
+    shown = _blank(text, blank)
+    units = []
+    offset = 0
+    for line in shown.splitlines(keepends=True):
+        cell_start = offset
+        for m in re.finditer(r"\|", line):
+            units.append((cell_start, offset + m.start()))
+            cell_start = offset + m.end()
+        units.append((cell_start, offset + len(line.rstrip("\n"))))
+        offset += len(line)
+    return Visible(shown, tuple(u for u in units if u[1] > u[0]))
+
+
+_VISIBLE: dict[str, Visible] = {}
+
+
+CODE_PLACE = "code copy"
+
+
+def visible(repo: Repo, rel: str, code: bool = False) -> Visible:
+    """What a reader of `rel` sees, with the prose units in it. For a code
+    copy (`code`), the reader is a program: comments are still blanked, but
+    a constant only tests import is kept, since it is the copy under check."""
+    text = repo.text(rel)
+    key = f"{rel}|{code}|" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+    if key in _VISIBLE:
+        return _VISIBLE[key]
+    suffix = Path(rel).suffix
+    if suffix in {".ts", ".tsx", ".js", ".jsx"}:
+        comments, units = _scan_script(text)
+        shown = _blank(text, comments)
+        unused = [] if code else _unused_constants(repo, rel, shown)
+        shown = _blank(shown, unused)
+        units = [u for u in units if not any(a <= u[0] < b for a, b in unused)]
+        result = Visible(shown, tuple(sorted(units)))
+    elif suffix == ".py":
+        result = _python_visible(text)
+    elif suffix == ".md":
+        result = _markdown_visible(text)
+    else:
+        result = Visible(text, ())
+    if len(result.text) != len(text):  # pragma: no cover - blanking keeps length
+        raise RegistryError(f"{rel}: the visible text lost its alignment with the file")
+    _VISIBLE[key] = result
+    return result
+
+
+_WORDY = re.compile(r"[A-Za-z0-9]")
+
+
+def sentences_in(text: str, start: int, end: int) -> list[tuple[int, int]]:
+    """The sentences of one prose unit: each ends at `.`, `!` or `?`
+    followed by white space or the unit's end."""
+    found = []
+    begin = start
+    for m in re.finditer(r"[.!?](?=\s|$)", text[start:end]):
+        stop = start + m.end()
+        found.append((begin, stop))
+        begin = stop
+    if begin < end:
+        found.append((begin, end))
+    return [(a, b) for a, b in found if _WORDY.search(text[a:b])]
+
+
+def touched_sentences(doc: Visible, start: int, end: int) -> list[tuple[int, int]]:
+    """Every sentence of a prose unit that overlaps the span, in order."""
+    found = []
+    for u_start, u_end in doc.units:
+        if u_start >= end:
+            break
+        if u_end <= start:
+            continue
+        for s_start, s_end in sentences_in(doc.text, u_start, u_end):
+            if s_start < end and s_end > start:
+                found.append((s_start, s_end))
+    return found
+
+
+def sentence_problem(doc: Visible, start: int, end: int) -> str:
+    """The first sentence the span touches but does not cover whole, or "".
+    What lies outside the span may only be punctuation and white space."""
+    for s_start, s_end in touched_sentences(doc, start, end):
+        outside = doc.text[s_start : max(s_start, start)] + doc.text[min(s_end, end) : s_end]
+        if _WORDY.search(outside):
+            return " ".join(doc.text[s_start:s_end].split())
+    return ""
 
 
 def offsets(text: str, node: ast.AST) -> tuple[int, int]:
@@ -806,7 +1276,11 @@ def swap(path: str, pattern: str, replacement: str) -> Callable[[Repo], dict[str
 
 TIERS = frozenset({"guard", "plan", "synth"})
 PRIMITIVE_ATTRS = frozenset({"call_tier"})
-PRIMITIVE_NAMES = frozenset({"_dispatch_tier_call", "call_jev"})
+# Jev, the classifier, is asked one decision at a time through `call_jev`
+# and a whole answer's reworded sentences at once through `call_jev_batch`
+# (`synthesis/sentence_check.py`). Both count as a classifier call.
+CLASSIFIER_CALLS = frozenset({"call_jev", "call_jev_batch"})
+PRIMITIVE_NAMES = frozenset({"_dispatch_tier_call"}) | CLASSIFIER_CALLS
 GRAPH_MODULE_PATH = f"{PACKAGE_DIR}/core/graph.py"
 
 
@@ -820,7 +1294,8 @@ class CallGraph:
     step reach a model call, and on which tier".
 
     A model call is `harness.call_tier(...)` or `_dispatch_tier_call(...)`,
-    whose string argument names the tier, or `call_jev(...)`, the classifier.
+    whose string argument names the tier, or `call_jev(...)` or
+    `call_jev_batch(...)`, the classifier.
     Calls are resolved by name within a module, through `from X import y`,
     through `module.attr` on an imported module, and through `self.method`.
     A function named without being called (a callback) counts as reached.
@@ -890,7 +1365,7 @@ class CallGraph:
                 if called in PRIMITIVE_NAMES or (
                     isinstance(func, ast.Attribute) and called in PRIMITIVE_ATTRS
                 ):
-                    if called == "call_jev":
+                    if called in CLASSIFIER_CALLS:
                         prims.add("classifier")
                         continue
                     literal = [
@@ -945,7 +1420,11 @@ _GRAPHS: dict[str, CallGraph] = {}
 
 def call_graph(repo: Repo) -> CallGraph:
     key = json.dumps(
-        sorted((k, hashlib.sha256(v.encode()).hexdigest()) for k, v in repo.overlay.items())
+        sorted(
+            (k, hashlib.sha256(v.encode()).hexdigest())
+            for k, v in repo.overlay.items()
+            if k.startswith(PACKAGE_DIR + "/") and k.endswith(".py")
+        )
     )
     key = f"{repo.root}|{key}"
     if key not in _GRAPHS:
@@ -1129,6 +1608,16 @@ class Where:
 
     With `collect`, every match is merged into one statement at the first
     match's line; otherwise each match is its own statement.
+
+    `expect` is how many times the pattern must match the text a reader
+    sees. A statement that disappears, or a multi-card pattern that loses
+    one card, is a FAIL rather than a smaller count (F-53-A04).
+
+    `block` marks a place that reads named fields out of a structure (a
+    TypeScript array of layers, an object's keys) rather than a sentence. It
+    is exempt from the whole-sentence rule, because the prose inside the
+    structure is not what it claims; that prose is guarded, where it states
+    a fact, by a place of its own.
     """
 
     place: str
@@ -1138,6 +1627,8 @@ class Where:
     parse: Callable[[re.Match[str]], Any] = GROUP_1
     collect: Callable[[list[Any]], Any] | None = None
     flags: int = 0
+    expect: int = 1
+    block: bool = False
 
 
 @dataclass(frozen=True)
@@ -1169,28 +1660,46 @@ class Result:
 
 
 def statements(repo: Repo, where: Where) -> list[Statement]:
-    text = repo.text(where.path)
+    """What a place says, read from the text a reader sees (`visible`).
+
+    Four ways a place stops saying what the registry reads, each a FAIL
+    (`PlaceFail`), never a silent drop: the pattern matches a different
+    number of times than `expect`; a match reads as something no known
+    wording or name means; it reads as nothing; or it touches a sentence it
+    does not cover whole, so words the registry never reads sit in the same
+    sentence as the claim (F-53-A03)."""
+    doc = visible(repo, where.path, code=where.place == CODE_PLACE)
+    text = doc.text
     matches = list(re.finditer(where.pattern, text, where.flags))
-    if not matches:
-        raise RegistryError(
-            f"{repo.display(where.path)}: pattern {where.pattern!r} finds nothing, so the "
-            "place no longer says this where the registry looks; update the registry"
+    if len(matches) != where.expect:
+        where_lines = ", ".join(str(line_of(text, m.start())) for m in matches) or "nowhere"
+        raise PlaceFail(
+            f"{repo.display(where.path)}: pattern {_clip(where.pattern, 90)!r} is said "
+            f"{len(matches)} times (lines {where_lines}) where the registry reads {where.expect}; "
+            "the statement changed, moved into a comment or disappeared"
         )
     found = []
     for match in matches:
         line = line_of(text, match.start())
         try:
             value = where.parse(match)
-        except Exception as exc:  # noqa: BLE001 - any parse failure is one ERROR line
-            raise RegistryError(
+        except Exception as exc:  # noqa: BLE001 - any parse failure is one FAIL line
+            raise PlaceFail(
                 f"{repo.display(where.path)}:{line}: cannot read {_clip(match.group(0), 80)!r}: "
                 f"{type(exc).__name__}: {exc}"
             ) from None
         if _empty(value):
-            raise RegistryError(
+            raise PlaceFail(
                 f"{repo.display(where.path)}:{line}: reads as nothing, so it cannot be judged; "
                 "the page no longer says what the registry expects there"
             )
+        if not where.block:
+            problem = sentence_problem(doc, match.start(), match.end())
+            if problem:
+                raise PlaceFail(
+                    f"{repo.display(where.path)}:{line}: the sentence says more than the "
+                    f"registry reads: {_clip(problem, 160)!r}"
+                )
         found.append(Statement(where, value, line, _says(match, value)))
     if where.collect is not None:
         first = found[0]
@@ -1224,7 +1733,11 @@ def _says(match: re.Match[str], value: Any) -> str:
 def _reason(exc: BaseException, repo: Repo | None) -> str:
     """One line for a failure, scrubbed of local paths. The registry's own
     errors carry their message; anything else is named by its type too."""
-    text = str(exc) if isinstance(exc, (Gap, RegistryError)) else f"{type(exc).__name__}: {exc}"
+    text = (
+        str(exc)
+        if isinstance(exc, (Gap, RegistryError, PlaceFail))
+        else f"{type(exc).__name__}: {exc}"
+    )
     return scrub(" ".join(text.split()), repo)
 
 
@@ -1266,6 +1779,16 @@ def check_fact(repo: Repo, fact: Fact) -> list[Result]:
                 (st, where.cmp.ok(st.value, truth.value), where.cmp.describe(st.value, truth.value))
                 for st in found
             ]
+        except PlaceFail as exc:
+            results.append(
+                Result(
+                    "FAIL",
+                    fact,
+                    where,
+                    f"FAIL | {fact.fact_id} | {where.place} | {_reason(exc, repo)}",
+                )
+            )
+            continue
         except Exception as exc:  # noqa: BLE001 - one ERROR line per place, and the run goes on
             results.append(
                 Result(
@@ -1456,6 +1979,9 @@ def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
                 f"{fact.fact_id}: a changed source did not change the truth ({show(before.value)})"
             )
 
+    proofs, category_failures = category_proofs(repo, facts)
+    failures += category_failures
+
     parser_cases: list[tuple[str, Any, Any]] = [
         ("to_int word", to_int("Eleven"), 11),
         ("to_int commas", to_int("115,406,761"), 115406761),
@@ -1471,6 +1997,24 @@ def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
         ("bump date string", bump("v1_2026-04-22"), "v1_2026-04-23"),
         ("millions floor", _millions_ok(67, 67_536_325), True),
         ("millions wrong", _millions_ok(115, 693_295_991), False),
+        # The visible-text scanner: an apostrophe in JSX text is text, a URL's
+        # `//` is not a comment, a JSX comment is blanked, and Python's
+        # implicit concatenation reads as one run of prose.
+        (
+            "jsx apostrophe and comment",
+            _blank(
+                "x = <p>It's fine {/* hidden */} here</p>;",
+                _scan_script("x = <p>It's fine {/* hidden */} here</p>;")[0],
+            ),
+            "x = <p>It's fine {            } here</p>;",
+        ),
+        ("url is not a comment", _scan_script('a = "https://x.org"; // c')[0], [(21, 25)]),
+        (
+            "python joins concatenated strings",
+            _python_visible('X = (\n    "one "\n    "two."\n)  # c\n').text,
+            'X = (\n    "one  \n     two."\n)     \n',
+        ),
+        ("sentences split at a full stop", len(sentences_in("One. Two three.", 0, 15)), 2),
     ]
     for label, got, want in parser_cases:
         if got != want:
@@ -1488,7 +2032,235 @@ def self_test(repo: Repo, facts: tuple[Fact, ...]) -> int:
         f"of {len(facts)} readers proven to follow a changed source; "
         f"{len(parser_cases)} parser cases; {len(failures)} failures"
     )
+    print(
+        "self-test, by category (proven of tried): "
+        + "; ".join(f"{name} {done} of {tried}" for name, (done, tried) in proofs.items())
+    )
     return 1 if failures else 0
+
+
+# ------------------------------------------------------------------ category proofs
+#
+# Card 53's review found the checker passing false pages in five shapes. Each
+# is a CATEGORY here, proven on every place rather than on the examples the
+# reviewers happened to write (Review_rounds.md, Rule 2):
+#
+#   extension  a clause added to a sentence a place reads fails a place in
+#              that file.
+#   removal    a statement deleted from the page fails its place.
+#   comment    the statement moved into a comment fails its place, although
+#              the raw file still carries the words.
+#   unused     the statement moved into a constant nothing uses fails its place.
+#   negation   "not " put at the start of any sentence a place touches fails
+#              at least one place in that file.
+#
+# Every edit is an overlay in memory, never a change on disk.
+
+DECOY_COMMENTS = {
+    ".ts": ("/*\n", "\n*/\n", "*/"),
+    ".tsx": ("/*\n", "\n*/\n", "*/"),
+    ".md": ("<!--\n", "\n-->\n", "-->"),
+}
+
+
+class _Judge:
+    """Whether one place passes on a changed file, reusing each fact's truth
+    unless the change touches a file that truth reads."""
+
+    def __init__(self, repo: Repo, facts: tuple[Fact, ...]) -> None:
+        self.repo = repo
+        self.truth: dict[str, Truth | None] = {}
+        self.sources: dict[str, set[str]] = {}
+        for fact in facts:
+            probe = Repo(repo.root, repo.reference, repo.overlay)
+            try:
+                self.truth[fact.fact_id] = fact.truth.read(probe)
+            except Exception:  # noqa: BLE001 - a fact whose truth fails is judged as failing
+                self.truth[fact.fact_id] = None
+            self.sources[fact.fact_id] = set(probe.read_log)
+
+    def passes(self, fact: Fact, where: Where, overlay: dict[str, str]) -> bool:
+        changed = self.repo.with_overlay(overlay)
+        truth = self.truth[fact.fact_id]
+        if set(overlay) & self.sources[fact.fact_id]:
+            try:
+                truth = fact.truth.read(changed)
+            except Exception:  # noqa: BLE001 - an unreadable truth is not a pass
+                return False
+        if truth is None:
+            return False
+        try:
+            found = statements(changed, where)
+        except Exception:  # noqa: BLE001 - a place that cannot be read is not a pass
+            return False
+        return all(where.cmp.ok(st.value, truth.value) for st in found)
+
+
+def _matches(repo: Repo, where: Where) -> list[re.Match[str]]:
+    doc = visible(repo, where.path, code=where.place == CODE_PLACE)
+    return list(re.finditer(where.pattern, doc.text, where.flags))
+
+
+def category_proofs(
+    repo: Repo, facts: tuple[Fact, ...]
+) -> tuple[dict[str, tuple[int, int]], list[str]]:
+    judge = _Judge(repo, facts)
+    tally = {k: [0, 0] for k in ("extension", "removal", "comment", "unused", "negation")}
+    failures: list[str] = []
+    by_path: dict[str, list[tuple[Fact, Where]]] = {}
+    for fact in facts:
+        for where in (*fact.stated, *fact.downstream):
+            by_path.setdefault(where.path, []).append((fact, where))
+
+    def expect_fail(
+        kind: str, fact: Fact, where: Where, overlay: dict[str, str], what: str
+    ) -> None:
+        tally[kind][1] += 1
+        if judge.passes(fact, where, overlay):
+            failures.append(f"{fact.fact_id} | {where.place} | {kind}: still passes after {what}")
+        else:
+            tally[kind][0] += 1
+
+    negated: set[tuple[str, int]] = set()
+    for fact in facts:
+        for where in (*fact.stated, *fact.downstream):
+            try:
+                if not judge.passes(fact, where, {}):
+                    continue  # already reported by the checks above
+                raw = repo.text(where.path)
+                doc = visible(repo, where.path, code=where.place == CODE_PLACE)
+                matches = _matches(repo, where)
+            except Exception:  # noqa: BLE001, S112 - an unreadable place is reported by step 1
+                continue
+            first = matches[0]
+            original = raw[first.start() : first.end()]
+            # removal
+            expect_fail(
+                "removal",
+                fact,
+                where,
+                {where.path: raw[: first.start()] + raw[first.end() :]},
+                "the statement was deleted",
+            )
+            # comment
+            suffix = Path(where.path).suffix
+            if suffix in DECOY_COMMENTS and DECOY_COMMENTS[suffix][2] not in original:
+                opener, closer, _ = DECOY_COMMENTS[suffix]
+                moved = opener + original + closer + raw[: first.start()] + raw[first.end() :]
+                if len(re.findall(where.pattern, moved, where.flags)) >= where.expect:
+                    expect_fail(
+                        "comment",
+                        fact,
+                        where,
+                        {where.path: moved},
+                        "the statement moved into a comment",
+                    )
+            # unused constant
+            if (
+                suffix in {".ts", ".tsx"}
+                and where.place != CODE_PLACE
+                and "`" not in original
+                and "${" not in original
+            ):
+                moved = (
+                    raw[: first.start()]
+                    + raw[first.end() :]
+                    + f"\nconst {MUTANT}decoy = `{original}`;\n"
+                )
+                if len(re.findall(where.pattern, moved, where.flags)) >= where.expect:
+                    expect_fail(
+                        "unused",
+                        fact,
+                        where,
+                        {where.path: moved},
+                        "the statement moved into an unused constant",
+                    )
+            if where.block:
+                continue
+            for match in matches:
+                sentences = touched_sentences(doc, match.start(), match.end())
+                if not sentences:
+                    continue
+                # extension: a clause before the last sentence's full stop,
+                # judged by every place in the file
+                s_start, s_end = sentences[-1]
+                at = s_end - 1 if raw[s_end - 1] in ".!?" else s_end
+                overlay = {where.path: raw[:at] + ", but not always" + raw[at:]}
+                tally["extension"][1] += 1
+                if all(judge.passes(f, w_, overlay) for f, w_ in by_path[where.path]):
+                    failures.append(
+                        f"{fact.fact_id} | {where.place} | extension: no place fails when a clause "
+                        f"is added to {_clip(' '.join(raw[s_start:s_end].split()), 90)!r}"
+                    )
+                else:
+                    tally["extension"][0] += 1
+                # negation, once per sentence, judged by every place in the file
+                for s_start, s_end in sentences:
+                    if (where.path, s_start) in negated:
+                        continue
+                    negated.add((where.path, s_start))
+                    word = _WORDY.search(raw, s_start)
+                    if word is None:
+                        continue
+                    at = word.start()
+                    overlay = {where.path: raw[:at] + "not " + raw[at:]}
+                    tally["negation"][1] += 1
+                    if all(judge.passes(f, w_, overlay) for f, w_ in by_path[where.path]):
+                        failures.append(
+                            f"{fact.fact_id} | {where.place} | negation: no place fails when "
+                            f"{_clip(' '.join(raw[s_start:s_end].split()), 90)!r} is negated"
+                        )
+                    else:
+                        tally["negation"][0] += 1
+    return {k: (v[0], v[1]) for k, v in tally.items()}, failures
+
+
+def mutation_test(
+    repo: Repo,
+    facts: tuple[Fact, ...],
+    mutations: tuple[tuple[str, str, tuple[tuple[str, str, str], ...]], ...],
+) -> int:
+    """Apply each named break-it edit in memory and require the checker to
+    stop passing. The unedited checkout must pass first, or no edit proves
+    anything. An edit whose text is no longer in its file is a failure."""
+    base = [r for fact in facts for r in check_fact(repo, fact) if r.verdict != "PASS"]
+    if base:
+        for result in base:
+            print(f"MUTATION-TEST FAIL | the unedited checkout does not pass: {result.render()}")
+        return 1
+    missed = 0
+    for label, finding, edits in mutations:
+        overlay: dict[str, str] = {}
+        stale = ""
+        for path, old, new in edits:
+            text = overlay.get(path, repo.text(path))
+            if text.count(old) != 1:
+                stale = f"{path} carries {_clip(old, 60)!r} {text.count(old)} times, not once"
+                break
+            overlay[path] = text.replace(old, new)
+        if stale:
+            missed += 1
+            print(f"MISSED | {finding} | {label} | the edit no longer applies: {stale}")
+            continue
+        changed = repo.with_overlay(overlay)
+        caught = ""
+        for fact in facts:
+            touches = any(w.path in overlay for w in (*fact.stated, *fact.downstream))
+            if not touches and not (set(overlay) & sources_read(repo, fact)):
+                continue
+            for result in check_fact(changed, fact):
+                if result.verdict != "PASS":
+                    caught = result.render()
+                    break
+            if caught:
+                break
+        if caught:
+            print(f"CAUGHT | {finding} | {label} | {_clip(caught, 220)}")
+        else:
+            missed += 1
+            print(f"MISSED | {finding} | {label} | every place still passes")
+    print(f"mutation-test: {len(mutations) - missed} of {len(mutations)} break-it edits caught")
+    return 1 if missed else 0
 
 
 def main(argv: list[str]) -> int:
@@ -1518,6 +2290,11 @@ def _run(argv: list[str]) -> int:
     parser.add_argument("--reference", help="the data-engineering repository")
     parser.add_argument("--root", help="the checkout to check (default: this one)")
     parser.add_argument("--self-test", action="store_true", help="prove every check can fail")
+    parser.add_argument(
+        "--mutation-test",
+        action="store_true",
+        help="apply the registry's break-it edits and prove each one fails the check",
+    )
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve() if args.root else DEFAULT_ROOT
@@ -1545,6 +2322,10 @@ def _run(argv: list[str]) -> int:
             return 0
     if args.self_test:
         return self_test(repo, facts)
+    if args.mutation_test:
+        import facts_registry
+
+        return mutation_test(repo, facts, facts_registry.MUTATIONS)
     if args.map:
         return print_map(repo, facts)
     return run_checks(repo, facts, args.all)

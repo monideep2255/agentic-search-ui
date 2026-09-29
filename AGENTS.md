@@ -42,15 +42,15 @@ Agent loop (every query):
 
 Three-layer data access:
   Layer 1: Knowledge graph (Cypher via psycopg2 to AGE on Hetzner VPS, read-only)
-  Layer 2: NCBI APIs live (EFetch, ELink, dbSNP REST, called at query time)
-  Layer 3: Enrichment APIs (PubTator3, LitVar2, LitSense, ClinicalTrials.gov)
+  Layer 2: NCBI APIs live (E-utilities, Datasets, PubChem, dbSNP, Pathogen Detection, called at query time)
+  Layer 3: Enrichment APIs (PubTator3, LitVar2, ClinicalTrials.gov)
 ```
 
 The agent orchestrates across all three layers. Layer 1 provides the pre-ingested graph (115M nodes, 693M edges from 5 NCBI databases), hosted on Hetzner CPX42 (`<server-ip>`) and queryable via openCypher over psycopg2. Layers 2 and 3 reach live APIs for data not in the graph or for real-time enrichment.
 
 Multi-model harness with three tiers:
 - Guard tier: fast, cheap model for input validation and guardrails
-- Plan tier: mid-range model for query decomposition and tool selection
+- Plan tier: mid-range model for Think's question analysis, and for writing a graph query in Act when no template fits. The Plan step picks its tools in code
 - Synth tier: strongest model for final answer synthesis and citation assembly
 
 ---
@@ -255,4 +255,4 @@ Security hooks in `.claude/hooks/` (wired in `.claude/settings.json`) run on Pre
 
 ---
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27

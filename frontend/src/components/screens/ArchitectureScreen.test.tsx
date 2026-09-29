@@ -179,7 +179,7 @@ describe("ArchitectureScreen", () => {
     expect(stack).toHaveTextContent("PostgreSQL 15 with the Apache AGE extension");
     expect(stack).toHaveTextContent("read-only credential");
     expect(stack).toHaveTextContent("30 seconds");
-    expect(stack).toHaveTextContent("500 rows");
+    expect(stack).toHaveTextContent("100 rows");
 
     const cypher = screen.getByTestId("architecture-cypher");
     expect(cypher).toHaveTextContent("MATCH (g:Gene {id: 'NCBIGene:672'})");
@@ -196,7 +196,7 @@ describe("ArchitectureScreen", () => {
     expect(one).toHaveTextContent("Knowledge graph");
     expect(one).toHaveTextContent("L1");
     expect(one).toHaveTextContent("cypher_query");
-    expect(one).toHaveTextContent("30 seconds, at most 500 rows");
+    expect(one).toHaveTextContent("30 seconds, at most 100 rows");
 
     const two = within(layers).getByTestId("architecture-layer-2");
     expect(two).toHaveTextContent("Live NCBI APIs");

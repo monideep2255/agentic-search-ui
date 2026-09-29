@@ -13,7 +13,15 @@ The first real run landed on 2026-08-25 and replaced the seeded example row, as 
 - 2026-08-25: `docs/build/Build_workflow_cadence.md`, the skill's first real run and its end-to-end proof.
 - 2026-08-25: `README.md`, the second run, which calibrated the comma-chain arm against a document that was already close to clean.
 - 2026-08-25: a five-document batch run in parallel, one agent per file, after a phase checkpoint: `requirements/Plan.md`, `requirements/phase_6/Continuation_prompt.md`, `PROGRESS.md`, `CLAUDE.md` and `AGENTS.md`. Two locked documents were analysed report-only and never edited, in `tracker/locked_docs_readability_report.md`.
+- 2026-08-30: `requirements/phase_6/Continuation_prompt.md`, stopped at step 3 because the gate was green on first observation, so nothing was edited.
+- 2026-08-31: `docs/build/Debugging_guide.md`, the first author-mode run, shipped after its third auditor round by product-owner decision.
+- 2026-09-20: `requirements/phase_6/Continuation_prompt.md`, run on a capture document on explicit instruction; the auditor failed it three times and the run stopped.
+- 2026-09-20: `testing/UI_fix_plan.md`, the first run on this file, whose auditor FAIL was the most useful result of the night.
 - 2026-09-22: `testing/UI_fix_plan.md`, the second run on this file: the product owner's high-level tracker at the top, both scripts green, stopped at the two-round auditor cap and put to the product owner.
+- 2026-09-23: `testing/UI_fix_plan.md`, the third run, stopped at the two-round auditor cap and put to the product owner.
+- 2026-09-24: `testing/UI_fix_plan.md`, three rows: round 3 by a background agent, the split into itself and `testing/UI_fixes_done.md`, and the move into a board with everything else in the done file.
+- 2026-09-26: `README.md`, two rows: the trim on the product owner's instruction that the README was too bloated, and round 2 fixing the first auditor's FAIL.
+- 2026-09-27: `README.md`, the second auditor's PASS on the round 2 row, appended because the log is append-only.
 
 ## Table
 

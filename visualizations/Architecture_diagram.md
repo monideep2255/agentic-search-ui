@@ -13,7 +13,7 @@ System architecture for System 3, the agentic search layer over the NCBI knowled
 
 ## The big picture
 
-One FastAPI application serves every surface. The web UI, the REST and SSE endpoints, the GraphQL surface and the MCP server all enter through the same application object, so a question asked from a browser and a question asked from an MCP host run the identical loop and get the identical event stream. The command line client is a client of the REST and SSE endpoints rather than a second server. KGX export is the one surface that does not touch the loop at all: it is a batch job that reads a query-scoped subgraph straight out of Layer 1.
+One FastAPI application serves every surface. The web UI, the REST and SSE endpoints, the GraphQL surface and the MCP server all enter through the same application object, so a question asked from a browser and a question asked from an MCP host run the identical loop and get the identical event stream. The command line client is a client of the REST and SSE endpoints, and its `s3 mcp` forwards to the MCP server, so neither is a second server. KGX export is the one surface that does not touch the loop at all: it is a batch job that reads a query-scoped subgraph straight out of Layer 1.
 
 ```mermaid
 flowchart LR
@@ -42,6 +42,7 @@ flowchart LR
     Term --> CLI
     Term --> KGXC
     CLI --> REST
+    CLI --> MCP
 
     REST --> API
     GQL --> API
@@ -59,15 +60,15 @@ The surfaces and their entry points:
 - Web UI: a React single-page app with a home screen, a run screen, an answer screen, an about screen and an integrations screen.
 - REST and SSE: `POST /v1/query` creates a run, `GET /v1/query/{run_id}/events` streams it, plus stop, feedback, citations, history, persona, allowance and health.
 - GraphQL: one `ask` mutation, one `stopRun` mutation, and `run` and `citations` queries, mounted at `/graphql`.
-- MCP server: one tool, `ask_biomedical_question`, mounted at `/mcp` on the same application.
-- Command line: the `s3` console script with `ask`, `stop` and `login` subcommands, talking to the REST and SSE endpoints.
+- MCP server: four tools, `ask_biomedical_question`, `list_past_searches`, `reopen_past_answer` and `send_answer_feedback`, mounted at `/mcp` on the same application.
+- Command line: the `s3` console script with `ask`, `stop`, `login` and `mcp` subcommands. The first three talk to the REST and SSE endpoints. `s3 mcp` is a local MCP server over stdio that forwards each message to `/mcp`.
 - KGX export: the `s3-kgx-export` console script, taking one or more seed CURIEs and writing `nodes.tsv`, `edges.tsv` and `manifest.json`.
 
 Where this lives: `src/system_03_search_agent/adapters/web_sse/app.py`, `adapters/graphql/`, `adapters/mcp/server.py`, `adapters/cli/`, `src/system_03_search_agent/export/`, `frontend/src/App.tsx`, `pyproject.toml`.
 
 ## The five-step agent loop
 
-Every query runs the same five nodes in a fixed sequence. Four of them make exactly one model call each, on the tier that matches the work. Act makes no model call at all; it dispatches tool calls.
+Every query runs the same five nodes in a fixed sequence, and every one of the five can ask a model something, on the tier that matches the work. The list below the diagram names each step's calls.
 
 The deterministic controls are what make the loop safe, not the prompts. A non-model prefilter runs ahead of the Guard call. A cost cap is checked immediately before every model call. A call budget bounds how many Layer 2 and Layer 3 calls one query may make. Write refuses rather than answering when nothing citable came back.
 
@@ -79,8 +80,8 @@ flowchart TD
     GC["Guardrail, Guard tier"]
     Forb["Forbidden intents"]
     TH["Think, Plan tier"]
-    PL["Plan, Plan tier"]
-    AC["Act, no model call"]
+    PL["Plan, tools picked in code"]
+    AC["Act, Plan and Guard tiers"]
     WR["Write, Synth tier"]
     Refuse["Refusal or decline"]
     Done["done event"]
@@ -102,11 +103,11 @@ flowchart TD
 
 Which tier runs which step, and what bounds it:
 
-- Guardrail: Guard tier, one call, per-step budget 15 seconds. The prefilter and the forbidden-intent screen around it are pure code and cost nothing.
-- Think: Plan tier, one call, per-step budget 45 seconds. Classifies the query into one of five shapes and resolves entities, live-confirming every model-extracted span before it contributes a CURIE.
-- Plan: Plan tier, one call, per-step budget 45 seconds. Chooses the tool calls.
-- Act: no model call. Its budget comes from the query class rather than a tier, from 15 seconds for a lookup up to 120 seconds for an exploratory query, and it is raised to a tool's own floor when the tool declares a longer one.
-- Write: Synth tier, one call, per-step budget 45 seconds. Emits tokens, citations, trust signals and the terminal `done` event.
+- Guardrail: Guard tier, per-step budget 15 seconds, for the injection and off-topic classifier, asked once more after an unusable reply. The relevancy decision, Jev or the guard tier, joins it when the word list does not recognise the question. The prefilter and the forbidden-intent screen around it are pure code and cost nothing.
+- Think: Plan tier, per-step budget 45 seconds. Classifies the query into one of five shapes and resolves entities, live-confirming every model-extracted span before it contributes a CURIE. Its yes-or-no decisions go to Jev or the guard tier, and the guard tier writes ask-back choices.
+- Plan: per-step budget 45 seconds, the plan tier's figure, though it never calls the plan tier. Chooses the tool calls in code. When no gene resolved, it reads the literature decision Think started, asking it itself only when Think did not start it. A gene question never waits for it.
+- Act: Plan tier to write a graph query when no template fits, and Guard tier to read article titles. Its budget comes from the query class rather than a tier, from 15 seconds for a lookup up to 120 seconds for an exploratory query, and it is raised to a tool's own floor when the tool declares a longer one.
+- Write: Synth tier, per-step budget 45 seconds, shared with the check on reworded sentences, by Jev or the guard tier, and a possible synth repair pass. Emits tokens, citations, trust signals and the terminal `done` event.
 
 The deterministic controls, in the order a query meets them:
 
@@ -127,7 +128,7 @@ flowchart TD
     Act["Act step"]
 
     subgraph Layer1["Layer 1, graph snapshot"]
-        CQ["cypher_query, 90 s"]
+        CQ["cypher_query, 30 s"]
     end
 
     subgraph Layer2["Layer 2, live NCBI"]
@@ -161,7 +162,7 @@ flowchart TD
 
 | Tool | Layer | Per-call budget in code | Rate-limit pool |
 | --- | --- | --- | --- |
-| cypher_query | Layer 1 | 90 seconds | Not an NCBI API. Row limit 500, plus a per-caller limit at the service |
+| cypher_query | Layer 1 | 30 seconds | Not an NCBI API. Row limit 500, plus a per-caller limit at the service |
 | ncbi_efetch | Layer 2 | 15 seconds, one backoff retry | E-utilities, 3 requests per second by default |
 | ncbi_dbsnp | Layer 2 | 15 seconds per call, two sequential calls | Variation Services, 1 request per second |
 | pathogen_detection | Layer 2 | 120 seconds total, 60 seconds per transfer | Bulk FTP snapshot, bounded by transfer time |
@@ -169,7 +170,7 @@ flowchart TD
 | litvar2_lookup | Layer 3 | 15 seconds | Provisional 5 requests per second |
 | clinicaltrials_search | Layer 3 | 15 seconds | Provisional 5 requests per second |
 
-Two classification calls in that table are deliberate rather than mechanical. `cypher_query`'s 90 seconds is measured, not inherited: the plan-tier generation call that writes the Cypher was measured at a mean of 25 seconds and a worst case near 40 seconds before the graph is touched at all, so a 30 second budget could not complete. `pathogen_detection` is Layer 2 rather than Layer 3 because it is an NCBI-native bulk source, not one of the four enrichment APIs.
+Two classification calls in that table are deliberate rather than mechanical. `cypher_query`'s 30 seconds is measured, not inherited: it was 90 for a while, then went back to 30 on the product owner's decision of 2026-09-26 (R-09), because across two golden runs 290 calls took a median of 0.71 seconds and no call that ran past 30 seconds succeeded. `pathogen_detection` is Layer 2 rather than Layer 3 because it is an NCBI-native bulk source, not one of the three enrichment APIs.
 
 Where this lives, all under `src/system_03_search_agent/tools/` except the last:
 
@@ -204,6 +205,7 @@ sequenceDiagram
     L->>S: tool_start
     T-->>L: rows or error
     L->>S: tool_result
+    L->>S: step
     L->>S: token
     L->>S: citation
     L->>S: trust_signal
@@ -217,6 +219,7 @@ The event types, in the order a complete run emits them:
 - `think`: the narrative, the query class, and the resolved entities.
 - `plan`: the narrative and the chosen tool calls.
 - `tool_start` and `tool_result`: one pair per tool call, sharing a `call_id`.
+- `step`: a progress marker saying Write has started, sent before its first token. It carries no text, citation or verdict.
 - `token`: the answer text as it streams, with marker ids for inline citation chips.
 - `citation`: one per claim that earned one, carrying the full provenance record.
 - `trust_signal`: the per-claim verdict, and the answer-level verdict.
@@ -347,4 +350,4 @@ References:
 - [docs/build/Debugging_guide.md](../docs/build/Debugging_guide.md): which file to open when something is wrong
 - [docs/build/Release_flow.md](../docs/build/Release_flow.md): how a change reaches production
 
-Last updated: 2026-09-13
+Last updated: 2026-09-27

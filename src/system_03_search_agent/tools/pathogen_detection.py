@@ -1479,8 +1479,8 @@ def build_citation(
     `layer="layer_2_api"` is a deliberate classification call, not the
     Layer 3 default a bulk-enrichment-shaped tool might suggest: Pathogen
     Detection is an NCBI-native bulk data source (the FTP snapshot tree),
-    not one of the four enrichment APIs CLAUDE.md names for Layer 3
-    (PubTator3, LitVar2, LitSense, ClinicalTrials.gov). Logged in
+    not one of the three enrichment APIs CLAUDE.md names for Layer 3
+    (PubTator3, LitVar2, ClinicalTrials.gov). Logged in
     DECISIONS.md and `tracker/phase_3.4.md` per T-3.4-04's own instruction,
     since it is a non-obvious call, not a mechanical one.
     """

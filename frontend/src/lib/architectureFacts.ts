@@ -105,8 +105,10 @@ export const PIPELINE_STEPS = [
  * Sources: `visualizations/Architecture_diagram.md`'s tool table for the
  * layer split and the budgets, each of which is a constant in code
  * (`CYPHER_QUERY_TIMEOUT_SECONDS = 30.0`, cut from 90.0 by pull request #119
- * on phase 8.6's judge finding F-8.6-FJ08, and `MAX_ROW_LIMIT = 500` in
- * `tools/graph_schema_constants.py`, `DEFAULT_TIMEOUT_S = 15.0` in
+ * on phase 8.6's judge finding F-8.6-FJ08, in
+ * `tools/graph_schema_constants.py`, the 100 rows every planned graph call
+ * asks for, `_PLAN_TOOL_CALL_ROW_LIMIT` in `core/graph.py`, below the
+ * schema's `MAX_ROW_LIMIT = 500`, `DEFAULT_TIMEOUT_S = 15.0` in
  * `tools/ncbi_transport.py`, `_TOTAL_BUDGET_S = 120.0` in
  * `tools/pathogen_detection.py`). The hosts come from the tool modules
  * themselves: `_EUTILS_BASE` in `tools/ncbi_eutils_actions.py`,
@@ -116,13 +118,16 @@ export const PIPELINE_STEPS = [
  * and the PubTator3, LitVar2 and ClinicalTrials.gov constants in their own
  * modules.
  *
- * ONE DIVERGENCE IS DELIBERATE. The About page's walk lists
- * `pathogen_detection` under layer 3. This list puts it under layer 2,
- * following `Architecture_diagram.md`, which classifies it there "because it
- * is an NCBI-native bulk source, not one of the four enrichment APIs" and is
- * this repository's source of truth for the tool-to-layer mapping. About's
- * own list is left as it stands, since that page was out of scope to
- * restructure; the disagreement is stated rather than papered over.
+ * `pathogen_detection` sits under layer 2, following `Architecture_diagram.md`,
+ * which classifies it there because it is an NCBI-native bulk source, not
+ * one of the three enrichment APIs. The About page's walk has listed it under
+ * layer 2 too since 2026-09-13, so the two pages no longer disagree.
+ *
+ * WHEN LAYER 3 RUNS: Plan decides, and not every question gets it. The
+ * Architecture page's layer 3 stop says which questions do and which do not,
+ * read from `core/graph.py` (`_build_layer_tool_calls` and the branches of
+ * `plan_node` that never reach it), so the summary here only says that Plan
+ * decides.
  */
 export const LAYERS: {
   n: 1 | 2 | 3;
@@ -139,7 +144,7 @@ export const LAYERS: {
       {
         name: "cypher_query",
         calls: "the ncbi_kg graph, PostgreSQL with Apache AGE",
-        budget: "30 seconds, at most 500 rows",
+        budget: "30 seconds, at most 100 rows",
       },
     ],
   },
@@ -170,7 +175,7 @@ export const LAYERS: {
     n: 3,
     name: "Enrichment",
     summary:
-      "Literature and trial evidence, layered on a fact the first two layers already established. Called when the question asks for it, never by default.",
+      "Literature and trial evidence about the gene, disease or variant a question names. Plan decides whether a question gets it, and not every question does.",
     tools: [
       { name: "pubtator_annotate", calls: "PubTator3", budget: "15 seconds" },
       { name: "litvar2_lookup", calls: "LitVar2", budget: "15 seconds" },
