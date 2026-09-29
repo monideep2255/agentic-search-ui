@@ -633,13 +633,18 @@ class Harness:
           from every later call in the process. Any other 400, one that
           merely mentions reasoning included, is not retried.
 
-        With `retry=False` (re-land follow-up R-10, card 72) neither retry
-        is taken: exactly one request is sent, and any failure is raised,
-        classified, from that one request's own exception, so the caller
-        reads a rate limit's `Retry-After` from the request that carried
-        it. The guardrail's classifier passes it, because it sends its own
-        second request (a hedge or a retry) and promises the provider at
-        most two per question. Every other caller keeps both retries.
+        With `retry=False` (re-land follow-up R-10, card 72) the transient
+        retry is not taken: one request for the answer is sent, and any
+        failure is raised, classified, from that request's own exception,
+        so the caller reads a rate limit's `Retry-After` from the request
+        that carried it. Every guard-tier request the guardrail makes passes
+        it (`harness.decide.ask_guard_model`), because that path sends its
+        own second request (a hedge or a retry) and promises the provider at
+        most two. The reasoning fallback is still taken (R-10 fix round,
+        F-72-J08): it is not a second request for the same answer but the
+        only way a model that cannot turn reasoning off can be asked at all,
+        and without it such a guard model would fail every question at the
+        front door in 50 ms. Every other caller keeps both retries.
 
         Any other recoverable or unexpected failure raises immediately. A
         retried call is a genuinely new attempt against the same target,
@@ -675,7 +680,8 @@ class Harness:
         }
 
         transient_retry_left = retry
-        reasoning_fallback_left = retry
+        # Taken whatever `retry` says (F-72-J08); see the docstring.
+        reasoning_fallback_left = True
         attempt = 0
         started = time.monotonic()
         while True:
