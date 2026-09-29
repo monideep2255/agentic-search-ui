@@ -865,8 +865,13 @@ def _crash_text(caplog: pytest.LogCaptureFixture) -> str:
 def _log_directly(caplog: pytest.LogCaptureFixture, exc: BaseException) -> str:
     from system_03_search_agent.core.run import _log_crash
 
+    escaped = ""
     with caplog.at_level("ERROR", logger=_CRASH_LOGGER):
-        _log_crash(_TRACE, exc)
+        try:
+            _log_crash(_TRACE, exc)
+        except Exception as raised:  # noqa: BLE001
+            escaped = type(raised).__name__
+    assert not escaped, f"_log_crash raised: {escaped}"
     return _crash_text(caplog)
 
 
@@ -886,6 +891,20 @@ def _install_raise(monkeypatch: pytest.MonkeyPatch, path: str, exc: BaseExceptio
             yield  # pragma: no cover
 
         monkeypatch.setattr(run_module.compiled_graph, "astream", _boom_astream)
+
+
+async def _drain_never_raising(path: str, query: Query) -> list:
+    """Drain a run, failing with a plain message if the crash logger raised
+    into the caller. Reporting only the class keeps pytest from formatting an
+    exception whose own methods are hostile."""
+    escaped = ""
+    try:
+        return await _drain(path, query)
+    except Exception as raised:  # noqa: BLE001
+        escaped = type(raised).__name__
+    # Failed outside the except block so pytest does not chain, and try to
+    # format, the hostile exception.
+    pytest.fail(f"the crash logger raised into the caller: {escaped}")
 
 
 def _assert_generic_pair(events: list) -> None:
@@ -964,7 +983,7 @@ async def test_a_crash_whose_record_cannot_be_built_still_gives_the_person_the_e
         _ = type(exc).__module__  # the trigger is real: reading it raises
     _install_raise(monkeypatch, path, exc)
     with caplog.at_level("ERROR", logger=_CRASH_LOGGER):
-        events = await _drain(path, _valid_query())
+        events = await _drain_never_raising(path, _valid_query())
 
     _assert_generic_pair(events)
     text = _crash_text(caplog)
@@ -993,7 +1012,7 @@ async def test_a_logger_that_itself_raises_never_costs_the_person_the_error_even
         raise OSError("log disk full")
 
     monkeypatch.setattr(run_module.logger, "error", _broken_error)
-    events = await _drain(path, _valid_query())
+    events = await _drain_never_raising(path, _valid_query())
     _assert_generic_pair(events)
 
 
@@ -1004,10 +1023,16 @@ def test_a_cause_whose_truthiness_raises_does_not_stop_the_record() -> None:
 
     from system_03_search_agent.core.run import _crash_record
 
+    escaped = ""
+    text = ""
     try:
         raise ValueError("outer") from Hostile()
     except ValueError as caught:
-        text = _crash_record(_TRACE, caught)
+        try:
+            text = _crash_record(_TRACE, caught)
+        except Exception as raised:  # noqa: BLE001
+            escaped = type(raised).__name__
+    assert not escaped, f"the record builder raised: {escaped}"
     assert "Hostile" in text
 
 
