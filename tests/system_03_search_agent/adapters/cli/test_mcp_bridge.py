@@ -125,7 +125,11 @@ class StandIn:
                     {
                         "jsonrpc": "2.0",
                         "id": message["id"],
-                        "error": {"code": -32600, "message": "missing, malformed, or invalid bearer token"},
+                        "error": {
+                            "code": -32600,
+                            "message": "invalid bearer token",
+                            "data": {"reason": "sign_in_refused"},
+                        },
                     }
                 )
             text = f"{message['params']['name']} answered {json.dumps(message['params'].get('arguments'))}"
@@ -319,7 +323,11 @@ class TestRenewal:
             message = json.loads(request.content)
             return httpx.Response(
                 200,
-                json={"jsonrpc": "2.0", "id": message["id"], "error": {"code": -32600, "message": "invalid bearer token"}},
+                json={
+                    "jsonrpc": "2.0",
+                    "id": message["id"],
+                    "error": {"code": -32600, "message": "invalid bearer token", "data": {"reason": "sign_in_refused"}},
+                },
             )
 
         stand_in.override = always_refuse
@@ -342,6 +350,47 @@ class TestRenewal:
         assert stand_in.refresh_calls == 1
         assert sorted(r["id"] for r in harness.replies()) == [11, 12]
         assert all("result" in r for r in harness.replies())
+
+
+class TestOnlyTheStructuredFieldMeansSignInRefused:
+    """Card 62's fix round, F-62-A06. `s3 mcp` decides the sign-in was
+    refused from the INVALID_REQUEST code and `data.reason`, never from the
+    message's words. Mutation that turns these red: match "bearer token" in
+    the message again, or drop the code check."""
+
+    @pytest.mark.asyncio
+    async def test_an_error_that_only_mentions_a_bearer_token_is_passed_on_unchanged(
+        self, signed_in
+    ) -> None:
+        stand_in = StandIn(valid_tokens=set())
+        server_error = {"code": -32602, "message": "unknown argument(s): bearer token"}
+
+        async def unknown_argument(request: httpx.Request) -> httpx.Response:
+            message = json.loads(request.content)
+            return httpx.Response(
+                200, json={"jsonrpc": "2.0", "id": message["id"], "error": server_error}
+            )
+
+        stand_in.override = unknown_argument
+        harness = Harness(stand_in, signed_in("opaque"))
+        replies = await harness.send(CALL())
+        assert replies == [{"jsonrpc": "2.0", "id": 3, "error": server_error}]
+        assert stand_in.refresh_calls == 0
+        assert len(stand_in.mcp_requests) == 1
+        assert "renewed" not in harness.stderr.getvalue()
+
+    @pytest.mark.parametrize(
+        ("error", "refused"),
+        [
+            ({"code": -32600, "message": "anything at all", "data": {"reason": "sign_in_refused"}}, True),
+            ({"code": -32600, "message": "invalid bearer token"}, False),
+            ({"code": -32600, "message": "invalid bearer token", "data": {"reason": "other"}}, False),
+            ({"code": -32602, "message": "x", "data": {"reason": "sign_in_refused"}}, False),
+            ({"code": -32600, "message": "x", "data": "sign_in_refused"}, False),
+        ],
+    )
+    def test_the_decision_reads_structure_not_words(self, error: dict, refused: bool) -> None:
+        assert mcp_bridge._is_token_refusal({"jsonrpc": "2.0", "id": 1, "error": error}) is refused
 
 
 class TestAccessTokenExpiry:

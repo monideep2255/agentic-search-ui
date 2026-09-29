@@ -524,21 +524,26 @@ class TestARefusedTokenSaysWhatToDo:
     Mutation that turns these red: put back the one shared message."""
 
     @staticmethod
-    def _says_how_to_get_a_token(message: str) -> None:
+    def _says_how_to_get_a_token(error: MCPError) -> None:
+        message = error.message
         assert "needs a System 3 account" in message
         assert "POST /auth/login" in message
-        # `s3 mcp` renews its sign-in when a refusal names the bearer token
-        # (`mcp_bridge._is_token_refusal`), and so does every copy already
-        # installed, so every refusal must keep saying it.
+        # Copies of `s3` installed before card 62's fix round renew their
+        # sign-in when a refusal names the bearer token, so every refusal
+        # keeps saying it.
+        assert "bearer token" in message
+        # `s3 mcp` today decides from the structured field alone (F-62-A06):
+        # the refusal as it arrived over the transport must carry it.
         from system_03_search_agent.adapters.cli.mcp_bridge import _is_token_refusal
 
-        assert _is_token_refusal({"jsonrpc": "2.0", "id": 1, "error": {"message": message}})
+        wire = {"code": error.code, "message": message, "data": error.data}
+        assert _is_token_refusal({"jsonrpc": "2.0", "id": 1, "error": wire})
 
     @pytest.mark.asyncio
     async def test_no_token_says_an_account_is_needed(self) -> None:
         error = await _call_tool_expecting_mcp_error(None, {"query": "What gene is BRCA1?"})
         assert error.message.startswith("no bearer token")
-        self._says_how_to_get_a_token(error.message)
+        self._says_how_to_get_a_token(error)
 
     @pytest.mark.asyncio
     async def test_a_header_without_the_bearer_scheme_is_called_malformed(self) -> None:
@@ -546,7 +551,7 @@ class TestARefusedTokenSaysWhatToDo:
             {"Authorization": "Token abc.def.ghi"}, {"query": "What gene is BRCA1?"}
         )
         assert error.message.startswith("malformed bearer token")
-        self._says_how_to_get_a_token(error.message)
+        self._says_how_to_get_a_token(error)
 
     @pytest.mark.asyncio
     async def test_a_token_that_does_not_verify_is_called_invalid(self) -> None:
@@ -554,7 +559,7 @@ class TestARefusedTokenSaysWhatToDo:
             {"Authorization": "Bearer this.is.not-a-real-jwt"}, {"query": "What gene is BRCA1?"}
         )
         assert error.message.startswith("invalid bearer token")
-        self._says_how_to_get_a_token(error.message)
+        self._says_how_to_get_a_token(error)
 
     @pytest.mark.asyncio
     async def test_a_real_guest_token_is_told_an_account_is_needed(self) -> None:
@@ -570,4 +575,67 @@ class TestARefusedTokenSaysWhatToDo:
         )
         assert error.message.startswith("invalid bearer token")
         assert "guest token cannot be used" in error.message
-        self._says_how_to_get_a_token(error.message)
+        self._says_how_to_get_a_token(error)
+
+
+class TestOnlyARefusedSignInCarriesTheSignInField:
+    """Card 62's fix round, F-62-A06 and F-62-J06. `s3 mcp` renews its
+    sign-in only when an error carries `SIGN_IN_REFUSED_DATA`; the server
+    sets it on the sign-in refusals and on nothing else, and never echoes a
+    caller's argument name. Mutations that turn these red: echo the unknown
+    names again, set the field on the unknown-argument error, or read two
+    Authorization headers as none."""
+
+    @pytest.mark.asyncio
+    async def test_an_argument_named_bearer_token_is_not_a_sign_in_refusal(self) -> None:
+        from system_03_search_agent.adapters.cli.mcp_bridge import _is_token_refusal
+
+        _user_id, headers = await _real_user_headers()
+        error = await _call_tool_expecting_mcp_error(
+            headers, {"query": "What gene is BRCA1?", "bearer token": "x"}
+        )
+        assert error.message.startswith("unknown argument: this tool accepts only ")
+        assert "bearer token" not in error.message.lower()
+        assert error.data is None
+        wire = {"code": error.code, "message": error.message, "data": error.data}
+        assert not _is_token_refusal({"jsonrpc": "2.0", "id": 1, "error": wire})
+
+    @pytest.mark.asyncio
+    async def test_every_sign_in_refusal_carries_the_field(self) -> None:
+        from system_03_search_agent.adapters.mcp.server import SIGN_IN_REFUSED_DATA
+
+        for headers in (None, {"Authorization": "Token x"}, {"Authorization": "Bearer not-a-jwt"}):
+            error = await _call_tool_expecting_mcp_error(headers, {"query": "What gene is BRCA1?"})
+            assert error.data == SIGN_IN_REFUSED_DATA
+
+    @pytest.mark.asyncio
+    async def test_two_authorization_headers_are_named_as_two(self) -> None:
+        from types import SimpleNamespace
+
+        from starlette.datastructures import Headers
+
+        from system_03_search_agent.adapters.mcp import server as server_module
+
+        ctx = SimpleNamespace(
+            headers=Headers(raw=[(b"authorization", b"Bearer a.b.c"), (b"authorization", b"Bearer d.e.f")])
+        )
+        with pytest.raises(MCPError) as caught:
+            await server_module._authenticate_mcp_caller(ctx)
+        assert caught.value.message.startswith(
+            "malformed bearer token: the request carried more than one Authorization header"
+        )
+        assert caught.value.data == server_module.SIGN_IN_REFUSED_DATA
+
+    @pytest.mark.asyncio
+    async def test_the_scheme_with_no_token_after_it_is_malformed(self) -> None:
+        from types import SimpleNamespace
+
+        from starlette.datastructures import Headers
+
+        from system_03_search_agent.adapters.mcp import server as server_module
+
+        for value in (b"Bearer ", b"Bearer    "):
+            ctx = SimpleNamespace(headers=Headers(raw=[(b"authorization", value)]))
+            with pytest.raises(MCPError) as caught:
+                await server_module._authenticate_mcp_caller(ctx)
+            assert caught.value.message == server_module._MALFORMED_TOKEN_MESSAGE

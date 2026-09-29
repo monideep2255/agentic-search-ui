@@ -64,7 +64,11 @@ def _stand_in_server(seen_authorization: list[str | None]) -> MCPServer:
         value = headers.get("authorization") if headers is not None else None
         seen_authorization.append(value)
         if value != f"Bearer {TOKEN}":
-            raise MCPError(code=-32600, message="missing, malformed, or invalid bearer token")
+            raise MCPError(
+                code=-32600,
+                message="invalid bearer token",
+                data={"reason": "sign_in_refused"},
+            )
 
     @server.tool(description="A tool name the bridge has never seen.")
     async def stand_in_lookup(term: str, ctx: Context) -> str:
