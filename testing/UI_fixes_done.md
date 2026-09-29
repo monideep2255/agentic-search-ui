@@ -421,7 +421,7 @@ fixed.
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-09-29. THE ONE THING TO KNOW: card 63 stays on develop. Its test queries 100 and 67 passed, and its golden run answered 98 of 150, below its floor of 101; the owner kept it and accepted the run, and the floor for the next change stays 101 (`DECISIONS.md`). Cards 62 and 53 finished their review rounds and are live on develop (#133, #134), with the two rule lists card 53 named (#135); both await the owner's retest, queries 101 and 102. Phase 8.7 is the parked work still to resume, and `HANDOFF.md` lists each piece.
+LAST UPDATED 2026-09-29. THE ONE THING TO KNOW: card 63 stays on develop. Its test queries 100 and 67 passed, and its golden run answered 98 of 150, below its floor of 101; the owner kept it and accepted the run, and the floor for the next change stays 101 (`DECISIONS.md`). Cards 62 and 53 finished their review rounds and are live on develop (#133, #134), with the two rule lists card 53 named (#135); both await the owner's retest, queries 101 and 102. Card 73 (#139) followed: a crashed search logs its reason. The guard fix, R-10 with card 72's hedge, failed its fresh verifier and is parked on its branch by the owner's choice; it returns as card 84 and a redesigned card 72, then phase 8.7. `HANDOFF.md` lists each piece.
 
 What is live on develop:
 
@@ -608,7 +608,7 @@ board on 2026-09-24.
 
 ### Next, in order
 
-Written 2026-09-25 in the order of that day's To do column, and not re-ordered since. The board's To do column now leads with newer cards, card 2 first. Where the two differ, the board's order wins. Ahead of every item below, since 2026-09-29: phase 8.7 from `HANDOFF.md`; cards 72 and 73, the guard timeouts behind card 63's lost golden runs, lead the board's To do column. The items below keep the reasons behind the older cards.
+Written 2026-09-25 in the order of that day's To do column, and not re-ordered since. The board's To do column now leads with newer cards, card 2 first. Where the two differ, the board's order wins. Ahead of every item below, since 2026-09-29: card 84 (R-10's sound parts), then card 72's redesigned hedge, then phase 8.7 from `HANDOFF.md`; cards 72 and 73, the guard timeouts behind card 63's lost golden runs, lead the board's To do column. The items below keep the reasons behind the older cards.
 
 The earlier framing of this list, kept because it still holds:
 
@@ -2053,6 +2053,10 @@ Back on the first laptop. Card 63's two checks ran, and cards 62 and 53 were res
 | Two rules naming LitSense | The owner approved correcting the two API lists, one line each | Merged (#135) |
 | Cards 71 to 78 | Filed: a reopened answer that differs from the one read (71), guard timeouts (72), a crash with no logged reason (73), G-006 (74), card 62's dropped MCP fix (75), two page sentences (76), the silent layer 3 skip (77), the facts checker's gaps (78) | To do |
 | The AirDrop steps in `HANDOFF.md` | Removed at the owner's word | Done |
+| Cards 62 and 53, and the two rule lists | Merged by the lead with `--admin` on the owner's grant (#133, #134, #135); card 53's branch first updated so the facts checker follows card 62's page; README's KGX line fixed after the product review (#138) | Retest |
+| Card 73, a crashed search logs its reason | Builder, judge, adversary, one fix round, fresh verifier; merged with V01 named at the owner's choice (#139) | Retest |
+| R-10 and card 72, the guard fix | Diagnosis, builder, judge, adversary (stalled after five findings), one fix round, fresh verifier: DO NOT MERGE on F-72-V08; parked on its branch at the owner's choice | Re-split as cards 84 and 72 |
+| Cards 79 to 84 | Filed from the product review, card 73's reviews and the parked guard fix | To do |
 
 ### 2026-09-29, in one table
 
