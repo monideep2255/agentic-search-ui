@@ -144,7 +144,6 @@ WEB_APP = f"{PKG}/adapters/web_sse/app.py"
 AUTH_ROUTER = f"{PKG}/auth/router.py"
 PERSONAS = f"{PKG}/data/personas_v1.json"
 S3_CLI = f"{PKG}/adapters/cli/main.py"
-KGX_CLI = f"{PKG}/export/cli.py"
 KGX_MANIFEST = f"{PKG}/export/manifest.py"
 GOLDEN = "eval/golden/golden_dataset.json"
 PYPROJECT = "pyproject.toml"
@@ -399,29 +398,6 @@ def pipeline_step_names(match: re.Match[str]) -> tuple[str, ...]:
             raise ValueError(f"the step {item!r} says more than the registry reads")
         steps.append(words[0])
     return tuple(steps)
-
-
-def kgx_example_options(match: re.Match[str]) -> frozenset[str]:
-    """The options the KGX example command uses. Every token must be the
-    command, a seed CURIE, a line continuation, an option, or the value
-    after an option, so the example cannot carry prose the registry does
-    not read."""
-    tokens = match.group(1).split()
-    if not tokens or tokens[0] != "s3-kgx-export":
-        raise ValueError("the example does not start with s3-kgx-export")
-    options = set()
-    expecting_value = False
-    for token in tokens[1:]:
-        if expecting_value:
-            expecting_value = False
-        elif token.startswith("--"):
-            options.add(token)
-            expecting_value = True
-        elif token in {"\\", "\\\\"} or re.fullmatch(r"[A-Za-z]+:[A-Za-z0-9_.]+", token):
-            continue
-        else:
-            raise ValueError(f"the example carries {token!r}, which the registry does not read")
-    return frozenset(options)
 
 
 def sent(template: str, **slots: str) -> str:
@@ -1612,8 +1588,7 @@ S3_SENTENCE = sent(
 )
 KGX_SENTENCE = sent(
     "s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv "
-    "and a manifest, from seed CURIEs and bounded hops, and needs graph credentials only the "
-    "operator grants."
+    "and a manifest, from seed CURIEs and bounded hops."
 )
 GUESTS_REFUSED = sent(
     "GraphQL and the MCP server: an account is required, so a guest cannot reach either."
@@ -2695,7 +2670,7 @@ FACTS: tuple[Fact, ...] = (
                 INTEGRATIONS,
                 INFO,
                 sent(
-                    "«n» console commands rather than HTTP routes, installed once with pip.",
+                    "«n» console commands rather than HTTP routes.",
                     n=r"(Two)",
                 ),
                 COUNT,
@@ -2716,20 +2691,6 @@ FACTS: tuple[Fact, ...] = (
         "the options the s3 command accepts",
         Computed(S3_CLI, cli_options(S3_CLI), swap(S3_CLI, r'"--depth",', '"--json",')),
         stated=(w(INTEGRATIONS, INFO, S3_SENTENCE, MEMBER, g()),),
-    ),
-    Fact(
-        "surfaces.kgx_options",
-        "the options the s3-kgx-export command accepts",
-        Computed(KGX_CLI, cli_options(KGX_CLI), swap(KGX_CLI, r'"--hops",', '"--depth",')),
-        stated=(
-            w(
-                INTEGRATIONS,
-                INFO,
-                r"export const KGX_EXAMPLE = `([^`]*)`",
-                SUBSET,
-                kgx_example_options,
-            ),
-        ),
     ),
     Fact(
         "access.login_route",
