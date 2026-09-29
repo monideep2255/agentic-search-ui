@@ -18,7 +18,7 @@ Nothing here requires a document to carry today's date:
 - Build harness review item D2 removed the column and the gate, delegated by the product owner on 2026-09-25 (DECISIONS.md, the lead implements both harness reviews' takeaways).
 - Now `HANDOFF.md` is rewritten at every session end, and every other document is edited when its fact changes.
 
-Last updated: 2026-09-27.
+Last updated: 2026-09-29.
 
 ## Table of contents
 
@@ -58,9 +58,9 @@ Last updated: 2026-09-27.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-09-27 that begins "The eight parked worktree folders under", the last row at the second 2026-09-27 checkpoint. The three rows read since the previous watermark, the `graphql-core` pin, the "repository" wording and the removed worktree folders, change a dependency, wording and local folders, not a registered document's shape, job or owner.
+Guarded through the DECISIONS.md row dated 2026-09-29 that begins "On the Intel Mac, the build's tools come from Miniforge", the last row at the 2026-09-29 checkpoint. The seven rows read since the previous watermark, the six parked branches pushed to GitHub (2026-09-28) and six of 2026-09-29 (both of card 63's rounds rerun, the outage note's wording, card 63 by pull request, the audit fix first, no `--admin` on develop, the Intel Mac's tools), change code, wording, a merge route and local setup, not a registered document's shape, job or owner.
 
-The checkpoint earlier that day guarded the rows before them. Three of those changed a registered document's job or a process this skill runs, each cited in its row above: the test queries document as the gate, a `/verify` pass starting the seven-day close, and owner decisions asked at once.
+The two 2026-09-27 checkpoints guarded the rows before them. Three of those changed a registered document's job or a process this skill runs, each cited in its row above: the test queries document as the gate, a `/verify` pass starting the seven-day close, and owner decisions asked at once.
 
 ## Why the registry lives here
 

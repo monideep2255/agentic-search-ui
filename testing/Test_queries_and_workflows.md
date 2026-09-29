@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-09-27.
+Last updated: 2026-09-29.
 
 Every entry has the same three parts:
 
@@ -1057,6 +1057,21 @@ What you should see:
 - Guests do not get this. The account is what stores the answer, and deleting the account deletes it with them.
 - Why it matters: clicking your own earlier question, being charged a second search for it, and waiting thirty seconds to read something you already read is the kind of small dishonesty that makes a history rail feel like decoration rather than a record.
 
+### 100. A "not yet confirmed" answer reopens too (card 63)
+
+Queries to try:
+
+- `Which diseases are associated with BRCA1?`: sign in, ask it, and read the trust line under the answer. If it reads "Based on N sources, not yet confirmed", start a new search, then click the question in "Your searches". If it reads "Confirmed", ask another gene question until one reads "not yet confirmed"; about six answers in ten do.
+- Query 67 covers a confirmed answer reopening.
+
+What you should see:
+
+- The "not yet confirmed" answer reopens at once, marked "Saved answer, asked <date>", with no progress screen and no second charge.
+- Its trust line still reads "not yet confirmed", with no check mark beside it, and any note that was under the answer is still there.
+- A guest's search still is not saved.
+- Only during an NCBI outage, which cannot be triggered on demand: the note reads, for example, "PubMed is down at NCBI right now, so this answer may be missing papers from it. Try again later." It never says the answer "has no papers", and never "Ask again to retry". A timeout or any other failure still says "Ask again to retry".
+- Why it matters: before card 63, about six answered searches in ten could not be reopened at all, and during an outage the note sent people straight back into it.
+
 ## 8. Stop, feedback and the connection
 
 ### 56. Stop a search (Product test 9)
@@ -1858,6 +1873,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 63 | A "not yet confirmed" answer reopens with its trust line and notes, and an NCBI outage is said plainly | Query 100 |
 | card 60 | The web app carries the license notices of the libraries it bundles | Query 99 |
 | card 58 | Stop can be pressed until the answer's first sentence is on screen | Query 98 |
 | card 49, phase 8.10 | Every integration works end to end: the command line and another AI agent ask what the web asks and get the same evidence | Queries 90 to 97 |
