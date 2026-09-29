@@ -120,7 +120,9 @@ for why every exception is caught here rather than trusted to
 """
 
 import logging
+import os
 import time
+import traceback
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
@@ -195,6 +197,136 @@ def _crash_fallback_events(trace_id: str, elapsed_ms: int, start_seq: int = 0) -
 
 
 logger = logging.getLogger(__name__)
+
+
+#: Bounds on the crash record (card 73). The record is one log entry, so every
+#: part of it has a hard cap that does not depend on who wrote the names in it.
+#: The head keeps the entry point and the node that was running; the tail keeps
+#: the failure itself. A crash through a graph node, a provider client and an
+#: HTTP stack is about 35 frames, so the 33 kept here hold the whole path and a
+#: runaway recursion still shows both ends with a count of what was left out.
+_CRASH_LOG_HEAD_FRAMES = 8
+_CRASH_LOG_TAIL_FRAMES = 25
+#: Cause and context links followed, and members of an exception group listed.
+_CRASH_LOG_MAX_CHAIN = 8
+_CRASH_LOG_MAX_GROUP_MEMBERS = 5
+#: Every class name, module path, file name and function name is cut to this.
+_CRASH_LOG_MAX_NAME_CHARS = 100
+#: The trace id is a 36 character UUID; the cap keeps the first line short.
+_CRASH_LOG_MAX_TRACE_ID_CHARS = 48
+#: The whole record. Anything past it is dropped, first line first kept.
+_CRASH_LOG_MAX_CHARS = 6000
+
+
+def _clip(value: object) -> str:
+    """One name of the record, cut to the per-name cap."""
+    return str(value)[:_CRASH_LOG_MAX_NAME_CHARS]
+
+
+def _class_name(exc: BaseException) -> str:
+    cls = type(exc)
+    return f"{_clip(cls.__module__)}.{_clip(cls.__qualname__)}"
+
+
+def _next_link(exc: BaseException) -> BaseException | None:
+    """The exception Python's own traceback would print next: the explicit
+    cause when there is one, otherwise the implicit context unless the raise
+    said `from None`. `is not None`, never truthiness: an exception object
+    can be falsy."""
+    if exc.__cause__ is not None:
+        return exc.__cause__
+    if exc.__suppress_context__:
+        return None
+    return exc.__context__
+
+
+def _crash_frames(exc: BaseException) -> list[str]:
+    """The frames of one exception's traceback, as `file:line in function`:
+    the outermost few and the innermost many, with one line saying how many
+    sit between them, so neither the entry point nor the failure is lost."""
+    frames = [
+        f"{_clip(os.path.basename(frame.filename))}:{frame.lineno} in {_clip(frame.name)}"
+        for frame in traceback.extract_tb(exc.__traceback__)
+    ]
+    keep = _CRASH_LOG_HEAD_FRAMES + _CRASH_LOG_TAIL_FRAMES
+    if len(frames) <= keep:
+        return frames
+    omitted = len(frames) - keep
+    return [
+        *frames[:_CRASH_LOG_HEAD_FRAMES],
+        f"... {omitted} frames omitted ...",
+        *frames[-_CRASH_LOG_TAIL_FRAMES:],
+    ]
+
+
+def _crash_record(trace_id: str, exc: BaseException) -> str:
+    """Build the whole crash record. The first line is short and starts with
+    the trace id, so a log handler that wraps long lines can never split it;
+    the detail follows on later lines."""
+    chain: list[BaseException] = []
+    seen: set[int] = set()
+    link: BaseException | None = exc
+    while link is not None and id(link) not in seen and len(chain) < _CRASH_LOG_MAX_CHAIN:
+        seen.add(id(link))
+        chain.append(link)
+        link = _next_link(link)
+    lines = [
+        f"search crashed, trace {str(trace_id)[:_CRASH_LOG_MAX_TRACE_ID_CHARS]}",
+        f"exception_class={_class_name(exc)}",
+        f"chain={' <- '.join(_class_name(item) for item in chain)}",
+    ]
+    if isinstance(exc, BaseExceptionGroup):
+        members = [_class_name(m) for m in exc.exceptions[:_CRASH_LOG_MAX_GROUP_MEMBERS]]
+        more = len(exc.exceptions) - len(members)
+        suffix = f" (+{more} more)" if more > 0 else ""
+        lines.append(f"group_members={', '.join(members)}{suffix}")
+    lines.append("frames:")
+    lines.extend(f"  {frame}" for frame in _crash_frames(exc))
+    innermost = chain[-1]
+    if innermost is not exc:
+        lines.append(f"innermost_frames ({_class_name(innermost)}):")
+        lines.extend(f"  {frame}" for frame in _crash_frames(innermost))
+    record = "\n".join(lines)
+    if len(record) > _CRASH_LOG_MAX_CHARS:
+        record = record[:_CRASH_LOG_MAX_CHARS] + "\n... record cut at its size limit"
+    return record
+
+
+def _log_crash(trace_id: str, exc: BaseException) -> None:
+    """Write the reason a search crashed to the log, once, at error level.
+    It never raises: it runs first in both last-resort handlers, ahead of the
+    fallback events, so a failure here would cost the person the error event.
+
+    Card 73. The two last-resort handlers below turn any uncaught exception
+    into the generic "failed unexpectedly" pair, which is right for the
+    person's screen and left a developer with nothing to trace (golden
+    question G-026, 2026-09-29, trace 2ff4e9d4).
+
+    What is logged: the trace id first, the exception's class (module and
+    name), the class names down its cause chain, the class names of an
+    exception group's members, and the traceback's frames as
+    `file:line in function` for the outermost exception and, when different,
+    the innermost one. What is deliberately NOT logged: the exception's
+    message, its arguments, local variables and the source text of each frame.
+    A provider error can echo a key and a driver error can echo a connection
+    string, and the redaction that exists in `observability/audit.py`
+    describes itself as best effort and not a control, so no scanner stands
+    between a message and the log here. A class name and a frame are
+    developer-written, never assembled from a response body, which is the
+    same distinction `audit` and `feedback/writer.py` already rely on. The
+    record carries no `exc_info` for the same reason: the standard formatter
+    would print the message.
+    """
+    try:
+        logger.error("%s", _crash_record(trace_id, exc))
+    except Exception:  # noqa: BLE001 - nothing here may cost the person the error event
+        try:
+            logger.error(
+                "search crashed, trace %s: crash record could not be built",
+                str(trace_id)[:_CRASH_LOG_MAX_TRACE_ID_CHARS],
+            )
+        except Exception:  # noqa: BLE001, S110 - last line of defence, nothing left to try
+            pass
 
 
 def _observed_cost_usd(events: list[Event]) -> float:
@@ -611,7 +743,8 @@ async def run(query: Query, context: RequestContext) -> AsyncIterator[Event]:
                             trace_id=query.trace_id, run_name="core.run.run"
                         ),
                     )
-            except Exception:  # noqa: BLE001 - the deliberate last-resort catch F-2.0-11 requires
+            except Exception as crash:  # noqa: BLE001 - the deliberate last-resort catch F-2.0-11 requires
+                _log_crash(query.trace_id, crash)
                 elapsed_ms = int((time.monotonic() - start) * 1000)
                 crash_events = _crash_fallback_events(query.trace_id, elapsed_ms)
                 emitted.extend(crash_events)
@@ -798,7 +931,8 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
                             next_seq = max(next_seq, event.seq + 1)
                             seen_events.append(event)
                             yield event
-        except Exception:  # noqa: BLE001 - mirrors run()'s deliberate last-resort catch, F-2.0-11
+        except Exception as crash:  # noqa: BLE001 - mirrors run()'s deliberate last-resort catch, F-2.0-11
+            _log_crash(query.trace_id, crash)
             elapsed_ms = int((time.monotonic() - start) * 1000)
             crash_events = _crash_fallback_events(
                 query.trace_id, elapsed_ms, start_seq=next_seq
