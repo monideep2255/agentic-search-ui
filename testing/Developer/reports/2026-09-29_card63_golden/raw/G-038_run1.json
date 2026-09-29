@@ -1,0 +1,465 @@
+{
+ "record": {
+  "id": "G-038",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-golden-b-20260929@example.com",
+  "category": "discovery",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Tell me about the tree of life.",
+  "session_id": "c103-bda74ef8a8e8",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "bae5d1bd",
+  "started_at": "2026-09-29T16:14:44+00:00",
+  "run_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 5 sources",
+  "citations": 6,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 6
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 0,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 162,
+  "answer_start": "Found 5 pubmed records: On tree longevity. [2], Understanding tree failure-A systematic review and meta-analysis. [3], Tree mycorrhizal type and tree diversity ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 2,
+  "server_elapsed_s": 26.982,
+  "seconds": 27.3,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 12,
+   "citation": 6,
+   "trust_signal": 7,
+   "done": 1
+  },
+  "first_word_s": 27.12,
+  "first_token_ts": "2026-09-29T16:13:23.684074Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+   "seq": 0,
+   "ts": "2026-09-29T16:12:57.294006Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+   "seq": 2,
+   "ts": "2026-09-29T16:13:00.268708Z",
+   "payload": {
+    "narrative": "The question is a broad, open-ended request for information about the entire tree of life, with no specific gene, organism, disease, or structured query.",
+    "query_class": "exploratory",
+    "resolved_entities": [],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+   "seq": 4,
+   "ts": "2026-09-29T16:13:00.272788Z",
+   "payload": {
+    "narrative": "no gene, variant or disease was named, so searching the published literature for: tree, life",
+    "tool_calls": [
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4347d161554c",
+      "layer": "layer_2_api",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-017856b400a8",
+      "layer": "layer_2_api",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-ada1dc72d878",
+      "layer": "layer_3_enrichment",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+   "seq": 6,
+   "ts": "2026-09-29T16:13:00.274612Z",
+   "payload": {
+    "call_id": "ne-4347d161554c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+   "seq": 7,
+   "ts": "2026-09-29T16:13:00.274676Z",
+   "payload": {
+    "call_id": "ne-017856b400a8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+   "seq": 8,
+   "ts": "2026-09-29T16:13:00.274695Z",
+   "payload": {
+    "call_id": "pa-ada1dc72d878",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+   "seq": 9,
+   "ts": "2026-09-29T16:13:00.776433Z",
+   "payload": {
+    "call_id": "ne-4347d161554c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+   "seq": 10,
+   "ts": "2026-09-29T16:13:00.958223Z",
+   "payload": {
+    "call_id": "pa-ada1dc72d878",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+   "seq": 11,
+   "ts": "2026-09-29T16:13:01.172441Z",
+   "payload": {
+    "call_id": "ne-017856b400a8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+   "seq": 12,
+   "ts": "2026-09-29T16:13:01.174347Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+   "seq": 13,
+   "ts": "2026-09-29T16:13:23.684074Z",
+   "payload": {
+    "text": "Found 5 pubmed records: On tree longevity. [2], Understanding tree failure-A systematic review and meta-analysis. [3], Tree mycorrhizal type and tree diversity shape the forest soil microbiota. [4], Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment. [5] and Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits. [6]. ",
+    "marker_ids": [
+     "ne-017856b400a8-1",
+     "ne-017856b400a8-2",
+     "ne-017856b400a8-3",
+     "ne-017856b400a8-4",
+     "ne-017856b400a8-5"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits.",
+     "Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment.",
+     "Tree mycorrhizal type and tree diversity shape the forest soil microbiota.",
+     "Understanding tree failure-A systematic review and meta-analysis.",
+     "On tree longevity."
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36215064",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36215064/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33305422",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33305422/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33592010",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33592010/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34327789",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34327789/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36215064",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36215064/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38602710",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38602710/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "0e6e6451-53c3-405b-99a7-2abc648e304c",
+   "seq": 39,
+   "ts": "2026-09-29T16:13:23.684606Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 26982,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 5 sources",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.relevancy",
+      "options": [
+       "on_topic",
+       "off_topic"
+      ],
+      "chosen": "on_topic",
+      "decided_by": "jev",
+      "jev_choice": "on_topic",
+      "jev_confidence": 0.9,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 166
+     },
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 184
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.97,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 146
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 179
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.94,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 187
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 pubmed records: On tree longevity. [2], Understanding tree failure-A systematic review and meta-analysis. [3], Tree mycorrhizal type and tree diversity shape the forest soil microbiota. [4], Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment. [5] and Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits. [6]. \n\nProductivity and Diversity\n\nEM tree communities initially had low productivity but increased increment over time with strong biodiversity effects, while the opposite pattern held for AM communities [1]. \n\nPubmed records found\n\nPubmed title: On tree longevity [2]. Pubmed title: Understanding tree failure-A systematic review and meta-analysis [3]. Pubmed title: Tree mycorrhizal type and tree diversity shape the forest soil microbiota [4]. Pubmed title: Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment [5]. Pubmed title: Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits [6]. "
+}

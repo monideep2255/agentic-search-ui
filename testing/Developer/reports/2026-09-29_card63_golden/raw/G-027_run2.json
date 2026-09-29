@@ -1,0 +1,955 @@
+{
+ "record": {
+  "id": "G-027",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-golden-a-20260929@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What genetic tests are available for Huntington disease?",
+  "session_id": "c103-7de4511f7e0c",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "bae5d1bd",
+  "started_at": "2026-09-29T16:19:11+00:00",
+  "run_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C0020179"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 13 sources, not yet confirmed",
+  "citations": 26,
+  "distinct_sources": 13,
+  "citations_by_layer": {
+   "layer_2_api": 20,
+   "layer_3_enrichment": 6
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 8,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 14,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 220,
+  "answer_start": "Found 1 disease record for Huntington disease: Huntington disease [1]. \n\nDisease records found\n\nDisease name: Huntington disease [1]. \n\nPubmed records found\n\nPu",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 14.112,
+  "seconds": 14.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 47,
+   "citation": 26,
+   "trust_signal": 27,
+   "done": 1
+  },
+  "first_word_s": 14.27,
+  "first_token_ts": "2026-09-29T16:17:37.924269Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 0,
+   "ts": "2026-09-29T16:17:25.052781Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 2,
+   "ts": "2026-09-29T16:17:27.972330Z",
+   "payload": {
+    "narrative": "The query asks about available genetic tests for a specific disease, which requires exploring multiple sources or databases to list tests, making it broad and multi-source. (Huntington disease: 1 of 6 MedGen record matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 4,
+   "ts": "2026-09-29T16:17:28.278201Z",
+   "payload": {
+    "narrative": "searching 3 layers for huntington disease. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-17ddd2ec6fe5",
+      "layer": "layer_1_graph",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-6b77f957aee5",
+      "layer": "layer_3_enrichment",
+      "persona": "Ramon y Cajal",
+      "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-8f1a82dcbdf8",
+      "layer": "layer_3_enrichment",
+      "persona": "Ramon y Cajal",
+      "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e3a699edc13d",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f4296d705398",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-29ee3cd0afd2",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-951ac2c0e129",
+      "layer": "layer_3_enrichment",
+      "persona": "Ramon y Cajal",
+      "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-5916e3cea5ed",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 6,
+   "ts": "2026-09-29T16:17:28.280367Z",
+   "payload": {
+    "call_id": "cq-17ddd2ec6fe5",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 7,
+   "ts": "2026-09-29T16:17:28.280427Z",
+   "payload": {
+    "call_id": "pa-6b77f957aee5",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 8,
+   "ts": "2026-09-29T16:17:28.280444Z",
+   "payload": {
+    "call_id": "ct-8f1a82dcbdf8",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 9,
+   "ts": "2026-09-29T16:17:28.280458Z",
+   "payload": {
+    "call_id": "ne-e3a699edc13d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 10,
+   "ts": "2026-09-29T16:17:28.280473Z",
+   "payload": {
+    "call_id": "ne-f4296d705398",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 11,
+   "ts": "2026-09-29T16:17:28.280493Z",
+   "payload": {
+    "call_id": "ne-29ee3cd0afd2",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 12,
+   "ts": "2026-09-29T16:17:28.280513Z",
+   "payload": {
+    "call_id": "pa-951ac2c0e129",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 13,
+   "ts": "2026-09-29T16:17:28.280535Z",
+   "payload": {
+    "call_id": "ne-5916e3cea5ed",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 14,
+   "ts": "2026-09-29T16:17:28.577229Z",
+   "payload": {
+    "call_id": "ne-e3a699edc13d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 15,
+   "ts": "2026-09-29T16:17:28.604696Z",
+   "payload": {
+    "call_id": "pa-6b77f957aee5",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 16,
+   "ts": "2026-09-29T16:17:28.729461Z",
+   "payload": {
+    "call_id": "ct-8f1a82dcbdf8",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 17,
+   "ts": "2026-09-29T16:17:28.733409Z",
+   "payload": {
+    "call_id": "ne-f4296d705398",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 18,
+   "ts": "2026-09-29T16:17:28.812098Z",
+   "payload": {
+    "call_id": "cq-17ddd2ec6fe5",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 19,
+   "ts": "2026-09-29T16:17:29.102169Z",
+   "payload": {
+    "call_id": "pa-951ac2c0e129",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 20,
+   "ts": "2026-09-29T16:17:29.110821Z",
+   "payload": {
+    "call_id": "ne-29ee3cd0afd2",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "fetch: 8 record(s)",
+    "result_count": 8,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 21,
+   "ts": "2026-09-29T16:17:29.200804Z",
+   "payload": {
+    "call_id": "ne-5916e3cea5ed",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "summary: 14 record(s)",
+    "result_count": 14,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 22,
+   "ts": "2026-09-29T16:17:29.202833Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 23,
+   "ts": "2026-09-29T16:17:37.924269Z",
+   "payload": {
+    "text": "Found 1 disease record for Huntington disease: Huntington disease [1]. ",
+    "marker_ids": [
+     "cq-17ddd2ec6fe5-1"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Huntington disease"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0020179",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0020179",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "15132037",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/15132037/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Huntington_Disease",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D006816",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00052143",
+    "source_url": "https://clinicaltrials.gov/study/NCT00052143",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1839348",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/1839348/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00075140",
+    "source_url": "https://clinicaltrials.gov/study/NCT00075140",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27228260",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27228260/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00980694",
+    "source_url": "https://clinicaltrials.gov/study/NCT00980694",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "29325616",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29325616/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01554033",
+    "source_url": "https://clinicaltrials.gov/study/NCT01554033",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38489195",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38489195/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02336633",
+    "source_url": "https://clinicaltrials.gov/study/NCT02336633",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "703dc9cc-9476-45a0-946a-3baeb043dba9",
+   "seq": 124,
+   "ts": "2026-09-29T16:17:37.930837Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 14112,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 13 sources, not yet confirmed",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 140
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 147
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 158
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 327
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 disease record for Huntington disease: Huntington disease [1]. \n\nDisease records found\n\nDisease name: Huntington disease [1]. \n\nPubmed records found\n\nPubmed title: Huntington's disease [2]. Pubmed title: Huntington's disease [19]. Pubmed title: Huntington disease [21]. Pubmed title: Huntington disease [23]. Pubmed title: Huntington's Disease Clinical Trials Corner: March 2024 [25]. \n\nMedgen records found\n\nMedgen title: Huntington disease [3]. \n\nClinical features MedGen lists for Huntington disease\n\nMedgen clinical_features: Chorea [4]. Medgen clinical_features: Depression [5]. Medgen clinical_features: Gliosis [6]. Medgen clinical_features: Rigidity [7]. Medgen clinical_features: Seizure [8]. Medgen clinical_features: Hyperreflexia [9]. Medgen clinical_features: Bradykinesia [10]. Medgen clinical_features: Personality changes [11]. Medgen clinical_features: Abnormality of eye movement [12]. Medgen clinical_features: Dementia [13]. Medgen clinical_features: Cerebellar atrophy [14]. Medgen clinical_features: Gait ataxia [15]. Medgen clinical_features: Neuronal loss in central nervous system [16]. \n\nLiterature entity records found\n\nLiterature entity name: Huntington Disease [17]. \n\nClinical trial records found\n\nClinical trial name: Prospective Huntington At Risk Observational Study [18]. Clinical trial name: Family Health After Predictive Huntington Disease (HD) Testing [20]. Clinical trial name: Bioavailability of Ubiquinol in Huntington Disease [22]. Clinical trial name: Study of Huntington Patients in Connection With European Huntington's Disease Network (EHDN) [24]. Clinical trial name: Resveratrol and Huntington Disease [26]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

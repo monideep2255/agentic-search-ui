@@ -1050,6 +1050,15 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-09-29, second session. CARD 63 KEPT ON DEVELOP BELOW ITS GOLDEN FLOOR BY THE OWNER'S CHOICE; CARDS 62 AND 53 REVIEWED AND IN PULL REQUESTS. What awaits the owner and the next action: `HANDOFF.md`.
+
+- Card 63's checks, both kept by the owner: test queries 100 and 67 passed on develop, run by the team on a fresh test account. The golden run, on two more fresh test accounts, answered 98 of 150 against a floor of 101, with no rate-limit signal. The six lost runs were four guard-model timeouts on both attempts, one crash before the guard replied with no reason logged, and G-006's graph search timing out in all three passes, none in code card 63 changed. The owner kept card 63 and accepted the run; the run was not repeated.
+- Card 62, #133: the Integrations page's install uses Python 3.11 and names git, macOS and Linux; `s3` shows the web's trust line from the server's final verdict only; a guest over MCP is told an account is needed; the KGX install command gives way to a sentence, since no outsider could run it. The fresh verifier found the round's MCP fix broke silent renewal against production, and the owner chose to revert that one commit (card 75).
+- Card 53, #134: the pages, the KGX manifest, the catalogue, CLAUDE.md, AGENTS.md and README state what the code does, true on every path the verifier ran; the facts checker judges whole sentences as a reader sees them and now catches every earlier break-it edit. Its remaining gaps (card 78), two sentences still false on some paths (card 76) and the silent layer 3 skip (card 77) merge named open.
+- #135: two always-loaded rules name the APIs each layer calls, without LitSense, approved by the owner item by item.
+- New cards 71 to 78, from card 63's checks and the two cards' reviews. `HANDOFF.md` no longer describes sending the secret files by AirDrop, at the owner's word.
+- Decisions logged: six rows dated 2026-09-29 in this session. Learnings logged: three rows, among them a client fix that read a server field production does not yet send.
+
 2026-09-29. CARD 63 ON DEVELOP, ITS GOLDEN RUN STILL TO COME; A SECOND LAPTOP SET UP; THE FRONTEND AUDIT GREEN AGAIN. What awaits the owner and the next action: `HANDOFF.md`.
 
 - Merged to develop, both by the owner in the browser, since develop's ruleset blocks the assistant's merge and the owner chose not to allow `--admin`:
