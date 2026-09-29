@@ -1057,7 +1057,8 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 - Card 53, #134: the pages, the KGX manifest, the catalogue, CLAUDE.md, AGENTS.md and README state what the code does, true on every path the verifier ran; the facts checker judges whole sentences as a reader sees them and now catches every earlier break-it edit. Its remaining gaps (card 78), two sentences still false on some paths (card 76) and the silent layer 3 skip (card 77) merge named open.
 - #135: two always-loaded rules name the APIs each layer calls, without LitSense, approved by the owner item by item.
 - New cards 71 to 78, from card 63's checks and the two cards' reviews. `HANDOFF.md` no longer describes sending the secret files by AirDrop, at the owner's word.
-- Decisions logged: six rows dated 2026-09-29 in this session. Learnings logged: three rows, among them a client fix that read a server field production does not yet send.
+- Merged the same evening, by the lead with `--admin` on the owner's grant (`DECISIONS.md`): #133, #135, #136 and #134, card 53's branch first updated so the facts checker follows card 62's Integrations card.
+- Decisions logged: seven rows dated 2026-09-29 in this session. Learnings logged: three rows, among them a client fix that read a server field production does not yet send.
 
 2026-09-29. CARD 63 ON DEVELOP, ITS GOLDEN RUN STILL TO COME; A SECOND LAPTOP SET UP; THE FRONTEND AUDIT GREEN AGAIN. What awaits the owner and the next action: `HANDOFF.md`.
 
