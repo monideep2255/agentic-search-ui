@@ -135,8 +135,11 @@ _NCBI_DBSNP_BUDGET = (
 )
 _PUBTATOR_BUDGET = (15.0, "No documented rate limit; shared per-query call budget")
 _LITVAR2_BUDGET = (15.0, "No documented rate limit; shared per-query call budget")
+# 120 s is the whole invocation's wall-clock budget (`_TOTAL_BUDGET_S` in
+# `pathogen_detection.py`). The rule's "60 seconds or more" is a floor, and the
+# 60 s that used to sit here was that floor, not what the tool enforces.
 _PATHOGEN_DETECTION_BUDGET = (
-    60.0,
+    120.0,
     "Not a request-rate API; bound by bulk FTP transfer time and snapshot pinning",
 )
 _CLINICALTRIALS_BUDGET = (15.0, "No documented rate limit; provisional throttle of about 5 requests/second")

@@ -87,7 +87,8 @@ def test_timeouts_match_tool_call_budgets_rule() -> None:
     assert by_name["ncbi_dbsnp.query"].timeout_s == 15.0
     assert by_name["pubtator_annotate.entity_lookup"].timeout_s == 15.0
     assert by_name["litvar2_lookup.variant_search"].timeout_s == 15.0
-    assert by_name["pathogen_detection.isolate_lookup"].timeout_s == 60.0
+    # The rule locks 60 s as a floor; the tool enforces 120 s (_TOTAL_BUDGET_S).
+    assert by_name["pathogen_detection.isolate_lookup"].timeout_s == 120.0
     assert by_name["clinicaltrials_search.search"].timeout_s == 15.0
 
 
