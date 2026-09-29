@@ -959,3 +959,79 @@ async def test_a_failed_call_records_no_elapsed_seconds(monkeypatch: pytest.Monk
     with pytest.raises(HarnessCallError):
         await harness.call_tier("guard", [{"role": "user", "content": "hi"}])
     assert harness.last_call_elapsed_s("c5-3", "guard") is None
+
+
+# --- Re-land follow-up R-10 and card 72: one request only, and the upstream host ---
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "failure",
+    [
+        lambda: litellm.RateLimitError("rate limited", llm_provider="openrouter", model="m", headers={"Retry-After": "7"}),
+        lambda: litellm.APIConnectionError(message="reset", llm_provider="openrouter", model="m"),
+        _reasoning_refusal,
+    ],
+    ids=["a 429", "a dropped connection", "a reasoning refusal"],
+)
+async def test_retry_false_sends_exactly_one_request(monkeypatch: pytest.MonkeyPatch, failure: Any) -> None:
+    """With `retry=False` a failure is raised from the one request's own
+    exception, so the caller reads that request's `Retry-After` itself.
+
+    MUTATION PROOF: `transient_retry_left = True` whatever `retry` says
+    turns the first two arms red on the request count."""
+    _patch_model_env(monkeypatch)
+    _patch_price(monkeypatch)
+    error = failure()
+    mock_acompletion = AsyncMock(side_effect=[error, _fake_response("late", 1, 1)])
+    monkeypatch.setattr(harness_module.litellm, "acompletion", mock_acompletion)
+
+    harness = Harness(trace_id="r10-one")
+    with pytest.raises(HarnessCallError) as excinfo:
+        await harness.call_tier("guard", [{"role": "user", "content": "hi"}], retry=False)
+    assert mock_acompletion.call_count == 1
+    assert excinfo.value.__cause__ is error
+    assert harness.get_query_cost_usd("r10-one") == 0.0
+
+
+@pytest.mark.asyncio
+async def test_the_default_still_retries_a_transient_error_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every other caller is untouched: the default keeps its one retry."""
+    _patch_model_env(monkeypatch)
+    _patch_price(monkeypatch)
+    mock_acompletion = AsyncMock(
+        side_effect=[
+            litellm.RateLimitError("rate limited", llm_provider="openrouter", model="m"),
+            _fake_response("ok", 1, 1),
+        ]
+    )
+    monkeypatch.setattr(harness_module.litellm, "acompletion", mock_acompletion)
+    result = await Harness(trace_id="r10-two").call_tier("guard", [{"role": "user", "content": "hi"}])
+    assert result.content == "ok" and mock_acompletion.call_count == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("provider", "expected"),
+    [
+        ("DeepInfra", "DeepInfra"),
+        (None, None),
+        (7, None),
+        ("   ", None),
+        ("Host\nwith\x00control", "Hostwithcontrol"),
+        ("x" * 500, "x" * 64),
+    ],
+    ids=["a named host", "none named", "not text", "blank", "control characters dropped", "cut to 64"],
+)
+async def test_the_upstream_provider_openrouter_names_is_on_the_reply(
+    monkeypatch: pytest.MonkeyPatch, provider: Any, expected: str | None
+) -> None:
+    _patch_model_env(monkeypatch)
+    _patch_price(monkeypatch)
+    reply = _fake_response("ok", 1, 1)
+    if provider is not None:
+        reply.provider = provider
+    monkeypatch.setattr(harness_module.litellm, "acompletion", AsyncMock(return_value=reply))
+    result = await Harness(trace_id="r10-host").call_tier("guard", [{"role": "user", "content": "hi"}])
+    assert result.upstream_provider == expected
+    assert result.elapsed_s is not None and result.elapsed_s >= 0
