@@ -7412,9 +7412,50 @@ class _CallOutcome:
     #: The typed output of one of the four other Layer 2/3 tools, for
     #: `GraphState.layer3_raw_outputs`; `None` for ncbi_efetch and cypher.
     layer_raw_output: Any = None
+    #: Card 63: why an `"error"` call failed, one of `ncbi_transport.
+    #: FAILURE_KINDS`, when the call said; `None` otherwise, which
+    #: `failed_searches` records as `other`.
+    failure_kind: str | None = None
+    #: Card 63: the NCBI database a failed `ncbi_efetch` call asked (its
+    #: input's own `db`, schema-validated), so the note under the answer can
+    #: name it; "" for every other call.
+    failure_source: str = ""
 
 
-def _error_outcome(call: ToolCall, summary: str, detail: str, *, cap_exceeded: bool = False) -> _CallOutcome:
+#: Card 63 (2026-09-27): a failed call's kind in the words a `tool_result`
+#: summary and `failed_searches[].reason` carry. OUR words from a fixed set,
+#: never the tool's `error` text, which for an E-utilities `ERROR` body is
+#: NCBI's own and is untrusted. Before this a PubMed search that NCBI
+#: answered "Search is temporarily unavailable" reached the stream, the
+#: developer instrument and the deploy log as "search: 0 id(s)", which reads
+#: as a search that ran and found nothing.
+_FAILURE_KIND_WORDS: Final[dict[str, str]] = {
+    "service_down": "the service is down at NCBI",
+    "rate_limited": "rate limited by NCBI",
+    "timed_out": "timed out",
+    "other": "other failure",
+}
+
+
+def _failure_kind_words(failure_kind: str | None) -> str:
+    """The fixed words for one failure kind; an unknown or absent kind is `other`."""
+    return _FAILURE_KIND_WORDS.get(failure_kind or "other", _FAILURE_KIND_WORDS["other"])
+
+
+def _ncbi_efetch_database(tool_input: NcbiEfetchInput) -> str:
+    """The `db` an `ncbi_efetch` input asks, or "" for an action that names none."""
+    database = getattr(tool_input.root, "db", None)
+    return database if isinstance(database, str) else ""
+
+
+def _error_outcome(
+    call: ToolCall,
+    summary: str,
+    detail: str,
+    *,
+    cap_exceeded: bool = False,
+    failure_kind: str | None = None,
+) -> _CallOutcome:
     """One failed call, disclosed rather than blank: an `"error"` pass-through
     result whose `error` text names what happened and what stands, and a
     `tool_result` summary a surface can show beside the layer.
@@ -7434,6 +7475,7 @@ def _error_outcome(call: ToolCall, summary: str, detail: str, *, cap_exceeded: b
             )
         ],
         cap_exceeded=cap_exceeded,
+        failure_kind=failure_kind,
     )
 
 
@@ -7465,6 +7507,7 @@ async def _execute_planned_call(
                 call,
                 "call did not complete within its per-step timeout budget",
                 "ncbi_efetch call did not complete within its per-step timeout budget",
+                failure_kind="timed_out",
             )
         except call_budget.CallBudgetExceededError:
             # T-6.0-01. The ceiling was reached MID-TOOL, which the
@@ -7509,20 +7552,44 @@ async def _execute_planned_call(
             # of ids. It feeds the follow-ups (`act_node`'s second stage)
             # and is never a finding, so it contributes no pair.
             ids = _search_ids(ncbi_efetch_output)
+            # Card 63: a failed search says why, in our words, rather than
+            # "search: 0 id(s)", which reads as a search that found nothing.
+            search_failed = ncbi_efetch_output.status == "error"
             return _CallOutcome(
                 status=ncbi_efetch_output.status,
-                summary=f"search: {len(ids)} id(s)",
+                summary=(
+                    f"search error: {_failure_kind_words(ncbi_efetch_output.failure_kind)}"
+                    if search_failed
+                    else f"search: {len(ids)} id(s)"
+                ),
                 result_count=len(ids),
                 truncated=ncbi_efetch_output.truncated,
                 pairs=[],
                 raw_output=ncbi_efetch_output,
+                failure_kind=(
+                    (ncbi_efetch_output.failure_kind or "other") if search_failed else None
+                ),
+                failure_source=(
+                    _ncbi_efetch_database(planned.ncbi_efetch_input) if search_failed else ""
+                ),
             )
         shaped_fields = _ncbi_efetch_output_to_structured_fields(
             ncbi_efetch_output, purpose, planned.gene_symbol
         )
+        # Card 63: the same for a record fetch, a summary or a link.
+        fetch_failed = ncbi_efetch_output.status == "error"
         return _CallOutcome(
             status=ncbi_efetch_output.status,
-            summary=f"{ncbi_efetch_output.action}: {shaped_fields['row_count']} record(s)",
+            summary=(
+                f"{ncbi_efetch_output.action} error: "
+                f"{_failure_kind_words(ncbi_efetch_output.failure_kind)}"
+                if fetch_failed
+                else f"{ncbi_efetch_output.action}: {shaped_fields['row_count']} record(s)"
+            ),
+            failure_kind=(ncbi_efetch_output.failure_kind or "other") if fetch_failed else None,
+            failure_source=(
+                _ncbi_efetch_database(planned.ncbi_efetch_input) if fetch_failed else ""
+            ),
             result_count=int(shaped_fields["row_count"]),
             truncated=ncbi_efetch_output.truncated,
             pairs=[
@@ -7553,6 +7620,7 @@ async def _execute_planned_call(
                     f"{call.tool} call did not complete within its {timeout_s:g}s "
                     "per-step timeout budget; the other layers' results stand"
                 ),
+                failure_kind="timed_out",
             )
         except call_budget.CallBudgetExceededError:
             return _error_outcome(
@@ -7630,6 +7698,7 @@ async def _execute_planned_call(
             call,
             "call did not complete within its per-step timeout budget",
             "cypher_query call did not complete within its per-step timeout budget",
+            failure_kind="timed_out",
         )
     except asyncio.CancelledError:
         raise
@@ -8010,11 +8079,22 @@ async def act_node(state: GraphState) -> dict[str, Any]:
     # recorded here, with the tool's own reason, so `write_node` can say
     # so in one plain sentence. The reason is the same bounded text the
     # `tool_result` summary now carries (L-01), never a raw exception.
+    #
+    # Card 63 (2026-09-27): the comment above said "with the tool's own
+    # reason" while a failed breadth search's summary was "search: 0 id(s)"
+    # whatever went wrong. The summary now names the failure kind in our
+    # words (`_FAILURE_KIND_WORDS`), and two fixed-vocabulary keys travel
+    # beside it so `write_node` decides its note from typed values rather
+    # than by reading the reason: `kind`, one of `ncbi_transport.
+    # FAILURE_KINDS`, and `source`, the NCBI database a failed `ncbi_efetch`
+    # call asked, or "" for any other call.
     failed_searches: list[dict[str, str]] = [
         {
             "tool": planned.tool_call.tool,
             "layer": planned.tool_call.layer,
             "reason": outcomes[planned.tool_call.call_id].summary[:500],
+            "kind": outcomes[planned.tool_call.call_id].failure_kind or "other",
+            "source": outcomes[planned.tool_call.call_id].failure_source,
         }
         for _, planned in ordered
         if outcomes[planned.tool_call.call_id].status == "error"
@@ -9076,6 +9156,91 @@ def _build_repair_cap_note(omission_remains: bool = True) -> str:
     if omission_remains:
         return base + ", so the omission described above was not repaired"
     return base + ", and the records it would have added are listed below as found"
+
+
+#: Card 63: the NCBI databases a failed-call note can name, as a person
+#: names them, and what the answer may be missing without them. Keyed by the
+#: `db` the call asked (`failed_searches[].source`). A database not listed
+#: here is still disclosed, in the unnamed sentence below.
+_DOWN_SOURCE_WORDS: Final[dict[str, tuple[str, str]]] = {
+    "pubmed": ("PubMed", "papers"),
+    "clinvar": ("ClinVar", "variant records"),
+    "omim": ("OMIM", "records"),
+    "gds": ("GEO DataSets", "datasets"),
+    "medgen": ("MedGen", "records"),
+    "gene": ("Gene", "gene records"),
+}
+
+
+def _build_failed_search_note(failed_searches: list[dict[str, str]]) -> str:
+    """The note under an answer that lost a background call (card 63).
+
+    Decided from the user's chair on 2026-09-27, the day PubMed's search was
+    down at NCBI for hours: the note used to say "Ask again to retry" for
+    every failure, which sent a person straight back into the same outage.
+    So the note now depends on what the act step recorded:
+
+    - Any call NCBI itself said is down (`kind == "service_down"`): name the
+      database, say NCBI is down and that the answer MAY be missing what it
+      holds, and say "Try again later". Never "ask again", which cannot help
+      until NCBI recovers.
+    - Only other failures, a timeout or a rate limit among them:
+      `FAILED_SEARCH_NOTE`, unchanged, because asking again can help.
+
+    The wording is decided by category, not by which step failed (F-63-A01,
+    F-63-A02). The recorded failure can be a search, a record fetch, a
+    summary or a link, and a fetch or summary can fail AFTER the search on
+    the same database succeeded, with those records on screen above the
+    note. So the note never asserts an absence and never names which step
+    failed: it says what NCBI said and that the answer may be missing
+    things, which is true whichever step failed.
+
+    Decided from the typed `kind` and `source` keys, never from the
+    `reason` text, and every word is ours: nothing NCBI wrote reaches it.
+    """
+    down = [item for item in failed_searches if item.get("kind") == "service_down"]
+    if not down:
+        return FAILED_SEARCH_NOTE
+
+    named: list[tuple[str, str]] = []
+    unnamed_down = False
+    for item in down:
+        words = _DOWN_SOURCE_WORDS.get(item.get("source") or "")
+        if words is None:
+            unnamed_down = True
+        elif words not in named:
+            named.append(words)
+
+    if len(named) == 1 and not unnamed_down:
+        name, missing = named[0]
+        sentences = [
+            (
+                f"{name} is down at NCBI right now, so this answer may be missing "
+                f"{missing} from it."
+            )
+        ]
+    elif named and not unnamed_down:
+        names = [name for name, _ in named]
+        joined = ", ".join(names[:-1]) + " and " + names[-1]
+        sentences = [
+            (
+                f"{joined} are down at NCBI right now, so this answer may be missing "
+                "sources from them."
+            )
+        ]
+    else:
+        sentences = [
+            (
+                "Some of NCBI's databases are down right now, so this answer may be "
+                "missing sources from them."
+            )
+        ]
+    if len(down) < len(failed_searches):
+        sentences.append(
+            "Another background search did not finish, so other sources may be missing too."
+        )
+    sentences.append("Try again later.")
+    return " ".join(sentences)
 
 
 def _build_incomplete_answer_note(
@@ -12420,7 +12585,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     failed_search_note: str | None = None
     if failed_searches and trust_outcome != "refuse":
         trust_outcome = aggregate([trust_outcome, "ask"])
-        failed_search_note = FAILED_SEARCH_NOTE
+        # Card 63: "Try again later" when NCBI said a database is down, the
+        # original "Ask again to retry" otherwise. See the builder.
+        failed_search_note = _build_failed_search_note(failed_searches)
     if repair_cap_exceeded and trust_outcome != "refuse":
         repair_cap_note = _build_repair_cap_note(omission_remains=bool(omitted_findings))
 
