@@ -22,7 +22,7 @@ citation builder:
         not itself a bare date (see that function's own docstring). Wired
         by `core.graph`'s citation-assembly code, T-3.4-06's own scope;
         confirmed live against the real graph that no real Layer 1 field
-        this repo's ingest returns matches `VOLATILE_FIELD_EXAMPLES` or
+        this repository's ingest returns matches `VOLATILE_FIELD_EXAMPLES` or
         `STABLE_FIELD_EXAMPLES` today (F-3.4-T06-01, `tracker/
         phase_3.4.md`), so this check is real, tested, and wired, but does
         not fire against any live citation until a richer per-domain

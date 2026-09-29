@@ -8,7 +8,7 @@ alwaysApply: true
 
 - Don't delete files or folders without explicitly informing the user first.
 - Don't create new files unnecessarily -- prefer editing existing files.
-- Don't add System 1/2 ETL code (bulk source-data parsers, AGE loaders, or anything that writes KGX into the graph) -- this repo is System 3 only.
+- Don't add System 1/2 ETL code (bulk source-data parsers, AGE loaders, or anything that writes KGX into the graph) -- this repository is System 3 only.
 - Don't modify files in `reference/` -- that symlink is read-only reference material.
 
 ### Reading KGX out of the graph is not writing KGX into it

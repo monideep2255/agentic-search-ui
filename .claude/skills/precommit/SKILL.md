@@ -20,7 +20,7 @@ Five build phases are merged as of this write-up: 1.0 (FastAPI skeleton and the 
 ## Prerequisites
 
 - Python virtualenv (`venv/`) active: `which python` should point inside `venv/`
-- Run from the repo root
+- Run from the repository root
 
 ## Checks to run
 
@@ -140,7 +140,7 @@ Overall:         READY / NOT READY
 
 ## Important
 
-This skill does not assume a virtualenv path beyond `venv/` at the repo root. Confirm your environment is active before invoking.
+This skill does not assume a virtualenv path beyond `venv/` at the repository root. Confirm your environment is active before invoking.
 
 The repository is no longer near-empty: five build phases are merged, and the Python test suite, the FastAPI entrypoint, ruff, and the frontend test suite all exist and run for real. This skill hard-fails on real errors. Mark a check FAIL when it errors on code that actually exists: a real syntax error, a real failing test, zero collected tests, a real lint violation, or a real frontend test failure. There is no longer a pre-code-state exemption for any of the five checks; the only note-not-failure exception left in this skill is the frontend `lint` gap described in check 5, because no `lint` script is currently wired into `frontend/package.json`.
 

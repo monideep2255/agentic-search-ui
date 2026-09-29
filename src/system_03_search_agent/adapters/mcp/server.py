@@ -270,7 +270,7 @@ _FOLD_LOOP_TIMEOUT_S = 240.0
 # unsanitized `f"...{error_payload.message}"`). Keyed by `error_class`
 # exactly like `core/graph.py`'s own `_STEP_ERROR_END_USER_MESSAGES`
 # sanitizes a `HarnessCallError` before it becomes a client-visible
-# payload (F-2.0-12's precedent, the closest one this repo has for this
+# payload (F-2.0-12's precedent, the closest one this repository has for this
 # exact boundary; the REST/SSE surface itself does not yet sanitize
 # `ErrorPayload.message`, confirmed by reading `harness/cost_control.py`'s
 # `sanitize_event_for_end_user`, which redacts `total_cost_usd` only).

@@ -1,7 +1,7 @@
 """Builder D's acceptance probe: three real decisions through decide()
 with CLASSIFIER_PROVIDER=jev, against the real OpenRouter decisions
-endpoint. Loads OPENROUTER_API_KEY from the main repo's .env, never
-prints it. Run from the repo root with PYTHONPATH=src.
+endpoint. Loads OPENROUTER_API_KEY from the main repository's .env, never
+prints it. Run from the repository root with PYTHONPATH=src.
 """
 from __future__ import annotations
 

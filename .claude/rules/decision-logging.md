@@ -7,7 +7,7 @@ paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", 
 ---
 ## Decision logging
 
-When a non-trivial choice is made between alternatives, log it to `DECISIONS.md` at the repo root.
+When a non-trivial choice is made between alternatives, log it to `DECISIONS.md` at the repository root.
 
 **What counts as a decision:**
 - Choosing one library/framework/tool over another

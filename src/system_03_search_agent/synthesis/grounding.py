@@ -112,7 +112,7 @@ def normalize(text: str) -> str:
     the same number, never two different numbers: the lookarounds confine
     it to a separator between digits, so "400" still fails against "15310"
     exactly as before. And `LEARNINGS.md`'s 2026-08-01 entry on the
-    validator makes the cost case directly, from this repo's own history: a
+    validator makes the cost case directly, from this repository's own history: a
     false reject means the user gets nothing, so a gate needs its cost side
     tested as hard as its block side.
 
@@ -158,7 +158,7 @@ def numbers_are_supported(
     ## Why this exists, stated plainly because it is an ADDITION
 
     Section 8.2 step 5 accepts a claim when "one is a substring of the
-    other", and the `b in a` direction of that rule has a hole this repo
+    other", and the `b in a` direction of that rule has a hole this repository
     measured rather than theorized. Given a finding whose value is
     "15310", the clause
 
@@ -481,7 +481,7 @@ def claim_introduces_no_new_content(
     allowlist: every content-bearing word in the claim must appear in the
     finding it cites or in the user's own question. `LEARNINGS.md`'s
     2026-08-01 entry on the Cypher validator records the same lesson from
-    the same repo, in almost the same words: a blocklist of unsafe shapes is
+    the same repository, in almost the same words: a blocklist of unsafe shapes is
     infinite while an allowlist of safe ones is finite, and the validator
     only stopped leaking once it flipped to fail-closed.
 

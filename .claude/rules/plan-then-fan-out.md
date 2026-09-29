@@ -31,7 +31,7 @@ Two mechanisms, chosen by shape:
 Worked examples:
 - User gives 3 tasks: check dependencies first, then dispatch the independent ones as parallel agents.
 - Deep dive plus meeting prep: independent, run as parallel agents.
-- Repo clone (step 1) plus deep dive analysis (step 2): step 2 depends on step 1, so this is sequential.
+- Repository clone (step 1) plus deep dive analysis (step 2): step 2 depends on step 1, so this is sequential.
 - Reading 5 files for context: no dependency between reads, parallel tool calls in one message.
 
 Do not apply this check when the task has clear sequential dependencies (step B requires the output of step A) or when there is only one task. Sequential execution on independent tasks is wasted time: the cost of checking for parallelism is always lower than the cost of waiting.

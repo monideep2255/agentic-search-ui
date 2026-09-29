@@ -13,7 +13,7 @@ Last updated: 2026-05-06
 - [1. Strategic foundation](#1-strategic-foundation)
 - [2. Architecture design](#2-architecture-design)
 - [3. Competency questions and evaluation](#3-competency-questions-and-evaluation)
-- [4. Reference implementation: NCBI KG repo](#4-reference-implementation-ncbi-kg-repo)
+- [4. Reference implementation: NCBI KG repository](#4-reference-implementation-ncbi-kg-repository)
 - [5. Contractor architecture: NLQ and NFR baseline](#5-contractor-architecture-nlq-and-nfr-baseline)
 - [6. System 1 and 2 data handoff](#6-system-1-and-2-data-handoff)
 - [7. Agent and harness engineering research](#7-agent-and-harness-engineering-research)
@@ -111,7 +111,7 @@ Start with few-shot examples in the planner prompt. Collect real query data. Upg
 
 ---
 
-## 4. Reference implementation: NCBI KG repo
+## 4. Reference implementation: NCBI KG repository
 
 Source: `reference/ncbi_ai_agents-ncbi-kg/` (ncbi-kg branch)
 
@@ -403,12 +403,12 @@ Coordination meeting with an NCBI coordination contact.
 
 ## 10. Existing project documentation
 
-### In this repo (docs/)
+### In this repository (docs/)
 
 | Document | What it covers | PRD/tech spec section |
 | --- | --- | --- |
 | `docs/architecture/System_3_architecture_brainstorming.md` | Agent loop, multi-tier LLM, cost model, UI, deployment | Agent architecture, cost model |
-| `docs/ncbi/NCBI_repos_deep_dive.md` | 13 NCBI repos analyzed; code to reuse, what not to build | Tool design, entity resolution |
+| `docs/ncbi/NCBI_repos_deep_dive.md` | 13 NCBI repositories analyzed; code to reuse, what not to build | Tool design, entity resolution |
 | `docs/ncbi/NCBI_databases_and_APIs_reference.md` | All 39 NCBI databases, APIs, rate limits | Layer 2 tool specifications |
 | `docs/architecture/Three_layer_data_architecture.md` | Three-layer query strategy, costs, connection code | Data architecture blueprint |
 | `docs/architecture/Biolink_repos_explained.md` | BioLink categories, predicates, CURIEs | Graph schema, Cypher patterns |

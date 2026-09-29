@@ -797,7 +797,7 @@ def _retry_after_hint(response: httpx.Response) -> str:
 # ---------------------------------------------------------------------------
 
 # Known-good top-level JSON envelope keys. Only "esearchresult" is
-# independently live-verified in this repo's capability sheet (premise
+# independently live-verified in this repository's capability sheet (premise
 # gate cases 7 and 9). "result" (ESummary) and "linksets" (ELink) follow
 # documented E-utilities convention but are NOT independently verified
 # here; T-3.1-03 (ncbi_eutils_actions) should live-verify them before its

@@ -2264,7 +2264,7 @@ class _ThinkExtractedEntity(BaseModel):
     `production-standards.md`: a model talked into an extra field is a
     model whose output is rejected wholesale, not sampled from. Only
     `entity_type == "gene"` is ever attempted for live confirmation
-    (`_confirm_extracted_entities` below); this repo has no live
+    (`_confirm_extracted_entities` below); this repository has no live
     confirmation primitive for the other listed types yet, so a span
     tagged as one of them is schema-valid but never contributes a CURIE in
     this phase's scope. Recorded rather than silently narrowed: see this
@@ -2958,7 +2958,7 @@ async def _confirm_extracted_entities(
 
     T-4.7-05: "A span whose CURIE cannot be CONFIRMED by a live lookup
     contributes NOTHING." Only `entity_type == "gene"` is attempted: this
-    repo's one live confirmation primitive, `resolve_symbol_to_curie`, is
+    repository's one live confirmation primitive, `resolve_symbol_to_curie`, is
     gene-specific (Layer 2, NCBI Datasets/ESearch). A non-gene span is
     schema-valid and simply not attempted here in this phase's scope.
 
@@ -8288,9 +8288,9 @@ def _tool_execution_outcome(
 # section M documents the root cause directly: "MedGen Disease nodes have
 # `name` populated with source-vocabulary codes such as `SNOMEDCT_US`
 # instead of human-readable disease names... Root cause is in the MedGen
-# ETL parser." That is System 1/2's data defect, out of this repo's
+# ETL parser." That is System 1/2's data defect, out of this repository's
 # scope to fix at the source (file-protection.md forbids touching ETL
-# code). What is this repo's own defect is stapling
+# code). What is this repository's own defect is stapling
 # `assertion_confidence="asserted"` onto a citation built from one of
 # these corrupted values: asserting high confidence in a value that is
 # actually a controlled-vocabulary system name, not the disease name it
@@ -9689,7 +9689,7 @@ def _response_text(response: Any) -> str:
 
     `call_tier` returns an `LLMResponse`, but this stays tolerant of a bare
     string and of None on purpose: every existing Write-step test in this
-    repo patches the dispatch with a mock whose return value is whatever
+    repository patches the dispatch with a mock whose return value is whatever
     that test needed, and a Write step that raises `AttributeError` on an
     unexpected shape would turn a synthesis defect into a crash. An
     unreadable response yields an empty narrative, which the grounding pass
@@ -10101,7 +10101,7 @@ def _field_class_for_layer1_field(field_name: str) -> FieldClass | None:
 
     Confirmed live against the real graph (2026-08-09, 200-row samples
     across Gene, SequenceVariant, and Disease vertices): every Layer 1
-    vertex this repo's ingest returns carries the identical generic
+    vertex this repository's ingest returns carries the identical generic
     BioLink-normalized property set (`id`, `name`, `xrefs`, `source`,
     `agent_type`, `source_url`, `knowledge_level`), never a
     `clinical_significance`, `review_status`, `gtr_test_status`,
@@ -10110,7 +10110,7 @@ def _field_class_for_layer1_field(field_name: str) -> FieldClass | None:
     7.4 assumes a richer, per-domain ingest would carry; this ingest
     normalized every vertex label down to one shared shape instead, so
     this function returns `None` for every real Layer 1 citation this
-    repo can build today. It is real, unit-tested code, not dead code
+    repository can build today. It is real, unit-tested code, not dead code
     kept for appearances: it activates the moment Systems 1/2 preserve a
     domain-specific property on ingest. Full account: F-3.4-T06-01,
     `tracker/phase_3.4.md`.
@@ -10130,7 +10130,7 @@ def _field_class_for_layer1_field(field_name: str) -> FieldClass | None:
 # heuristic or a fuzzy/similarity matcher: every entry here traces to a
 # live-confirmed pairing, the same "an explicit table beats a guessed
 # heuristic" discipline `provenance_defaults.py`'s per-tool table and the
-# ClinVar term table already use elsewhere in this repo.
+# ClinVar term table already use elsewhere in this repository.
 #
 # "name" -> "symbol": the graph's generic BioLink-normalized Gene `name`
 # property (e.g. "BRCA1 DNA repair associated") and `ncbi_efetch`'s own
@@ -10732,7 +10732,7 @@ def _layer2_citation_for_synth_finding(
     `license` come from `provenance_defaults.defaults_for_tool
     ("ncbi_efetch")`, `assertion_confidence` from that function's own
     ClinVar-shaped-field check, exactly as every other `ncbi_efetch`
-    citation this repo builds (T-3.4-04's own six-tool premise coverage).
+    citation this repository builds (T-3.4-04's own six-tool premise coverage).
 
     `build_layer2_citation` needs the tool's own real, typed
     `NcbiEfetchOutput`, not the generic pseudo-row dict

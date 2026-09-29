@@ -76,7 +76,7 @@ rejection is the correct and only available behavior, and a `Literal` is the
 direct implementation of the spec for that case.
 
 Design decision 3, `source_url` and the fetch-host-versus-record-host split:
-this is the first tool in the repo where the host it fetches from
+this is the first tool in the repository where the host it fetches from
 (`eutils.ncbi.nlm.nih.gov`, `api.ncbi.nlm.nih.gov`) differs from the host a
 citation must resolve to (`www.ncbi.nlm.nih.gov`, `pubmed.ncbi.nlm.nih.gov`,
 `omim.org`). `graph_schema_constants.NCBI_RECORD_URL_PATTERN`

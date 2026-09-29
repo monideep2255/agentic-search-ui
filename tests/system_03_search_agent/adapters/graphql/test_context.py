@@ -15,7 +15,7 @@ elsewhere (`auth/dependencies.py`, `auth/guest.py`).
 Every assertion below names, in a comment beside it, the mutation that
 turns it red, matching this repository's mutation-proof discipline for a
 gate-adjacent file (`tracker/phase_4.3.md`'s "Premise gate design" section,
-and this repo's `test_types.py`/`test_fold.py` precedent for the same
+and this repository's `test_types.py`/`test_fold.py` precedent for the same
 package).
 """
 

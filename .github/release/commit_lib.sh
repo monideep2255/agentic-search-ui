@@ -37,18 +37,30 @@
 # non-zero, and every caller exits on it.
 
 # release_commit_shas <range>
-# Prints one full sha per line for the range, oldest first, merges excluded.
-# An empty range means the whole history. Returns non-zero if git fails.
+# Prints one full sha per line for the range, newest first as `git log` gives
+# them, merges excluded, and the release job's own changelog commits excluded
+# (see release_changelog_verdict below). An empty range means the whole
+# history. Returns non-zero if git fails.
 release_commit_shas() {
-  local range="$1" out status
-  out="$(git log ${range:+"$range"} --no-merges --format='%H' 2>&1)"
+  local range="$1" out status line sha subject verdict
+  out="$(git log ${range:+"$range"} --no-merges --format='%H%x09%s' 2>&1)"
   status=$?
   if [ "$status" -ne 0 ]; then
     printf 'git log failed for range %s (exit %s): %s\n' \
       "${range:-<whole history>}" "$status" "$out" >&2
     return 1
   fi
-  printf '%s' "$out"
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    sha="${line%%$'\t'*}"
+    subject="${line#*$'\t'}"
+    verdict="$(release_changelog_verdict "$sha" "$subject")" || return 1
+    if [ "$verdict" = "changelog" ]; then
+      continue
+    fi
+    printf '%s\n' "$sha"
+  done <<< "$out"
+  return 0
 }
 
 # release_commit_field <sha> <format>
@@ -64,6 +76,188 @@ release_commit_field() {
     return 1
   fi
   printf '%s' "$out"
+}
+
+# ---------------------------------------------------------------------------
+# The release job's own changelog commit, recognised once
+# ---------------------------------------------------------------------------
+
+# WHY THE RELEASE JOB HAS TO RECOGNISE ITS OWN COMMIT. Since 2026-09-27 the job
+# never pushes to `production` (release.yml's header says why). It commits the
+# changelog locally, on top of the production commit it tagged, and that commit
+# reaches `production` the long way round: the back-merge pull request carries
+# it into `develop`, and the NEXT release pull request carries it into
+# `production`. So every release after the first finds the previous release's
+# changelog commit inside its own range. Counted as an ordinary commit it would
+# be listed in the next release's notes, and a release whose only other
+# content is merge commits would publish a patch version for nothing.
+#
+# The subject is written in exactly one place, here, and read in exactly one
+# place, release_changelog_verdict below. Two scripts spelling it separately is
+# the "two readers disagree" class this file exists to end.
+
+# release_changelog_subject <version>
+# The subject tag_and_release.sh gives the changelog commit for <version>.
+release_changelog_subject() {
+  printf 'docs(changelog): release %s [skip ci]' "$1"
+}
+
+_RELEASE_CHANGELOG_SUBJECT_RE='^docs\(changelog\): release v[0-9]+\.[0-9]+\.[0-9]+ \[skip ci\]$'
+# The same commit after a squash merge of its back-merge pull request, which
+# rewrites it under the pull request's title. The repository merges with merge
+# commits, so this should not occur, but it costs one pattern to make the
+# changelog survive any of GitHub's three merge buttons.
+_RELEASE_BACKMERGE_SQUASH_RE='^chore: back-merge v[0-9]+\.[0-9]+\.[0-9]+ into develop( \(#[0-9]+\))?$'
+
+# release_changelog_version <subject>
+# Prints the version a subject names when it is one of the two changelog
+# subjects above, and nothing for any other subject. This is the only place a
+# subject is matched against them. The verdict and the finder below ask here,
+# and every script that looks for a changelog commit asks the finder, so no
+# two scripts can recognise the changelog commit differently (F-REL-A05, where
+# the carry step matched the robot's own subject only and missed the
+# squash-merged form the verdict accepted).
+release_changelog_version() {
+  if printf '%s' "$1" \
+      | grep -Eq "${_RELEASE_CHANGELOG_SUBJECT_RE}|${_RELEASE_BACKMERGE_SQUASH_RE}"; then
+    printf '%s' "$1" | sed -nE 's/^[^0-9]*(v[0-9]+\.[0-9]+\.[0-9]+).*$/\1/p'
+  fi
+}
+
+# release_changelog_verdict <sha> <subject>
+# Prints `changelog` when the commit is the release job's own changelog
+# commit, `commit` for everything else. Returns non-zero if git fails.
+#
+# TWO CONDITIONS, BOTH REQUIRED. The subject alone is chosen by whoever writes
+# the commit, so a subject match alone would let any commit hide from the
+# release notes by borrowing it. The commit must ALSO change `CHANGELOG.md`
+# and nothing else. A commit that passes both can hide nothing but changelog
+# text, which is exactly what it is.
+release_changelog_verdict() {
+  local sha="$1" subject="$2" files status
+  if [ -z "$(release_changelog_version "$subject")" ]; then
+    printf 'commit'
+    return 0
+  fi
+  files="$(git diff-tree --no-commit-id --name-only -r --root "$sha" 2>&1)"
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    printf 'git diff-tree failed for %s (exit %s): %s\n' "$sha" "$status" "$files" >&2
+    return 1
+  fi
+  if [ "$files" = "CHANGELOG.md" ]; then
+    printf 'changelog'
+  else
+    printf 'commit'
+  fi
+}
+
+# release_find_changelog_commit <version> <ref>...
+# Searches each ref in the order given for the release job's changelog commit
+# for <version>, recognised exactly as the verdict above recognises it: either
+# subject, naming <version>, on a commit that changes CHANGELOG.md alone.
+# Prints `<sha><TAB><ref>` for the first one found, and nothing when no ref
+# carries one. A ref that does not exist is skipped. Returns non-zero if git
+# fails.
+release_find_changelog_commit() {
+  local version="$1" ref out status line sha subject verdict
+  shift
+  for ref in "$@"; do
+    git rev-parse --verify --quiet "${ref}^{commit}" > /dev/null || continue
+    out="$(git log "$ref" --no-merges --fixed-strings --grep="$version" --format='%H%x09%s' 2>&1)"
+    status=$?
+    if [ "$status" -ne 0 ]; then
+      printf 'git log failed searching %s (exit %s): %s\n' "$ref" "$status" "$out" >&2
+      return 1
+    fi
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      sha="${line%%$'\t'*}"
+      subject="${line#*$'\t'}"
+      [ "$(release_changelog_version "$subject")" = "$version" ] || continue
+      verdict="$(release_changelog_verdict "$sha" "$subject")" || return 1
+      if [ "$verdict" = "changelog" ]; then
+        printf '%s\t%s\n' "$sha" "$ref"
+        return 0
+      fi
+    done <<< "$out"
+  done
+  return 0
+}
+
+# ---------------------------------------------------------------------------
+# The release robot, and the tags it made
+# ---------------------------------------------------------------------------
+
+# The identity every commit and tag this job makes carries. It is also how a
+# later run recognises a tag this job made (release_job_tag_at below), so it
+# is written once, here.
+RELEASE_BOT_NAME="github-actions[bot]"
+RELEASE_BOT_EMAIL="41898282+github-actions[bot]@users.noreply.github.com"
+
+release_as_bot() {
+  git config user.name "$RELEASE_BOT_NAME"
+  git config user.email "$RELEASE_BOT_EMAIL"
+}
+
+# release_job_tag_at <commit>
+# Prints the `vX.Y.Z` tag this job made on <commit>, and nothing when there is
+# none. A tag counts only when it is annotated and its tagger is the release
+# robot, so a tag the owner made by hand is never one: the data engineering
+# repository's first release, v1.0.0, is tagged by hand on purpose so that the
+# robot releases nothing, and that must stay true. Returns non-zero if git
+# fails, or if <commit> carries more than one such tag, which no run of this
+# job makes.
+release_job_tag_at() {
+  local out status tags
+  out="$(git for-each-ref --points-at "$1" \
+    --format='%(refname:strip=2)%09%(objecttype)%09%(taggeremail)' refs/tags 2>&1)"
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    printf 'git for-each-ref failed reading the tags on %s (exit %s): %s\n' \
+      "$1" "$status" "$out" >&2
+    return 1
+  fi
+  tags="$(printf '%s\n' "$out" | awk -F '\t' -v email="<${RELEASE_BOT_EMAIL}>" \
+    '$1 ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/ && $2 == "tag" && $3 == email { print $1 }')"
+  if [ "$(printf '%s' "$tags" | grep -c .)" -gt 1 ]; then
+    printf '%s carries more than one release tag made by this job: %s\n' \
+      "$1" "$(printf '%s' "$tags" | tr '\n' ' ')" >&2
+    return 1
+  fi
+  printf '%s' "$tags"
+}
+
+# ---------------------------------------------------------------------------
+# One release's section of CHANGELOG.md, read once
+# ---------------------------------------------------------------------------
+
+# release_changelog_section <version>
+# Reads a CHANGELOG.md on stdin and prints the section for <version>: its
+# `## <version> ` heading and every line after it up to, not including, the
+# next `## ` heading, with trailing blank lines dropped. Prints nothing when
+# the file has no section for <version>.
+#
+# THE NEXT `## ` HEADING ENDS THE SECTION WHATEVER IT SAYS, including a second
+# heading for the same version (F-REL-J11). The notes reader this replaced
+# tested for the version's heading before testing for "any heading", so a
+# second `## <version>` line restarted the section instead of ending it, and a
+# changelog carrying two headings for one version, for example a section the
+# owner drafted by hand under the version the release then got, published
+# both as one release's notes. The first heading for <version> wins.
+#
+# The heading is matched as `## <version> ` with its trailing space, or as the
+# bare `## <version>`, so `## v0.2.0` never matches `## v0.2.01`.
+release_changelog_section() {
+  awk -v with_date="## $1 " -v bare="## $1" '
+    found && /^## / { exit }
+    !found && (index($0, with_date) == 1 || $0 == bare) { found = 1 }
+    found { lines[++n] = $0 }
+    END {
+      while (n > 0 && lines[n] !~ /[^[:space:]]/) { n-- }
+      for (i = 1; i <= n; i++) { print lines[i] }
+    }
+  '
 }
 
 # ---------------------------------------------------------------------------

@@ -79,7 +79,7 @@ both call sites below. Tracing is now genuinely configured, through
 run actually transmits: BOTH the `LANGCHAIN_TRACING_V2`/`LANGSMITH_TRACING`
 flag AND a provisioned `LANGSMITH_API_KEY` are required (see
 `observability/config.py`'s docstring for why the flag alone, already
-`true` in this repo's `.env` ahead of this phase, was never sufficient
+`true` in this repository's `.env` ahead of this phase, was never sufficient
 consent on its own). With no key configured, `traced_graph_run` never even
 constructs a `langsmith.Client`, so a run today still makes zero outbound
 calls to `api.smith.langchain.com`, the same guarantee the old hardcoded
@@ -221,7 +221,7 @@ def _observed_cost_usd(events: list[Event]) -> float:
 
 
 def _terminal_events_for_capture(
-    query: Query, events: list[Event], elapsed_ms: int
+    query: Query, events: list[Event], elapsed_ms: int, metered_cost_usd: float = 0.0
 ) -> list[Event]:
     """`events`, guaranteed to end in a `done` the assembler can read.
 
@@ -258,12 +258,20 @@ def _terminal_events_for_capture(
     see for a run that never produced an answer. The cost is the real
     observed cost rather than zero, so the system-wide daily cost cap
     counts the model calls a stopped run actually paid for.
+
+    `metered_cost_usd` is the harness's own running total, card 58. The
+    last `cost` event misses a model call the stop cancelled mid-flight:
+    the harness meters that call when it is cancelled (`Harness.call_tier`),
+    but no node survives to emit the `cost` event that would carry it.
+    Measured on a stop during the writing call: the row recorded only what
+    was spent before Write. The larger of the two is recorded, since the
+    harness total already includes every earlier `cost` event.
     """
     if any(event.type == "done" for event in events):
         return events
     next_seq = max((event.seq for event in events), default=-1) + 1
     done_payload = DonePayload(
-        total_cost_usd=_observed_cost_usd(events),
+        total_cost_usd=max(_observed_cost_usd(events), metered_cost_usd),
         # Observed rather than the graph's own `findings_count`, which lives
         # in graph state this function cannot see. A `tool_result` event is
         # a tool call that actually returned.
@@ -662,7 +670,7 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
     function drives `compiled_graph.astream(initial_state,
     stream_mode="updates")` instead, which yields one `{node_name:
     partial_state}` dict per node as that node itself completes (verified
-    against this repo's pinned LangGraph version; see the module
+    against this repository's pinned LangGraph version; see the module
     docstring). Pulling `partial_state["events"]` out of each yielded
     update and yielding those `Event` objects immediately means a
     consumer observes an earlier node's events (e.g. `guard`, `think`)
@@ -711,6 +719,9 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
     # shape and for the identical reason the comment above gives for
     # trace_id. Reset in the same `finally`.
     _call_budget_handle = set_query_budget("lookup")
+    # Card 58: bound before the `try`, so the `finally` can read the
+    # harness's own cost total however this generator ends.
+    harness: Harness | None = None
     try:
         harness = Harness(trace_id=query.trace_id)
         context = await _load_session_memory(query, context)
@@ -816,10 +827,18 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
         # abandonment timer, and it closes this generator explicitly so this
         # block runs immediately rather than whenever the collector gets to
         # it.
+        # Card 58: the harness total carries a model call the stop cancelled
+        # mid-flight, which no `cost` event did. See
+        # `_terminal_events_for_capture`.
         await _capture_interaction(
             query,
             _terminal_events_for_capture(
-                query, seen_events, int((time.monotonic() - start) * 1000)
+                query,
+                seen_events,
+                int((time.monotonic() - start) * 1000),
+                metered_cost_usd=(
+                    harness.get_query_cost_usd(query.trace_id) if harness is not None else 0.0
+                ),
             ),
         )
         # T-5.0-05: the matching reset for `set_trace_id` above, run last so

@@ -19,7 +19,7 @@ The sandbox is a security boundary. `dangerouslyDisableSandbox: true` removes it
 
 | Symptom | Class | Durable fix | Override needed? |
 |---------|-------|-------------|------------------|
-| "Operation not permitted", "could not lock", write blocked to a path outside the allowlist | Filesystem deny | Write to an allowed path (scratchpad, repo dir). If a protected path legitimately must change (e.g. `.git/config`), that one write needs the override. A `git pull` whose incoming commits rewrite protected paths is one named operation and takes the override for the whole pull. | Only for the single protected-path write, or a named protected-path operation such as a pull |
+| "Operation not permitted", "could not lock", write blocked to a path outside the allowlist | Filesystem deny | Write to an allowed path (scratchpad, repository dir). If a protected path legitimately must change (e.g. `.git/config`), that one write needs the override. A `git pull` whose incoming commits rewrite protected paths is one named operation and takes the override for the whole pull. | Only for the single protected-path write, or a named protected-path operation such as a pull |
 | Connection refused or blocked to an `https://` host | Network Layer-7 | The proxy allows HTTPS to allowlisted hosts. Add the host with `/sandbox`. | No |
 | Connection fails to a raw TCP or SSH endpoint (e.g. `git@github.com:22`) | Network Layer-4 | The HTTP proxy cannot tunnel raw SSH regardless of allowlist. Switch the tool to HTTPS (e.g. `git remote set-url` to `https://`). | Only as a last resort if no HTTPS path exists |
 

@@ -279,7 +279,7 @@ class Mutation:
         # `input` shadows a builtin. The name is part of the locked GraphQL
         # operation set in tracker/phase_4.3.md and is the conventional
         # GraphQL argument name, so the published schema is not renamed to
-        # satisfy a Python convention. This repo's ruff config does not
+        # satisfy a Python convention. This repository's ruff config does not
         # enable flake8-builtins, so no suppression is needed either.
         #
         # A state-changing operation, hence a mutation rather than a query:

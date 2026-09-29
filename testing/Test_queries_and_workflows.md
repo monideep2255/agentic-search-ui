@@ -1400,7 +1400,7 @@ What you should see:
 
 ## 12. The overnight build of 2026-09-25
 
-Built overnight from the board's To do column, by the plan in `testing/Overnight_build_plan_2026-09-25.md`. Everything here is on develop only. If you do not like it, `python3 testing/Developer/scripts/bin_overnight.py --all --yes` puts develop's product code back exactly as it was before the night.
+Built overnight from the board's To do column. Everything here is on develop only.
 
 ### 80. A good question is not refused at the think step (12.17)
 

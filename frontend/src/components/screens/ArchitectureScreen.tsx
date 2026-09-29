@@ -1,6 +1,6 @@
 /**
  * The Architecture page, `/architecture`. Product-owner request of
- * 2026-09-13: "Data retrieval from data engineering repo, April 22 snapshot,
+ * 2026-09-13: "Data retrieval from data engineering repository, April 22 snapshot,
  * add this metric for the system 1, list out the names of databases as the
  * core of information being pulled from like the 115M etc, then the system 2
  * and 3, Databases in kg, pull from api layer 2 and 3."
