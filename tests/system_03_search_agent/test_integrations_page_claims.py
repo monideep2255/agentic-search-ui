@@ -417,14 +417,22 @@ def _declared_by(install: re.Match[str]) -> set[str]:
     return set(data["project"]["scripts"])
 
 
-_COPY_ORDER = ("INSTALL_EXAMPLE", "CLI_EXAMPLE", "KGX_EXAMPLE")
+_COPY_ORDER = ("INSTALL_EXAMPLE", "CLI_EXAMPLE")
+# Card 62's fix round (F-62-J02, A07): the one install the page prints.
+_S3_INSTALL_SUBDIRECTORY = "clients/system3-cli"
 
 
 def test_every_printed_command_comes_with_the_install_the_page_prints_for_it(
     page_source: str, declared_console_scripts: set[str]
 ) -> None:
-    """Mutation that turns this red: drop the server's install line from
-    `KGX_EXAMPLE`, which is the page PR-8.10-03 ran."""
+    """Mutation that turns this red: run a command no printed install
+    provides, which is the page PR-8.10-03 ran (`s3-kgx-export` after the
+    `s3` install)."""
+    s3_scripts = set(
+        tomllib.loads(
+            (_REPO_ROOT / _S3_INSTALL_SUBDIRECTORY / "pyproject.toml").read_text(encoding="utf-8")
+        )["project"]["scripts"]
+    )
     installed: set[str] = set()
     ran: list[str] = []
     for name in _COPY_ORDER:
@@ -440,10 +448,43 @@ def test_every_printed_command_comes_with_the_install_the_page_prints_for_it(
                     f"{name} tells a reader to run {program!r}, and no install the page "
                     f"prints before it provides it (installed so far: {sorted(installed)})"
                 )
-    assert set(ran) == declared_console_scripts, (
+    assert set(ran) == s3_scripts, (
         f"populate-check failed: the copies ran {sorted(set(ran))}, not every "
-        f"declared command {sorted(declared_console_scripts)}"
+        f"command the s3 install declares {sorted(s3_scripts)}"
     )
+
+
+def test_the_page_installs_only_s3_exactly_pinned(page_source: str) -> None:
+    """Card 62's fix round, F-62-J02 and F-62-A07. The KGX copy installed the
+    whole server from the repository root, whose dependencies are version
+    floors (a release nobody reviewed could install), and whose files
+    overlap `s3`'s, so uninstalling it deleted `s3`. The page now prints one
+    install, `clients/system3-cli`, whose every dependency is pinned
+    exactly. Mutation that turns this red: put back a root install."""
+    installs = [
+        match
+        for name in re.findall(r"export const (\w+) = `", page_source)
+        for command in _shell_commands(_copied(page_source, name))
+        if (match := _PIP_GIT_INSTALL.match(command))
+    ]
+    assert installs, "populate-check failed: the page prints no install at all"
+    for install in installs:
+        assert install.group("sub") == _S3_INSTALL_SUBDIRECTORY, install.group(0)
+    # Every pip line anywhere in the page, not only in the copies found above.
+    printed = re.findall(r'pip install "[^"]*"', page_source)
+    assert len(printed) == len(installs), printed
+    data = tomllib.loads(
+        (_REPO_ROOT / _S3_INSTALL_SUBDIRECTORY / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    for requirement in data["project"]["dependencies"]:
+        assert re.fullmatch(r"[A-Za-z0-9_.\[\]-]+==[A-Za-z0-9_.+-]+", requirement), requirement
+
+
+def test_the_page_says_how_a_kgx_file_is_had_today(page_source: str) -> None:
+    """Card 62's fix round, F-62-J03: with no install printed for it, the
+    card says plainly where a KGX file comes from."""
+    assert "s3-kgx-export is not in that install and has no download" in page_source
+    assert "today a KGX file comes from the operator" in page_source
 
 
 def test_every_printed_command_parses_as_printed(page_source: str) -> None:
@@ -473,7 +514,7 @@ def test_every_printed_command_parses_as_printed(page_source: str) -> None:
             except (s3_main._ArgparseExit, kgx_cli._ArgparseExit):
                 pytest.fail(f"{name} prints {command!r}, which does not parse: {err.getvalue()}")
             parsed += 1
-    assert parsed >= 3, "populate-check failed: fewer than three commands were parsed"
+    assert parsed >= 2, "populate-check failed: fewer than two commands were parsed"
 
 
 def test_the_agent_configuration_names_s3_by_a_full_path(page_source: str) -> None:
@@ -489,7 +530,10 @@ def test_the_agent_configuration_names_s3_by_a_full_path(page_source: str) -> No
     assert server["command"].rsplit("/", 1)[-1] == "s3"
     assert server["args"][0] == "mcp"
     s3_main._parse_mcp_args(server["args"][1:], out=io.StringIO(), err=io.StringIO())
-    assert f"replace {server['command']} with the full path that command -v s3 prints" in page_source
+    assert (
+        f"replace {server['command']} with the full path that command -v s3 prints "
+        "inside the virtual environment, after . s3-env/bin/activate" in page_source
+    )
 
 
 def test_the_python_version_the_card_states_is_the_one_the_install_needs(page_source: str) -> None:
@@ -500,4 +544,10 @@ def test_the_python_version_the_card_states_is_the_one_the_install_needs(page_so
     )
     required = re.fullmatch(r">=(\d+\.\d+)", data["project"]["requires-python"])
     assert required, data["project"]["requires-python"]
-    assert f"needs Python {required.group(1)} or newer" in page_source
+    version = required.group(1)
+    assert f"needs git and Python {version}" in page_source
+    # Card 62's fix round, F-62-J01: the venv is made with that version by
+    # name, never a bare `python3`, which is macOS's own 3.9.
+    install = _shell_commands(_copied(page_source, "INSTALL_EXAMPLE"))
+    assert install[0] == f"python{version} -m venv s3-env", install[0]
+    assert "works on macOS and Linux" in page_source

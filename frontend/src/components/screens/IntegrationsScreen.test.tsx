@@ -153,33 +153,61 @@ describe("the integrations page, rebuilt from the reference layout", () => {
     expect(command.startsWith("/"), "the configuration names a full path").toBe(true);
     const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
     expect(card).toHaveTextContent(`replace ${command} with the full path that command -v s3 prints`);
+    // Card 62's fix round (F-62-A04): `command -v s3` prints nothing outside
+    // the environment, so the sentence says where to run it. Mutation that
+    // turns this red: drop "inside the virtual environment".
+    expect(card).toHaveTextContent(
+      "command -v s3 prints inside the virtual environment, after . s3-env/bin/activate",
+    );
   });
 
-  it("says what the install needs: Python 3.11 or newer and a virtual environment", () => {
-    // Card 62, PR-8.10-04: macOS's own Python 3.9 failed with "No matching
-    // distribution found for setuptools==83.0.0", and Homebrew's Python
-    // outside a virtual environment refused with
-    // "externally-managed-environment". Mutation that turns this red: drop
-    // the sentence.
+  it("says how to enter the environment again in a new terminal, before s3 login or s3 ask", () => {
+    // Card 62's fix round (F-62-A04): the page's `s3 login` and `s3 ask`
+    // gave "command not found: s3" in any terminal but the install's own.
+    // Mutation that turns this red: drop the sentence.
     render(<IntegrationsScreen />);
 
     const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
-    expect(card).toHaveTextContent(/needs Python 3\.11 or newer/);
-    expect(card).toHaveTextContent(/virtual environment/);
+    expect(card).toHaveTextContent(
+      "In a new terminal, enter it again with . s3-env/bin/activate from the same folder before s3 login or s3 ask.",
+    );
   });
 
-  it("says s3-kgx-export is not in the s3 install, and how to get it", () => {
+  it("says what the install needs, before the commands: git, Python 3.11, macOS or Linux", () => {
+    // Card 62, PR-8.10-04: macOS's own Python 3.9 failed with "No matching
+    // distribution found for setuptools==83.0.0", and Homebrew's Python
+    // outside a virtual environment refused with
+    // "externally-managed-environment". Its fix round (F-62-J01, J07, A03):
+    // git and the platforms were never named. Mutation that turns this red:
+    // drop the sentence, or move it after the commands.
+    render(<IntegrationsScreen />);
+
+    const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
+    expect(card).toHaveTextContent(/works on macOS and Linux and needs git and Python 3\.11/);
+    expect(card).toHaveTextContent(/virtual environment/);
+    const needs = within(card as HTMLElement).getByText(/needs git and Python 3\.11/);
+    const install = within(card as HTMLElement).getByTestId("integration-copy-install");
+    expect(
+      needs.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING,
+      "the requirements come before the install command",
+    ).toBeTruthy();
+  });
+
+  it("says s3-kgx-export is not in the s3 install, and how a KGX file is had today", () => {
     // Card 62, PR-8.10-03: the card said both commands were "installed once
     // with pip", and after the page's own install `s3-kgx-export` was
-    // "command not found". It reads the graph directly, so it ships with the
-    // server's own package. Mutation that turns this red: put back
-    // "installed once with pip".
+    // "command not found". Its fix round (F-62-J02, J03, A07): the page
+    // printed an install of the whole server with version floors, which
+    // also deleted `s3` when removed. No KGX install is printed now; the
+    // card says the operator runs it. Mutation that turns this red: put
+    // back the KGX copy, or "installed once with pip".
     render(<IntegrationsScreen />);
 
     const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
     expect(card).not.toHaveTextContent(/installed once with pip/);
-    expect(card).toHaveTextContent(/s3-kgx-export is not in that install/);
-    expect(card).toHaveTextContent(/server's own package/);
+    expect(card).toHaveTextContent(/s3-kgx-export is not in that install and has no download/);
+    expect(card).toHaveTextContent(/today a KGX file comes from the operator/);
+    expect(within(card as HTMLElement).queryByTestId("integration-copy-kgx")).toBeNull();
   });
 
   it("promises no schedule for the MCP follow-up offers, and claims no parity", () => {
@@ -269,7 +297,7 @@ describe("the integrations page, rebuilt from the reference layout", () => {
       expect(copied, "`question` was the old, wrong field name").not.toContain("question:");
     });
 
-    it("writes the REST curl, the MCP config and both console commands", async () => {
+    it("writes the REST curl, the MCP config and the s3 commands", async () => {
       const user = setupWithClipboard();
       render(<IntegrationsScreen />);
 
@@ -277,7 +305,6 @@ describe("the integrations page, rebuilt from the reference layout", () => {
         ["integration-copy-rest", "/v1/query"],
         ["integration-copy-mcp", "/mcp"],
         ["integration-copy-cli", "s3 ask"],
-        ["integration-copy-kgx", "s3-kgx-export"],
       ] as const) {
         writeText.mockClear();
         await user.click(cards().getByTestId(testId));
@@ -309,26 +336,26 @@ describe("the integrations page, rebuilt from the reference layout", () => {
       expect(JSON.parse(writeText.mock.calls[0][0])).toEqual(AGENT_CONFIG);
     });
 
-    it("installs s3 into a new virtual environment, and the KGX copy installs the server's own package", async () => {
-      // Card 62, PR-8.10-03 and 04. The install copy makes and activates a
-      // virtual environment before pip runs, so Homebrew's Python does not
-      // refuse and `s3` is on the PATH for the next command. The KGX copy
-      // starts with the install that actually carries `s3-kgx-export`: the
-      // repository itself, not `clients/system3-cli`.
+    it("installs s3 with python3.11 into a new virtual environment, and installs nothing else", async () => {
+      // Card 62, PR-8.10-03 and 04, and its fix round (F-62-J01, J02, A07).
+      // The install copy makes the venv with `python3.11` by name, since a
+      // bare `python3` is macOS's own 3.9, then activates it before pip
+      // runs, so Homebrew's Python does not refuse and `s3` is on the PATH
+      // for the next command. No other copy on the page installs anything.
       const user = setupWithClipboard();
       render(<IntegrationsScreen />);
 
       await user.click(cards().getByTestId("integration-copy-install"));
       const install = writeText.mock.calls[0][0].split("\n");
-      expect(install[0]).toBe("python3 -m venv s3-env");
+      expect(install[0]).toBe("python3.11 -m venv s3-env");
       expect(install[1]).toBe(". s3-env/bin/activate");
       expect(install[2]).toMatch(/^pip install "git\+https:\/\/\S+#subdirectory=clients\/system3-cli"$/);
 
-      writeText.mockClear();
-      await user.click(cards().getByTestId("integration-copy-kgx"));
-      const kgx = writeText.mock.calls[0][0].split("\n");
-      expect(kgx[0]).toMatch(/^pip install "git\+https:\/\/[^"#]+\.git"$/);
-      expect(kgx[1]).toMatch(/^s3-kgx-export /);
+      for (const testId of ["integration-copy-cli", "integration-copy-mcp-stdio"]) {
+        writeText.mockClear();
+        await user.click(cards().getByTestId(testId));
+        expect(writeText.mock.calls[0][0], `${testId} installs something`).not.toMatch(/pip install/);
+      }
     });
 
     it("says so when the clipboard is unavailable, rather than looking like nothing happened", async () => {
