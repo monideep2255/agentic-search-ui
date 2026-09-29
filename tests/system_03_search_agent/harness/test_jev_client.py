@@ -288,12 +288,12 @@ def _with_cost(body: dict[str, Any], cost: float) -> dict[str, Any]:
         (
             _response(_with_cost(_success_body(choice="maybe"), 0.004)),
             "invalid_option",
-            0.004,
+            MAX_JEV_COST_USD,
         ),
         (
             _response(_with_cost(_success_body(question_key="another.decision"), 0.004)),
             "malformed_reply",
-            0.004,
+            MAX_JEV_COST_USD,
         ),
         (httpx.Response(200, content=b"not json at all"), "malformed_reply", MAX_JEV_COST_USD),
         (
@@ -315,7 +315,9 @@ async def test_an_unusable_reply_still_reports_what_it_cost(
     invisible to the cost caps. A 200 whose body is not JSON came back from
     the provider too, so it is billed the ceiling as well (re-land
     follow-up R-07, F-8.6-RJ05); only "HTTP 503", where no reply came back
-    to bill, stays $0.0."""
+    to bill, stays $0.0. Since re-land follow-up R-10, a reply that states a
+    usable amount but cannot be used is charged the ceiling too: nothing in
+    a reply the loop cannot use is trusted, its cost included (F-8.6-FJ02)."""
     monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=reply))
     with pytest.raises(JevCallError) as excinfo:
         await _call_once()
@@ -538,7 +540,7 @@ async def test_an_unusable_batch_reply_still_reports_what_it_cost(
     with pytest.raises(JevCallError) as excinfo:
         await _batch_once()
     assert excinfo.value.reason == reason
-    assert excinfo.value.billed_cost_usd == pytest.approx(0.004)
+    assert excinfo.value.billed_cost_usd == pytest.approx(MAX_JEV_COST_USD)  # R-10: never the stated 0.004
 
 
 @pytest.mark.asyncio

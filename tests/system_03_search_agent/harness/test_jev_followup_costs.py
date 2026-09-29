@@ -23,12 +23,17 @@ What this file covers:
 What it deliberately omits: a live endpoint. No network call anywhere:
 `jev_client._post` is the one seam, patched in every test.
 
-The rule the charges follow is the one `JevCallError` states: a reply
-that states a usable amount at or under the ceiling is charged that
-amount, and anything else the ceiling. So a reply whose `confidence`
-overflows but whose `cost` reads $0.001 is charged $0.001, exactly like a
-reply whose `confidence` is the string "abc" (the control below), never
-$0.0.
+The rule the charges follow, since re-land follow-up R-10 (F-8.6-FJ01,
+FA01, FJ02, FJ03), is the one `JevCallError` states: every reply that came
+back but cannot be used is charged the `MAX_JEV_COST_USD` ceiling, one
+cent, whatever its body's shape and whatever cost it states, and the one
+warning `jev_client` writes for it names that amount. R-07 charged a
+malformed reply the cost it stated; that left a reply stating $0 charged
+$0 (FJ02), and shapes the parse did not name (`"probabilities": null`, a
+list or a string there, a body nested too deep for the JSON parser)
+escaped uncharged at every site while the log said the ceiling was
+charged (FJ01, FA01, FJ03). R-10 adds those shapes below, at all three
+sites.
 """
 
 from __future__ import annotations
@@ -121,20 +126,41 @@ async def _batch() -> None:
 
 
 # Every unreadable 200 reply, with what it must be charged.
+def _probabilities_as(raw: str, *, key: str = "guardrail.relevancy", choice: str = "on_topic") -> bytes:
+    """A reply whose `probabilities` is `raw` JSON text, stating a usable
+    $0.00002: F-8.6-FJ01's shapes."""
+    body = _single_body(key=key, choice=choice, cost="0.00002")
+    return body.replace(f'"probabilities": {{"{choice}": 0.8}}', f'"probabilities": {raw}').encode()
+
+
+#: A body nested too deep for the JSON parser: `response.json()` raises
+#: `RecursionError`, not `ValueError` (F-8.6-FA01).
+_DEEP = b"[" * 100_000 + b"]" * 100_000
+
 _SINGLE_CASES = [
-    (_single_body(key="guardrail.relevancy", choice="on_topic", cost=_HUGE).encode(), MAX_JEV_COST_USD),
-    (_single_body(key="guardrail.relevancy", choice="on_topic", confidence=_HUGE).encode(), 0.001),
-    (_single_body(key="guardrail.relevancy", choice="on_topic", prob=_HUGE).encode(), 0.001),
-    (_single_body(key="guardrail.relevancy", choice="on_topic", confidence='"abc"').encode(), 0.001),
-    (b"not json at all", MAX_JEV_COST_USD),
-    (b"", MAX_JEV_COST_USD),
-    (b"\xff\xfe\xfa", MAX_JEV_COST_USD),
+    _single_body(key="guardrail.relevancy", choice="on_topic", cost=_HUGE).encode(),
+    _single_body(key="guardrail.relevancy", choice="on_topic", confidence=_HUGE).encode(),
+    _single_body(key="guardrail.relevancy", choice="on_topic", prob=_HUGE).encode(),
+    _single_body(key="guardrail.relevancy", choice="on_topic", confidence='"abc"').encode(),
+    _single_body(key="guardrail.relevancy", choice="on_topic", confidence="7", cost="0").encode(),
+    _probabilities_as("null"),
+    _probabilities_as("[0.8, 0.2]"),
+    _probabilities_as('"on_topic"'),
+    _DEEP,
+    b"not json at all",
+    b"",
+    b"\xff\xfe\xfa",
 ]
 _SINGLE_IDS = [
     "cost too large for a float",
     "confidence too large for a float",
     "probability too large for a float",
-    "control: confidence a string",
+    "confidence a string, cost stated",
+    "confidence out of range, cost stated as 0",
+    "probabilities null",
+    "probabilities a list",
+    "probabilities a string",
+    "a body nested too deep",
     "a body that is not JSON",
     "an empty body",
     "a body that is not text",
@@ -142,16 +168,24 @@ _SINGLE_IDS = [
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(("content", "billed"), _SINGLE_CASES, ids=_SINGLE_IDS)
-async def test_call_jev_charges_an_unreadable_reply_inside_the_ceiling(
-    monkeypatch: pytest.MonkeyPatch, content: bytes, billed: float
+@pytest.mark.parametrize("content", _SINGLE_CASES, ids=_SINGLE_IDS)
+async def test_call_jev_charges_an_unreadable_reply_one_cent_and_says_so(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, content: bytes
 ) -> None:
+    """MUTATION PROOF: narrowing `call_jev`'s parse arm back to a list of
+    error types turns "probabilities null" red (it escapes as an
+    `AttributeError`), and `_json_payload`'s back to `ValueError` turns "a
+    body nested too deep" red; see the builder's report."""
     _patch_reply(monkeypatch, content)
-    with pytest.raises(JevCallError) as excinfo:
+    with (
+        caplog.at_level(logging.WARNING, logger=jev_client_module.__name__),
+        pytest.raises(JevCallError) as excinfo,
+    ):
         await _single()
     assert excinfo.value.reason == "malformed_reply"
-    assert excinfo.value.billed_cost_usd == pytest.approx(billed)
+    assert excinfo.value.billed_cost_usd == MAX_JEV_COST_USD
     assert "fall back to the guard tier" in str(excinfo.value)
+    assert [r.getMessage().endswith("it is charged $0.01, the ceiling for one call") for r in caplog.records] == [True]
 
 
 @pytest.mark.asyncio
@@ -159,15 +193,20 @@ async def test_call_jev_charges_an_unreadable_reply_inside_the_ceiling(
     ("content", "billed"),
     [
         (_batch_body(cost=_HUGE).encode(), MAX_JEV_COST_USD),
-        (_batch_body(confidence=_HUGE).encode(), 0.001),
-        (_batch_body(confidence='"abc"').encode(), 0.001),
+        (_batch_body(confidence=_HUGE).encode(), MAX_JEV_COST_USD),
+        (_batch_body(confidence='"abc"').encode(), MAX_JEV_COST_USD),
+        (_batch_body().replace('"probabilities": {"no": 0.8}}, "item_2"', '"probabilities": null}, "item_2"').encode(),
+         MAX_JEV_COST_USD),
+        (_DEEP, MAX_JEV_COST_USD),
         (b"not json at all", MAX_JEV_COST_USD),
         (b"", MAX_JEV_COST_USD),
     ],
     ids=[
         "cost too large for a float",
         "confidence too large for a float",
-        "control: confidence a string",
+        "confidence a string, cost stated",
+        "probabilities null",
+        "a body nested too deep",
         "a body that is not JSON",
         "an empty body",
     ],
@@ -187,13 +226,15 @@ async def test_call_jev_batch_charges_an_unreadable_reply_inside_the_ceiling(
 @pytest.mark.parametrize(
     ("content", "said"),
     [
-        (b"not json at all", "is not JSON, so it is charged the $0.01 ceiling"),
+        (b"not json at all", "could not be read as JSON (JSONDecodeError); it is charged $0.01"),
         (
             _single_body(key="guardrail.relevancy", choice="on_topic", cost=_HUGE).encode(),
-            "so it is charged the $0.01 ceiling",
+            "did not match the confirmed response shape (OverflowError); it is charged $0.01",
         ),
+        (_probabilities_as("null"), "(AttributeError); it is charged $0.01"),
+        (_DEEP, "could not be read as JSON (RecursionError); it is charged $0.01"),
     ],
-    ids=["a body that is not JSON", "cost too large for a float"],
+    ids=["a body that is not JSON", "cost too large for a float", "probabilities null", "a body nested too deep"],
 )
 async def test_the_warning_names_the_amount_actually_charged(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, content: bytes, said: str
@@ -238,6 +279,11 @@ _SITE_CASES = [
     ("cost too large for a float", "cost"),
     ("a body that is not JSON", "not_json"),
     ("an empty body", "empty"),
+    ("probabilities null, a usable cost stated", "probabilities_null"),
+    ("probabilities a list, a usable cost stated", "probabilities_list"),
+    ("probabilities a string, a usable cost stated", "probabilities_string"),
+    ("a body nested too deep", "deep"),
+    ("an option outside the set, a usable cost stated", "invalid_option"),
 ]
 
 
@@ -246,9 +292,24 @@ def _site_content(shape: str, *, key: str, choice: str, batch: bool = False) -> 
         return b"not json at all"
     if shape == "empty":
         return b""
+    if shape == "deep":
+        return _DEEP
+    if shape.startswith("probabilities_"):
+        raw = {"probabilities_null": "null", "probabilities_list": "[0.8]", "probabilities_string": '"x"'}[shape]
+        if batch:
+            return _batch_body().replace('"probabilities": {"no": 0.8}}, "item_2"', f'"probabilities": {raw}}}, "item_2"').encode()
+        return _probabilities_as(raw, key=key, choice=choice)
+    if shape == "invalid_option":
+        if batch:
+            return _batch_body().replace('"choice": "no"', '"choice": "maybe"', 1).encode()
+        return _single_body(key=key, choice="maybe", cost="0.00002").encode()
     if batch:
         return _batch_body(cost=_HUGE).encode()
     return _single_body(key=key, choice=choice, cost=_HUGE).encode()
+
+
+def _reason(shape: str) -> str:
+    return "invalid_option" if shape == "invalid_option" else "malformed_reply"
 
 
 @pytest.mark.asyncio
@@ -259,7 +320,7 @@ async def test_decide_charges_the_ceiling(
     _patch_reply(monkeypatch, _site_content(shape, key="guardrail.relevancy", choice="on_topic"))
     harness = Harness(trace_id="d")
     record = await decide(harness, "d", "guardrail.relevancy", "x", ["on_topic", "off_topic"], default="on_topic")
-    assert record.fallback_reason is not None and record.fallback_reason.endswith("malformed_reply")
+    assert record.fallback_reason is not None and record.fallback_reason.endswith(_reason(shape))
     assert harness.get_query_cost_usd("d") == pytest.approx(MAX_JEV_COST_USD)
 
 
@@ -271,7 +332,7 @@ async def test_the_injection_pick_charges_the_ceiling(
     _patch_reply(monkeypatch, _site_content(shape, key="guardrail.injection", choice="not_injection"))
     harness = Harness(trace_id="i")
     result = await graph_module._jev_injection_pick(harness, "i", "What does BRCA1 do?")
-    assert result == "malformed_reply"
+    assert result == _reason(shape)
     assert harness.get_query_cost_usd("i") == pytest.approx(MAX_JEV_COST_USD)
 
 
@@ -285,7 +346,7 @@ async def test_the_sentence_check_charges_the_ceiling(
     harness = Harness(trace_id="s")
     with pytest.raises(JevCallError) as excinfo:
         await sentence_check_module._ask_jev([], harness=harness, trace_id="s", timeout_s=3.0)
-    assert excinfo.value.reason == "malformed_reply"
+    assert excinfo.value.reason == _reason(shape)
     assert harness.get_query_cost_usd("s") == pytest.approx(MAX_JEV_COST_USD)
 
 
@@ -297,3 +358,11 @@ def test_the_probe_bodies_are_what_they_claim() -> None:
         float(parsed["usage"]["cost"])
     with pytest.raises(ValueError):
         json.loads("")
+    with pytest.raises(RecursionError):
+        json.loads(_DEEP)
+    for shape in ("probabilities_null", "probabilities_list", "probabilities_string"):
+        single = json.loads(_site_content(shape, key="k", choice="c"))
+        batch = json.loads(_site_content(shape, key="", choice="", batch=True))
+        assert not isinstance(single["answers"]["k"]["probabilities"], dict)
+        assert not isinstance(batch["answers"]["item_1"]["probabilities"], dict)
+        assert single["usage"]["cost"] == 0.00002

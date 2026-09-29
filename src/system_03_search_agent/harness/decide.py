@@ -267,9 +267,10 @@ async def _run_jev_pick(
 ) -> JevResult:
     """Jev's pick, cap-checked first exactly like the guard call above.
 
-    Charges Jev's reported cost whether or not the reply is usable: a
-    reply that came back unusable carries its cost on
-    `JevCallError.billed_cost_usd` (fix round, F-8.6-J10). Raises
+    Charges every reply that came back: a usable one its stated cost, an
+    unusable one the `MAX_JEV_COST_USD` ceiling it carries on
+    `JevCallError.billed_cost_usd` (fix round, F-8.6-J10; re-land follow-up
+    R-10), which `jev_client` has already logged by amount. Raises
     JevCallError (from `jev_client.call_jev`) or
     `cost_control.QueryCapExceededError` on any failure; `_jev_attempt`
     catches both.
@@ -294,10 +295,11 @@ async def _run_jev_pick(
             criteria=criteria,
         )
     except JevCallError as exc:
-        # A reply that came back but could not be used (malformed, an option
-        # outside the set, a cost above the ceiling) was still billed: its
-        # reported cost is charged, never zero, and the cost cap then applies
-        # to the guard fallback as to any call (fix round, F-8.6-J10).
+        # A reply that came back but could not be used (any malformed body, an
+        # option outside the set, a cost above the ceiling) was still billed:
+        # it is charged the ceiling it carries, never zero, and the cost cap
+        # then applies to the guard fallback as to any call (fix round,
+        # F-8.6-J10; re-land follow-up R-10).
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
         raise

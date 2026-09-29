@@ -802,14 +802,14 @@ def _free_guard(monkeypatch: pytest.MonkeyPatch, *, reply: str = "relevant") -> 
     ("cost", "choice", "reason", "charged"),
     [
         ("0.02", "relevant", "malformed_reply", MAX_JEV_COST_USD),
-        ("0.004", "maybe", "invalid_option", 0.004),
+        ("0.004", "maybe", "invalid_option", MAX_JEV_COST_USD),
         ("Infinity", "relevant", "malformed_reply", MAX_JEV_COST_USD),
         ("NaN", "relevant", "malformed_reply", MAX_JEV_COST_USD),
         ("-0.1", "relevant", "malformed_reply", MAX_JEV_COST_USD),
     ],
     ids=[
         "above the ceiling, charged at the ceiling",
-        "an option outside the set, charged",
+        "an option outside the set, charged the ceiling (R-10)",
         "infinite, not an amount",
         "not a number, not an amount",
         "negative, not an amount",

@@ -1593,9 +1593,9 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
     except JevCallError as exc:
         # A reply that came back but could not be used was still billed:
         # charge `billed_cost_usd`, exactly as `decide()`'s own Jev call does
-        # (fix round, F-8.6-J10). It is never above `MAX_JEV_COST_USD`: the
-        # stated amount when that is a usable one within the ceiling, the
-        # ceiling otherwise (F-8.6-V01, V03, RA01, RJ05).
+        # (fix round, F-8.6-J10). It is the `MAX_JEV_COST_USD` ceiling for
+        # every unusable body, whatever its shape, and `jev_client` has
+        # logged that amount (re-land follow-up R-10, F-8.6-FJ01, FA01).
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)
         return exc.reason
