@@ -23,17 +23,21 @@ What this file covers:
 What it deliberately omits: a live endpoint. No network call anywhere:
 `jev_client._post` is the one seam, patched in every test.
 
-The rule the charges follow, since re-land follow-up R-10 (F-8.6-FJ01,
-FA01, FJ02, FJ03), is the one `JevCallError` states: every reply that came
-back but cannot be used is charged the `MAX_JEV_COST_USD` ceiling, one
-cent, whatever its body's shape and whatever cost it states, and the one
-warning `jev_client` writes for it names that amount. R-07 charged a
-malformed reply the cost it stated; that left a reply stating $0 charged
-$0 (FJ02), and shapes the parse did not name (`"probabilities": null`, a
-list or a string there, a body nested too deep for the JSON parser)
-escaped uncharged at every site while the log said the ceiling was
-charged (FJ01, FA01, FJ03). R-10 adds those shapes below, at all three
-sites.
+The rule the charges follow, since R-10's fix round (the product owner's
+decision of 2026-09-29; F-72-J02, A03, J09), is `jev_client.jev_charge_usd`:
+a reply that came back is never charged $0. A usable reply is charged the
+cost it states when that is above zero and at most `MAX_JEV_COST_USD`;
+every other reply, whatever its body's shape and whatever cost it states,
+is charged the small `JEV_FLOOR_COST_USD`, and the one warning
+`jev_client` writes for it names that amount. R-07 charged a malformed
+reply the cost it stated; that left a reply stating $0 charged $0 (FJ02),
+and shapes the parse did not name (`"probabilities": null`, a list or a
+string there, a body nested too deep for the JSON parser) escaped
+uncharged at every site while the log said the ceiling was charged (FJ01,
+FA01, FJ03). R-10 charged them the one-cent ceiling, about 500 times
+develop when the endpoint's shape drifts (A03); the fix round charges the
+floor. And no Jev call is let through that could take the question past
+its per-query cap (J09).
 """
 
 from __future__ import annotations
@@ -52,6 +56,7 @@ from system_03_search_agent.harness import jev_client as jev_client_module
 from system_03_search_agent.harness.decide import decide
 from system_03_search_agent.harness.harness import Harness
 from system_03_search_agent.harness.jev_client import (
+    JEV_FLOOR_COST_USD,
     MAX_JEV_COST_USD,
     JevCallError,
     JevChoiceQuestion,
@@ -169,7 +174,7 @@ _SINGLE_IDS = [
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("content", _SINGLE_CASES, ids=_SINGLE_IDS)
-async def test_call_jev_charges_an_unreadable_reply_one_cent_and_says_so(
+async def test_call_jev_charges_an_unreadable_reply_the_floor_and_says_so(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, content: bytes
 ) -> None:
     """MUTATION PROOF: narrowing `call_jev`'s parse arm back to a list of
@@ -183,23 +188,23 @@ async def test_call_jev_charges_an_unreadable_reply_one_cent_and_says_so(
     ):
         await _single()
     assert excinfo.value.reason == "malformed_reply"
-    assert excinfo.value.billed_cost_usd == MAX_JEV_COST_USD
+    assert excinfo.value.billed_cost_usd == JEV_FLOOR_COST_USD
     assert "fall back to the guard tier" in str(excinfo.value)
-    assert [r.getMessage().endswith("it is charged $0.01, the ceiling for one call") for r in caplog.records] == [True]
+    assert [r.getMessage().endswith("it is charged $0.0001") for r in caplog.records] == [True]
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("content", "billed"),
     [
-        (_batch_body(cost=_HUGE).encode(), MAX_JEV_COST_USD),
-        (_batch_body(confidence=_HUGE).encode(), MAX_JEV_COST_USD),
-        (_batch_body(confidence='"abc"').encode(), MAX_JEV_COST_USD),
+        (_batch_body(cost=_HUGE).encode(), JEV_FLOOR_COST_USD),
+        (_batch_body(confidence=_HUGE).encode(), JEV_FLOOR_COST_USD),
+        (_batch_body(confidence='"abc"').encode(), JEV_FLOOR_COST_USD),
         (_batch_body().replace('"probabilities": {"no": 0.8}}, "item_2"', '"probabilities": null}, "item_2"').encode(),
-         MAX_JEV_COST_USD),
-        (_DEEP, MAX_JEV_COST_USD),
-        (b"not json at all", MAX_JEV_COST_USD),
-        (b"", MAX_JEV_COST_USD),
+         JEV_FLOOR_COST_USD),
+        (_DEEP, JEV_FLOOR_COST_USD),
+        (b"not json at all", JEV_FLOOR_COST_USD),
+        (b"", JEV_FLOOR_COST_USD),
     ],
     ids=[
         "cost too large for a float",
@@ -226,13 +231,13 @@ async def test_call_jev_batch_charges_an_unreadable_reply_inside_the_ceiling(
 @pytest.mark.parametrize(
     ("content", "said"),
     [
-        (b"not json at all", "could not be read as JSON (JSONDecodeError); it is charged $0.01"),
+        (b"not json at all", "could not be read as JSON (JSONDecodeError); it is charged $0.0001"),
         (
             _single_body(key="guardrail.relevancy", choice="on_topic", cost=_HUGE).encode(),
-            "did not match the confirmed response shape (OverflowError); it is charged $0.01",
+            "did not match the confirmed response shape (OverflowError); it is charged $0.0001",
         ),
-        (_probabilities_as("null"), "(AttributeError); it is charged $0.01"),
-        (_DEEP, "could not be read as JSON (RecursionError); it is charged $0.01"),
+        (_probabilities_as("null"), "(AttributeError); it is charged $0.0001"),
+        (_DEEP, "could not be read as JSON (RecursionError); it is charged $0.0001"),
     ],
     ids=["a body that is not JSON", "cost too large for a float", "probabilities null", "a body nested too deep"],
 )
@@ -240,8 +245,8 @@ async def test_the_warning_names_the_amount_actually_charged(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, content: bytes, said: str
 ) -> None:
     """RA01: the warning said "charged the $0.01 ceiling" while $0.0 was
-    charged. The warning and the error's charge now agree."""
-    assert f"${MAX_JEV_COST_USD:.2f}" == "$0.01"
+    charged. The warning and the error's charge now agree, on the floor."""
+    assert f"${JEV_FLOOR_COST_USD:.4f}" == "$0.0001"
     _patch_reply(monkeypatch, content)
     with (
         caplog.at_level(logging.WARNING, logger=jev_client_module.__name__),
@@ -249,7 +254,7 @@ async def test_the_warning_names_the_amount_actually_charged(
     ):
         await _single()
     assert said in caplog.text
-    assert excinfo.value.billed_cost_usd == pytest.approx(MAX_JEV_COST_USD)
+    assert excinfo.value.billed_cost_usd == pytest.approx(JEV_FLOOR_COST_USD)
 
 
 # ---------------------------------------------------------------------------
@@ -314,31 +319,31 @@ def _reason(shape: str) -> str:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("label", "shape"), _SITE_CASES, ids=[c[0] for c in _SITE_CASES])
-async def test_decide_charges_the_ceiling(
+async def test_decide_charges_the_floor(
     monkeypatch: pytest.MonkeyPatch, jev_mode: None, label: str, shape: str
 ) -> None:
     _patch_reply(monkeypatch, _site_content(shape, key="guardrail.relevancy", choice="on_topic"))
     harness = Harness(trace_id="d")
     record = await decide(harness, "d", "guardrail.relevancy", "x", ["on_topic", "off_topic"], default="on_topic")
     assert record.fallback_reason is not None and record.fallback_reason.endswith(_reason(shape))
-    assert harness.get_query_cost_usd("d") == pytest.approx(MAX_JEV_COST_USD)
+    assert harness.get_query_cost_usd("d") == pytest.approx(JEV_FLOOR_COST_USD)
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("label", "shape"), _SITE_CASES, ids=[c[0] for c in _SITE_CASES])
-async def test_the_injection_pick_charges_the_ceiling(
+async def test_the_injection_pick_charges_the_floor(
     monkeypatch: pytest.MonkeyPatch, jev_mode: None, label: str, shape: str
 ) -> None:
     _patch_reply(monkeypatch, _site_content(shape, key="guardrail.injection", choice="not_injection"))
     harness = Harness(trace_id="i")
     result = await graph_module._jev_injection_pick(harness, "i", "What does BRCA1 do?")
     assert result == _reason(shape)
-    assert harness.get_query_cost_usd("i") == pytest.approx(MAX_JEV_COST_USD)
+    assert harness.get_query_cost_usd("i") == pytest.approx(JEV_FLOOR_COST_USD)
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("label", "shape"), _SITE_CASES, ids=[c[0] for c in _SITE_CASES])
-async def test_the_sentence_check_charges_the_ceiling(
+async def test_the_sentence_check_charges_the_floor(
     monkeypatch: pytest.MonkeyPatch, jev_mode: None, label: str, shape: str
 ) -> None:
     _patch_reply(monkeypatch, _site_content(shape, key="", choice="", batch=True))
@@ -347,7 +352,7 @@ async def test_the_sentence_check_charges_the_ceiling(
     with pytest.raises(JevCallError) as excinfo:
         await sentence_check_module._ask_jev([], harness=harness, trace_id="s", timeout_s=3.0)
     assert excinfo.value.reason == _reason(shape)
-    assert harness.get_query_cost_usd("s") == pytest.approx(MAX_JEV_COST_USD)
+    assert harness.get_query_cost_usd("s") == pytest.approx(JEV_FLOOR_COST_USD)
 
 
 def test_the_probe_bodies_are_what_they_claim() -> None:
@@ -366,3 +371,101 @@ def test_the_probe_bodies_are_what_they_claim() -> None:
         assert not isinstance(single["answers"]["k"]["probabilities"], dict)
         assert not isinstance(batch["answers"]["item_1"]["probabilities"], dict)
         assert single["usage"]["cost"] == 0.00002
+
+
+# ---------------------------------------------------------------------------
+# R-10's fix round: a USABLE reply is never charged $0 either (F-72-J02), and
+# no Jev charge takes a question past its per-query cap (F-72-J09).
+# ---------------------------------------------------------------------------
+
+_USABLE_CASES = [
+    ("0", JEV_FLOOR_COST_USD),
+    ("0.0", JEV_FLOOR_COST_USD),
+    ("0.00002", 0.00002),
+    ("0.004", 0.004),
+    ("0.01", MAX_JEV_COST_USD),
+    ("1e-12", 1e-12),
+]
+_USABLE_IDS = [
+    "stated $0: the floor",
+    "stated $0.0: the floor",
+    "Jev's measured price: as stated",
+    "a larger sensible amount: as stated",
+    "exactly the ceiling: as stated",
+    "a tiny amount above zero: as stated",
+]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("stated", "charged"), _USABLE_CASES, ids=_USABLE_IDS)
+async def test_a_usable_reply_is_charged_its_sensible_cost_or_the_floor_at_every_site(
+    monkeypatch: pytest.MonkeyPatch, jev_mode: None, stated: str, charged: float
+) -> None:
+    """F-72-J02: a usable reply stating $0 was charged $0 at `decide`, the
+    injection pick and the sentence check, so the cap saw nothing for it.
+
+    MUTATION PROOF: `jev_charge_usd` returning a stated $0 as $0 turns the
+    two "the floor" arms red."""
+    _patch_reply(monkeypatch, _single_body(key="guardrail.relevancy", choice="on_topic", cost=stated).encode())
+    harness = Harness(trace_id="d")
+    record = await decide(harness, "d", "guardrail.relevancy", "x", ["on_topic", "off_topic"], default="on_topic")
+    assert record.decided_by == "jev" and record.chosen == "on_topic"
+    assert harness.get_query_cost_usd("d") == pytest.approx(charged)
+
+    _patch_reply(monkeypatch, _single_body(key="guardrail.injection", choice="not_injection", cost=stated).encode())
+    harness = Harness(trace_id="i")
+    result = await graph_module._jev_injection_pick(harness, "i", "What does BRCA1 do?")
+    assert not isinstance(result, str) and result.choice == "not_injection"
+    assert harness.get_query_cost_usd("i") == pytest.approx(charged)
+
+    _patch_reply(monkeypatch, _batch_body(cost=stated).encode())
+    monkeypatch.setattr(sentence_check_module, "build_jev_state", lambda candidates: ("STATE", [object(), object()]))
+    monkeypatch.setattr(sentence_check_module, "approved_keys_from_jev", lambda result, sent: frozenset())
+    harness = Harness(trace_id="s")
+    await sentence_check_module._ask_jev([], harness=harness, trace_id="s", timeout_s=3.0)
+    assert harness.get_query_cost_usd("s") == pytest.approx(charged)
+
+
+@pytest.mark.asyncio
+async def test_a_floor_charge_is_logged_by_amount(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """R-10 line 3: the log names the amount charged."""
+    _patch_reply(monkeypatch, _single_body(key="guardrail.relevancy", choice="on_topic", cost="0").encode())
+    with caplog.at_level(logging.WARNING, logger=jev_client_module.__name__):
+        await _single()
+    assert "stated a cost of $0.000000, not a sensible amount; it is charged $0.0001" in caplog.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("stated", ["0.009", "not json"], ids=["a usable reply near the ceiling", "an unusable reply"])
+async def test_no_jev_charge_takes_a_question_past_its_cap(
+    monkeypatch: pytest.MonkeyPatch, jev_mode: None, stated: str
+) -> None:
+    """F-72-J09: at $0.0965 of a $0.10 cap, a Jev call passed the guard
+    tier's $0.003 pre-flight and an unusable reply then charged a cent,
+    ending at $0.1065. The pre-flight now counts the most one Jev call can
+    be charged, so no call is made and nothing passes the cap, at `decide`
+    and at the injection pick.
+
+    MUTATION PROOF: `check_jev_per_query_cap` checking the guard estimate
+    only turns both arms red on the request count, and the first on the
+    total."""
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "0.10")
+    posts: list[str] = []
+
+    async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
+        key = next(iter(body["questions"]))
+        posts.append(key)
+        choice = body["questions"][key]["options"][0]
+        content = b"not json" if stated == "not json" else _single_body(key=key, choice=choice, cost=stated).encode()
+        return httpx.Response(200, content=content)
+
+    monkeypatch.setattr(jev_client_module, "_post", _post)
+    harness = Harness(trace_id="c")
+    harness.track_cost("c", "guard", 0.0965)
+    record = await decide(harness, "c", "guardrail.relevancy", "x", ["on_topic", "off_topic"], default="on_topic")
+    assert record.fallback_reason == "cost_cap"
+    assert await graph_module._jev_injection_pick(harness, "c", "What does BRCA1 do?") == "cost_cap"
+    assert posts == []
+    assert harness.get_query_cost_usd("c") <= 0.10

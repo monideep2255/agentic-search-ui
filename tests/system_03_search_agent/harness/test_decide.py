@@ -42,7 +42,7 @@ from system_03_search_agent.harness import jev_client as jev_client_module
 from system_03_search_agent.harness.cost_control import QueryCapExceededError
 from system_03_search_agent.harness.decide import decide
 from system_03_search_agent.harness.harness import Harness
-from system_03_search_agent.harness.jev_client import MAX_JEV_COST_USD, JevCallError, JevResult
+from system_03_search_agent.harness.jev_client import JEV_FLOOR_COST_USD, JevCallError, JevResult
 
 _OPTIONS = ["relevant", "not_relevant"]
 
@@ -754,12 +754,13 @@ async def test_a_bad_reply_through_the_real_client_falls_back(
     assert record.fallback_reason == reason
 
 
-# Fix round (F-8.6-J10, then clamped by F-8.6-V01 and V03): a Jev reply
-# that came back unusable was billed all the same. A well-formed cost at or
-# under MAX_JEV_COST_USD is charged exactly as reported; a cost above the
-# ceiling, or a figure that is not a finite, non-negative amount of money,
-# is charged the ceiling itself, never the reported figure and never zero.
-# The cost cap then applies to the guard fallback as to any call.
+# Fix round (F-8.6-J10, then clamped by F-8.6-V01 and V03; R-10's fix
+# round, F-72-A03): a Jev reply that came back unusable was billed all the
+# same. It is charged the small JEV_FLOOR_COST_USD, whatever cost it
+# reports: above the ceiling, not a finite, non-negative amount of money, or
+# a usable-looking amount on a reply that cannot be used. Never the
+# reported figure and never zero. The cost cap then applies to the guard
+# fallback as to any call.
 
 
 def _real_jev_reply(monkeypatch: pytest.MonkeyPatch, *, cost: str, choice: str = "relevant") -> None:
@@ -801,21 +802,21 @@ def _free_guard(monkeypatch: pytest.MonkeyPatch, *, reply: str = "relevant") -> 
 @pytest.mark.parametrize(
     ("cost", "choice", "reason", "charged"),
     [
-        ("0.02", "relevant", "malformed_reply", MAX_JEV_COST_USD),
-        ("0.004", "maybe", "invalid_option", MAX_JEV_COST_USD),
-        ("Infinity", "relevant", "malformed_reply", MAX_JEV_COST_USD),
-        ("NaN", "relevant", "malformed_reply", MAX_JEV_COST_USD),
-        ("-0.1", "relevant", "malformed_reply", MAX_JEV_COST_USD),
+        ("0.02", "relevant", "malformed_reply", JEV_FLOOR_COST_USD),
+        ("0.004", "maybe", "invalid_option", JEV_FLOOR_COST_USD),
+        ("Infinity", "relevant", "malformed_reply", JEV_FLOOR_COST_USD),
+        ("NaN", "relevant", "malformed_reply", JEV_FLOOR_COST_USD),
+        ("-0.1", "relevant", "malformed_reply", JEV_FLOOR_COST_USD),
     ],
     ids=[
-        "above the ceiling, charged at the ceiling",
-        "an option outside the set, charged the ceiling (R-10)",
+        "above the ceiling, charged the floor",
+        "an option outside the set, charged the floor",
         "infinite, not an amount",
         "not a number, not an amount",
         "negative, not an amount",
     ],
 )
-async def test_an_unusable_jev_reply_is_charged_at_its_reported_cost(
+async def test_an_unusable_jev_reply_is_charged_the_floor(
     monkeypatch: pytest.MonkeyPatch, cost: str, choice: str, reason: str, charged: float
 ) -> None:
     _jev_mode(monkeypatch)
@@ -833,10 +834,12 @@ async def test_an_unusable_jev_reply_is_charged_at_its_reported_cost(
 
 
 @pytest.mark.asyncio
-async def test_the_cost_cap_still_applies_after_an_over_ceiling_charge(monkeypatch: pytest.MonkeyPatch) -> None:
-    """$0.02 reported, charged at the $0.01 ceiling (F-8.6-V01) against a
-    $0.005 cap: the guard fallback is refused by the cap before it is
-    sent, and the fail-open default is recorded."""
+async def test_the_cost_cap_refuses_a_jev_call_whose_charge_could_pass_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R-10's fix round (F-72-J09): against a $0.005 cap, Jev is not asked
+    at all, since a usable reply may be charged up to the $0.01 ceiling it
+    states; the guard tier, whose own pre-flight fits, decides, and the
+    question's cost never passes its cap. Before, Jev was let through on the
+    guard tier's estimate and its reply then charged a cent."""
     _jev_mode(monkeypatch)
     _patch_cap(monkeypatch, cap_usd="0.005")
     mock_guard = _free_guard(monkeypatch)
@@ -845,10 +848,10 @@ async def test_the_cost_cap_still_applies_after_an_over_ceiling_charge(monkeypat
 
     record = await decide(harness, "j10-2", "guardrail.relevancy", "x", _OPTIONS, default="relevant")
 
-    mock_guard.assert_not_called()
-    assert record.fallback_reason == "no_usable_pick:malformed_reply"
-    assert record.chosen == "relevant"
-    assert harness.get_query_cost_usd("j10-2") == pytest.approx(MAX_JEV_COST_USD)
+    jev_client_module._post.assert_not_called()  # type: ignore[attr-defined]
+    assert mock_guard.call_count == 1
+    assert record.fallback_reason == "cost_cap"
+    assert harness.get_query_cost_usd("j10-2") <= 0.005
 
 
 def test_nothing_waits_on_a_comparison_pick_any_more() -> None:

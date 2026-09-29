@@ -347,11 +347,14 @@ async def _ask_jev(
 ) -> frozenset[tuple[str, tuple[str, ...]]]:
     """Jev's verdicts on every sentence, in one call.
 
-    Cap-checked first and charged after, exactly like `harness.decide`'s
-    Jev pick: Jev has no tier of its own, so the guard tier's conservative
-    estimate and cost bucket stand in. A reply that came back unusable is
-    charged its reported cost too (`JevCallError.billed_cost_usd`). Raises
-    `QueryCapExceededError`, `JevCallError` or `SentenceCheckUnreadable`.
+    Cap-checked first and charged after: Jev has no tier of its own, so
+    the guard tier's conservative estimate and cost bucket stand in. What
+    a reply is charged is fixed in `jev_client` (`jev_charge_usd`): a usable
+    reply the cost it states when that is a sensible amount, and any other
+    reply that came back, unusable ones included, the small
+    `JEV_FLOOR_COST_USD` on `JevCallError.billed_cost_usd`, never its
+    reported figure and never $0. Raises `QueryCapExceededError`,
+    `JevCallError` or `SentenceCheckUnreadable`.
     """
     state, sent = build_jev_state(candidates)
     if not sent:
@@ -366,8 +369,9 @@ async def _ask_jev(
             timeout_s=timeout_s,
         )
     except JevCallError as exc:
-        # An unusable reply was still billed: its reported cost is charged,
-        # never zero, even though it approves nothing (fix round, F-8.6-J10).
+        # An unusable reply was still billed: the floor it carries is
+        # charged, never zero, even though it approves nothing (fix round,
+        # F-8.6-J10; R-10's fix round, F-72-J11).
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
         raise

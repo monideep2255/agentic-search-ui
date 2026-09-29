@@ -14,13 +14,14 @@ Reads:
       reads `OPENROUTER_API_KEY`, then passes both in.
 
 Writes:
-    - Nothing. Jev's own `usage.cost` is returned on `JevResult` for the
-      caller to charge through `Harness.track_cost`, and, for a reply that
-      came back but could not be used, the `MAX_JEV_COST_USD` ceiling on
-      `JevCallError.billed_cost_usd` (build phase 8.6 fix round, F-8.6-J10;
-      re-land follow-up R-10); this module never touches a `Harness`
-      instance. It writes one log line per unusable reply, naming the
-      amount charged (`_unusable_reply`).
+    - Nothing. What each reply is charged is fixed here and handed to the
+      caller to charge through `Harness.track_cost`: a usable reply's own
+      stated cost on `JevResult.cost_usd` when it is a sensible amount, and
+      otherwise the small `JEV_FLOOR_COST_USD`, on `JevResult.cost_usd` or,
+      for a reply that could not be used, on `JevCallError.billed_cost_usd`
+      (`jev_charge_usd`; the R-10 fix round, the product owner's decision
+      of 2026-09-29). This module never touches a `Harness` instance. It
+      writes one log line whenever the floor is charged, naming the amount.
 
 THE ENDPOINT'S SHAPE IS NOT PUBLICLY DOCUMENTED. Everything below was
 pinned live on 2026-09-25 against the real endpoint, `POST
@@ -96,8 +97,8 @@ between two options.
 No retries inside this module (ai-security-standards, tool-call-budgets):
 the caller's fallback to the guard tier's own pick IS the retry, per this
 ticket's brief. A 3-second TOTAL timeout on the whole call (see
-`_TIMEOUT_S`) and a host-pinned, literal URL (never
-built from caller input) are both non-negotiable per
+`_TIMEOUT_S`, counted by `wait_counting_free_time`) and a host-pinned,
+literal URL (never built from caller input) are both non-negotiable per
 `tool-call-budgets.md` and `production-standards.md`'s multi-agent
 pipeline gate.
 """
@@ -108,14 +109,16 @@ import asyncio
 import logging
 import math
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Annotated, Any
+from typing import Annotated, Any, TypeVar
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
+
+_R = TypeVar("_R")
 
 JEV_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
 
@@ -140,19 +143,26 @@ JevFailureReason = str  # "timeout" | "http_error" | "malformed_reply" | "invali
 #: the real price. Jev's cost is the one model cost in the loop the loop does
 #: not compute itself: it is whatever the undocumented endpoint says, and it
 #: is charged straight into the per-query, per-user and system-wide caps.
-#:
-#: A usable reply is charged the cost it states, which `JevResult` bounds
-#: to this ceiling. A reply that came back from the provider but cannot be
-#: used, whatever its body's shape, is charged exactly this ceiling, one
-#: cent (re-land follow-up R-10, `_unusable_reply`): a malformed body, an
-#: option outside the set, a stated cost above the ceiling or one that is
-#: not an amount at all. The money was spent either way, so it is never
-#: charged $0.0 (F-8.6-J10, V03, FJ01, FA01), and nothing in a reply the
-#: loop cannot use is trusted, its stated cost included (FJ02). Never the
-#: reported figure above the ceiling either (F-8.6-V01): a reply once
+#: A stated cost above it is not a sensible amount (F-8.6-V01: a reply once
 #: reported 12.5 for a call that actually cost $0.0000125, and charging it
-#: would have paused every person's questions for the rest of the day.
+#: would have paused every person's questions for the rest of the day).
 MAX_JEV_COST_USD = 0.01
+
+#: What a Jev reply that came back is charged when it states no sensible
+#: cost, in US dollars: about five times Jev's measured price, so a cap
+#: still sees every call, and about a hundredth of `MAX_JEV_COST_USD`
+#: (the R-10 fix round, the product owner's decision of 2026-09-29).
+#:
+#: A reply that reached the provider is never charged $0.0 (F-8.6-J10, V03,
+#: FJ01, FA01; F-72-J02: a usable reply stating $0 used to be charged $0).
+#: It is charged the cost it states when that is above zero and at most
+#: `MAX_JEV_COST_USD`, and this floor otherwise: a reply that cannot be
+#: used, whatever its body's shape, or one stating $0, no cost, or one
+#: above the ceiling or not an amount at all. Not the ceiling: charging one
+#: cent for every unusable reply made a drift in the endpoint's shape cost
+#: about $0.07 a question, about 500 times develop, enough to pause every
+#: person at the system's daily cap after a few hundred questions (F-72-A03).
+JEV_FLOOR_COST_USD = 0.0001
 
 #: At most one probability per offered option; `DecisionRecord.options`
 #: allows 12.
@@ -167,7 +177,9 @@ class JevResult(BaseModel):
     read back from an external HTTPS call, and it is treated with the
     same discipline as any other untrusted response before the caller
     acts on it. `cost_usd` is bounded above and `probabilities` in size
-    for the same reason (F-8.2-J15).
+    for the same reason (F-8.2-J15). As `call_jev` returns it, `cost_usd`
+    is what the caller charges: the stated cost when sensible, the
+    `JEV_FLOOR_COST_USD` floor otherwise (`jev_charge_usd`).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -196,13 +208,12 @@ class JevCallError(RuntimeError):
     happens inside this module.
 
     `billed_cost_usd` is what a reply that came back but could not be used
-    is charged, in US dollars, on the question: always `MAX_JEV_COST_USD`,
-    one cent, whatever the body's shape (re-land follow-up R-10,
-    `_unusable_reply`). A malformed reply, an option outside the set and a
-    reply reporting a cost above the ceiling or no usable cost are all
-    billed that ceiling, never the reported figure and never $0.0. 0.0
-    only when no reply came back at all: a timeout, a transport error, or
-    a status other than 200.
+    is charged, in US dollars, on the question: always `JEV_FLOOR_COST_USD`,
+    whatever the body's shape (`_unusable_reply`; the R-10 fix round). A
+    malformed reply, an option outside the set and a reply reporting a cost
+    above the ceiling or no usable cost are all billed that floor, never the
+    reported figure and never $0.0. 0.0 only when no reply came back at
+    all: a timeout, a transport error, or a status other than 200.
     """
 
     def __init__(self, message: str, *, reason: str, billed_cost_usd: float = 0.0) -> None:
@@ -220,8 +231,8 @@ def _reported_cost_usd(payload: object) -> float | None:
     from JSON), or is an integer too large to become a float at all, states
     no amount. Read only to say, in the log and the error, that a reply
     claimed more than any one call should cost; what a reply is CHARGED is
-    decided by whether it can be used (`_unusable_reply`), never by this
-    figure alone (re-land follow-up R-10, F-8.6-FJ01, FJ02, FJ03).
+    decided by `jev_charge_usd` and by whether it can be used
+    (`_unusable_reply`), never by this figure alone.
     """
     try:
         raw = payload["usage"]["cost"]  # type: ignore[index]
@@ -236,40 +247,117 @@ def _reported_cost_usd(payload: object) -> float | None:
     return cost if math.isfinite(cost) and cost >= 0 else None
 
 
+def jev_charge_usd(stated_usd: float | None) -> float:
+    """What a Jev reply that came back is charged, in US dollars: the cost it
+    states when that is a sensible amount, above zero and at most
+    `MAX_JEV_COST_USD`; `JEV_FLOOR_COST_USD` otherwise (the R-10 fix round,
+    the product owner's decision of 2026-09-29; F-72-J02, A03)."""
+    if stated_usd is not None and 0.0 < stated_usd <= MAX_JEV_COST_USD:
+        return stated_usd
+    return JEV_FLOOR_COST_USD
+
+
 def _unusable_reply(
     subject: str, detail: str, next_step: str, *, reason: str = "malformed_reply"
 ) -> JevCallError:
     """The error for a 200 reply that came back from the provider but cannot
-    be used, charged `MAX_JEV_COST_USD`, and the ONE log line that says so
-    (re-land follow-up R-10, F-8.6-FJ01, FA01, FJ02, FJ03).
+    be used, charged `JEV_FLOOR_COST_USD`, and the ONE log line that says so
+    (re-land follow-up R-10, F-8.6-FJ01, FA01, FJ02, FJ03; its fix round,
+    F-72-A03).
 
-    Every such reply, whatever its body's shape, is charged the ceiling:
-    one cent. Nothing in a reply the loop cannot use is trusted, its stated
-    cost included, because a cost cap that guesses must guess toward
-    stopping (F-2.1-B02). Before R-10, a malformed reply stating a usable
-    amount was charged that amount, one stating $0 was charged $0 (FJ02),
-    and a reply whose shape raised an error the parse did not name
-    (`"probabilities": null`, a body nested too deep) escaped as an
-    unexpected error and was charged $0 while the log had already said
-    "charged the $0.01 ceiling" (FJ01, FA01, FJ03). Now the warning below is
-    written only here, at the moment the charge is fixed, and names the
-    amount the error carries, which every charge site charges.
+    Every such reply, whatever its body's shape, is charged the floor.
+    Nothing in a reply the loop cannot use is trusted, its stated cost
+    included. Before R-10, a reply whose shape raised an error the parse did
+    not name (`"probabilities": null`, a body nested too deep) escaped as an
+    unexpected error and was charged $0 (FJ01, FA01, FJ03); R-10 then
+    charged the one-cent ceiling, which made a drift in the endpoint's shape
+    cost about $0.07 a question (A03). The warning below is written only
+    here, at the moment the charge is fixed, and names the amount the error
+    carries, which every charge site charges.
 
     `detail` is code-authored text plus, at most, an exception's type name
     or Jev's own bounded choice: never the key, never the state.
     """
     logger.warning(
-        "Jev's reply for %s could not be used: %s; it is charged $%.2f, the ceiling for one call",
+        "Jev's reply for %s could not be used: %s; it is charged $%.4f",
         subject,
         detail,
-        MAX_JEV_COST_USD,
+        JEV_FLOOR_COST_USD,
     )
     return JevCallError(
-        f"Jev's reply for {subject} could not be used: {detail}; it is charged the "
-        f"${MAX_JEV_COST_USD:.2f} ceiling; {next_step}",
+        f"Jev's reply for {subject} could not be used: {detail}; it is charged "
+        f"${JEV_FLOOR_COST_USD:.4f}; {next_step}",
         reason=reason,
-        billed_cost_usd=MAX_JEV_COST_USD,
+        billed_cost_usd=JEV_FLOOR_COST_USD,
     )
+
+
+def _charged_as_stated_or_floor(subject: str, stated_usd: float) -> float:
+    """A USABLE reply's charge: its stated cost when sensible, else the
+    floor, with one warning naming the floor (F-72-J02: a usable reply
+    stating $0 used to be charged $0, invisible to every cap)."""
+    charged = jev_charge_usd(stated_usd)
+    if charged != stated_usd:
+        logger.warning(
+            "Jev's reply for %s stated a cost of $%.6f, not a sensible amount; it is charged $%.4f",
+            subject,
+            stated_usd,
+            charged,
+        )
+    return charged
+
+
+#: How long one look at the clock waits in `wait_counting_free_time`.
+_LOOK_S = 0.05
+
+#: A look that comes back later than asked by more than this was a stall of
+#: the server's own event loop: only the time asked plus this is counted.
+_STALL_SLACK_S = 0.05
+
+#: The most real time a stalled server may add to one of Jev's bounds, so
+#: a server that keeps stalling still ends the wait.
+JEV_STALL_ALLOWANCE_S = 2.0
+
+
+async def wait_counting_free_time(awaitable: Awaitable[_R], budget_s: float) -> _R:
+    """Await `awaitable` for at most `budget_s` seconds of time the event
+    loop was free to run, and never more than `budget_s` plus
+    `JEV_STALL_ALLOWANCE_S` of real time; raise `TimeoutError` past that,
+    after stopping it (the R-10 fix round, F-72-J03).
+
+    Every clock on a Jev call counts this way: Jev's own total bound
+    (`_send`), `decide()`'s outer net and the guardrail's injection net.
+    Time the server spent frozen, on another question's synchronous work,
+    is time nobody could read Jev's reply in, so it is not counted against
+    Jev. Before, a stall of 0.6 s anywhere inside `decide()`'s wait spent
+    its half-second margin, the net said "timeout" while Jev was still
+    inside its own bound, and a question Jev judged on topic was refused as
+    off topic (FA03). A reply that has arrived always wins over the clock:
+    whatever finished is returned, whatever the time.
+
+    A body that trickles in slowly (F-8.2-J03) does not stall the loop, so
+    it is counted in full and cut at the bound as before.
+    """
+    task = asyncio.ensure_future(awaitable)
+    started = last = time.monotonic()
+    counted = 0.0
+    try:
+        while True:
+            if task.done():
+                return task.result()
+            left_s = budget_s - counted
+            real_left_s = budget_s + JEV_STALL_ALLOWANCE_S - (time.monotonic() - started)
+            if left_s <= 0 or real_left_s <= 0:
+                raise TimeoutError
+            ask_s = min(_LOOK_S, left_s, real_left_s)
+            await asyncio.wait({task}, timeout=ask_s)
+            now = time.monotonic()
+            counted += min(now - last, ask_s + _STALL_SLACK_S)
+            last = now
+    finally:
+        if not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
 
 
 def _json_payload(response: httpx.Response, subject: str, next_step: str) -> object:
@@ -375,7 +463,8 @@ async def _send(
         # The TOTAL bound (F-8.2-J03): connect, send, and the whole body
         # read, however it trickles in. `_post` finishes reading the body
         # before it returns, so nothing slow is left outside this wait.
-        response = await asyncio.wait_for(_post(headers, body), timeout=timeout_s)
+        # Counted in time the server was free to read it (F-72-J03).
+        response = await wait_counting_free_time(_post(headers, body), timeout_s)
     except (TimeoutError, httpx.TimeoutException) as exc:
         raise JevCallError(
             f"Jev did not answer within {timeout_s}s in total for {subject}; {next_step}",
@@ -485,7 +574,9 @@ async def call_jev(
             reason="invalid_option",
         )
 
-    return parsed
+    # `cost_usd` is what the caller charges: the stated cost when sensible,
+    # the floor otherwise, never $0 (F-72-J02).
+    return parsed.model_copy(update={"cost_usd": _charged_as_stated_or_floor(subject, parsed.cost_usd)})
 
 
 # ---------------------------------------------------------------------------
@@ -535,8 +626,8 @@ class JevBatchResult(BaseModel):
     The same discipline as `JevResult` (`extra="forbid"`, every string and
     map bounded, and a reply reporting more than `MAX_JEV_COST_USD` for the
     whole call, about 30 times the $0.00033 measured for thirty questions,
-    not used, and charged the `MAX_JEV_COST_USD` ceiling rather than the
-    figure it reported; see `MAX_JEV_COST_USD`).
+    not used, and charged `JEV_FLOOR_COST_USD` rather than the figure it
+    reported; see `jev_charge_usd`). `cost_usd` is what the caller charges.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -661,4 +752,4 @@ async def call_jev_batch(
                 next_step,
                 reason="invalid_option",
             )
-    return parsed
+    return parsed.model_copy(update={"cost_usd": _charged_as_stated_or_floor(subject, parsed.cost_usd)})

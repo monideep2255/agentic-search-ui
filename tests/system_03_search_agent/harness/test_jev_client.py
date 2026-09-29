@@ -21,7 +21,7 @@ import pytest
 
 from system_03_search_agent.harness import jev_client as jev_client_module
 from system_03_search_agent.harness.jev_client import (
-    MAX_JEV_COST_USD,
+    JEV_FLOOR_COST_USD,
     JevCallError,
     JevResult,
     call_jev,
@@ -244,12 +244,12 @@ async def test_call_jev_sends_the_callers_description(monkeypatch: pytest.Monkey
 @pytest.mark.parametrize(
     ("cost", "billed"),
     [
-        ("Infinity", MAX_JEV_COST_USD),
-        ("NaN", MAX_JEV_COST_USD),
-        ("-0.1", MAX_JEV_COST_USD),
-        ("0.5", MAX_JEV_COST_USD),
-        ("0.02", MAX_JEV_COST_USD),
-        ("true", MAX_JEV_COST_USD),
+        ("Infinity", JEV_FLOOR_COST_USD),
+        ("NaN", JEV_FLOOR_COST_USD),
+        ("-0.1", JEV_FLOOR_COST_USD),
+        ("0.5", JEV_FLOOR_COST_USD),
+        ("0.02", JEV_FLOOR_COST_USD),
+        ("true", JEV_FLOOR_COST_USD),
     ],
 )
 async def test_a_cost_no_decision_could_have_is_a_malformed_reply(
@@ -288,18 +288,18 @@ def _with_cost(body: dict[str, Any], cost: float) -> dict[str, Any]:
         (
             _response(_with_cost(_success_body(choice="maybe"), 0.004)),
             "invalid_option",
-            MAX_JEV_COST_USD,
+            JEV_FLOOR_COST_USD,
         ),
         (
             _response(_with_cost(_success_body(question_key="another.decision"), 0.004)),
             "malformed_reply",
-            MAX_JEV_COST_USD,
+            JEV_FLOOR_COST_USD,
         ),
-        (httpx.Response(200, content=b"not json at all"), "malformed_reply", MAX_JEV_COST_USD),
+        (httpx.Response(200, content=b"not json at all"), "malformed_reply", JEV_FLOOR_COST_USD),
         (
             _response({"model": "m", "answers": {}, "usage": {"input_tokens": 1}}),
             "malformed_reply",
-            MAX_JEV_COST_USD,
+            JEV_FLOOR_COST_USD,
         ),
         (httpx.Response(503, content=b"unavailable"), "http_error", 0.0),
     ],
@@ -499,11 +499,11 @@ async def test_a_batch_answer_outside_its_options_is_an_invalid_option(monkeypat
 @pytest.mark.parametrize(
     ("cost", "billed"),
     [
-        ("Infinity", MAX_JEV_COST_USD),
-        ("NaN", MAX_JEV_COST_USD),
-        ("-0.1", MAX_JEV_COST_USD),
-        ("0.5", MAX_JEV_COST_USD),
-        ("0.02", MAX_JEV_COST_USD),
+        ("Infinity", JEV_FLOOR_COST_USD),
+        ("NaN", JEV_FLOOR_COST_USD),
+        ("-0.1", JEV_FLOOR_COST_USD),
+        ("0.5", JEV_FLOOR_COST_USD),
+        ("0.02", JEV_FLOOR_COST_USD),
     ],
 )
 async def test_a_batch_cost_no_call_could_have_is_malformed(
@@ -540,7 +540,7 @@ async def test_an_unusable_batch_reply_still_reports_what_it_cost(
     with pytest.raises(JevCallError) as excinfo:
         await _batch_once()
     assert excinfo.value.reason == reason
-    assert excinfo.value.billed_cost_usd == pytest.approx(MAX_JEV_COST_USD)  # R-10: never the stated 0.004
+    assert excinfo.value.billed_cost_usd == pytest.approx(JEV_FLOOR_COST_USD)  # never the stated 0.004: the floor (R-10 fix round)
 
 
 @pytest.mark.asyncio
