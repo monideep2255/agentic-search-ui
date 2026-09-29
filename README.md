@@ -70,7 +70,6 @@ It is a PROTOTYPE. What that means in practice, stated because a demo link invit
 # Prerequisites
 python 3.11+
 node 22+ (for React frontend)
-redis (for caching)
 postgresql 15+ (local, for the user-data database: auth, sessions, interactions)
 # No local AGE knowledge graph needed - Layer 1 connects to the remote Hetzner VPS
 
@@ -152,7 +151,7 @@ Multi-model harness routes each model call to the appropriate model tier (guard,
 | LLM access | LiteLLM (multi-provider, one configured model per tier) |
 | Knowledge graph | PostgreSQL 15 + Apache AGE on Hetzner CPX42 |
 | User data | PostgreSQL (separate instance) |
-| Caching | Redis |
+| Caching | In-process caches only. A Redis service is provisioned on Railway, but no code under `src/` reads it yet |
 | Frontend | React |
 | Auth | PyJWT (HS256 access tokens), argon2-cffi (argon2id password hashing) |
 | Observability | LangSmith, PostHog, an append-only JSONL tool-call audit log |
