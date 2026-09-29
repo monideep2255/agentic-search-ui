@@ -274,3 +274,105 @@ The one skip is that last premise test, which needs the live graph and a real mo
 - `ncbi_dbsnp.py` and `ncbi_coordinate_overlap.py` still call `classify_eutils_response` without a database, so their outage warnings log `unspecified`.
 - The comment above the refusal in `core/graph.py`'s `_write_answer` still says a failed search "invites a retry". That is now true of every failure except an outage. It sits outside this round's fence, so it was not edited.
 - Not run: the golden consistency run, and the live premise gate named above.
+
+## Fix round, 2026-09-29
+
+One fix round after the judge (PASS with three should-fix gaps) and the adversary (FAIL on F-63-A01). Nothing was committed, staged or stashed. Every red below breaks ONE property, then the file is restored byte for byte from a copy (confirmed with `cmp`) or with `git checkout -- <file>` for a file not otherwise edited.
+
+### F-63-A01 (blocking): the outage note asserted an absence
+
+- What changed: `_build_failed_search_note` in `core/graph.py` now decides its wording by category, not by which step failed. It never says "has no" and never names a step. Docstring and the card 63 comments updated so none still claims "has no X from it" or "search is down".
+- New wording, exactly as briefed:
+  - One database: "PubMed is down at NCBI right now, so this answer may be missing papers from it."
+  - Several: "PubMed and ClinVar are down at NCBI right now, so this answer may be missing sources from them."
+  - Any unnamed: "Some of NCBI's databases are down right now, so this answer may be missing sources from them."
+  - Unchanged: the "Another background search did not finish..." sentence and its condition, "Try again later.", and `FAILED_SEARCH_NOTE` for no-outage cases.
+- New test, the regression: `test_breadth_wiring.py::test_an_outage_after_a_successful_search_never_says_the_answer_has_none`, two ids: `pubmed_fetch_down` and `clinvar_summary_down`. Through the real loop with the file's fakes, the search succeeds (`search: 3 id(s)`), then the fetch or summary fails with `service_down`. It asserts the streamed notes and the saved markdown (`answer_markdown_from`) never contain "has no ", "search is down" or "searches are down", do contain the exact new note, and still show the records (PubMed source URL and `PMID:30000003`, or the `## Clinvar records found` table). `_ToolSpy` gained a `failing={(action, db): kind}` option to fail one step.
+- Changed tests, wording only, no assertion weakened: `test_write_failed_search.py` (note text, two databases, another-search sentence, unnamed sentence), `test_breadth_wiring.py` (the end to end outage test), `test_capture_saved_answer.py` (`_DOWN_NOTE` fixture), plus two docstrings and one comment in `test_ncbi_eutils_actions.py` and `test_topic_search.py`.
+- Red (old single database sentence put back in `graph.py`), exit nonzero:
+
+```text
+FAILED tests/system_03_search_agent/core/test_breadth_wiring.py::test_a_search_down_at_ncbi_says_so_in_our_words_and_says_try_later
+FAILED tests/system_03_search_agent/core/test_breadth_wiring.py::test_an_outage_after_a_successful_search_never_says_the_answer_has_none[pubmed_fetch_down]
+FAILED tests/system_03_search_agent/core/test_breadth_wiring.py::test_an_outage_after_a_successful_search_never_says_the_answer_has_none[clinvar_summary_down]
+FAILED tests/system_03_search_agent/core/test_write_failed_search.py::test_an_answer_that_lost_a_search_to_an_outage_says_try_later_not_ask_again
+FAILED tests/system_03_search_agent/core/test_write_failed_search.py::test_the_outage_note_names_each_database_that_is_down_once
+FAILED tests/system_03_search_agent/core/test_write_failed_search.py::test_the_outage_note_says_when_another_search_also_failed
+6 failed, 48 passed in 5.97s
+```
+
+- Green: the nine named files, `527 passed in 7.26s`.
+
+### F-63-A02 (should-fix): a failed fetch, summary or link is not a search
+
+- What changed: the note fix above removes "search is down". `SEARCH_DOWN_MESSAGE` in `synthesis/refuse.py` is now "A source I needed is down at NCBI right now, so I could not find grounded evidence this time. Try again later, or try NCBI's cross-database search:". Name kept, comments and the `refusal_message_for` docstring updated, chooser logic untouched.
+- New test: `test_write_failed_search.py::test_the_outage_refusal_says_a_source_is_down_not_a_search`, which pins the exact string.
+- Red (old "A search I needed" wording put back):
+
+```text
+FAILED tests/system_03_search_agent/core/test_write_failed_search.py::test_the_outage_refusal_says_a_source_is_down_not_a_search
+1 failed, 20 passed in 5.23s
+```
+
+### F-63-J01: the "cannot connect" marker had no test that could go red
+
+- New test: `test_ncbi_transport.py::test_each_outage_marker_alone_makes_an_error_body_service_down`, ids `cannot_connect_only` and `unavailable_only`. Each phrase contains only its own marker, and the test asserts that before classifying. Added `import json` to that file.
+- Red, `"cannot connect"` removed from `_SERVICE_DOWN_MARKERS`:
+
+```text
+FAILED tests/system_03_search_agent/tools/test_ncbi_transport.py::test_each_outage_marker_alone_makes_an_error_body_service_down[cannot_connect_only]
+1 failed, 182 passed in 0.80s
+```
+
+- Red, `"unavailable"` removed (the mirror, so both directions are pinned):
+
+```text
+FAILED tests/system_03_search_agent/tools/test_ncbi_transport.py::test_each_outage_marker_alone_makes_an_error_body_service_down[unavailable_only]
+1 failed, 83 passed in 0.56s
+```
+
+- Green: `84 passed in 0.63s` for `test_ncbi_transport.py`.
+
+### F-63-J02: the failed fetch, summary and link branch was unpinned
+
+- New tests in `test_breadth_wiring.py`, beside the search-branch arm:
+  - `test_a_failed_fetch_summary_or_link_names_the_failure_and_carries_its_kind`, three ids (fetch, summary, link): calls `_execute_planned_call` directly with a minimal harness. Asserts summary `"<action> error: the service is down at NCBI"`, `failure_kind == "service_down"`, `failure_source == db`, and no NCBI text.
+  - `test_a_fetch_that_succeeds_keeps_its_record_count_and_records_no_failure`: the populate check, same call answering `ok`.
+- Red a (branch summary reverted), red b (`failure_kind=None`) and red c (`failure_source` dropped), one result line each:
+
+```text
+5 failed, 28 passed in 5.98s
+5 failed, 28 passed in 6.02s
+5 failed, 28 passed in 6.00s
+```
+
+  Each run failed the three direct arms plus the two A01 regression arms.
+
+### F-63-J03: the ncbi_efetch timeout kind was unobserved
+
+- New test: `test_breadth_wiring.py::test_an_ncbi_efetch_timeout_records_the_timed_out_kind`. Through the real loop, the PubMed search hangs past a shortened `_NCBI_EFETCH_ACT_TIMEOUT_SECONDS` (0.2). It asserts exactly one `timed_out` entry from `ncbi_efetch`, no `other`, and that the note stays `FAILED_SEARCH_NOTE`.
+- Red (`failure_kind="other"` on that timeout path):
+
+```text
+FAILED tests/system_03_search_agent/core/test_breadth_wiring.py::test_an_ncbi_efetch_timeout_records_the_timed_out_kind
+1 failed, 32 passed in 5.82s
+```
+
+### Frontend check (item 8)
+
+- `HIDDEN_NOTE_PATTERNS` in `frontend/src/components/screens/AnswerScreen.tsx` has two patterns, both anchored on "Note: ". `SYSTEM_NOTE_PREFIXES` in `hooks/useRunView.ts` applies only to a token with no `kind`, and every listed prefix starts "Note:" or is the medical disclaimer.
+- The new notes start "PubMed is down..." or "Some of NCBI's databases...", so they match none. The backend types them `kind: "note"`, which renders as an inline muted paragraph. `savedAnswerMarkdown.tsx` renders it as a plain paragraph.
+- No frontend file mentions the old or new wording. Result: neither hidden nor mis-styled, so no frontend change.
+
+### Gates
+
+- `venv/bin/ruff check`: `All checks passed!`, exit 0. The first run failed ISC004 on three of my new sentences, fixed by parenthesising them, then re-run.
+- `venv/bin/isort --check-only --diff src tests services tracker alembic .claude .github`: `Skipped 2 files`, exit 0.
+- The nine named files (seven card files, `synthesis/test_required_paths.py`, `adapters/cli/test_render.py`): `527 passed in 7.26s`. The whole unit suite was not run, as briefed.
+
+### What I did not do
+
+- F-63-A03, F-63-A04 and F-63-J04, as briefed.
+- `PROGRESS.md` still carries the old note wording in prose. It is a checkpoint document, so I left it for the lead.
+- The remaining "search is down" and "has no " strings in `test_write_failed_search.py` and `test_breadth_wiring.py` are negative assertions that the old wording is absent.
+- No commit, stage, stash or push. A backup file from the first red run was moved to the scratchpad, since a hook blocks file deletion from the shell.
