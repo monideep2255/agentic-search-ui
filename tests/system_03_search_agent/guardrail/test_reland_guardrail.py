@@ -651,25 +651,32 @@ async def test_with_the_default_provider_an_off_topic_refusal_waits_on_no_decisi
 
 
 # ---------------------------------------------------------------------------
-# R-01 (golden G-005): a slow or briefly failing guard classifier call gets
-# one fresh attempt, inside the guardrail's unchanged budget. The first
-# attempt gets `_CLASSIFIER_FIRST_ATTEMPT_SHARE` of what is left (two
-# thirds), the second the rest. A second failure, or no time left, still
-# ends in the fatal step error: no verdict is no answer. Most arms shrink
-# the budget to one second so they run fast; the first arm keeps the real
-# budget, so it takes two thirds of it. No arm patches the share.
+# R-01 (golden G-005), since R-10 and card 72: a slow or briefly failing
+# guard classifier call gets one more request, inside the guardrail's
+# unchanged budget. A first request still unanswered after
+# `_CLASSIFIER_HEDGE_AFTER_S` gets an identical second beside it, the first
+# not cancelled; one that fails or comes back unusable earlier gets its
+# second then. Two requests at most. A second failure, or no time left,
+# still ends in the fatal step error: no verdict is no answer. Most arms
+# shrink the budget to one second and the hedge to 0.3 s so they run fast;
+# the first arm keeps the real budget and the real hedge.
 # ---------------------------------------------------------------------------
 
 _SHRUNK_BUDGET_S = 1.0
+_SHRUNK_HEDGE_S = 0.3
 
 
-def _shrink_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+def _shrink_budget(monkeypatch: pytest.MonkeyPatch, hedge_s: float | None = _SHRUNK_HEDGE_S) -> None:
+    """The guardrail's budget shrunk to one second, and the hedge with it
+    unless `hedge_s` is None (the real 4 s hedge then never fires)."""
     real_budget = graph_module.budget_for_step
 
     def _budget(step: str, query_class: Any) -> float:
         return _SHRUNK_BUDGET_S if step == "guardrail" else real_budget(step, query_class)
 
     monkeypatch.setattr(graph_module, "budget_for_step", _budget)
+    if hedge_s is not None:
+        monkeypatch.setattr(graph_module, "_CLASSIFIER_HEDGE_AFTER_S", hedge_s)
 
 
 def _classifier_calls(monkeypatch: pytest.MonkeyPatch, *behaviours: Any) -> list[int]:
@@ -712,17 +719,16 @@ _REFUSE_INJECTION = json.dumps(
 async def test_a_hung_first_attempt_gets_a_second_within_the_real_budget(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """G-005's shape with the guardrail's real budget: the first classifier
-    request hangs, the second answers at once, and the question is admitted
-    on that verdict when the first attempt's share of the budget runs out,
-    inside the budget.
+    """G-005's shape with the guardrail's real budget and the real hedge:
+    the first classifier request hangs, the hedge sent beside it at
+    `_CLASSIFIER_HEDGE_AFTER_S` answers at once, and the question is
+    admitted on that verdict, about four seconds in, not ten.
 
-    MUTATION PROOF: removing the second attempt for a failed call (the
-    `continue` in the `HarnessCallError` arm) turns this red on the step
-    error.
+    MUTATION PROOF: never sending the hedge (`_send()` in the hedge arm of
+    `_classify_within_budget`) turns this red on the step error.
     """
-    budget = graph_module.budget_for_step("guardrail", "lookup")
-    first_attempt = budget * graph_module._CLASSIFIER_FIRST_ATTEMPT_SHARE
+    hedge = graph_module._CLASSIFIER_HEDGE_AFTER_S
+    assert hedge == 4.0
     count = _classifier_calls(monkeypatch, "hang", _ADMIT)
 
     started = time.monotonic()
@@ -732,7 +738,7 @@ async def test_a_hung_first_attempt_gets_a_second_within_the_real_budget(
     assert result.get("step_error") is None
     assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
     assert count[0] == 2
-    assert first_attempt - 0.5 < elapsed < budget, (elapsed, first_attempt, budget)
+    assert hedge - 0.2 < elapsed < hedge + 1.0, elapsed
 
 
 @pytest.mark.asyncio
@@ -758,16 +764,28 @@ async def test_the_second_attempts_verdict_decides(
 
 
 @pytest.mark.asyncio
-async def test_a_transient_error_twice_then_a_verdict(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`call_tier` already retries a raised transient error once, inside the
-    first attempt; when both of its requests fail, the guardrail's second
-    attempt is the third request, and its verdict decides."""
+async def test_a_transient_error_then_a_verdict_on_the_second_request(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Since R-10 `call_tier` sends one request per call for the classifier,
+    so the guardrail's own second request is the second request, and its
+    verdict decides."""
     _shrink_budget(monkeypatch)
-    count = _classifier_calls(monkeypatch, _rate_limited(), _rate_limited(), _ADMIT)
+    count = _classifier_calls(monkeypatch, _rate_limited(), _ADMIT)
     events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
     assert result.get("step_error") is None
     assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
-    assert count[0] == 3
+    assert count[0] == 2
+
+
+@pytest.mark.asyncio
+async def test_two_transient_errors_are_the_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R-10 (F-8.6-FJ04): a third request is never sent, even when it would
+    have answered. Before R-10 this question was admitted on the third."""
+    _shrink_budget(monkeypatch)
+    count = _classifier_calls(monkeypatch, _rate_limited(), _rate_limited(), _ADMIT)
+    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    assert result["step_error"]["fatal"] is True
+    assert _payload(events, "guard") is None
+    assert count[0] == 2
 
 
 @pytest.mark.asyncio
@@ -775,9 +793,11 @@ async def test_a_transient_error_twice_then_a_verdict(monkeypatch: pytest.Monkey
 async def test_two_failed_attempts_give_the_fatal_step_error(
     monkeypatch: pytest.MonkeyPatch, failure: str
 ) -> None:
-    """No verdict, no answer: two hung attempts, or two attempts whose
-    requests are all rate limited, end in the fatal transient step error
-    with its honest message, inside the budget, and emit no verdict."""
+    """No verdict, no answer: two hung requests, or two rate-limited ones,
+    end in the fatal transient step error with its honest message, inside
+    the budget, and emit no verdict. Since R-10 a rate limit's message says
+    to wait rather than to retry now (F-8.6-FA02), and two requests are the
+    most sent (F-8.6-FJ04)."""
     _shrink_budget(monkeypatch)
     behaviour = "hang" if failure == "hang" else _rate_limited()
     count = _classifier_calls(monkeypatch, behaviour)
@@ -786,17 +806,22 @@ async def test_two_failed_attempts_give_the_fatal_step_error(
     events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
     elapsed = time.monotonic() - started
 
+    message = (
+        "A step in this query hit a temporary error. Retrying the query may succeed."
+        if failure == "hang"
+        else "The service that checks each question is busy right now. "
+        "Wait a little before trying the query again."
+    )
     assert result.get("step_error") == {
         "fatal": True,
         "scope": "step",
         "source": "guardrail",
         "error_class": "transient",
-        "message": "A step in this query hit a temporary error. Retrying the query may succeed.",
+        "message": message,
         "retry_after_s": 0,
     }
     assert _payload(events, "guard") is None
-    # Two attempts; `call_tier` retries a raised error once inside each.
-    assert count[0] == (2 if failure == "hang" else 4)
+    assert count[0] == 2
     assert elapsed < _SHRUNK_BUDGET_S + 0.2, elapsed
 
 
@@ -848,10 +873,10 @@ async def test_a_failure_that_is_not_transient_gets_no_second_attempt(
 
 def _recording_dispatch(monkeypatch: pytest.MonkeyPatch, first_runs_for: float) -> list[float]:
     """Replace `_dispatch_tier_call` with a stand-in that records the budget
-    each attempt was given. The first attempt runs for `first_runs_for`
-    times its own budget and then fails with a transient error: 1.0 is a
-    timeout at its bound, more than 1.0 a stall its own bound did not cut.
-    The second answers at once."""
+    each request was given and when. The first request runs for
+    `first_runs_for` times its own budget and then fails with a transient
+    error: 1.0 is a timeout at its bound, more than 1.0 a stall its own
+    bound did not cut. The second answers at once."""
     import asyncio
     from types import SimpleNamespace
 
@@ -859,7 +884,8 @@ def _recording_dispatch(monkeypatch: pytest.MonkeyPatch, first_runs_for: float) 
 
     budgets: list[float] = []
 
-    async def _dispatch(*_args: Any, budget_s: float, **_kwargs: Any) -> Any:
+    async def _dispatch(*_args: Any, budget_s: float, **kwargs: Any) -> Any:
+        assert kwargs.get("retry") is False, "one request per call (R-10)"
         budgets.append(budget_s)
         if len(budgets) == 1:
             await asyncio.sleep(budget_s * first_runs_for)
@@ -871,30 +897,29 @@ def _recording_dispatch(monkeypatch: pytest.MonkeyPatch, first_runs_for: float) 
 
 
 @pytest.mark.asyncio
-async def test_the_two_attempts_share_the_step_budget(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The first attempt is given its share of what is left and, timing out
-    at its bound, leaves the second the rest, so together they never pass
-    the step's budget."""
+async def test_both_requests_end_by_the_step_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Card 72: each request may run to the step's deadline and no further.
+    The first is given the whole budget; the hedge, sent beside it after
+    `_CLASSIFIER_HEDGE_AFTER_S`, is given what is left then, so both end at
+    the same deadline and neither passes it."""
     _shrink_budget(monkeypatch)
     budgets = _recording_dispatch(monkeypatch, first_runs_for=1.0)
     started = time.monotonic()
     events, _, _ = await _run_guardrail(_ORDINARY_QUESTION)
     elapsed = time.monotonic() - started
     assert _payload(events, "guard")["passed"] is True
-    share = graph_module._CLASSIFIER_FIRST_ATTEMPT_SHARE
-    assert 0 < share < 1
     first, second = budgets
-    assert first == pytest.approx(_SHRUNK_BUDGET_S * share, abs=0.05)
-    assert second == pytest.approx(_SHRUNK_BUDGET_S * (1 - share), abs=0.05)
-    assert first + second <= _SHRUNK_BUDGET_S
-    assert elapsed < _SHRUNK_BUDGET_S, elapsed
+    assert first == pytest.approx(_SHRUNK_BUDGET_S, abs=0.05)
+    assert second == pytest.approx(_SHRUNK_BUDGET_S - _SHRUNK_HEDGE_S, abs=0.05)
+    assert elapsed < _SHRUNK_HEDGE_S + 0.2, elapsed
 
 
 @pytest.mark.asyncio
 async def test_no_time_left_gives_no_second_attempt(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A first attempt that fails after the step's budget is gone gets no
-    second attempt: its failure is the step error."""
-    _shrink_budget(monkeypatch)
+    """A first request that stalls past the step's budget, with the hedge
+    not yet due, gets no second: it is cut at the deadline and the question
+    ends in the step error."""
+    _shrink_budget(monkeypatch, hedge_s=None)
     budgets = _recording_dispatch(monkeypatch, first_runs_for=2.2)
     events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
     assert len(budgets) == 1, budgets
@@ -922,9 +947,10 @@ async def test_no_time_left_at_all_asks_no_classifier(monkeypatch: pytest.Monkey
 async def test_a_timed_out_attempt_is_charged_as_the_harness_charges_one(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A hung attempt cut by its budget is charged `call_tier`'s own
-    cancellation estimate (the tier's max tokens at the output price,
-    F-2.1-B02), never zero, and the second attempt its metered cost."""
+    """A hung request, cancelled once the hedge beside it answered, is
+    charged `call_tier`'s own cancellation estimate (the tier's max tokens
+    at the output price, F-2.1-B02), never zero, and the hedge its metered
+    cost (card 72: "the loser is charged as a cancelled call is today")."""
     _shrink_budget(monkeypatch)
     _classifier_calls(monkeypatch, "hang", _ADMIT)
     _, _, harness = await _run_guardrail(_ORDINARY_QUESTION)
