@@ -188,3 +188,13 @@ Each command below ran to exit in the worktree:
 - The web's risk ranking puts `unknown` above `high` and then hides it (`frontend/src/hooks/useRunView.ts`, the `rank` in the trust block), so one `unknown` claim signal can hide "High-risk claim" on the web. `s3` does not copy that. It is outside this round's fence and worth its own card.
 - `s3 ask --json` is unchanged, since it is the contract. After a fatal error followed by `done` it still reports that `done`'s `trust_outcome` and `trust_line`, beside its `error` object. The human output no longer does.
 - Transition: `s3 mcp` built from this branch renews a refused sign-in only when the server sends the new field. Against a server without it, production until its next release, a refusal that the bridge's proactive renewal did not prevent reaches the agent in the server's own words, which say how to sign in, instead of a silent renewal. The proactive renewal, 60 seconds before expiry, covers ordinary expiry either way.
+
+## After the fresh verifier, 2026-09-29
+
+The fresh verifier (`verifier.md`) found every judge and adversary finding fixed, and one regression inside this round's MCP fix, F-62-V03: `s3 mcp` renewed an expired sign-in only when the refusal carried `data.reason`, which production does not send, and `s3` talks to production by default. The review loop allows no third round, so the product owner chose between the two options it allows and dropped the commit: `3842019f` is reverted by `16572df9`, and the rest of this round merges.
+
+What that leaves open, named:
+
+- F-62-A06 and F-62-J06 are open again. They become their own card, which lands the server's refusal field first and the client change after it, so no installed client ever waits on a server that does not send the field.
+- F-62-V01, V02 and V04 are minor and named open: a `done` with a trust line but no trust signal prints the line, `s3 ask --json` reports `complete: true` after a fatal error, and a `flag` verdict prints `[flag]` where the web says "Answered".
+- The facts checker reads the removed `KGX_EXAMPLE` (`surfaces.kgx_options`); card 53 owns the checker and drops or rewrites that fact when the two cards meet on develop.
