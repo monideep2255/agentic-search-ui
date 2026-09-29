@@ -45,9 +45,11 @@ the gate is the one that cannot be edited:
    standalone stdout line (build phase 4.2 review, J-4.2-05: a leading
    `\n` now guarantees the tag never glues to the last token's own text,
    closing the gap between this docstring's earlier "standalone" claim and
-   what the code actually did) at the point the answer-scope `trust_signal`
-   event actually arrives, which in every fixture this ticket read is
-   already immediately before `done`.
+   what the code actually did). Since card 62's fix round (F-62-A05) it is
+   printed when `done` arrives, from `done.trust_outcome`, the server's
+   final verdict, which is also what the web, `--json` and the exit code
+   read; the answer-scope `trust_signal` arrives immediately before `done`
+   on a well-formed stream, so the tag appears at the same moment it did.
 
 3. Untrusted-content sanitization (build phase 4.2 review, F-4.2-A-01,
    critical; hardened at the round-3 fix, F-4.2-RR-01 and F-4.2-RR-02;
@@ -266,9 +268,79 @@ def _error_disclosure(error_class: str) -> str:
 # `ask` answer that arrives with no trust line (`frontend/src/hooks/
 # useRunView.ts`, `OUTCOME_BY_TRUST`), copied rather than imported for the
 # same adapter-independence reason as the two tables above. Printed under
-# `[answer]` so the caution the server's `ask` carries is never lost when the
-# tag no longer says `ask`.
+# `[answer]` only when the server's final verdict, `done.trust_outcome`, is
+# `ask` and `done` carries no trust line: it is the web's rendering of that
+# verdict, never a line this renderer composes on its own.
 _UNCONFIRMED_WITHOUT_TRUST_LINE = "Single source, not independently confirmed"
+
+# Card 62's fix round (F-62-A01, F-62-A08, F-62-J04): the web's words for a
+# run that did not finish (`useRunView.ts`, the `fatalError` branch of the
+# trust block). It replaces every verdict there, and it does here: a run
+# that ended on a fatal error, or before `done`, prints this and no tag.
+_RUN_DID_NOT_FINISH = "Not verified · the run did not finish"
+
+# The two cautions the web never drops beside the trust line (F-62-A02,
+# `useRunView.ts`: "Two things are never dropped for it: an ungrounded
+# verdict, and a high-risk tier").
+_NOT_FULLY_GROUNDED = "Not fully grounded"
+_HIGH_RISK_CLAIM = "High-risk claim"
+# Parts of one trust line, joined as the web shows them side by side.
+_TRUST_PART_SEPARATOR = " · "
+# Risk tiers that carry no caution: `low`, and `unknown`, which the core
+# sends for a refusal where no risk assessment ran (T-4.3-05). Every other
+# value is a caution, including one this renderer does not know, since a
+# risk signal should over-report rather than vanish (F-4.8-A-19).
+_RISK_TIERS_WITHOUT_CAUTION = frozenset({"low", "unknown"})
+_KNOWN_RISK_ORDER = ("moderate", "high", "critical")
+
+# Every Unicode general category a one-line server string must not carry:
+# the four `_ESCAPED_UNICODE_CATEGORIES` below (control, format, surrogate,
+# private use) plus `Zl` and `Zp`, the line and paragraph separators. `\n`,
+# `\r`, `\v`, `\f` and U+0085 are all `Cc`, and U+2028 and U+2029 are `Zl`
+# and `Zp`, so no character in any of these categories can start a new line
+# on a terminal or in a redirected file.
+_LINE_BREAKING_OR_CONTROL_CATEGORIES = frozenset({"Cc", "Cf", "Cs", "Co", "Zl", "Zp"})
+_SPACE_RUN = re.compile(" {2,}")
+
+
+def _single_line(text: str) -> str:
+    """Server text that is printed as one line (the trust line, a risk tier),
+    with every character in `_LINE_BREAKING_OR_CONTROL_CATEGORIES` removed,
+    decided by Unicode category rather than by a list of characters.
+
+    F-62-A09: a trust line carrying a newline printed a forged reference row
+    right under the genuine `[answer]` tag. Each removed character becomes a
+    space, runs of spaces collapse to one, and the ends are stripped,
+    which is what the web does to the same text inside one `<span>`. The
+    renderer's own vocabulary (`[answer]`, `References:`) is still escaped by
+    `_escape_forgery_markers`, so the line cannot forge a tag either."""
+    kept = "".join(
+        " " if unicodedata.category(ch) in _LINE_BREAKING_OR_CONTROL_CATEGORIES else ch
+        for ch in text
+    )
+    # Only spaces are collapsed, so the category check above is the one
+    # control that removes a line break.
+    return _escape_forgery_markers(_SPACE_RUN.sub(" ", kept).strip())
+
+
+def _risk_caution(risk_tiers: list[str]) -> str | None:
+    """The web's risk mark for the worst tier any trust signal carried, or
+    None. `high` reads "High-risk claim", as on the web; another cautionary
+    tier reads "<tier> risk claim"; an unrecognised tier outranks every
+    known one. `unknown` is ignored rather than ranked, so it can never hide
+    a `high` beside it."""
+    cautions = [tier for tier in risk_tiers if tier not in _RISK_TIERS_WITHOUT_CAUTION]
+    if not cautions:
+        return None
+
+    def rank(tier: str) -> int:
+        return _KNOWN_RISK_ORDER.index(tier) if tier in _KNOWN_RISK_ORDER else len(_KNOWN_RISK_ORDER)
+
+    worst = max(cautions, key=rank)
+    if worst == "high":
+        return _HIGH_RISK_CLAIM
+    tier_text = _single_line(worst)
+    return f"{tier_text} risk claim" if tier_text else _HIGH_RISK_CLAIM
 
 
 # ----------------------------------------------------------------------
@@ -603,13 +675,12 @@ class Renderer:
         # Terminal-state bookkeeping. `_exit_code` is the single source of
         # truth `finish()` reads; every path that can end the run sets it.
         self._exit_code: int | None = None
-        self._printed_trust_prefix = False
         self._printed_references = False
         # F-4.2-A-27: once a guard rejection has fired, never let a later
         # event (a stray `trust_signal`/`done` the server should not send
         # after a rejection, but this renderer does not get to assume that
         # never happens) print `[answer]` or a references block on top of
-        # it. Checked in `_write_trust_prefix` directly, defense in depth
+        # it. Checked in `_write_verdict` directly, defense in depth
         # regardless of what upstream sends.
         self._guard_rejected = False
 
@@ -626,10 +697,20 @@ class Renderer:
         self._fatal_error_seen = False
         self._citations_seen = 0
 
-        # Card 62, PR-8.10-01: the outcome the trust tag was printed for,
-        # and whether its trust line has been printed under it.
-        self._tagged_outcome: TrustOutcome | None = None
-        self._printed_trust_line = False
+        # Card 62's fix round. The verdict block (the tag and the one trust
+        # line under it) is printed once, from `done`, the server's final
+        # verdict, which is the source the web, `--json` and the exit code
+        # read (F-62-A05). Trust signals only feed the two cautions the web
+        # keeps beside the line (F-62-A02).
+        self._done_seen = False
+        self._printed_verdict = False
+        self._printed_unfinished = False
+        self._trust_signal_seen = False
+        self._all_grounded = True
+        self._risk_tiers: list[str] = []
+        # Whether anything answer-shaped reached stdout, so a run that did
+        # not finish says so under it.
+        self._answer_written = False
 
     @property
     def offered_options(self) -> bool:
@@ -645,28 +726,28 @@ class Renderer:
             citations_seen=self._citations_seen,
         )
 
-    def _shown_outcome(self, outcome: TrustOutcome) -> TrustOutcome:
-        """The outcome to show: `ask` for a question back, which the stream
-        labels `refuse`, and the stream's own outcome for everything else."""
-        if outcome == "refuse" and self._asked_back():
+    def _is_question_back(self, verdict: TrustOutcome) -> bool:
+        """Whether the server's final verdict is a question back: the stream
+        labels one `refuse`, and `_is_ask_back` tells it from a refusal. It
+        is its own state, never the server's `ask` verdict, which means a
+        finished answer that is not yet confirmed (F-62-A01)."""
+        return verdict == "refuse" and self._asked_back()
+
+    @staticmethod
+    def _tag_word(verdict: TrustOutcome, question_back: bool) -> str:
+        """The word inside the printed tag, from the server's final verdict.
+
+        `[ask]` on this surface means a question back with options to pick
+        from. The server's `ask` on a finished answer means "answered, not
+        yet confirmed", which the web shows as "Answered" with the trust
+        line under it, so it is tagged `[answer]` here (card 62,
+        PR-8.10-01). `JsonRenderer` still reports `trust_outcome: "ask"`,
+        which is the contract."""
+        if question_back:
             return "ask"
-        return outcome
-
-    def _tag_word(self, shown: TrustOutcome) -> TrustOutcome:
-        """The word inside the printed trust tag.
-
-        Card 62, PR-8.10-01. The server's `ask` on a finished answer means
-        "answered, not yet confirmed", and the web shows it as "Answered"
-        with the trust line under it. `[ask]` on this surface means a
-        question back with options to pick from, so a finished answer that
-        asked nothing read as a question. It is tagged `[answer]` here, and
-        `_write_trust_line` prints the caution under it. Only the human
-        text changes: `JsonRenderer` still reports `trust_outcome: "ask"`,
-        which is the contract, and the exit code still follows
-        `_shown_outcome`."""
-        if shown == "ask" and not self._asked_back():
+        if verdict == "ask":
             return "answer"
-        return shown
+        return verdict
 
     # ------------------------------------------------------------------
     # Dispatch
@@ -789,6 +870,8 @@ class Renderer:
         self._out.write(_sanitize_untrusted(payload.text))
         self._out.flush()
         self._seen_marker_ids.update(payload.marker_ids)
+        if payload.text:
+            self._answer_written = True
 
     def _handle_citation(self, event: Event) -> None:
         payload = CitationPayload.model_validate(event.payload)
@@ -816,69 +899,85 @@ class Renderer:
         self._citations[payload.citation_id] = payload
 
     def _handle_trust_signal(self, event: Event) -> None:
-        payload = TrustSignalPayload.model_validate(event.payload)
-        if payload.scope != "answer":
-            # Per-claim signals (`scope == "claim"`) do not get their own
-            # rendered line: Section 13.3 names one prefix "on the answer
-            # body," singular, not one per claim. The web UI's own
-            # per-citation chip is the only surface that renders the
-            # claim-level signal (Section 12.4); this plain-text surface
-            # has no analogous inline chip to attach it to.
-            return
-        self._write_trust_prefix(payload.outcome)
+        """Records what the web keeps beside the trust line, and prints
+        nothing. Every signal counts, claim and answer scope alike, as on
+        the web (`useRunView.ts` reads every `trust_signal` for the
+        grounded verdict and the worst risk tier).
 
-    def _write_trust_prefix(self, outcome: TrustOutcome) -> None:
-        if self._printed_trust_prefix or self._guard_rejected:
-            # F-4.2-A-27: a guard rejection already printed its own
-            # explanation to stderr and set the exit code; never let a
-            # later `trust_signal`/`done` print `[answer]` (or any other
-            # outcome) on top of a run this renderer already knows was
-            # rejected.
+        Card 62's fix round, F-62-A05: this used to print the tag from the
+        first answer-scope signal, so a later `done` saying otherwise could
+        not change it, and `s3`'s stdout could contradict its own exit code,
+        `--json` and the web. The tag now comes from `done` alone."""
+        payload = TrustSignalPayload.model_validate(event.payload)
+        if self._guard_rejected:
             return
+        self._trust_signal_seen = True
+        if not payload.grounded:
+            self._all_grounded = False
+        self._risk_tiers.append(payload.risk_tier)
+
+    def _trust_line_text(self, verdict: TrustOutcome, trust_line: str | None) -> str:
+        """The one trust line under the tag, as the web shows it: "Not fully
+        grounded" first when any trust signal was ungrounded, then the
+        server's `done.trust_line` (or, for an `ask` verdict with none, the
+        web's words for that verdict), then the risk mark. Empty when there
+        is nothing the server sent to say. Every server string on it goes
+        through `_single_line`."""
+        parts: list[str] = []
+        if self._trust_signal_seen and not self._all_grounded:
+            parts.append(_NOT_FULLY_GROUNDED)
+        line = _single_line(trust_line or "")
+        if not line and verdict == "ask":
+            line = _UNCONFIRMED_WITHOUT_TRUST_LINE
+        if line:
+            parts.append(line)
+        risk = _risk_caution(self._risk_tiers)
+        if risk is not None:
+            parts.append(risk)
+        return _TRUST_PART_SEPARATOR.join(parts)
+
+    def _write_verdict(self, verdict: TrustOutcome, trust_line: str | None) -> None:
+        """The tag and the one trust line under it, printed once, from the
+        server's final verdict (`done`).
+
+        Nothing is printed on a guard rejection (F-4.2-A-27: its own
+        explanation is on stderr), nor after a fatal error: the web shows no
+        outcome for a run that did not finish, and `finish` prints its words
+        for that instead (F-62-A08). A question back reads `[ask]` with no
+        trust line, since it is a question, not an answer; a refusal reads
+        `[refuse]` with none either."""
+        if self._printed_verdict or self._guard_rejected or self._fatal_error_seen:
+            return
+        self._printed_verdict = True
+        question_back = self._is_question_back(verdict)
         # T-8.10-03: the options belong to the question the tokens just
         # printed, so they go between it and the tag.
         self._write_clarifying_options()
-        # Build phase 8.10: a question back reads `[ask]`, as it does over
-        # MCP, never `[refuse]`, which is kept for real refusals.
-        outcome = self._shown_outcome(outcome)
-        self._tagged_outcome = outcome
-        # J-4.2-05: a leading `\n` guarantees this tag starts its own
-        # line regardless of whether the last token write ended in a
-        # newline, closing the gap between this module's own docstring
-        # claim ("a standalone stdout line") and what the code used to
-        # do (glue the tag to the end of the last token, verified at
-        # byte index 36 mid-sentence in the judge's own probe).
-        self._out.write(f"\n[{self._tag_word(outcome)}]\n")
+        # J-4.2-05: a leading `\n` guarantees the tag starts its own line
+        # whatever the last token ended with.
+        block = f"\n[{self._tag_word(verdict, question_back)}]\n"
+        # A question back is a `refuse` verdict, so neither carries a line.
+        if verdict != "refuse":
+            line = self._trust_line_text(verdict, trust_line)
+            if line:
+                block += f"{line}\n"
+        self._out.write(block)
         self._out.flush()
-        self._printed_trust_prefix = True
 
-    def _write_trust_line(self, trust_line: str | None) -> None:
-        """The one plain trust line the web shows under an answer, on the
-        line after the tag (card 62, PR-8.10-01).
-
-        `done.trust_line` is server text, so it goes through
-        `_sanitize_untrusted` like every other server string. Nothing is
-        printed for a refusal, a question back or a rejected question, none
-        of which carries one. An `ask` answer with no trust line gets the
-        web's own caution instead, so `[answer]` never stands alone over an
-        answer the server did not confirm. Printed at most once: called from
-        `_handle_done` with the line, and from `finish` with none, for a run
-        that ended before `done`."""
+    def _write_unfinished_notice(self) -> None:
+        """The web's words for a run that did not finish, under whatever
+        answer text and citations already reached stdout, so a reader of a
+        redirected file learns what stderr said. Never a verdict: it
+        replaces the tag and the trust line (F-62-A01, F-62-J04)."""
         if (
-            self._printed_trust_line
-            or not self._printed_trust_prefix
+            self._printed_unfinished
+            or self._printed_verdict
             or self._guard_rejected
-            or self._tagged_outcome in (None, "refuse")
-            or self._asked_back()
+            or not (self._answer_written or self._citations)
         ):
             return
-        line = (trust_line or "").strip()
-        if not line and self._tagged_outcome == "ask":
-            line = _UNCONFIRMED_WITHOUT_TRUST_LINE
-        if not line:
-            return
-        self._printed_trust_line = True
-        self._out.write(f"{_sanitize_untrusted(line)}\n")
+        self._printed_unfinished = True
+        self._out.write(f"\n{_RUN_DID_NOT_FINISH}\n")
         self._out.flush()
 
     def _handle_cost(self, event: Event) -> None:
@@ -918,13 +1017,16 @@ class Renderer:
 
     def _handle_done(self, event: Event) -> None:
         payload = DonePayload.model_validate(event.payload)
+        self._done_seen = True
 
-        # Fallback: if the answer-scope trust_signal never arrived (should
-        # not happen on a well-formed stream, but `done.trust_outcome`
-        # carries the same value regardless per Section 2.3), print the
-        # prefix now rather than lose it.
-        self._write_trust_prefix(payload.trust_outcome)
-        self._write_trust_line(payload.trust_line)
+        # The tag and the trust line, from the server's final verdict: the
+        # same field the web's outcome, `--json`'s `trust_outcome` and the
+        # exit code below read (F-62-A05).
+        self._write_verdict(payload.trust_outcome, payload.trust_line)
+        if self._fatal_error_seen:
+            # A fatal error then `done` (a declined run, for one): the run
+            # did not finish, and the notice sits where the tag would.
+            self._write_unfinished_notice()
 
         self._write_references_block()
 
@@ -946,8 +1048,10 @@ class Renderer:
         # question back exits 0 like any other `[ask]`, and a real refusal
         # still exits 1.
         if self._exit_code is None:
-            shown = self._shown_outcome(payload.trust_outcome)
-            self._exit_code = _EXIT_FAILURE if shown == "refuse" else _EXIT_OK
+            refused = payload.trust_outcome == "refuse" and not self._is_question_back(
+                payload.trust_outcome
+            )
+            self._exit_code = _EXIT_FAILURE if refused else _EXIT_OK
 
     # ------------------------------------------------------------------
     # References block
@@ -956,7 +1060,7 @@ class Renderer:
     def _write_references_block(self) -> None:
         if self._printed_references or self._guard_rejected:
             # F-4.2-A-27: the same defense-in-depth guard as
-            # `_write_trust_prefix`. A stray `citation`/`done` arriving
+            # `_write_verdict`. A stray `citation`/`done` arriving
             # after a guard rejection must not print a references block
             # on top of it either, or a rejected run would print nothing
             # via the trust tag but still leak a "References:" block.
@@ -1084,7 +1188,12 @@ class Renderer:
         # guard-rejection suppression internally (F-4.2-A-27), so a
         # rejected run still prints nothing.
         self._write_clarifying_options()
-        self._write_trust_line(None)
+        # Card 62's fix round (F-62-J04, F-62-A01, F-62-A08): a run that
+        # ended on a fatal error or before `done` gets no tag and no trust
+        # line, only the web's words for a run that did not finish. Nothing
+        # here composes a verdict.
+        if self._fatal_error_seen or not self._done_seen:
+            self._write_unfinished_notice()
         self._write_references_block()
         return self._exit_code
 

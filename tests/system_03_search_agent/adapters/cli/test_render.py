@@ -255,9 +255,10 @@ class TestRefusalPath:
             assert renderer.finish() == 0, f"outcome={outcome!r} should still exit 0"
             # Card 62, PR-8.10-01: a finished `ask` answer is tagged
             # `[answer]` with the web's caution under it, since `[ask]` on
-            # this surface means a question back with options to pick.
-            tag = "[flag]\n" if outcome == "flag" else (
-                "[answer]\nSingle source, not independently confirmed\n"
+            # this surface means a question back with options to pick. The
+            # signal's `high` tier adds the web's risk mark (F-62-A02).
+            tag = "[flag]\nHigh-risk claim\n" if outcome == "flag" else (
+                "[answer]\nSingle source, not independently confirmed · High-risk claim\n"
             )
             assert tag in out.getvalue()
 
@@ -1206,7 +1207,7 @@ class TestGuardRejectionSuppressesLaterTrustOutput:
         exit_code = renderer.finish()
         assert exit_code != 0
         # Mutation: drop the `_guard_rejected` check in
-        # `_write_trust_prefix` -> "[answer]" would appear on stdout.
+        # `_write_verdict` -> "[answer]" would appear on stdout.
         assert out.getvalue() == ""
 
 
@@ -1272,6 +1273,10 @@ class TestTrustPrefixOwnLine:
                     citation_id=None, scope="answer",
                 ),
             )
+        )
+        # Card 62's fix round (F-62-A05): the tag is printed from `done`.
+        renderer.handle(
+            _event("done", 4, DonePayload(total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=5, trust_outcome="answer"))
         )
         rendered = out.getvalue()
         idx = rendered.index("[answer]")
