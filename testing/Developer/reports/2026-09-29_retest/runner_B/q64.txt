@@ -1,0 +1,53 @@
++ New search
+
+YOUR SEARCHES
+
+What MeSH terms are assigned to PMID 11237011?
+1 tool · 26 sources from 1 layer
+s3-retest-b-20260929@example.com
+No search limit in effect yet
+What MeSH terms are assigned to PMID 11237011?
+New search
+
+✓ Answered7.0s · 1 tool · 26 sources from 1 layer
+
+Show work ▾
+
+Found 26 ontology class records for PMID 11237011[21][22][23][24][25][26].⁠1–20
+
+Additional terms include Chromosome Mapping, Sequence Analysis, DNA, Conserved Sequence, Repetitive Sequences, Nucleic Acid, CpG Islands, and GC Rich Sequence.⁠1–6
+
+EVOLUTION AND PROTEINS
+
+MeSH terms Evolution, Molecular and Gene Duplication.⁠7, 8 The terms Proteins and Proteome.⁠9, 10
+
+ONTOLOGY CLASS RECORDS FOUND
+RECORD	IDENTIFIER	
+Animals	MeSH:D000818	⁠11
+Chromosome Mapping	MeSH:D002874	⁠1
+DNA Transposable Elements	MeSH:D004251	⁠12
+Drug Industry	MeSH:D004345	⁠13
+Forecasting	MeSH:D005544	⁠14
+Genes	MeSH:D005796	⁠15
+Genetics, Medical	MeSH:D005826	⁠16
+Humans	MeSH:D006801	⁠17
+Mutation	MeSH:D009154	⁠18
+Proteins	MeSH:D011506	⁠9
+Showing 1–10 of 26
+‹ Previous
+Page 1 of 3
+Next ›
+▶
+SOURCES
+26
+Based on 26 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

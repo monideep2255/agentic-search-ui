@@ -1,0 +1,163 @@
+QUESTION: What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+LANDED=answer SECONDS=37.2
+
++ New search
+
+YOUR SEARCHES
+
+What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+15 tools · 59 sources from 3 layers
+Find GEO expression datasets studying TP53 in human tumour samples.
+24 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+23 sources · Sep 29
+Compare what is known about MLH1 and MSH2 in colorectal cancer risk.
+25 sources · Sep 29
+What is rs334 and what condition is it associated with?
+5 sources · Sep 29
+Which diseases are associated with BRCA1?
+22 sources · Sep 29
+s3-retest-a-20260929@example.com
+No search limit in effect yet
+What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+New search
+
+? Answered8.3s · 15 tools · 59 sources from 3 layers
+
+Show work ▾
+
+Found 1 gene record and 37 sequence variant records for BRCA1, RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216 and LOC111589215[21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38].⁠1–20
+
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+BRCA1 DNA repair associated	NCBIGene:672	⁠1
+BRCA1	NCBIGene:672	⁠40
+SEQUENCE VARIANT RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)	ClinVar:1000183	⁠2
+NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)	ClinVar:1000551	⁠3
+NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)	ClinVar:1001081	⁠4
+NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)	ClinVar:1002154	⁠5
+NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)	ClinVar:1002750	⁠6
+NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)	ClinVar:1003072	⁠7
+NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)	ClinVar:1003150	⁠8
+NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)	ClinVar:1004428	⁠9
+NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)	ClinVar:1004775	⁠10
+NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val)	ClinVar:1004786	⁠11
+Showing 1–10 of 37
+‹ Previous
+Page 1 of 4
+Next ›
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_007294.4(BRCA1):c.5075-32T>C	VCV004935309	⁠39
+NM_007294.4(BRCA1):c.5243_5277+2788del	VCV000267740	⁠42
+NM_007294.4(BRCA1):c.4779A>G (p.Ile1593Met)	VCV004935311	⁠45
+NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG	VCV000267741	⁠47
+NM_007294.4(BRCA1):c.4623G>A (p.Glu1541=)	VCV004935312	⁠49
+NG_005905.2:g.(147057_150288)_(160933_166866)del	VCV000373892	⁠51
+NM_007294.4(BRCA1):c.4358-2733_4358-2720del	VCV004935314	⁠53
+GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3	VCV004823850	⁠55
+NM_007294.4(BRCA1):c.2145C>G (p.Thr715=)	VCV004848411	⁠58
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing.	PMID:28976962	⁠41
+BRCA1: An Endocrine and Metabolic Regulator.	PMID:35432218	⁠46
+Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.	PMID:36914836	⁠50
+Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection.	PMID:39261728	⁠54
+Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors.	PMID:39265497	⁠57
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	omim 113705	⁠43
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	omim 113705	⁠43
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer	NCT00590109	COMPLETED	⁠44
+BRCA1 Haploinsufficiency and Gene Expression	NCT00597987	COMPLETED	⁠48
+Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma	NCT00617656	TERMINATED	⁠52
+Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation	NCT00673335	COMPLETED	⁠56
+Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations	NCT00700778	TERMINATED	⁠59
+NOTES
+Note: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query
+Note: this answer does not address the following entities named in the question: RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216, LOC111589215. Ask about them individually for a complete answer.
+▶
+SOURCES
+59
+Based on 59 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== LINKS ===
+https://www.ncbi.nlm.nih.gov/gene/672
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1000183
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1000551
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1001081
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1002154
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1002750
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1003072
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1003150
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1004428
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1004775
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1004786
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1005082
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1005528
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1005598
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1005841
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1005942
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1005980
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1007698
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1007721
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1008789
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1009121
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1009204
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1009272
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1009310
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1009406
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1009551
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1010063
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1010509
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1010603
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1010631
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1010734
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1011036
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1012155
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1012156
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1012905
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1013802
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1014065
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1014279
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4935309/
+https://www.ncbi.nlm.nih.gov/gene/672/
+https://pubmed.ncbi.nlm.nih.gov/28976962/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4935311/
+https://pubmed.ncbi.nlm.nih.gov/35432218/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4935312/
+https://pubmed.ncbi.nlm.nih.gov/36914836/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4935314/
+https://pubmed.ncbi.nlm.nih.gov/39261728/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/
+https://pubmed.ncbi.nlm.nih.gov/39265497/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/
+https://clinicaltrials.gov/study/NCT00590109
+https://clinicaltrials.gov/study/NCT00597987
+https://clinicaltrials.gov/study/NCT00617656
+https://clinicaltrials.gov/study/NCT00673335
+https://clinicaltrials.gov/study/NCT00700778
+=== CITATION ARIA (first 6) ===
+Sources 1 to 20: Source 1, layer 1; Source 2, layer 1; Source 3, layer 1; Source 4, layer 1; Source 5, layer 1; Source 6, layer 1; Source 7, layer 1; Source 8, layer 1; Source 9, layer 1; Source 10, layer 1; Source 11, layer 1; Source 12, layer 1; Source 13, layer 1; Source 14, layer 1; Source 15, layer 1; Source 16, layer 1; Source 17, layer 1; Source 18, layer 1; Source 19, layer 1; Source 20, layer 1
+Sources
+Source 1, layer 1
+Source 40, layer 2
+Sources
+Source 2, layer 1

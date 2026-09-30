@@ -1,0 +1,68 @@
+QUESTION: What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+LANDED=answer SECONDS=6.3
+
++ New search
+
+YOUR SEARCHES
+
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+0 tools · 0 sources
+What is BioSample SAMN12121739 and which SRA runs and assemblies come from it?
+6 sources · Sep 29
+What is known about Salmonella isolate SAMN02147118 in Pathogen Detection?
+2 sources · Sep 29
+Which E. coli isolates in Pathogen Detection carry colistin resistance genes?
+1 source · Sep 29
+Which Salmonella isolates in Pathogen Detection carry ESBL genes?
+0 sources · Sep 29
+Show me the ones from 2023
+0 sources · Sep 29
+ESBL E. coli isolates?
+21 sources · Sep 29
+Which E. coli isolates are in Pathogen Detection?
+0 sources · Sep 29
+Which tomato isolates in Pathogen Detection carry resistance genes?
+0 sources · Sep 29
+Which Listeria isolates in Pathogen Detection carry blaKPC?
+1 source · Sep 29
+Which Klebsiella isolates in Pathogen Detection carry carbapenemase genes?
+21 sources · Sep 29
+Which Salmonella isolates carry blaCTX-M-15?
+21 sources · Sep 29
+What is BioSample SAMN12121739 and which SRA runs and assemblies come from it?
+0 sources · Sep 29
+What is in BioProject PRJNA999999999?
+0 sources · Sep 29
+For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies, and tell me how to retrieve each.
+4 sources · Sep 29
+What genes and ClinVar records are under chr7:117,480,025-117,668,665 on GRCh38?
+50 sources · Sep 29
+What is under chr17:43,044,295-43,125,364?
+0 sources · Sep 29
+What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+50 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+24 sources · Sep 29
+s3-retest-a-20260929@example.com
+No search limit in effect yet
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+New search
+
+0 tools · 0 sources
+
+This run could not be completed. Try asking again, or rephrase the question.
+Not verified · the run did not finish
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== LINKS ===
+
+=== CITATION ARIA (first 6) ===

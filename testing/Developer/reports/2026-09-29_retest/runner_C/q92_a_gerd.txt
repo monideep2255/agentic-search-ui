@@ -1,0 +1,10 @@
+[Koch | think] the ask-back classifier read a one-to-three-word opening question and decided it names a subject rather than a request, so the answer asks which aspect is meant before any search
+[Koch | plan] no tool selected; the answer asks a question back before any search
+What would you like to know about GERD?
+  1. What are the symptoms and treatments for GERD?
+  2. Are there clinical trials on GERD?
+  3. What does recent research say about GERD?
+  4. Are there genes associated with GERD?
+
+[ask]
+s3: to ask one of these, run: s3 ask --session-id 1df4244fca344cfb90a563573edabf65 "<the question you pick>"

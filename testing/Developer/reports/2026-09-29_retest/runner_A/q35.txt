@@ -1,0 +1,108 @@
+QUESTION: Which Salmonella isolates carry blaCTX-M-15?
+LANDED=answer SECONDS=37.5
+
++ New search
+
+YOUR SEARCHES
+
+Which Salmonella isolates carry blaCTX-M-15?
+2 tools · 21 sources from 1 layer
+What is BioSample SAMN12121739 and which SRA runs and assemblies come from it?
+0 sources · Sep 29
+What is in BioProject PRJNA999999999?
+0 sources · Sep 29
+For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies, and tell me how to retrieve each.
+4 sources · Sep 29
+What genes and ClinVar records are under chr7:117,480,025-117,668,665 on GRCh38?
+50 sources · Sep 29
+What is under chr17:43,044,295-43,125,364?
+0 sources · Sep 29
+What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+50 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+24 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+23 sources · Sep 29
+Compare what is known about MLH1 and MSH2 in colorectal cancer risk.
+25 sources · Sep 29
+What is rs334 and what condition is it associated with?
+5 sources · Sep 29
+Which diseases are associated with BRCA1?
+22 sources · Sep 29
+s3-retest-a-20260929@example.com
+No search limit in effect yet
+Which Salmonella isolates carry blaCTX-M-15?
+New search
+
+✓ Answered33.6s · 2 tools · 21 sources from 1 layer
+
+Show work ▾
+
+I found 20 pathogen samples and 1 organism related to Salmonella[21].⁠1–20
+
+These isolates are named 8891, A54560, 8892, SAMEA1712252, SAMEA1712275, SAMEA2054258, BCW_2662, BCW_2665, BCW_2785, 2013K-0468, 2014EL-1063, 2014EL-1083, 2014EL-1071, 2014EL-1072, 2014EL-1186, 2014EL-1195, 2014EL-1200, H120660652, 80301, and 98280.⁠1–20
+
+WHERE THIS ANSWER COMES FROM
+8891	⁠1
+A54560	⁠2
+8892	⁠3
+Pathogen sample	⁠4
+Pathogen sample	⁠5
+Pathogen sample	⁠6
+BCW_2662	⁠7
+BCW_2665	⁠8
+BCW_2785	⁠9
+2013K-0468	⁠10
+Showing 1–10 of 21
+‹ Previous
+Page 1 of 3
+Next ›
+NOTES
+Pathogen Detection lists 2,684 Salmonella isolates with these genes; the first 20 in the snapshot are shown.
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+21
+Based on 21 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== LINKS ===
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1009669
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1009687
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1009692
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1712252
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1712275
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA2054258
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02368543
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02368546
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02368659
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098689
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098807
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098808
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098809
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098810
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03145677
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03145678
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03145679
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03169678
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03469103
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03478069
+https://www.ncbi.nlm.nih.gov/taxonomy/590
+=== CITATION ARIA (first 6) ===
+Sources 1 to 20: Source 1, layer 2; Source 2, layer 2; Source 3, layer 2; Source 4, layer 2; Source 5, layer 2; Source 6, layer 2; Source 7, layer 2; Source 8, layer 2; Source 9, layer 2; Source 10, layer 2; Source 11, layer 2; Source 12, layer 2; Source 13, layer 2; Source 14, layer 2; Source 15, layer 2; Source 16, layer 2; Source 17, layer 2; Source 18, layer 2; Source 19, layer 2; Source 20, layer 2
+Sources 1 to 20: Source 1, layer 2; Source 2, layer 2; Source 3, layer 2; Source 4, layer 2; Source 5, layer 2; Source 6, layer 2; Source 7, layer 2; Source 8, layer 2; Source 9, layer 2; Source 10, layer 2; Source 11, layer 2; Source 12, layer 2; Source 13, layer 2; Source 14, layer 2; Source 15, layer 2; Source 16, layer 2; Source 17, layer 2; Source 18, layer 2; Source 19, layer 2; Source 20, layer 2
+Source 1, layer 2
+Source 2, layer 2
+Source 3, layer 2
+Source 4, layer 2

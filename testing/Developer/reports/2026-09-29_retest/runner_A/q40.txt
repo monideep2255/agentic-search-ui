@@ -1,0 +1,61 @@
+QUESTION: Which E. coli isolates are in Pathogen Detection?
+LANDED=answer SECONDS=6.9
+
++ New search
+
+YOUR SEARCHES
+
+Which E. coli isolates are in Pathogen Detection?
+0 tools · 0 sources
+Which tomato isolates in Pathogen Detection carry resistance genes?
+0 sources · Sep 29
+Which Listeria isolates in Pathogen Detection carry blaKPC?
+1 source · Sep 29
+Which Klebsiella isolates in Pathogen Detection carry carbapenemase genes?
+21 sources · Sep 29
+Which Salmonella isolates carry blaCTX-M-15?
+21 sources · Sep 29
+What is BioSample SAMN12121739 and which SRA runs and assemblies come from it?
+0 sources · Sep 29
+What is in BioProject PRJNA999999999?
+0 sources · Sep 29
+For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies, and tell me how to retrieve each.
+4 sources · Sep 29
+What genes and ClinVar records are under chr7:117,480,025-117,668,665 on GRCh38?
+50 sources · Sep 29
+What is under chr17:43,044,295-43,125,364?
+0 sources · Sep 29
+What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+50 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+24 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+23 sources · Sep 29
+Compare what is known about MLH1 and MSH2 in colorectal cancer risk.
+25 sources · Sep 29
+What is rs334 and what condition is it associated with?
+5 sources · Sep 29
+Which diseases are associated with BRCA1?
+22 sources · Sep 29
+s3-retest-a-20260929@example.com
+No search limit in effect yet
+Which E. coli isolates are in Pathogen Detection?
+New search
+
+3.9s · 0 tools · 0 sources
+
+Show work ▾
+One more detail needed
+Which resistance gene or gene family should the isolates carry? For example ESBL (the blaCTX-M family), carbapenemase (blaKPC, blaNDM, blaOXA-48, blaVIM, blaIMP), colistin resistance (mcr), or a gene name such as blaCTX-M-15.
+https://www.ncbi.nlm.nih.gov/search/all/?term=Which%20E.%20coli%20isolates%20are%20in%20Pathogen%20Detection%3F
+
+ASK ANOTHER QUESTION
+
+Ask
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== LINKS ===
+https://www.ncbi.nlm.nih.gov/search/all/?term=Which%20E.%20coli%20isolates%20are%20in%20Pathogen%20Detection%3F
+=== CITATION ARIA (first 6) ===

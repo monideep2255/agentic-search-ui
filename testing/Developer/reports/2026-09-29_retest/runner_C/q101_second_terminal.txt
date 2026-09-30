@@ -1,0 +1,4 @@
+<scratch>/retestC/s3-env/bin/s3
+usage: s3 <command> [options]
+
+Ask System 3 biomedical questions from a terminal, with every claim cited.

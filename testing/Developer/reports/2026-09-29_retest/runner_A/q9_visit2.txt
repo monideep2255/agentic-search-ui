@@ -1,0 +1,48 @@
+Which diseases are associated with BRCA1?
+New search
+
+? Answered12.6s · 13 tools · 23 sources from 2 layers
+
+Show work ▾
+
+I found 4 conditions related to BRCA1.⁠2–5
+
+BRCA1 acts as a tumor suppressor that helps keep DNA stable.⁠1
+
+WHERE THIS ANSWER COMES FROM
+Familial cancer of breast	⁠2
+Familial breast-ovarian cancer susceptibility 1	⁠3
+Pancreatic cancer susceptibility 4	⁠4
+Fanconi anemia complementation group S	⁠5
+BRCA1	⁠6
+BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing.	⁠7
+NM_007294.4(BRCA1):c.5243_5277+2788del	⁠8
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	⁠9
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	⁠9
+BRCA1	⁠10
+Showing 1–10 of 23
+‹ Previous
+Page 1 of 3
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+22
+Based on 22 sources, not yet confirmed
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+PERSONA_CHIP_BEFORE=["Working as Chase"] CHIP=["Working as Chase"] CAPTION=[]
+LINKS=["https://pubmed.ncbi.nlm.nih.gov/28976962/","https://pubmed.ncbi.nlm.nih.gov/35432218/","https://pubmed.ncbi.nlm.nih.gov/36914836/","https://pubmed.ncbi.nlm.nih.gov/39261728/","https://pubmed.ncbi.nlm.nih.gov/39265497/","https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/","https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/","https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/","https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/","https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/","https://www.ncbi.nlm.nih.gov/gene/672","https://www.ncbi.nlm.nih.gov/gene/672/","https://www.ncbi.nlm.nih.gov/medgen/C0346153","https://www.ncbi.nlm.nih.gov/medgen/C2676676","https://www.ncbi.nlm.nih.gov/medgen/C3280442","https://www.ncbi.nlm.nih.gov/medgen/C4554406"]

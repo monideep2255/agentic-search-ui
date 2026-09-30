@@ -1,0 +1,50 @@
++ New search
+
+YOUR SEARCHES
+
+BRCA1
+0 tools · 0 sources
+Marfan
+0 sources · Sep 29
+papers on caffeine
+8 sources · Sep 29
+What is GERD?
+14 sources · Sep 29
+Any trials for GERD?
+13 sources · Sep 29
+Which genes are associated with reflux disease?
+17 sources · Sep 29
+reflux disease
+0 sources · Sep 29
+What is GERD?
+14 sources · Sep 29
+GERD
+0 sources · Sep 29
+What MeSH terms are assigned to PMID 11237011?
+26 sources · Sep 29
+What MeSH terms are assigned to PMID 11237011?
+26 sources · Sep 29
+What MeSH terms are assigned to PMID 11237011?
+26 sources · Sep 29
+s3-retest-b-20260929@example.com
+No search limit in effect yet
+BRCA1
+New search
+
+2.9s · 0 tools · 0 sources
+
+Show work ▾
+One more detail needed
+What would you like to know about BRCA1?
+https://www.ncbi.nlm.nih.gov/search/all/?term=BRCA1
+
+ASK ANOTHER QUESTION
+
+Ask
+What is the function of the BRCA1 gene?
+Which genetic variants in BRCA1 are associated with cancer risk?
+What clinical trials are studying BRCA1-related conditions?
+What does recent research say about BRCA1 and treatment options?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

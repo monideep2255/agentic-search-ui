@@ -89,7 +89,7 @@ decisions in its To do column.
 | 8.1 | Search all three layers at the same time | Approved | 5 |
 | 8.2 | A lead scientist hands off to three named scientists | Approved | 1, 8 |
 | 8.3 | Progress steps named for the scientist | Approved | 1, 8 |
-| 8.4 | Scientists stay random on every visit | Awaits one look | 9 |
+| 8.4 | Scientists stay random on every visit | Approved 2026-09-29, batch retest | 9 |
 | 9.1 | Two answer modes, Plain language and Researcher | Approved | 2 |
 | 9.2 | An info button explaining the two modes | Approved | 3 |
 | 9.3 | Plain language: about 250 words in three paragraphs | Superseded |  |
@@ -101,9 +101,9 @@ decisions in its To do column.
 | 9.9 | Trust signals become one plain line | Approved for the one-line shape; wording is your decision | 5 |
 | 9.10 | Researcher headings, Plain language without them | Superseded |  |
 | 9.11 | A small medical-advice line on Plain language answers | Your decision, not an approval | 2 |
-| 9.12 | The depth cannot change mid-search | Awaits one look | 4 |
+| 9.12 | The depth cannot change mid-search | Approved 2026-09-29, batch retest | 4 |
 | 10.1 | Stop the flagship questions from refusing | Live | 1, 7 |
-| 10.2 | History shows the saved answer instantly | Built and awaiting retest | 67 |
+| 10.2 | History shows the saved answer instantly | Approved 2026-09-29, batch retest | 67 |
 | 10.3 | The consistency run, three tries per golden question | Run 2026-09-22 |  |
 | 11.1 | Researcher answers should follow your reference screenshot | Superseded by 11.12 |  |
 | 11.2 | Delete the reference screenshot and the sets 8 and 9 session prompt when done | Done |  |
@@ -117,7 +117,7 @@ decisions in its To do column.
 | 11.10 | Use parallel sub-agents, each on a model matched to the task | Done |  |
 | 11.12 | The answer reads as one block; break it into readable paragraphs, headings and tables | Live, approved | 2, 5 |
 | 11.13 | The same readable format in both Plain language and Researcher | Superseded by 11.31 |  |
-| 11.14 | Copying the answer picks up "Source 1, layer 2" text | Live, awaits one look | 6 |
+| 11.14 | Copying the answer picks up "Source 1, layer 2" text | Approved 2026-09-29, batch retest | 6 |
 | 11.15 | The answer does not stream | Superseded by 11.16 |  |
 | 11.16 | Signal the write step as it starts, reveal sentences at reading pace | Live, approved | 1, 5 |
 | 11.17 | Why only gene records, and not PubMed, PMC or NCBI Datasets? | Live, approved | 5, 19 |
@@ -132,61 +132,61 @@ decisions in its To do column.
 | 11.26 | The answers do not look like the approved mockup | Live, approved | 17 |
 | 11.27 | Too much bold: only the title or main point should be bold | Live, approved | 77 |
 | 11.28 | The move from searching to the streamed answer is too quick | Live, approved | 18 |
-| 11.30 | Make sure every integration on the Integrations page actually works, end to end | Fix B fixed and live-verified, awaiting your retest | 60 |
+| 11.30 | Make sure every integration on the Integrations page actually works, end to end | Approved 2026-09-29, batch retest | 60 |
 | 11.31 | The two answer modes look the same, and they should not | Live, approved as is | 14, 2 |
 | 11.33 | PubMed abstracts reach the answer page cut off mid-word | Approved | 11 |
 | 11.34 | A multi-sentence abstract loses its citation entirely in the code-built tail | Fixed and live | 13 |
 | 11.35 | "The Notes section is super confusing. remove it" | Live, approved | 7 |
-| 11.36 | The answer-modes info button still promised "about 250 words in three paragraphs" | Live, awaits one look | 3 |
+| 11.36 | The answer-modes info button still promised "about 250 words in three paragraphs" | Approved 2026-09-29, batch retest | 3 |
 | 11.37 | Layer 1 knowledge-graph sources are invisible in the source list | Accepted, not a defect to fix |  |
-| 12.1 | A disease question searches one place and refuses | Live, awaiting retest | 68 |
-| 12.2 | A literature question is refused as "Outside biomedical research" | Live, awaiting retest | 70 |
+| 12.1 | A disease question searches one place and refuses | Failed the 2026-09-29 batch retest, back in To do as card 90 | 68 |
+| 12.2 | A literature question is refused as "Outside biomedical research" | Approved 2026-09-29, batch retest | 70 |
 | 12.3 | Do we ask a clarifying question when a query is one to three words? | Live, awaiting your retest | 76 |
-| 12.4 | "If it didn't have an answer, why would I 'continue the conversation'?" | Live, awaiting retest | 71 |
+| 12.4 | "If it didn't have an answer, why would I 'continue the conversation'?" | Approved 2026-09-29, batch retest | 71 |
 | 12.5 | Can these questions be answered at all, and how? | Answered | 68, 69, 73 |
 | 12.6 | The product already writes a good clarifying question and throws it away | Already built, closed by measurement | 48 |
-| 12.7 | A question naming no gene and no disease finds nothing at all | Live, awaiting retest | 69 |
-| 12.8 | The trust line under an answer undercounts its sources | Fixed, awaiting retest | 74, shared with 12.11 |
-| 12.9 | Plain language and researcher return the SAME text | Live, awaiting your retest | 72 |
-| 12.10 | The answers list what was found instead of answering | Live, awaiting your retest | 73 |
-| 12.11 | The sources chip and the trust line disagree | Live, awaiting your retest | 74 |
-| 12.12 | Broken sentences and repeated records | Live, awaiting your retest | 75 |
-| 12.13 | Clicking a search in the history rail re-runs it instead of showing the saved answer | Live, awaiting your retest | 67 |
-| card 58 | Stop works until the first sentence of the answer is on screen, and a stop in that window shows "Search stopped" and nothing of the answer | Live, awaiting your retest | 98 |
-| card 60 | The web app carries its libraries' license notices: React, React DOM and MUI, each with its version and license text | Live, awaiting your retest | 99 |
-| card 63 | A "not yet confirmed" answer reopens from your searches with its trust line and notes, and during an NCBI outage the note says the database is down and may be missing things, never that the answer has none | Live, awaiting the golden run and your retest | 100, 67 |
-| card 62 | The Integrations page's install works on the first try, and `s3` shows the web's trust line for each answer | Live, awaiting your retest | 101 |
-| card 53 | The Architecture and About pages, the KGX manifest and the project documents state what the code does | Live, awaiting your retest | 102 |
-| card 73 | A search that crashes writes its reason and trace id to the log | Live, awaiting your retest | none, nothing to try by hand |
+| 12.7 | A question naming no gene and no disease finds nothing at all | Approved 2026-09-29, batch retest | 69 |
+| 12.8 | The trust line under an answer undercounts its sources | Approved 2026-09-29, batch retest | 74, shared with 12.11 |
+| 12.9 | Plain language and researcher return the SAME text | Approved 2026-09-29, batch retest | 72 |
+| 12.10 | The answers list what was found instead of answering | Failed the 2026-09-29 batch retest, back in To do as card 89 | 73 |
+| 12.11 | The sources chip and the trust line disagree | Approved 2026-09-29, batch retest | 74 |
+| 12.12 | Broken sentences and repeated records | Failed the 2026-09-29 batch retest, back in To do as card 88 | 75 |
+| 12.13 | Clicking a search in the history rail re-runs it instead of showing the saved answer | Approved 2026-09-29, batch retest | 67 |
+| card 58 | Stop works until the first sentence of the answer is on screen, and a stop in that window shows "Search stopped" and nothing of the answer | Approved 2026-09-29, batch retest | 98 |
+| card 60 | The web app carries its libraries' license notices: React, React DOM and MUI, each with its version and license text | Failed the 2026-09-29 batch retest, back in To do as card 86 | 99 |
+| card 63 | A "not yet confirmed" answer reopens from your searches with its trust line and notes, and during an NCBI outage the note says the database is down and may be missing things, never that the answer has none | Approved 2026-09-29, batch retest | 100, 67 |
+| card 62 | The Integrations page's install works on the first try, and `s3` shows the web's trust line for each answer | Approved 2026-09-29, batch retest | 101 |
+| card 53 | The Architecture and About pages, the KGX manifest and the project documents state what the code does | Approved 2026-09-29, batch retest | 102 |
+| card 73 | A search that crashes writes its reason and trace id to the log | Approved 2026-09-29, batch retest | none, nothing to try by hand |
 | cards 49 and 21, phase 8.10 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | Live, awaiting your retest | 90 to 97, and 60 |
-| card 1, T-8.6-06 | An answer about something else never says "MedGen lists no clinical features for ..." | Live, awaiting your retest | 87 |
-| card 31, T-8.6-06 | At Researcher depth, a question about a disease's features names them in the written answer too | Live, awaiting your retest | 81 |
-| T-8.6-04, T-8.6-05, R-02 | A question carrying hidden instructions, or asking to change the graph, is refused, and Jev makes that call | Live, awaiting your retest | 88, 89 |
+| card 1, T-8.6-06 | An answer about something else never says "MedGen lists no clinical features for ..." | Approved 2026-09-29, batch retest | 87 |
+| card 31, T-8.6-06 | At Researcher depth, a question about a disease's features names them in the written answer too | Approved 2026-09-29, batch retest | 81 |
+| T-8.6-04, T-8.6-05, R-02 | A question carrying hidden instructions, or asking to change the graph, is refused, and Jev makes that call | Approved 2026-09-29, batch retest | 88, 89 |
 | card 45, R-09 | A graph search that cannot finish gives up after 30 seconds, not 90 | Live, awaiting your retest | 59 |
-| card 3, T-8.6-07 | The second writing call runs only when it can change the answer | Live, awaiting your retest | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-07 |
-| card 34, T-8.6-03 | Jev's and DeepSeek's picks are compared offline instead of racing the answer | Live, awaiting your retest | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-03 |
-| 13.2 | The Answer modes card gives each mode its own block and says what the mode gives, never who the reader is; on a phone it now fits on screen | Live, awaiting your retest | 86 |
-| Jev as the classifier, golden row G-038 | A question the biomedical word list does not know is judged by the classifier, not refused: the tree of life is answered, pizza is refused, and off-topic follow-ups are refused | Live, awaiting your retest | 83 |
-| 12.15 | "Recent papers" asks how far back to search, and the choice narrows the papers | Live, awaiting your retest | 84 |
-| 12.16 part 3 | Whether a question wants papers is a classifier's choice, not a word list | Live, awaiting your retest | 85 |
-| Jev, the probability model trial | Jev makes the small choices on develop and DeepSeek's pick is recorded beside it: read the comparison table | Live, awaiting your retest | Nothing to try by hand: `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md` |
-| 11.32, the function catalogue | The NCBI and enrichment calls are listed once as typed functions the classifier can choose from | Live, awaiting your retest | Nothing to try by hand: `src/system_03_search_agent/tools/catalogue.py` |
-| the golden rows | Golden row G-035 accepts the Taxonomy link the product cites | Live, awaiting your retest | Nothing to try by hand |
-| disease names, the hand-over | The graph's data gaps are handed to the repository that writes the graph | Live, awaiting your retest | Nothing to try by hand: read `docs/data-engineering/Graph_data_hand_over_2026-09-25.md` |
-| 2.13, the four type values | The design card's four type values match the shipped code | Live, awaiting your retest | Nothing to try by hand |
-| the checkpoint line | `/phase-checkpoint` names the counts line by what it holds | Live, awaiting your retest | Nothing to try by hand |
-| 12.14 | A question about a disease's features names them, each cited to MedGen: in the written answer at Plain language, in the list at Researcher | Live, awaiting your retest | 81 |
-| 12.17 | A good question is never refused because the think step's reply was malformed | Live, awaiting your retest | 80 |
-| the ceiling, the byte ceiling | An answer can cite up to 30 sources, and a question about papers reaches them | Live, awaiting your retest | 82 |
-| the live NCBI unit test | An NCBI outage no longer turns the build red | Live, awaiting your retest | Nothing to try by hand: CI's unit gate deselects the live test |
-| G-019 | MeSH terms show as real terms, each linked to its MeSH record | Live, awaiting your retest | 64 |
-| the opening count | The opening sentence's count agrees with the list beneath it | Live, awaiting your retest | 65 |
-| the phenotype template | The Marfan phenotype question no longer says "I could not find evidence"; what it answers instead is 12.14 in To do | Live, awaiting your retest | 66 |
-| G-033, G-037 | Two questions keep their own graph search: MLH1 and MSH2, and GEO datasets for TP53 | Live, awaiting your retest | 24, 25 |
-| the coordinate range | A chromosome range is answered with its genes and records, and a range with no assembly asks which | Live, awaiting your retest | 27, 28, 29 |
-| the question's own words | An answer never lists the question's own words as diseases it did not address | Live, awaiting your retest | 23, 25 |
-| the accessions | A BioProject or BioSample accession is answered, and an unknown one is named as not found | Live, awaiting your retest | 30, 31, 32 |
-| G-035 | Pathogen Detection isolate questions answer with a table of isolates and their resistance genes | Live, awaiting your retest | 33, 35, 36, 38, 39, 40, 44, and `testing/Product/queries/Isolate_search_queries_and_workflow.md` |
+| card 3, T-8.6-07 | The second writing call runs only when it can change the answer | Approved 2026-09-29, batch retest | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-07 |
+| card 34, T-8.6-03 | Jev's and DeepSeek's picks are compared offline instead of racing the answer | Approved 2026-09-29, batch retest | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-03 |
+| 13.2 | The Answer modes card gives each mode its own block and says what the mode gives, never who the reader is; on a phone it now fits on screen | Approved 2026-09-29, batch retest | 86 |
+| Jev as the classifier, golden row G-038 | A question the biomedical word list does not know is judged by the classifier, not refused: the tree of life is answered, pizza is refused, and off-topic follow-ups are refused | Approved 2026-09-29, batch retest | 83 |
+| 12.15 | "Recent papers" asks how far back to search, and the choice narrows the papers | Failed the 2026-09-29 batch retest, back in To do as card 87 | 84 |
+| 12.16 part 3 | Whether a question wants papers is a classifier's choice, not a word list | Approved 2026-09-29, batch retest | 85 |
+| Jev, the probability model trial | Jev makes the small choices on develop and DeepSeek's pick is recorded beside it: read the comparison table | Approved 2026-09-29, batch retest | Nothing to try by hand: `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md` |
+| 11.32, the function catalogue | The NCBI and enrichment calls are listed once as typed functions the classifier can choose from | Approved 2026-09-29, batch retest | Nothing to try by hand: `src/system_03_search_agent/tools/catalogue.py` |
+| the golden rows | Golden row G-035 accepts the Taxonomy link the product cites | Approved 2026-09-29, batch retest | Nothing to try by hand |
+| disease names, the hand-over | The graph's data gaps are handed to the repository that writes the graph | Approved 2026-09-29, batch retest | Nothing to try by hand: read `docs/data-engineering/Graph_data_hand_over_2026-09-25.md` |
+| 2.13, the four type values | The design card's four type values match the shipped code | Approved 2026-09-29, batch retest | Nothing to try by hand |
+| the checkpoint line | `/phase-checkpoint` names the counts line by what it holds | Approved 2026-09-29, batch retest | Nothing to try by hand |
+| 12.14 | A question about a disease's features names them, each cited to MedGen: in the written answer at Plain language, in the list at Researcher | Approved 2026-09-29, batch retest | 81 |
+| 12.17 | A good question is never refused because the think step's reply was malformed | Approved 2026-09-29, batch retest | 80 |
+| the ceiling, the byte ceiling | An answer can cite up to 30 sources, and a question about papers reaches them | Approved 2026-09-29, batch retest | 82 |
+| the live NCBI unit test | An NCBI outage no longer turns the build red | Approved 2026-09-29, batch retest | Nothing to try by hand: CI's unit gate deselects the live test |
+| G-019 | MeSH terms show as real terms, each linked to its MeSH record | Approved 2026-09-29, batch retest | 64 |
+| the opening count | The opening sentence's count agrees with the list beneath it | Approved 2026-09-29, batch retest | 65 |
+| the phenotype template | The Marfan phenotype question no longer says "I could not find evidence"; what it answers instead is 12.14 in To do | Approved 2026-09-29, batch retest | 66 |
+| G-033, G-037 | Two questions keep their own graph search: MLH1 and MSH2, and GEO datasets for TP53 | Failed the 2026-09-29 batch retest, back in To do as card 91 | 24, 25 |
+| the coordinate range | A chromosome range is answered with its genes and records, and a range with no assembly asks which | Failed the 2026-09-29 batch retest, back in To do as card 92 | 27, 28, 29 |
+| the question's own words | An answer never lists the question's own words as diseases it did not address | Failed the 2026-09-29 batch retest, back in To do as card 93 | 23, 25 |
+| the accessions | A BioProject or BioSample accession is answered, and an unknown one is named as not found | Approved 2026-09-29, batch retest | 30, 31, 32 |
+| G-035 | Pathogen Detection isolate questions answer with a table of isolates and their resistance genes | Failed the 2026-09-29 batch retest, back in To do as card 94 | 33, 35, 36, 38, 39, 40, 44, and `testing/Product/queries/Isolate_search_queries_and_workflow.md` |
 
 ## What is done, in summary
 
@@ -421,7 +421,7 @@ fixed.
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-09-29. THE ONE THING TO KNOW: card 63 stays on develop. Its test queries 100 and 67 passed, and its golden run answered 98 of 150, below its floor of 101; the owner kept it and accepted the run, and the floor for the next change stays 101 (`DECISIONS.md`). Cards 62 and 53 finished their review rounds and are live on develop (#133, #134), with the two rule lists card 53 named (#135); both await the owner's retest, queries 101 and 102. Card 73 (#139) followed: a crashed search logs its reason. The guard fix, R-10 with card 72's hedge, failed its fresh verifier and is parked on its branch by the owner's choice; it returns as card 84 and a redesigned card 72, then phase 8.7. `HANDOFF.md` lists each piece.
+LAST UPDATED 2026-09-29. THE ONE THING TO KNOW: card 63 stays on develop. Its test queries 100 and 67 passed, and its golden run answered 98 of 150, below its floor of 101; the owner kept it and accepted the run, and the floor for the next change stays 101 (`DECISIONS.md`). Cards 62 and 53 finished their review rounds and are live on develop (#133, #134), with the two rule lists card 53 named (#135); both await the owner's retest, queries 101 and 102. Card 73 (#139) followed: a crashed search logs its reason. The guard fix, R-10 with card 72's hedge, failed its fresh verifier and is parked on its branch by the owner's choice; card 84 was then built and stopped at the owner's choice, and guardrail work returns only as an agreed design. A batch retest of the Retest column ran the same day: the owner approved the 39 cards that passed, and the 9 that failed are cards 86 to 94 in To do. `HANDOFF.md` lists each piece.
 
 What is live on develop:
 
@@ -608,7 +608,7 @@ board on 2026-09-24.
 
 ### Next, in order
 
-Written 2026-09-25 in the order of that day's To do column, and not re-ordered since. The board's To do column now leads with newer cards, card 2 first. Where the two differ, the board's order wins. Ahead of every item below, since 2026-09-29: card 84 (R-10's sound parts), then card 72's redesigned hedge, then phase 8.7 from `HANDOFF.md`; cards 72 and 73, the guard timeouts behind card 63's lost golden runs, lead the board's To do column. The items below keep the reasons behind the older cards.
+Written 2026-09-25 in the order of that day's To do column, and not re-ordered since. The board's To do column now leads with newer cards, card 2 first. Where the two differ, the board's order wins. Ahead of every item below, since 2026-09-29: the owner's pick from cards 86 to 94, which failed the batch retest, or phase 8.7 from `HANDOFF.md`, one piece at a time; cards 72 and 73, the guard timeouts behind card 63's lost golden runs, lead the board's To do column. The items below keep the reasons behind the older cards.
 
 The earlier framing of this list, kept because it still holds:
 
@@ -2057,6 +2057,8 @@ Back on the first laptop. Card 63's two checks ran, and cards 62 and 53 were res
 | Card 73, a crashed search logs its reason | Builder, judge, adversary, one fix round, fresh verifier; merged with V01 named at the owner's choice (#139) | Retest |
 | R-10 and card 72, the guard fix | Diagnosis, builder, judge, adversary (stalled after five findings), one fix round, fresh verifier: DO NOT MERGE on F-72-V08; parked on its branch at the owner's choice | Re-split as cards 84 and 72 |
 | Cards 79 to 84 | Filed from the product review, card 73's reviews and the parked guard fix | To do |
+| Card 84, R-10's guardrail fixes alone | Built; its adversary found an off-topic question and a disguised injection admitted under a rate limit; stopped and parked at the owner's choice | Parked |
+| The Retest column | Three runners ran every Retest card's test queries on develop: 39 passed and were approved by the owner, 9 failed and went back to To do as cards 86 to 94, 3 wait on the owner's eye | Done |
 
 ### 2026-09-29, in one table
 

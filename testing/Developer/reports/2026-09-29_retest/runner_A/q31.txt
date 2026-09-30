@@ -1,0 +1,49 @@
+QUESTION: What is in BioProject PRJNA999999999?
+LANDED=answer SECONDS=8
+
++ New search
+
+YOUR SEARCHES
+
+What is in BioProject PRJNA999999999?
+0 tools · 0 sources
+For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies, and tell me how to retrieve each.
+4 sources · Sep 29
+What genes and ClinVar records are under chr7:117,480,025-117,668,665 on GRCh38?
+50 sources · Sep 29
+What is under chr17:43,044,295-43,125,364?
+0 sources · Sep 29
+What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+50 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+24 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+23 sources · Sep 29
+Compare what is known about MLH1 and MSH2 in colorectal cancer risk.
+25 sources · Sep 29
+What is rs334 and what condition is it associated with?
+5 sources · Sep 29
+Which diseases are associated with BRCA1?
+22 sources · Sep 29
+s3-retest-a-20260929@example.com
+No search limit in effect yet
+What is in BioProject PRJNA999999999?
+New search
+
+5.0s · 0 tools · 0 sources
+
+Show work ▾
+One more detail needed
+BioProject PRJNA999999999 was not found in NCBI. Check the accession and ask again.
+https://www.ncbi.nlm.nih.gov/search/all/?term=What%20is%20in%20BioProject%20PRJNA999999999%3F
+
+ASK ANOTHER QUESTION
+
+Ask
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== LINKS ===
+https://www.ncbi.nlm.nih.gov/search/all/?term=What%20is%20in%20BioProject%20PRJNA999999999%3F
+=== CITATION ARIA (first 6) ===

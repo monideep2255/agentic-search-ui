@@ -41,11 +41,11 @@ The reviewers' probes from 2026-09-27 are gone, so any resumed phase 8.7 reviewe
 
 - The privacy pre-commit and commit-msg hooks on the second laptop, from your private notes. Until they are in, every commit there is checked by hand.
 - `~/.local/bin/railway link` on the second laptop, choosing `system3-search-agent-develop`, so `/ship` can confirm deploys.
-- Retests: the Retest column of `testing/UI_fix_plan.md`, newest first. Card 73 is at the top, nothing to try by hand; then cards 53 and 62, queries 102 and 101; then card 63, queries 100 and 67.
+- Retests: three cards left in the Retest column after the batch retest of 2026-09-29, each needing the owner's eye (`testing/Developer/reports/2026-09-29_retest/`). The owner approved the 39 that passed; the 9 that failed are cards 86 to 94 in To do.
 
 ## The one next action
 
-Card 84: re-cut R-10's sound parts from develop as their own change, reusing the parked branch `fix/card72-r10-guardrail`, without the hedge. Then card 72's redesigned hedge, where any refusal beats an admit on every guard call. Then phase 8.7 from `tracker/phase_8.7.md`. Why: `DECISIONS.md`, 2026-09-29.
+The owner picks the next piece from the top of To do: cards 86 to 94 failed the batch retest of 2026-09-29, each needing a diagnosis first, and phase 8.7 is parked on its branches. Guardrail work (cards 72 and 84) returns only as a design agreed with the owner first. One piece at a time, carried to done (`DECISIONS.md`, 2026-09-29).
 
 ### Starting on another computer
 

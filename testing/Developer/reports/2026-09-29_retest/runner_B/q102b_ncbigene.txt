@@ -1,0 +1,40 @@
+No search limit in effect yet
+Which diseases are associated with NCBIGene:672?
+New search
+
+? Answered22.8s · 4 tools · 6 sources from 1 layer
+
+Show work ▾
+
+I found 4 conditions related to NCBIGene:672.⁠1–4
+
+NCBIGene:672 is associated with four diseases: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4
+
+NCBIGene:672 is the BRCA1 gene.⁠5
+
+WHERE THIS ANSWER COMES FROM
+Familial cancer of breast	⁠1
+Familial breast-ovarian cancer susceptibility 1	⁠2
+Pancreatic cancer susceptibility 4	⁠3
+Fanconi anemia complementation group S	⁠4
+BRCA1	⁠5
+BRCA1	⁠6
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+6
+Based on 6 sources, not yet confirmed
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
