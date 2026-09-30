@@ -1192,15 +1192,39 @@ export function useRunView(events: AgentEvent[]): RunView {
      * enum carrying no free text, so branching on it keeps the no-backend-text
      * guarantee that fix was about while restoring the distinction it lost.
      */
+    /*
+     * The transient line says to wait a little rather than "in a moment"
+     * (card 84, F-72-V05): with no wait known, a rate-limited person told
+     * "in a moment" retried at once and met the same limit.
+     */
     const FATAL_COPY: Record<string, string> = {
       cancelled: "This run was stopped before it finished, so no answer was written.",
-      transient: "This run could not be completed. Try asking again in a moment.",
+      transient: "This run could not be completed. Wait a little, then try asking again.",
       recoverable: "This run could not be completed. Try asking again, or rephrase the question.",
       unexpected: "This run could not be completed. Try asking again, or rephrase the question.",
     };
+    /*
+     * The honest wait (R-10 line 4, card 84; F-72-A01, J04). When the
+     * service that checks each question is rate-limited and the provider
+     * named a wait, a transient error carries it in `retry_after_s`.
+     * `retry_after_s` is a number on the wire, never free text, so reading
+     * it keeps the no-backend-text guarantee above: the sentence is still
+     * this file's own. Only a transient error reads it; "second" for one.
+     */
+    const retryAfterS =
+      fatalError && fatalError.type === "error" && fatalError.payload.error_class === "transient"
+        ? fatalError.payload.retry_after_s
+        : 0;
+    const waitSeconds =
+      typeof retryAfterS === "number" && Number.isFinite(retryAfterS) && retryAfterS > 0
+        ? Math.ceil(retryAfterS)
+        : 0;
     const failure =
       fatalError && fatalError.type === "error"
-        ? (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
+        ? waitSeconds > 0
+          ? "This run could not be completed. Try asking again in about " +
+            `${waitSeconds} ${waitSeconds === 1 ? "second" : "seconds"}.`
+          : (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
         : null;
 
     const failedGuard = events.find(
