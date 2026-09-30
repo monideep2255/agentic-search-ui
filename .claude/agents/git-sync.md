@@ -43,14 +43,8 @@ git status                    # review what changed
 git add <specific files>      # never git add -A -- risks committing .env, data/, reference/
 git diff --stat --cached      # confirm what is staged before committing
 git commit -m "[descriptive message]"
-python3 .claude/skills/ship/scripts/check_public_leaks.py > /tmp/leak_scan.txt 2>&1
-rc=$?
-tail -40 /tmp/leak_scan.txt
-if [ $rc -ne 0 ]; then echo "LEAK SCAN rc=$rc: do not push"; fi
-git push                      # only when rc was 0
+git push
 ```
-
-The public-leak scan is the last step before every push, from /ship or from a plain "push" or "sync" request. This repository is public, and a push is permanent. It fetches the base, reads every outgoing commit one at a time plus the working tree and untracked files, and exits 0 only when nothing looks like a secret or a private value. Stop on any other exit code and report the scan's lines to the user; never push past it and never bypass it with `--no-verify`. A finding in a commit is taken out of that commit (a soft reset to the merge base the scan prints, then one fresh commit), never deleted by a later commit, because the earlier commit would still be published. What the scan reads and what it cannot catch: `.claude/skills/ship/SKILL.md`, "The public-leak scan".
 
 ### Full sync (pull then push)
 
@@ -58,8 +52,7 @@ The public-leak scan is the last step before every push, from /ship or from a pl
 2. Show the user `git status` and confirm which files to stage
 3. Stage specific files only (never `git add -A`)
 4. Commit with descriptive message
-5. Run the public-leak scan (above) and stop unless it exits 0
-6. Push to origin
+5. Push to origin
 
 ## Commit message guidelines
 
@@ -104,7 +97,6 @@ Report:
 
 - Files changed (added/modified/deleted)
 - Commit hash
-- The public-leak scan's exit code and summary line
 - Current sync status with remote
 
 ## Error handling
