@@ -496,6 +496,7 @@ FALSE_ALARM_LINES = {
     "section-number": "see Section 5.2.2.3 of the specification",
     "section-number-wide": "Section 12.4.10.3 applies",
     "python-version": "Requires Python 3.11.4.1",
+    "numbered-clauses": "clauses 4.2.1.3 and 4.2.1.4 cover it",
     "cidr-range": "the 10.0.0.0/8 and 192.168.0.0/16 ranges, and 10/8 in short",
     "role-addresses": "contact eutilities"
     + "@ncbi.nlm.nih.gov, support"
@@ -1071,7 +1072,7 @@ def test_private_check_sees_every_outgoing_line(repo: Path, where: str) -> None:
     elif where == "file-name":
         commit_file(repo, f"notes_{OWNER_TERM}.txt", "clean\n")
     elif where == "hash-line":
-        commit_file(repo, "a.md", f"# heading by {OWNER_TERM}\n")
+        (repo / "loose.md").write_text(f"# heading by {OWNER_TERM}\n")  # only --message sees it
     else:
         commit_file(repo, "a.txt", f"by {OWNER_TERM}\n")
         commit_file(repo, "a.txt", "clean\n", message="chore: tidy")
