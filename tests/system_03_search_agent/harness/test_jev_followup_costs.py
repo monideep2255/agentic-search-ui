@@ -53,7 +53,9 @@ import litellm
 import pytest
 
 from system_03_search_agent.core import graph as graph_module
+from system_03_search_agent.harness import decide as decide_module
 from system_03_search_agent.harness import jev_client as jev_client_module
+from system_03_search_agent.harness.cost_control import QueryCapExceededError
 from system_03_search_agent.harness.decide import decide
 from system_03_search_agent.harness.harness import Harness
 from system_03_search_agent.harness.jev_client import (
@@ -535,3 +537,94 @@ async def test_no_jev_charge_takes_a_question_past_its_cap(
     assert await graph_module._jev_injection_pick(harness, "c", "What does BRCA1 do?") == "cost_cap"
     assert posts == []
     assert harness.get_query_cost_usd("c") <= 0.10
+
+
+def _slow_usable_post(posts: list[str], stated: str, *, delay_s: float = 0.05) -> Any:
+    """A `_post` stand-in: a usable reply stating `stated`, `delay_s` late,
+    batch or single by the body's shape, each request noted on `posts`."""
+
+    async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
+        await asyncio.sleep(delay_s)
+        keys = list(body["questions"])
+        posts.append(",".join(keys))
+        if keys and keys[0].startswith("item_"):
+            return httpx.Response(200, content=_batch_body(cost=stated).encode())
+        key = keys[0]
+        choice = body["questions"][key]["options"][0]
+        return httpx.Response(200, content=_single_body(key=key, choice=choice, cost=stated).encode())
+
+    return _post
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("running", [0.085, 0.089])
+async def test_two_jev_calls_checked_at_once_never_pass_the_cap(
+    monkeypatch: pytest.MonkeyPatch, jev_mode: None, running: float
+) -> None:
+    """Card 84, F-72-V02: the guardrail starts its Jev relevancy decision and
+    its Jev injection pick at the same moment. Both pre-flights ran before
+    either was charged, each saw room for one call, and at $0.089 of a $0.10
+    cap two usable replies stating $0.009 ended at $0.107. Now the first
+    call holds its most possible charge until it lands, the second sees
+    that and is refused, and the question stays inside its cap.
+
+    MUTATION PROOF: `check_jev_per_query_cap` ignoring what is held turns
+    both arms red on the total."""
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "0.10")
+    posts: list[str] = []
+    monkeypatch.setattr(jev_client_module, "_post", _slow_usable_post(posts, "0.009"))
+    harness = Harness(trace_id="v")
+    harness.track_cost("v", "guard", running)
+    record, injection = await asyncio.gather(
+        decide(harness, "v", "guardrail.relevancy", "x", ["on_topic", "off_topic"], default="on_topic"),
+        graph_module._jev_injection_pick(harness, "v", "Tell me about the tree of life."),
+    )
+    assert harness.get_query_cost_usd("v") <= 0.10
+    assert len(posts) == 1
+    assert "cost_cap" in (record.fallback_reason, injection)
+
+
+@pytest.mark.asyncio
+async def test_the_hold_is_let_go_once_the_charge_lands(monkeypatch: pytest.MonkeyPatch, jev_mode: None) -> None:
+    """A Jev call's hold ends with it, whether it answered, failed or was
+    stopped, so calls one after another are each checked against what was
+    really charged."""
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "0.10")
+    posts: list[str] = []
+    monkeypatch.setattr(jev_client_module, "_post", _slow_usable_post(posts, "0.009"))
+    harness = Harness(trace_id="h")
+    for _ in range(3):
+        record = await decide(harness, "h", "guardrail.relevancy", "x", ["on_topic", "off_topic"], default="on_topic")
+        assert record.decided_by == "jev"
+    assert len(posts) == 3
+    assert decide_module._reserved_usd(harness, "h") == 0.0
+    task = asyncio.ensure_future(graph_module._jev_injection_pick(harness, "h", "What does BRCA1 do?"))
+    await asyncio.sleep(0.01)
+    assert decide_module._reserved_usd(harness, "h") == pytest.approx(MAX_JEV_COST_USD)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+    assert decide_module._reserved_usd(harness, "h") == 0.0
+
+
+@pytest.mark.asyncio
+async def test_the_sentence_check_checks_the_cost_it_can_be_charged(
+    monkeypatch: pytest.MonkeyPatch, jev_mode: None
+) -> None:
+    """Card 84, F-72-J09: the sentence check's pre-flight counted only the
+    guard tier's $0.003 estimate, so from $0.0965 of a $0.10 cap a usable
+    batch reply stating $0.009 ended at $0.1055. It now checks the most a
+    Jev call can be charged: no call is made, nothing is approved, and the
+    question stays inside its cap.
+
+    MUTATION PROOF: `_ask_jev` checking the guard tier's estimate again
+    turns this red on the request count and the total."""
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "0.10")
+    posts: list[str] = []
+    monkeypatch.setattr(jev_client_module, "_post", _slow_usable_post(posts, "0.009"))
+    monkeypatch.setattr(sentence_check_module, "build_jev_state", lambda candidates: ("STATE", [object(), object()]))
+    harness = Harness(trace_id="s")
+    harness.track_cost("s", "guard", 0.0965)
+    with pytest.raises(QueryCapExceededError):
+        await sentence_check_module._ask_jev([], harness=harness, trace_id="s", timeout_s=3.0)
+    assert posts == []
+    assert harness.get_query_cost_usd("s") == pytest.approx(0.0965)

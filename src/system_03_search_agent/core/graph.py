@@ -514,8 +514,8 @@ from system_03_search_agent.harness.coordinator_worker import (
 from system_03_search_agent.harness.decide import (
     GuardReplyUnusable,
     ask_guard_model,
-    check_jev_per_query_cap,
     decide,
+    jev_charge_reserved,
     jev_decides,
     rate_limit_behind,
 )
@@ -1508,10 +1508,11 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
     prompt admitted 5 where the guardrail's own classifier admitted 2. Here
     a failure is only a reason, and the caller keeps the measured
     classifier's verdict, which is already in hand. The per-query cap check
-    before the call (`check_jev_per_query_cap`) and the charge after it
-    mirror `decide()`'s own Jev call, so the query pays for Jev exactly as
-    it does for every other decision, never $0 and never past its cap (fix
-    round, F-72-J02, J09).
+    before the call, held until the charge lands (`jev_charge_reserved`),
+    and the charge after it mirror `decide()`'s own Jev call, so the query
+    pays for Jev exactly as it does for every other decision, never $0 and
+    never past its cap, two Jev calls started at once included (fix round,
+    F-72-J02, J09; card 84, F-72-V02).
 
     Returns the validated `JevResult`, or one of `JevCallError.reason`'s
     values ("timeout", "http_error", "malformed_reply", "invalid_option"),
@@ -1519,37 +1520,39 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
     Never raises, except for cancellation, which stops the call with it.
     """
     try:
-        check_jev_per_query_cap(harness, trace_id)
+        with jev_charge_reserved(harness, trace_id):
+            try:
+                result = await wait_counting_free_time(
+                    call_jev(
+                        model=resolve_jev_model(),
+                        question_key=_INJECTION.point,
+                        state=text[:_INJECTION_STATE_MAX_CHARS],
+                        options=_INJECTION.options,
+                        api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+                        instructions=_INJECTION.instructions,
+                        criteria=_INJECTION.criteria,
+                    ),
+                    _JEV_INJECTION_WAIT_S,
+                )
+            except JevCallError as exc:
+                # A reply that came back but could not be used was still
+                # billed: charge `billed_cost_usd`, exactly as `decide()`'s
+                # own Jev call does (fix round, F-8.6-J10). It is the
+                # `JEV_FLOOR_COST_USD` floor for every unusable body, whatever
+                # its shape, and for a status other than 200, and `jev_client`
+                # has logged that amount (R-10 and its fix round, F-72-A03;
+                # card 84, F-72-V03).
+                if exc.billed_cost_usd:
+                    harness.track_cost(trace_id, "guard", exc.billed_cost_usd)
+                return exc.reason
+            except TimeoutError:
+                return "timeout"
+            except Exception:  # noqa: BLE001 - a broken Jev call leaves the classifier's verdict standing
+                return "unexpected_error"
+            harness.track_cost(trace_id, "guard", result.cost_usd)
+            return result
     except cost_control.QueryCapExceededError:
         return "cost_cap"
-    try:
-        result = await wait_counting_free_time(
-            call_jev(
-                model=resolve_jev_model(),
-                question_key=_INJECTION.point,
-                state=text[:_INJECTION_STATE_MAX_CHARS],
-                options=_INJECTION.options,
-                api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-                instructions=_INJECTION.instructions,
-                criteria=_INJECTION.criteria,
-            ),
-            _JEV_INJECTION_WAIT_S,
-        )
-    except JevCallError as exc:
-        # A reply that came back but could not be used was still billed:
-        # charge `billed_cost_usd`, exactly as `decide()`'s own Jev call does
-        # (fix round, F-8.6-J10). It is the `JEV_FLOOR_COST_USD` floor for
-        # every unusable body, whatever its shape, and `jev_client` has
-        # logged that amount (R-10 and its fix round, F-72-A03).
-        if exc.billed_cost_usd:
-            harness.track_cost(trace_id, "guard", exc.billed_cost_usd)
-        return exc.reason
-    except TimeoutError:
-        return "timeout"
-    except Exception:  # noqa: BLE001 - a broken Jev call leaves the classifier's verdict standing
-        return "unexpected_error"
-    harness.track_cost(trace_id, "guard", result.cost_usd)
-    return result
 
 
 async def _relevancy_decision(

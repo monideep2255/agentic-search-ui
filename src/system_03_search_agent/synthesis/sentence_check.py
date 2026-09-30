@@ -50,9 +50,9 @@ models.
 
 Depends on:
     - system_03_search_agent.synthesis.grounding (SynthesisCandidate)
-    - system_03_search_agent.harness.decide (jev_decides)
+    - system_03_search_agent.harness.decide (jev_decides, jev_charge_reserved)
     - system_03_search_agent.harness.jev_client (call_jev_batch)
-    - system_03_search_agent.harness.cost_control (check_per_query_cap)
+    - system_03_search_agent.harness.cost_control (QueryCapExceededError)
     - system_03_search_agent.harness.tiers (resolve_jev_model)
 
 Reads:
@@ -74,9 +74,8 @@ import re
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Final
 
-from system_03_search_agent.harness import cost_control
 from system_03_search_agent.harness.cost_control import QueryCapExceededError
-from system_03_search_agent.harness.decide import jev_decides
+from system_03_search_agent.harness.decide import jev_charge_reserved, jev_decides
 from system_03_search_agent.harness.jev_client import (
     JEV_TOTAL_TIMEOUT_S,
     JevAnswer,
@@ -347,8 +346,13 @@ async def _ask_jev(
 ) -> frozenset[tuple[str, tuple[str, ...]]]:
     """Jev's verdicts on every sentence, in one call.
 
-    Cap-checked first and charged after: Jev has no tier of its own, so
-    the guard tier's conservative estimate and cost bucket stand in. What
+    Cap-checked first, for the cost the call can actually be charged, and
+    charged after (`harness.decide.jev_charge_reserved`: the guard tier's
+    estimate, then `MAX_JEV_COST_USD` on top of what other Jev calls already
+    let through may still add; card 84, F-72-J09, V02). Before, the check
+    counted only the guard tier's $0.003 estimate, so a usable batch reply
+    stating up to $0.01 could take a question past its cap by $0.007. Jev
+    has no tier of its own, so the guard tier's cost bucket stands in. What
     a reply is charged is fixed in `jev_client` (`jev_charge_usd`): a usable
     reply the cost it states when that is a sensible amount, and any other
     reply that came back, unusable ones included, the small
@@ -359,23 +363,23 @@ async def _ask_jev(
     state, sent = build_jev_state(candidates)
     if not sent:
         raise SentenceCheckUnreadable("no item fits in one Jev call")
-    cost_control.check_per_query_cap(harness, trace_id, "guard")
-    try:
-        result = await call_jev_batch(
-            model=resolve_jev_model(),
-            state=state,
-            questions=build_jev_questions(len(sent)),
-            api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-            timeout_s=timeout_s,
-        )
-    except JevCallError as exc:
-        # An unusable reply was still billed: the floor it carries is
-        # charged, never zero, even though it approves nothing (fix round,
-        # F-8.6-J10; R-10's fix round, F-72-J11).
-        if exc.billed_cost_usd:
-            harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
-        raise
-    harness.track_cost(trace_id, "guard", result.cost_usd)  # type: ignore[arg-type]
+    with jev_charge_reserved(harness, trace_id):
+        try:
+            result = await call_jev_batch(
+                model=resolve_jev_model(),
+                state=state,
+                questions=build_jev_questions(len(sent)),
+                api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+                timeout_s=timeout_s,
+            )
+        except JevCallError as exc:
+            # An unusable reply was still billed: the floor it carries is
+            # charged, never zero, even though it approves nothing (fix
+            # round, F-8.6-J10; R-10's fix round, F-72-J11).
+            if exc.billed_cost_usd:
+                harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
+            raise
+        harness.track_cost(trace_id, "guard", result.cost_usd)  # type: ignore[arg-type]
     return approved_keys_from_jev(result, sent)
 
 

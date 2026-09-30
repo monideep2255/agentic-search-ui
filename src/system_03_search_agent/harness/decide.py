@@ -5,7 +5,8 @@ fallback on failure only").
 
 Depends on:
     - system_03_search_agent.harness.harness (Harness, HarnessCallError,
-      Message)
+      LLMResponse, Message); `ask_guard_model` sends every guard-tier call
+      the guardrail makes, one `call_tier(retry=False)` per request
     - system_03_search_agent.harness.cost_control (check_per_query_cap,
       per_query_cost_cap_usd, QueryCapExceededError)
     - system_03_search_agent.harness.jev_client (call_jev, JevCallError,
@@ -60,13 +61,15 @@ multiple-choice question over a capped string.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import email.utils
 import logging
 import math
 import os
 import re
 import time
-from collections.abc import Callable, Mapping, Sequence
+import weakref
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Final
@@ -569,6 +572,17 @@ async def _run_guard_pick(
     return call.parsed if call.answered else None
 
 
+#: The most each Jev call already let through by the pre-flight can still be
+#: charged, per `Harness` and trace, until its charge lands (card 84,
+#: F-72-V02). Keyed weakly so a finished question's harness takes its entry
+#: with it.
+_JEV_RESERVED: weakref.WeakKeyDictionary[Harness, dict[str, float]] = weakref.WeakKeyDictionary()
+
+
+def _reserved_usd(harness: Harness, trace_id: str) -> float:
+    return _JEV_RESERVED.get(harness, {}).get(trace_id, 0.0)
+
+
 def check_jev_per_query_cap(harness: Harness, trace_id: str) -> None:
     """The per-query cap's pre-flight for one Jev call, checked the way
     every other model call is checked: refused when the running cost plus
@@ -577,9 +591,12 @@ def check_jev_per_query_cap(harness: Harness, trace_id: str) -> None:
     Jev has no tier of its own, so the guard tier's estimate is checked as
     before, and then the most one Jev call can be charged,
     `MAX_JEV_COST_USD`, since a usable reply is charged the cost it states
-    up to that ceiling. Before, a Jev call was let through on the guard
-    tier's $0.003 estimate and an unusable reply then charged one cent, so
-    a question at $0.0965 of a $0.10 cap ended at $0.1065.
+    up to that ceiling, on top of what every other Jev call already let
+    through and not yet charged may still add (`jev_charge_reserved`, card
+    84, F-72-V02). Before, a Jev call was let through on the guard tier's
+    $0.003 estimate and an unusable reply then charged one cent, so a
+    question at $0.0965 of a $0.10 cap ended at $0.1065; and two Jev calls
+    checked at once each saw room for one.
 
     Raises:
         QueryCapExceededError: the call would take the question past its cap.
@@ -587,15 +604,46 @@ def check_jev_per_query_cap(harness: Harness, trace_id: str) -> None:
     cost_control.check_per_query_cap(harness, trace_id, "guard")
     cap = cost_control.per_query_cost_cap_usd()
     current = harness.get_query_cost_usd(trace_id)
-    if current + MAX_JEV_COST_USD > cap:
+    reserved = _reserved_usd(harness, trace_id)
+    if current + reserved + MAX_JEV_COST_USD > cap:
         raise QueryCapExceededError(
             f"asking Jev once more for query {trace_id!r} could take its running cost "
             "past the per-query cap; stop issuing further model calls for this query "
             "and move to Write with whatever tool results already exist",
             query_cost_usd=current,
             query_cap_usd=cap,
-            estimated_call_cost_usd=MAX_JEV_COST_USD,
+            estimated_call_cost_usd=MAX_JEV_COST_USD + reserved,
         )
+
+
+@contextlib.contextmanager
+def jev_charge_reserved(harness: Harness, trace_id: str) -> Iterator[None]:
+    """Check the cap for one Jev call and hold its most possible charge,
+    `MAX_JEV_COST_USD`, until the call's own charge has landed (card 84,
+    F-72-V02, J09).
+
+    Every Jev charge site wraps its call and its charge in this: `decide`'s
+    pick, the guardrail's injection pick and the sentence check. The check
+    and the hold happen together, with no await between them, so two Jev
+    calls started at once cannot both see room the other will use: the
+    guardrail starts its injection pick and its relevancy decision at the
+    same moment, and Think starts several decisions together.
+
+    Raises:
+        QueryCapExceededError: the call would take the question past its cap;
+            nothing is held.
+    """
+    check_jev_per_query_cap(harness, trace_id)
+    held = _JEV_RESERVED.setdefault(harness, {})
+    held[trace_id] = held.get(trace_id, 0.0) + MAX_JEV_COST_USD
+    try:
+        yield
+    finally:
+        left = held.get(trace_id, 0.0) - MAX_JEV_COST_USD
+        if left > 1e-12:
+            held[trace_id] = left
+        else:
+            held.pop(trace_id, None)
 
 
 async def _run_jev_pick(
@@ -617,37 +665,39 @@ async def _run_jev_pick(
     the small `JEV_FLOOR_COST_USD`, which `jev_client` has already fixed on
     `JevResult.cost_usd` or `JevCallError.billed_cost_usd` and logged by
     amount. The cap is checked first with the most one Jev call can be
-    charged (`check_jev_per_query_cap`), so no Jev charge takes the
-    question past its cap. Raises JevCallError (from `jev_client.call_jev`)
+    charged, held until the charge lands (`jev_charge_reserved`), so no Jev
+    charge takes the question past its cap, two started at once included. Raises JevCallError (from `jev_client.call_jev`)
     or `cost_control.QueryCapExceededError` on any failure; `_jev_attempt`
     catches both.
     """
-    check_jev_per_query_cap(harness, trace_id)
-    try:
-        result = await call_jev(
-            model=model,
-            question_key=point,
-            state=state,
-            options=options,
-            api_key=api_key,
-            instructions=instructions,
-            criteria=criteria,
-        )
-    except JevCallError as exc:
-        # A reply that came back but could not be used (any malformed body, an
-        # option outside the set, a cost that is not a sensible amount) was
-        # still billed: it is charged the floor it carries, never zero, and
-        # the cost cap then applies to the guard fallback as to any call
-        # (fix round, F-8.6-J10; R-10 and its fix round).
-        if exc.billed_cost_usd:
-            harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
-        raise
-    # Charged under the "guard" tier bucket for the same reason the cap
-    # check above reuses it: `Harness.track_cost`'s accumulator is not
-    # broken down per tier (its own docstring says so), it only sums onto
-    # `trace_id`'s running total, and Jev has no tier slot of its own.
-    harness.track_cost(trace_id, "guard", result.cost_usd)  # type: ignore[arg-type]
-    return result
+    with jev_charge_reserved(harness, trace_id):
+        try:
+            result = await call_jev(
+                model=model,
+                question_key=point,
+                state=state,
+                options=options,
+                api_key=api_key,
+                instructions=instructions,
+                criteria=criteria,
+            )
+        except JevCallError as exc:
+            # A reply that came back but could not be used (any malformed
+            # body, an option outside the set, a cost that is not a sensible
+            # amount, a status other than 200) was still billed: it is
+            # charged the floor it carries, never zero, and the cost cap
+            # then applies to the guard fallback as to any call (fix round,
+            # F-8.6-J10; R-10 and its fix round; card 84).
+            if exc.billed_cost_usd:
+                harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
+            raise
+        # Charged under the "guard" tier bucket for the same reason the cap
+        # check above reuses it: `Harness.track_cost`'s accumulator is not
+        # broken down per tier (its own docstring says so), it only sums
+        # onto `trace_id`'s running total, and Jev has no tier slot of its
+        # own.
+        harness.track_cost(trace_id, "guard", result.cost_usd)  # type: ignore[arg-type]
+        return result
 
 
 def jev_decides() -> bool:
