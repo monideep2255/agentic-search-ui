@@ -1050,6 +1050,17 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-09-29, evening. CARD 73 LIVE; TWO GUARDRAIL ATTEMPTS STOPPED; THE RETEST COLUMN CLEARED IN ONE BATCH. What awaits the owner and the next action: `HANDOFF.md`.
+
+- Card 73, #139: a crashed search writes its reason and trace id to the log, and the person's screen is unchanged. Builder, judge, adversary, one fix round, fresh verifier; merged with F-73-V01 named at the owner's choice.
+- The guardrail, cards 72 and 84, not merged:
+  - Card 72's diagnosis found the guard model's upstream slow in bursts. R-10 had fallen off the board and was built with card 72's hedged request as one change; its fresh verifier found an off-topic question admitted in a slow spell, and the owner parked it (`fix/card72-r10-guardrail`).
+  - Card 84, R-10's fixes alone, kept develop's retries and R-10's rate-limit rule; its adversary found an off-topic question and a forged-chat injection admitted under a rate limit, and the owner stopped it (`fix/card84-r10-sound-parts`). Guardrail work returns only as a design agreed first.
+- The owner's question, "you are just increasing work without finishing work", reset the way of working: cards only for what a person would notice, one piece carried to done at a time, and cards 76, 78, 81, 82 and 83 folded into 85.
+- The batch retest: three runners ran every Retest card's test queries on develop. The owner approved the 39 that passed; the 9 that failed are cards 86 to 94; 3 wait on the owner's eye.
+- Merged by the lead with `--admin` on the owner's grant: #133 to #143.
+- Decisions logged: ten rows dated 2026-09-29 in this part of the session. Learnings logged: three rows, among them racing two classifier replies, a brief whose two constraints contradicted each other, and reviewers misreading the stop rule.
+
 2026-09-29, second session. CARD 63 KEPT ON DEVELOP BELOW ITS GOLDEN FLOOR BY THE OWNER'S CHOICE; CARDS 62 AND 53 REVIEWED AND IN PULL REQUESTS. What awaits the owner and the next action: `HANDOFF.md`.
 
 - Card 63's checks, both kept by the owner: test queries 100 and 67 passed on develop, run by the team on a fresh test account. The golden run, on two more fresh test accounts, answered 98 of 150 against a floor of 101, with no rate-limit signal. The six lost runs were four guard-model timeouts on both attempts, one crash before the guard replied with no reason logged, and G-006's graph search timing out in all three passes, none in code card 63 changed. The owner kept card 63 and accepted the run; the run was not repeated.
