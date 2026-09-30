@@ -4,19 +4,18 @@ node.
 
 ## What these arms pin
 
-- Card 84 (R-10 lines 2 and 4, F-8.6-FJ11, FJ04, FA02, FA05, FJ05; F-72-J04,
-  J05, J08, V05, V06): every guard-tier call the guardrail makes, the
-  classifier and the relevancy decision's guard pick, sends at most two
-  requests, one after the other, never two at once. The second goes when
-  develop's policy sent its own second: at once after an error (develop's
-  `call_tier` resend), at two thirds of the budget after a hung first
-  request (R-01), at once after an unusable reply. It keeps all the rest
-  of the budget, so a slow failure then an answer inside 15 s is admitted.
-  A stated `Retry-After` is waited out first, or, when it does not fit,
-  ends the question at once saying how long to wait; it is read from
-  whichever request carried it. Each call writes one log line naming each
-  request's outcome, time and upstream host. No verdict is still no
-  answer, and no path passes the budget.
+- Card 84 (R-10 line 4, F-8.6-FJ04, FA02, FA05, FJ05; F-72-J04, J05, J08,
+  V05, V06), as the lead corrected it: every guard-tier call the guardrail
+  makes, the classifier and the relevancy decision's guard pick, keeps
+  develop's policy request for request, with its timing (R-01's attempts,
+  `call_tier`'s immediate resend, R-05's backoff), and never has two
+  requests in flight. Once the provider rate-limits a call, it sends at
+  most two requests in all; a stated `Retry-After` is waited out first,
+  or, when it does not fit, ends the question at once saying how long to
+  wait; it is read from whichever request carried it. Each call writes one
+  log line naming each request's outcome, time and upstream host. No
+  verdict is still no answer, and no path passes the budget. FJ11 stays
+  as on develop, pinned by its own test.
 - R-06 (F-8.6-RJ03, RJ09), then R-10 (F-8.6-FA03, F-72-J03, J07): in Jev
   mode, a refusal that only Jev's OWN relevancy pick could change waits
   only until `decide()` says Jev failed (`jev_failed`), not for the guard
@@ -279,11 +278,12 @@ def test_a_retry_after_date_is_read_as_a_wait() -> None:
 
 def test_the_first_request_keeps_two_thirds_and_the_budget_is_unchanged() -> None:
     """Nothing the owner holds moved: the guardrail's 15 s, R-01's share,
-    and two requests at most."""
+    R-05's backoff and floor, and two requests at most once rate-limited."""
     assert graph_module.budget_for_step("guardrail", "lookup") == 15.0
     assert graph_module._CLASSIFIER_FIRST_ATTEMPT_SHARE == pytest.approx(2 / 3)
-    assert decide_module.GUARD_MAX_REQUESTS == 2
+    assert decide_module.GUARD_RATE_LIMITED_MAX_REQUESTS == 2
     assert decide_module.GUARD_MIN_SECOND_REQUEST_S == 3.0
+    assert decide_module.GUARD_RETRY_BACKOFF_S == 2.0
 
 
 def test_a_first_request_that_hangs_gets_its_second_at_ten_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -314,21 +314,43 @@ def test_an_error_is_followed_at_once_as_on_develop(monkeypatch: pytest.MonkeyPa
     assert elapsed == pytest.approx(0.65)
 
 
-def test_a_slow_failure_then_an_answer_inside_the_budget_keeps_the_question(monkeypatch: pytest.MonkeyPatch) -> None:
-    """R-10 line 2 (F-8.6-FJ11): the first request fails after 9 s, and the
-    second answers 5.5 s after it is sent, inside the 15 s. On develop the
-    second was cut at the first attempt's 10 s share and a third request
-    had 5 s, too little, so the question failed at 15 s; now the second
-    keeps all the rest and the question is admitted at 14.5 s.
-
-    MUTATION PROOF: giving the second request only the first request's
-    share (cut at 10 s) turns this red on the step error."""
+def test_fj11_stays_as_on_develop_a_slow_failure_then_a_slow_answer_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R-10 line 2 (F-8.6-FJ11) is OPEN by the lead's correction of
+    2026-09-29, which keeps develop's timing exactly for every failure that
+    is not a rate limit. The first request fails after 9 s; develop resends
+    at once inside the first attempt's 10 s share, cuts that at 10 s, and
+    gives a third request the last 5 s, too little for a 5.5 s answer. The
+    fix that admitted this (the resend keeping all 15 s) loses questions
+    develop answers whenever that resend hangs and the third would have
+    answered, so it cannot keep develop's timing. Pinned so a change here is
+    seen, not to endorse it."""
     times = _classifier(monkeypatch, (9.0, _unavailable), (5.5, _ADMIT))
+    events, result, _, elapsed = _node(monkeypatch)
+    assert result.get("step_error") == _STEP_ERROR
+    assert _guard(events) is None
+    assert [t - times[0] for t in times] == [pytest.approx(0.0), pytest.approx(9.0), pytest.approx(10.0)]
+    assert elapsed == pytest.approx(15.0)
+
+
+def test_an_error_lasting_about_a_second_is_outlasted_as_on_develop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R-05's RJ08 blip, kept: both requests of the first attempt fail
+    inside a one-second error, the second attempt waits the 2 s backoff,
+    and the question is admitted on the third request.
+
+    MUTATION PROOF: no backoff between attempts turns this red."""
+    first: list[float] = []
+
+    def _blip() -> Any:
+        now = asyncio.get_running_loop().time()
+        first.append(now)
+        return _connection_error() if now - first[0] < 1.0 else _ADMIT
+
+    times = _classifier(monkeypatch, _blip)
     events, result, _, elapsed = _node(monkeypatch)
     assert result.get("step_error") is None
     assert _guard(events) == _ADMITTED
-    assert _gaps(times) == [pytest.approx(9.0)]
-    assert elapsed == pytest.approx(14.5)
+    assert len(times) == 3
+    assert elapsed == pytest.approx(2.0)
 
 
 def test_an_unusable_reply_is_followed_at_once(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -347,7 +369,7 @@ def test_an_unusable_reply_then_an_error_keeps_the_errors_words(monkeypatch: pyt
     events, result, _, _ = _node(monkeypatch)
     assert _guard(events) is None
     assert result.get("step_error") == _STEP_ERROR
-    assert len(times) == 2
+    assert len(times) == 3  # the second attempt's request and its resend, as on develop
 
 
 def test_a_guard_model_that_cannot_turn_reasoning_off_still_screens(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -402,11 +424,11 @@ def _rate_limit_error(message: str, retry_after_s: int) -> dict[str, Any]:
 
 def test_a_rate_limit_storm_costs_two_requests_and_says_to_wait(monkeypatch: pytest.MonkeyPatch) -> None:
     """R-10 (F-8.6-FJ04, FA02, FJ05): every request is a 429 naming no wait.
-    Two requests in all, never four, one after the other; the person is
-    told to wait a little, not to retry now.
+    Two requests in all, never develop's four, one after the other; the
+    person is told to wait a little, not to retry now.
 
-    MUTATION PROOF: `call_tier` with its own retry again (`retry=True`)
-    turns this red on the request count."""
+    MUTATION PROOF: allowing three requests to a rate-limited call turns
+    this red on the request count."""
     times = _classifier(monkeypatch, _rate_limited)
     events, result, _, _ = _node(monkeypatch)
     assert result.get("step_error") == _rate_limit_error(_BUSY_NO_WAIT, 0)
@@ -495,47 +517,53 @@ def test_the_rate_limit_message_counts_seconds_in_words(wait_s: float | None, me
 # ---------------------------------------------------------------------------
 
 _EVERY_FAILURE = [
-    ("hang",),
-    (_rate_limited,),
-    (_rate_limited("0.6"), _rate_limited("0.6"), "hang"),
-    (_connection_error, _connection_error, 0.1),
-    ((9.0, _unavailable), "hang"),
-    ("hang", _connection_error, 0.1),
-    ((1.5, _ADMIT), "hang"),
-    ("I will look this up.", "hang"),
-    ("I will look this up.", "I will look this up.", 0.1),
-    (_rate_limited("12.5"), 0.1),
-    (lambda: litellm.AuthenticationError(message="401 (stub)", llm_provider="openrouter", model="m"), 0.1),
+    (("hang",), 2, False),
+    ((_rate_limited,), 2, False),
+    ((_rate_limited("0.6"), _rate_limited("0.6"), "hang"), 2, False),
+    ((_connection_error, _connection_error, 0.1), 3, True),
+    ((_connection_error,), 4, False),
+    (((9.0, _unavailable), "hang"), 3, False),
+    (("hang", _connection_error, 0.1), 3, True),
+    (((1.5, _ADMIT), "hang"), 1, True),
+    (("I will look this up.", "hang"), 2, False),
+    (("I will look this up.", "I will look this up.", 0.1), 2, False),
+    ((_rate_limited("12.5"), 0.1), 1, False),
+    ((_connection_error, _rate_limited, 0.1), 2, False),
+    ((lambda: litellm.AuthenticationError(message="401 (stub)", llm_provider="openrouter", model="m"), 0.1), 1, False),
 ]
 _EVERY_FAILURE_IDS = [
     "a hang every time",
     "a 429 every time",
     "429s naming a wait, then a hang",
-    "two errors, then an answer a third request would get",
+    "two errors, then an answer: the third request, as on develop",
+    "errors every time: develop's four",
     "a slow error, then a hang",
-    "a hang, then an error, then an answer a third request would get",
+    "a hang, then an error, then an answer",
     "a slow first reply is not a failure",
     "unusable, then a hang",
     "two unusable replies, then an answer",
     "a wait that leaves too little",
+    "an error, then a 429: no third request",
     "a refused key",
 ]
 
 
-@pytest.mark.parametrize("behaviours", _EVERY_FAILURE, ids=_EVERY_FAILURE_IDS)
+@pytest.mark.parametrize(("behaviours", "requests", "admitted"), _EVERY_FAILURE, ids=_EVERY_FAILURE_IDS)
 def test_no_verdict_is_no_answer_and_no_path_passes_the_budget(
-    monkeypatch: pytest.MonkeyPatch, behaviours: tuple[Any, ...]
+    monkeypatch: pytest.MonkeyPatch, behaviours: tuple[Any, ...], requests: int, admitted: bool
 ) -> None:
+    """Every shape: the requests develop sent, or at most two once one was
+    rate-limited; never two in flight; never past the budget; no verdict,
+    no admission."""
     times = _classifier(monkeypatch, *behaviours)
     events, result, _, elapsed = _node(monkeypatch)
-    assert len(times) <= decide_module.GUARD_MAX_REQUESTS
+    assert len(times) == requests
     assert times.peak == 1
     assert elapsed <= 15.0 + 1e-6
-    guard = _guard(events)
-    if result.get("step_error") is None:
-        assert guard == _ADMITTED and behaviours[0] == (1.5, _ADMIT)
+    if admitted:
+        assert result.get("step_error") is None and _guard(events) == _ADMITTED
     else:
-        assert guard is None
+        assert result.get("step_error") is not None and _guard(events) is None
 
 
 def test_with_jev_a_classifier_that_never_answers_is_never_an_admission(
@@ -583,7 +611,7 @@ def test_each_guard_call_logs_its_time_and_upstream_host_and_nothing_private(
     line = ours[0].getMessage()
     assert line == (
         f"guard call guard classification (trace {harness.trace_id}): answered after 10.20s in all, "
-        "2 of at most 2 requests; request 1: cut at its budget after 10.00s; "
+        "2 requests; request 1: cut at its budget after 10.00s; "
         f"request 2: answered after 0.20s, upstream DeepInfra{'x' * 55}"
     )
     for record in caplog.records:

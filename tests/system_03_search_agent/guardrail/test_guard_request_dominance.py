@@ -1,6 +1,7 @@
-"""Card 84 (R-10 without card 72's hedge): the guard calls' two-request
-policy never loses a search develop answers, and never answers it later or
-differently, wherever develop answered within two requests.
+"""Card 84 (R-10 without card 72's hedge, as the lead corrected it on
+2026-09-29): the guard calls never lose a search develop answers, and
+never answer it later or differently, unless the provider rate-limited the
+call.
 
 ## What this pins
 
@@ -14,29 +15,23 @@ fast on-topic), two policies are run:
   with the rest, each through `call_tier`'s own immediate resend, with
   R-05's backoff between them), and `call_tier`'s default retry for the
   relevancy decision's guard pick. Ported line for line below as the
-  yardstick, since develop's code is replaced on this branch.
+  yardstick, since develop's code is replaced on this branch; the port was
+  checked case for case against develop's real code.
 - This branch's, through the REAL code: the guardrail node for the
   classifier, and `harness.decide._run_guard_pick` for the pick.
 
-For every case, the new policy sends at most two requests, never two at
-once, and never passes the budget. For every case where develop reached a
-verdict (an admission or a refusal) within its first two requests, and no
-request before it stated a `Retry-After`, the new policy reaches the SAME
-verdict, no later. Nothing races: one reply decides, the first usable one
-in sequence, exactly as on develop.
+For every case, the new policy never has two requests in flight and never
+passes the budget, and a call that met a 429 sends at most two requests.
+For every case where develop reached a verdict (an admission or a refusal)
+without meeting a 429, the new policy sends the SAME requests and reaches
+the SAME verdict at the SAME moment.
 
-## The two classes it cannot hold, counted rather than hidden
+## The one class it cannot hold, counted rather than hidden
 
-- Develop's verdict came from its third or fourth request. The two-request
-  cap (R-10 line 4) forbids those, so such a search can be lost, for
-  example an error lasting about a second that fails the first two
-  requests (R-05's RJ08 blip). Counted as `third_request`.
-- A request before develop's verdict stated a `Retry-After`, which develop's
-  immediate resend ignored and R-10 line 4 now honours. Counted as
-  `stated_wait`.
-
-Both counts are asserted to be the only places the policies differ, and
-reported by `test_the_sweep_reports_what_the_cap_gives_up`.
+Develop met a 429 before its verdict. R-10 line 4 caps such a call at two
+requests and honours a stated `Retry-After`, where develop's immediate
+resend ignored it and its second attempt sent two more. Counted as
+`rate_limited`, and reported by `test_the_sweep_reports_what_the_cap_gives_up`.
 
 ## How it runs
 
@@ -301,7 +296,7 @@ class _Run:
     elapsed_s: float
     requests: int
     peak: int
-    stated_wait_before_verdict: bool = False
+    rate_limited: bool = False
     outcomes: list[_Outcome] = field(default_factory=list)
 
 
@@ -336,8 +331,8 @@ def _run(monkeypatch: pytest.MonkeyPatch, provider: _Provider, *, develop: bool,
             result = await graph_module.guardrail_node(state)  # type: ignore[arg-type]
             guard = next((e.payload for e in result.get("events", []) if e.type == "guard"), None)
             verdict = None if guard is None else guard["category"]
-        stated = any(o.kind == "rate_limit" and (o.retry_after_s or 0) > 0 for o in stub.outcomes[:-1])
-        return _Run(verdict, loop.time() - started, len(stub.sent), stub.peak, stated, list(stub.outcomes))
+        rate_limited = any(o.kind == "rate_limit" for o in stub.outcomes)
+        return _Run(verdict, loop.time() - started, len(stub.sent), stub.peak, rate_limited, list(stub.outcomes))
 
     return run_virtual(monkeypatch, _go)
 
@@ -360,7 +355,11 @@ def _sweep(monkeypatch: pytest.MonkeyPatch, grid: list[_Provider], *, pick: bool
         old = _run(monkeypatch, provider, develop=True, pick=pick, budget_s=budget_s)
         new = _run(monkeypatch, provider, develop=False, pick=pick, budget_s=budget_s)
         where = f"{provider.name}, budget {budget_s:g}s"
-        if new.requests > decide_module.GUARD_MAX_REQUESTS:
+        if new.rate_limited:
+            first_429 = next(i for i, o in enumerate(new.outcomes, 1) if o.kind == "rate_limit")
+            if new.requests > max(decide_module.GUARD_RATE_LIMITED_MAX_REQUESTS, first_429):
+                sweep.problems.append(f"{where}: {new.requests} requests, the first 429 on request {first_429}")
+        if new.requests > 4:
             sweep.problems.append(f"{where}: {new.requests} requests")
         if new.peak > 1:
             sweep.problems.append(f"{where}: {new.peak} requests in flight at once")
@@ -369,18 +368,17 @@ def _sweep(monkeypatch: pytest.MonkeyPatch, grid: list[_Provider], *, pick: bool
         if old.verdict is None:
             continue
         sweep.develop_answered += 1
-        if old.requests > decide_module.GUARD_MAX_REQUESTS:
-            kind = "third_request"
-        elif old.stated_wait_before_verdict:
-            kind = "stated_wait"
-        else:
+        if not old.rate_limited:
             if new.verdict != old.verdict:
                 sweep.problems.append(f"{where}: develop {old.verdict}, new {new.verdict}")
             elif new.elapsed_s > old.elapsed_s + 1e-6:
                 sweep.problems.append(f"{where}: develop {old.elapsed_s:.2f}s, new {new.elapsed_s:.2f}s")
+            elif new.requests != old.requests:
+                sweep.problems.append(f"{where}: develop {old.requests} requests, new {new.requests}")
             else:
                 sweep.held += 1
             continue
+        kind = "rate_limited"
         if new.verdict is None:
             sweep.classes[f"{kind}: lost"] += 1
         elif new.verdict != old.verdict:
@@ -424,40 +422,39 @@ def _pick_grid() -> list[_Provider]:
     return grid
 
 
-def test_the_classifier_never_loses_or_slows_a_search_develop_answered_within_two_requests(
+def test_the_classifier_never_loses_or_slows_a_search_develop_answered_without_a_rate_limit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Acceptance line 1. Every case: at most two requests, never two at
-    once, never past the budget. Every case develop answered within two
-    requests with no stated wait before its verdict: the same verdict, no
-    later. The grid's size and the count held are pinned, so a grid that
-    shrank or stopped exercising develop would show here."""
+    """Acceptance line 1, as corrected. Every case: never two requests at
+    once, never past the budget, at most two after a 429. Every case
+    develop answered without a 429: the same requests, the same verdict, at
+    the same moment. The grid's size and the count held are pinned, so a
+    grid that shrank or stopped exercising develop would show here."""
     sweep = _classifier_sweep(monkeypatch)
     assert sweep.problems == [], "\n".join(sweep.problems[:20])
     assert sweep.cases == len(_classifier_grid()) * 2 >= 10_000
-    assert sweep.held >= sweep.develop_answered // 2, (sweep.held, sweep.develop_answered)
-    differing = {k: v for k, v in sweep.classes.items() if "same, no later" not in k}
-    assert all(k.startswith(("third_request", "stated_wait")) for k in differing), differing
+    assert sweep.held >= sweep.develop_answered * 3 // 4, (sweep.held, sweep.develop_answered)
+    assert all(k.startswith("rate_limited") for k in sweep.classes), sweep.classes
 
 
-def test_the_relevancy_pick_never_loses_or_slows_a_pick_develop_made_without_a_stated_wait(
+def test_the_relevancy_pick_never_loses_or_slows_a_pick_develop_made_without_a_rate_limit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The relevancy decision's guard pick: develop's `call_tier` already
-    sent at most two requests, so every pick develop made is made here, the
-    same, no later, except where a request stated a wait."""
+    """The relevancy decision's guard pick: every pick develop made without
+    a 429 is made here, the same, at the same moment, with the same
+    requests."""
     sweep = _sweep(monkeypatch, _pick_grid(), pick=True)
     assert sweep.problems == [], "\n".join(sweep.problems[:20])
     assert sweep.cases == len(_pick_grid()) >= 250
-    assert set(sweep.classes) <= {k for k in sweep.classes if k.startswith("stated_wait")}
+    assert all(k.startswith("rate_limited") for k in sweep.classes), sweep.classes
     assert sweep.held >= sweep.develop_answered // 2
 
 
 def test_the_sweep_reports_what_the_cap_gives_up(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
-    """The two classes dominance cannot hold, printed with their counts for
-    the builder's report (`pytest -s`). An error lasting about a second that
-    fails develop's first two requests (R-05's RJ08 blip) is lost: develop
-    answered it on its third request."""
+    """The one class dominance cannot hold, a call the provider rate-limited,
+    printed with its counts for the builder's report (`pytest -s`). R-05's
+    RJ08 blip, an error lasting about a second that fails develop's first
+    two requests, is answered as on develop, on the third request."""
     sweep = _classifier_sweep(monkeypatch)
     with capsys.disabled():
         print(f"\nclassifier sweep: {sweep.cases} cases, develop answered {sweep.develop_answered}, "
@@ -468,8 +465,7 @@ def test_the_sweep_reports_what_the_cap_gives_up(monkeypatch: pytest.MonkeyPatch
     old = _run(monkeypatch, blip, develop=True)
     new = _run(monkeypatch, blip, develop=False)
     assert (old.verdict, old.requests) == ("ok", 3)
-    assert (new.verdict, new.requests) == (None, 2)
-    assert sweep.classes["third_request: lost"] > 0
+    assert (new.verdict, new.requests, new.elapsed_s) == ("ok", 3, pytest.approx(old.elapsed_s))
 
 
 # ---------------------------------------------------------------------------
@@ -508,11 +504,11 @@ def test_the_sweep_catches_a_hedge(monkeypatch: pytest.MonkeyPatch) -> None:
     real = decide_module.ask_guard_model
 
     async def _hedged(harness: Any, trace_id: str, messages: Any, **kwargs: Any) -> Any:
-        first = asyncio.ensure_future(real(harness, trace_id, messages, **{**kwargs, "retry_unusable": False}))
+        first = asyncio.ensure_future(real(harness, trace_id, messages, **kwargs))
         await asyncio.wait({first}, timeout=4.0)
         if first.done():
             return first.result()
-        second = asyncio.ensure_future(real(harness, trace_id, messages, **{**kwargs, "retry_unusable": False}))
+        second = asyncio.ensure_future(real(harness, trace_id, messages, **kwargs))
         done, _ = await asyncio.wait({first, second}, return_when=asyncio.FIRST_COMPLETED)
         winner = done.pop()
         for task in (first, second):
@@ -562,11 +558,16 @@ def test_the_sweep_catches_a_second_request_cut_at_the_first_share(monkeypatch: 
     assert any("develop ok, new None" in p or "develop off_topic, new None" in p for p in problems), problems[:5]
 
 
-def test_a_third_request_is_never_sent(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The cap holds against a provider that would answer a third request,
-    where develop spent four."""
-    provider = _by_index((_Outcome("error", 0.05), _Outcome("error", 0.05), _Outcome("reply", 0.3, "admit")))
-    new = _run(monkeypatch, provider, develop=False)
-    assert new.requests == 2 and new.verdict is None
-    old = _run(monkeypatch, provider, develop=True)
-    assert old.requests == 3 and old.verdict == "ok"
+def test_a_rate_limited_call_never_sends_a_third_request(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The cap holds only for a rate limit: two 503s and then an answer is
+    answered on the third request, as on develop; two 429s end the call,
+    where develop sent two more."""
+    errors = _by_index((_Outcome("error", 0.05), _Outcome("error", 0.05), _Outcome("reply", 0.3, "admit")))
+    new = _run(monkeypatch, errors, develop=False)
+    old = _run(monkeypatch, errors, develop=True)
+    assert (new.requests, new.verdict) == (old.requests, old.verdict) == (3, "ok")
+    limited = _by_index((_Outcome("rate_limit", 0.05), _Outcome("rate_limit", 0.05), _Outcome("reply", 0.3, "admit")))
+    new = _run(monkeypatch, limited, develop=False)
+    old = _run(monkeypatch, limited, develop=True)
+    assert (new.requests, new.verdict) == (2, None)
+    assert (old.requests, old.verdict) == (3, "ok")

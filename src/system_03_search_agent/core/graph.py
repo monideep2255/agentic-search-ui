@@ -1805,39 +1805,36 @@ async def _guardrail_after_prefilter(
     # verdict instead.
     guard_messages = classifier.build_messages(query.text)
 
-    # At most two requests, one after the other, never two at once (card
-    # 84: R-10 without card 72's hedge; `harness.decide.ask_guard_model`).
+    # Develop's two attempts, request for request, never two requests at
+    # once (card 84: R-10 without card 72's hedge, as the lead corrected it;
+    # `harness.decide.ask_guard_model`).
     #
-    # Two, not one, mirroring `think_node`'s handling of the same failure.
-    # Measured 2026-09-13 across thirteen live Guard calls carrying the
-    # session block: twelve parsed, one came back as something other than
+    # Two attempts, not one, mirroring `think_node`'s handling of the same
+    # failure. Measured 2026-09-13 across thirteen live Guard calls carrying
+    # the session block: twelve parsed, one came back as something other than
     # the JSON object the instruction demands, and that one run refused a
-    # question the other twelve admitted. A second request on an UNUSABLE
+    # question the other twelve admitted. A second attempt on an UNUSABLE
     # reply is not a second opinion on a verdict: a reply that parsed,
     # whatever it said, is final, and two unusable replies still end in the
     # fail-closed step error below.
     #
-    # Re-land, R-01 (G-005): the first request gets two thirds of what is
+    # Re-land, R-01 (G-005): the first attempt gets two thirds of what is
     # left of the guardrail's budget (`_CLASSIFIER_FIRST_ATTEMPT_SHARE`),
-    # which is not changed, and one cut there, or one that failed with a
-    # transient error, is followed at once by a second with ALL the rest.
-    # That second is the resend develop's `call_tier` sent at the same
-    # moment, now given the whole remaining budget rather than the first
-    # attempt's share, so a request that fails slowly and a second that then
-    # answers inside the 15 seconds keep the question (R-10 line 2,
-    # F-8.6-FJ11). A rate limit that names a `Retry-After` is waited out
-    # first, and ends the question at once, saying how long to wait, when
-    # that does not fit (R-10 line 4). Develop could send four requests: two
-    # attempts, each through `call_tier`'s own resend, with R-05's backoff
-    # between them; those last two are what the two-request cap gives up
-    # (see `test_guard_request_dominance.py`). No verdict is still no answer.
+    # which is not changed, and a timeout or a transient error gets a second
+    # attempt with the rest, after R-05's backoff when it was an error. Each
+    # attempt resends a transient error once at once, as `call_tier` did. A
+    # rate limit is the one change (R-10 line 4): once the provider answers
+    # 429, the call sends at most two requests in all, waits out a stated
+    # `Retry-After` first, and ends the question at once, saying how long to
+    # wait, when that does not fit. No verdict is still no answer.
     #
     # How it composes with the harness: each request is its own
-    # `enforce_timeout` around one `call_tier(retry=False)`, after the
-    # per-query cap's pre-flight. A request cut by its budget is charged by
-    # `call_tier`'s cancellation arm, the harness's own estimate of what the
-    # provider may have billed (F-2.1-B02); one that failed with an error
-    # returned nothing billable and is charged nothing.
+    # `enforce_timeout` around one `call_tier(retry=False)`, inside its
+    # attempt's budget, after the per-query cap's pre-flight for the
+    # attempt. A request cut by its budget is charged by `call_tier`'s
+    # cancellation arm, the harness's own estimate of what the provider may
+    # have billed (F-2.1-B02); one that failed with an error returned nothing
+    # billable and is charged nothing.
     def _parse(content: Any) -> tuple[classifier.InjectionClassification, GuardVerdict]:
         try:
             parsed = classifier.parse_classification(content)
@@ -1862,8 +1859,8 @@ async def _guardrail_after_prefilter(
             step="guardrail",
             deadline=step_deadline,
             parse=_parse,
+            attempts=2,
             first_share=_CLASSIFIER_FIRST_ATTEMPT_SHARE,
-            retry_unusable=True,
         )
     except cost_control.QueryCapExceededError:
         return {"cap_exceeded": True}

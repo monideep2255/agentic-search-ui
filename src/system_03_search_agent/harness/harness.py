@@ -638,10 +638,11 @@ class Harness:
         failure is raised, classified, from that request's own exception,
         so the caller reads a rate limit's `Retry-After` from the request
         that carried it. Every guard-tier call the guardrail makes passes it
-        (`harness.decide.ask_guard_model`), because that path decides for
-        itself when its one further request goes, one after the other,
-        never two at once, and promises the provider at most two per call
-        (card 84). The reasoning fallback is still taken (R-10 fix round,
+        (`harness.decide.ask_guard_model`), because that path sends
+        develop's resend itself, one request after the other, never two at
+        once, so it can see a rate limit on the request that met it and hold
+        a rate-limited call to two requests (card 84). The reasoning
+        fallback is still taken (R-10 fix round,
         F-72-J08): it is not a second request for the same answer but the
         only way a model that cannot turn reasoning off can be asked at all,
         and without it such a guard model would fail every question at the

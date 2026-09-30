@@ -247,19 +247,35 @@ def _parse_guard_choice(raw: str, options: Sequence[str]) -> str | None:
 # (card 84, re-land follow-up R-10 without card 72's hedge).
 # ---------------------------------------------------------------------------
 
-#: The most requests one guard-tier call sends the provider for its answer
-#: (R-10, F-8.6-FJ04). Develop's policy could send four: two attempts, each
-#: through `call_tier`'s own immediate resend. A resend without the
-#: reasoning setting (F-72-J08) is part of the same request, not a second.
-GUARD_MAX_REQUESTS: Final[int] = 2
+#: The most requests a RATE-LIMITED guard-tier call sends (R-10 line 4,
+#: F-8.6-FJ04; card 84, the lead's correction of 2026-09-29): once any
+#: request of the call meets a 429, the call sends no more than this in all.
+#: Every other failure keeps develop's policy, which can send four. A resend
+#: without the reasoning setting (F-72-J08) is part of the same request.
+GUARD_RATE_LIMITED_MAX_REQUESTS: Final[int] = 2
 
-#: The least time the second request must keep for itself after waiting
-#: out a provider's `Retry-After` (develop's `_CLASSIFIER_MIN_SECOND_ATTEMPT_S`,
-#: re-land follow-up R-05, unchanged): phase 8.6's golden run put the guard
-#: verdict's median at 1.53 s, and three seconds covers most replies. When
-#: the stated wait would leave less, no second request is sent, since asking
-#: before the provider said to is the hammering R-05 removed.
+#: The least time a request must keep for itself after a wait before it
+#: (develop's `_CLASSIFIER_MIN_SECOND_ATTEMPT_S`, re-land follow-up R-05,
+#: unchanged): phase 8.6's golden run put the guard verdict's median at
+#: 1.53 s, and three seconds covers most replies. A backoff that would
+#: leave less is shortened; a provider's own `Retry-After` that would leave
+#: less means no further request, since asking before the provider said to
+#: is the hammering R-05 removed.
 GUARD_MIN_SECOND_REQUEST_S: Final[float] = 3.0
+
+#: How long a second ATTEMPT waits after the first ended in an error that
+#: is not a rate limit (develop's `_CLASSIFIER_RETRY_BACKOFF_S`, re-land
+#: follow-up R-05, F-8.6-RJ01, RJ08, RA02, unchanged): two seconds outlasts
+#: an error of about a second. An attempt cut by its own budget gets no wait.
+GUARD_RETRY_BACKOFF_S: Final[float] = 2.0
+
+
+def _attempt_wait_s(exc: HarnessCallError, remaining_s: float) -> float:
+    """Develop's `_classifier_retry_wait_s` for a failure that is not a rate
+    limit (a rate-limited call never reaches a second attempt here)."""
+    if exc.source.startswith("harness.enforce_timeout"):
+        return 0.0
+    return max(0.0, min(GUARD_RETRY_BACKOFF_S, remaining_s - GUARD_MIN_SECOND_REQUEST_S))
 
 
 def rate_limit_behind(exc: BaseException) -> BaseException | None:
@@ -332,8 +348,8 @@ def provider_retry_after_s(error: BaseException) -> float | None:
 
 class GuardReplyUnusable(ValueError):
     """Raised by an `ask_guard_model` caller's `parse` when a reply that came
-    back cannot be used. `ask_guard_model` then sends its second request
-    when the caller asked for that (`retry_unusable`)."""
+    back cannot be used. The call then goes on to its next attempt, when it
+    has one, as develop's classifier did."""
 
 
 #: The longest upstream host name written to the log (bounded again here,
@@ -356,8 +372,9 @@ class GuardCall:
       whichever request carried a `Retry-After`, the later one winning; 0.0
       when the stated wait has already passed; None when no request
       stated one or the call did not end on a rate limit.
-    - `requests`: how many requests were sent, never more than
-      `GUARD_MAX_REQUESTS`.
+    - `requests`: how many requests were sent: at most four, develop's two
+      attempts of two, and at most `GUARD_RATE_LIMITED_MAX_REQUESTS` once
+      one of them was rate-limited (`rate_limited`).
     """
 
     parsed: Any = None
@@ -366,6 +383,7 @@ class GuardCall:
     unusable: bool = False
     rate_limit_wait_s: float | None = None
     requests: int = 0
+    rate_limited: bool = False
     lines: list[str] = field(default_factory=list)
 
 
@@ -389,6 +407,10 @@ def _failure_words(exc: HarnessCallError) -> str:
     return f"failed, {exc.error_class} ({kind[:40]})"
 
 
+class _StopCall(Exception):
+    """Ends a rate-limited call: no further request may be sent."""
+
+
 async def ask_guard_model(
     harness: Harness,
     trace_id: str,
@@ -398,102 +420,148 @@ async def ask_guard_model(
     step: str,
     deadline: float,
     parse: Callable[[str], Any],
+    attempts: int = 1,
     first_share: float = 1.0,
-    retry_unusable: bool = False,
     max_tokens: int | None = None,
 ) -> GuardCall:
-    """One guard-tier call, sent as at most two requests one after the
-    other, never two at once (card 84: R-10 without card 72's hedge).
+    """One guard-tier call: develop's own policy, request for request,
+    except when the provider rate-limits it, and never two requests at once
+    (card 84: R-10 without card 72's hedge, as the lead corrected it).
 
-    Develop's policy, request by request, cut at two:
+    Develop's policy, kept exactly for every failure that is not a rate
+    limit, with its timing:
 
-    - Request 1 may run to `first_share` of what is left before `deadline`
-      (the classifier's two thirds, re-land R-01; the whole of it for a
-      guard pick, which develop never cut early).
-    - A usable reply decides. An unusable one is followed at once by
-      request 2 when `retry_unusable` (the classifier, as on develop), and
-      otherwise ends the call.
-    - Request 1 cut at its share: request 2 at once with the rest (R-01).
-    - Request 1 failing with a transient error: request 2 at once, the
-      moment develop's `call_tier` sent its own resend, but with ALL the
-      rest of the budget, where develop cut that resend at the first
-      attempt's share. That is R-10 line 2 (F-8.6-FJ11): a request that
-      fails slowly and a second that then answers inside the budget keep
-      the question.
-    - Except a rate limit that states a `Retry-After`: request 2 waits that
-      long first (R-10 line 4, F-8.6-FA05), and is not sent at all when the
-      wait would leave it less than `GUARD_MIN_SECOND_REQUEST_S`.
-    - Any other failure, or a failure of request 2, ends the call.
+    - Up to `attempts` attempts (the classifier's two, re-land R-01; one
+      for a guard pick). The first may run to `first_share` of what is left
+      before `deadline` (two thirds for the classifier), a second to the
+      rest.
+    - Inside an attempt, a transient error is resent at once, once, within
+      the attempt's own budget: what `call_tier`'s own retry did.
+    - An attempt that ended in a transient error is followed, when another
+      is allowed, after `GUARD_RETRY_BACKOFF_S` (shortened to keep
+      `GUARD_MIN_SECOND_REQUEST_S`), or at once when the attempt was cut by
+      its budget (R-05). An unusable reply goes to the next attempt at once.
+    - The per-query cap's pre-flight runs before each attempt.
 
-    So every provider behaviour develop answered within its first two
-    requests is answered here at the same moment with the same reply,
-    except where a stated wait is now honoured; develop's third and fourth
-    requests are the ones given up. `test_guard_request_dominance.py`
-    sweeps both policies over timings and verdicts to hold this.
+    A rate limit (R-10 line 4, F-8.6-FJ04, FA05): once any request meets a
+    429, the call sends at most `GUARD_RATE_LIMITED_MAX_REQUESTS` in all. A
+    `Retry-After` it states is waited out before the next request, or ends
+    the call at once when it would leave that request less than
+    `GUARD_MIN_SECOND_REQUEST_S`. The one request left then keeps all the
+    rest of the budget.
 
-    Each request is one `call_tier(..., retry=False)` inside
-    `enforce_timeout(step, ...)`, after the per-query cap's pre-flight,
-    which raises `QueryCapExceededError` to the caller. One log line per
-    call (`_log_guard_call`) names each request's outcome, its time and the
-    upstream host OpenRouter reports, and the trace id; never the key, a
-    token, the question or the prompt.
+    So every provider behaviour develop answered without a 429 is answered
+    here the same, at the same moment; `test_guard_request_dominance.py`
+    sweeps both over timings and verdicts. Each request is one
+    `call_tier(..., retry=False)` inside `enforce_timeout(step, ...)`. One
+    log line per call (`_log_guard_call`) names each request's outcome,
+    time and upstream host, and the trace id; never the key, a token, the
+    question or the prompt.
     """
     call = GuardCall()
     started = time.monotonic()
     stated_until: float | None = None
     outcome = "no request sent: the budget was already spent"
-    try:
-        for number in range(1, GUARD_MAX_REQUESTS + 1):
-            remaining_s = deadline - time.monotonic()
-            if remaining_s <= 0:
-                if number > 1:
-                    outcome = "the budget ran out before a second request"
-                break
-            budget_s = remaining_s * first_share if number == 1 else remaining_s
-            cost_control.check_per_query_cap(harness, trace_id, "guard")
-            sent = time.monotonic()
-            call.requests = number
-            outcome = f"stopped while request {number} was running"
-            try:
-                response = await harness.enforce_timeout(
-                    step,
-                    harness.call_tier(
-                        "guard", messages, cache_prefix=None, max_tokens=max_tokens, retry=False
-                    ),
-                    budget_s,
-                )
-            except HarnessCallError as exc:
-                call.error, call.unusable = exc, False
-                took = time.monotonic() - sent
-                call.lines.append(f"request {number}: {_failure_words(exc)} after {took:.2f}s")
-                rate_limit = rate_limit_behind(exc)
-                stated = provider_retry_after_s(rate_limit) if rate_limit is not None else None
+
+    async def _request(budget_s: float) -> LLMResponse:
+        """One request, noted on `call`; its failure is the caller's."""
+        nonlocal outcome, stated_until
+        number = call.requests = call.requests + 1
+        sent = time.monotonic()
+        outcome = f"stopped while request {number} was running"
+        if budget_s <= 0:
+            # The attempt's budget was already spent: what `enforce_timeout`
+            # does at once, without sending anything.
+            call.requests -= 1
+            spent = HarnessCallError(
+                "the attempt's budget was spent before its resend could go out",
+                error_class="transient",
+                source=f"harness.enforce_timeout:{step}",
+            )
+            call.error, call.unusable = spent, False
+            raise spent
+        try:
+            response = await harness.enforce_timeout(
+                step,
+                harness.call_tier("guard", messages, cache_prefix=None, max_tokens=max_tokens, retry=False),
+                budget_s,
+            )
+        except HarnessCallError as exc:
+            call.error, call.unusable = exc, False
+            call.lines.append(f"request {number}: {_failure_words(exc)} after {time.monotonic() - sent:.2f}s")
+            outcome = _failure_words(exc)
+            rate_limit = rate_limit_behind(exc)
+            if rate_limit is not None:
+                call.rate_limited = True
+                stated = provider_retry_after_s(rate_limit)
                 if stated is not None:
                     stated_until = time.monotonic() + stated
-                outcome = _failure_words(exc)
-                if exc.error_class != "transient" or number == GUARD_MAX_REQUESTS:
+            raise
+        call.lines.append(
+            f"request {number}: answered after {time.monotonic() - sent:.2f}s, upstream {_clean_upstream(response)}"
+        )
+        return response
+
+    async def _after_rate_limit() -> LLMResponse:
+        """The one request a rate-limited call may still send, after any
+        stated wait, with all that is left; `_StopCall` when none may go."""
+        nonlocal outcome
+        if call.requests >= GUARD_RATE_LIMITED_MAX_REQUESTS:
+            raise _StopCall
+        wait_s = max(0.0, (stated_until or 0.0) - time.monotonic())
+        if wait_s > 0:
+            if wait_s + GUARD_MIN_SECOND_REQUEST_S > deadline - time.monotonic():
+                outcome = "rate limited, and the stated wait does not fit the budget"
+                raise _StopCall
+            await asyncio.sleep(wait_s)
+        try:
+            return await _request(deadline - time.monotonic())
+        except HarnessCallError:
+            raise _StopCall from None
+
+    try:
+        for attempt in range(1, attempts + 1):
+            remaining_s = deadline - time.monotonic()
+            if remaining_s <= 0:
+                if call.requests:
+                    outcome = f"{outcome}; the budget ran out before another attempt"
+                break
+            cost_control.check_per_query_cap(harness, trace_id, "guard")
+            attempt_deadline = time.monotonic() + (remaining_s * first_share if attempt == 1 else remaining_s)
+            try:
+                response = await _request(attempt_deadline - time.monotonic())
+            except HarnessCallError as exc:
+                response = None
+                if call.rate_limited:
+                    response = await _after_rate_limit()
+                elif exc.error_class == "transient" and not exc.source.startswith("harness.enforce_timeout"):
+                    try:
+                        response = await _request(attempt_deadline - time.monotonic())
+                    except HarnessCallError:
+                        if call.rate_limited:
+                            response = await _after_rate_limit()
+            if response is None:
+                failure = call.error
+                if failure is None or attempt == attempts or failure.error_class != "transient":
                     break
-                if stated is not None and stated > 0:
-                    if stated + GUARD_MIN_SECOND_REQUEST_S > deadline - time.monotonic():
-                        outcome = "rate limited, and the stated wait does not fit the budget"
-                        break
-                    await asyncio.sleep(stated)
+                wait_s = _attempt_wait_s(failure, deadline - time.monotonic())
+                if wait_s > 0:
+                    await asyncio.sleep(wait_s)
                 continue
-            took = time.monotonic() - sent
-            upstream = _clean_upstream(response)
             try:
                 call.parsed = parse(response.content)
             except GuardReplyUnusable:
                 call.error, call.unusable = None, True
-                call.lines.append(f"request {number}: answered, unusable, after {took:.2f}s, upstream {upstream}")
+                call.lines[-1] = call.lines[-1].replace(": answered after", ": answered, unusable, after", 1)
                 outcome = "no usable reply"
-                if retry_unusable:
-                    continue
-                break
+                if call.rate_limited:
+                    break
+                continue
             call.answered, call.error, call.unusable = True, None, False
-            call.lines.append(f"request {number}: answered after {took:.2f}s, upstream {upstream}")
             outcome = "answered"
             break
+    except _StopCall:
+        pass
     except asyncio.CancelledError:
         outcome = f"stopped by its caller while request {call.requests} was running"
         raise
@@ -501,8 +569,8 @@ async def ask_guard_model(
         outcome = "refused by the per-query cost cap"
         raise
     finally:
-        rate_limited = call.error is not None and rate_limit_behind(call.error) is not None
-        if rate_limited and stated_until is not None:
+        ended_on_rate_limit = call.error is not None and rate_limit_behind(call.error) is not None
+        if ended_on_rate_limit and stated_until is not None:
             call.rate_limit_wait_s = max(0.0, stated_until - time.monotonic())
         _log_guard_call(label, trace_id, outcome, time.monotonic() - started, call)
     return call
@@ -518,13 +586,13 @@ def _log_guard_call(label: str, trace_id: str, outcome: str, elapsed_s: float, c
     bounded, printable host name.
     """
     logger.warning(
-        "guard call %s (trace %s): %s after %.2fs in all, %d of at most %d requests; %s",
+        "guard call %s (trace %s): %s after %.2fs in all, %d request%s; %s",
         label,
         trace_id,
         outcome,
         elapsed_s,
         call.requests,
-        GUARD_MAX_REQUESTS,
+        "" if call.requests == 1 else "s",
         "; ".join(call.lines) or "no request",
     )
 
@@ -549,12 +617,12 @@ async def _run_guard_pick(
     `chosen` with the caller's fail-open default. In Jev mode this runs
     only after Jev has failed.
 
-    Sent through `ask_guard_model` (card 84), inside the same
-    `_GUARD_BUDGET_S` develop gave it: at most two requests, one after the
-    other. The only change from develop's `call_tier` retry is that a rate
-    limit's stated `Retry-After` is waited out before the second request,
-    or ends the pick when it does not fit (R-10 line 4, F-72-J05). An
-    unusable reply is no pick, as before, with no second request.
+    Sent through `ask_guard_model` (card 84) as one attempt inside the same
+    `_GUARD_BUDGET_S` develop gave it, with develop's immediate resend
+    after a transient error. The only change from develop is a rate limit:
+    two requests at most, and a stated `Retry-After` waited out before the
+    second, or ending the pick when it does not fit (R-10 line 4,
+    F-72-J05). An unusable reply is no pick, as before.
     """
     messages = _build_guard_messages(state, options, instructions, criteria)
     try:
@@ -566,6 +634,7 @@ async def _run_guard_pick(
             step="guardrail",
             deadline=time.monotonic() + _GUARD_BUDGET_S,
             parse=lambda content: _parse_guard_choice(content, options),
+            attempts=1,
         )
     except QueryCapExceededError:
         return None

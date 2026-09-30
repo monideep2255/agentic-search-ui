@@ -758,13 +758,11 @@ async def test_the_second_attempts_verdict_decides(
 
 
 @pytest.mark.asyncio
-async def test_two_transient_errors_are_the_limit(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Card 84 (R-10, at most two requests per guard call): two transient
-    errors end the question, and a third request, which would have answered,
-    is never sent. On develop `call_tier` resent inside each of two
-    attempts, so this was admitted on the third of four requests; that is
-    the one thing the two-request cap gives up, and
-    `test_guard_request_dominance.py` counts it."""
+async def test_a_transient_error_twice_then_a_verdict(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`call_tier`'s resend is kept inside the first attempt; when both of
+    its requests fail, the guardrail's second attempt is the third request,
+    and its verdict decides, as on develop (card 84, the lead's correction:
+    only a rate-limited call is held to two requests)."""
     import litellm
 
     def _error() -> BaseException:
@@ -772,6 +770,18 @@ async def test_two_transient_errors_are_the_limit(monkeypatch: pytest.MonkeyPatc
 
     _shrink_budget(monkeypatch)
     count = _classifier_calls(monkeypatch, _error(), _error(), _ADMIT)
+    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    assert result.get("step_error") is None
+    assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
+    assert count[0] == 3
+
+
+@pytest.mark.asyncio
+async def test_a_rate_limited_call_stops_at_two_requests(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R-10 line 4: two 429s end the call, where develop's second attempt
+    sent a third and a fourth request."""
+    _shrink_budget(monkeypatch)
+    count = _classifier_calls(monkeypatch, _rate_limited(), _rate_limited(), _ADMIT)
     events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
     assert result["step_error"]["error_class"] == "transient"
     assert _payload(events, "guard") is None
@@ -783,10 +793,10 @@ async def test_two_transient_errors_are_the_limit(monkeypatch: pytest.MonkeyPatc
 async def test_two_failed_attempts_give_the_fatal_step_error(
     monkeypatch: pytest.MonkeyPatch, failure: str
 ) -> None:
-    """No verdict, no answer: two hung requests, or two rate-limited ones,
+    """No verdict, no answer: two hung attempts, or a rate-limited call,
     end in the fatal transient step error, inside the budget, and emit no
     verdict. A rate limit that named no wait says to wait a little (R-10
-    line 4); two requests in all, never four (card 84)."""
+    line 4); two requests in all, never develop's four (card 84)."""
     _shrink_budget(monkeypatch)
     behaviour = "hang" if failure == "hang" else _rate_limited()
     count = _classifier_calls(monkeypatch, behaviour)
@@ -862,9 +872,9 @@ async def test_a_failure_that_is_not_transient_gets_no_second_attempt(
 def _recording_dispatch(monkeypatch: pytest.MonkeyPatch, first_runs_for: float) -> list[float]:
     """Replace the harness's `enforce_timeout` with a stand-in that records
     the budget each classifier request was given. The first request runs
-    for `first_runs_for` times its own budget and then fails with a
-    transient error: 1.0 is a failure at its bound, more than 1.0 a stall
-    its own bound did not cut. The second answers at once."""
+    for `first_runs_for` times its own budget and then is cut: 1.0 at its
+    bound, more than 1.0 a stall its own bound did not cut. The second
+    answers at once."""
     import asyncio
     from types import SimpleNamespace
 
@@ -877,7 +887,9 @@ def _recording_dispatch(monkeypatch: pytest.MonkeyPatch, first_runs_for: float) 
         budgets.append(budget_s)
         if len(budgets) == 1:
             await asyncio.sleep(budget_s * first_runs_for)
-            raise HarnessCallError("stub failure", error_class="transient")
+            raise HarnessCallError(
+                "stub failure", error_class="transient", source="harness.enforce_timeout:guardrail"
+            )
         return SimpleNamespace(content=_ADMIT, upstream_provider=None)  # the fields read
 
     monkeypatch.setattr(harness_module.Harness, "enforce_timeout", _enforce)
