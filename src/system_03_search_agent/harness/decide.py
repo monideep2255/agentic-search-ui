@@ -437,6 +437,7 @@ async def decide(
     instructions: str | None = None,
     criteria: Mapping[str, str] | None = None,
     default: str | None = None,
+    jev_failed: asyncio.Event | None = None,
 ) -> DecisionRecord:
     """Decide one closed-option question, `point`, over the bounded `state`.
 
@@ -476,6 +477,16 @@ async def decide(
       reason are what say that nobody decided. Without a `default`,
       `chosen` is `options[0]`.
 
+    `jev_failed` (re-land follow-up R-10, F-8.6-FA03): when the caller
+    passes an event, `decide()` sets it the moment Jev's OWN pick can no
+    longer come back from this decision: in Jev mode as soon as Jev has
+    failed, before the guard tier is asked; with the guard provider at
+    once, since Jev is never asked. A caller whose outcome only Jev's own
+    pick could change waits on this event rather than on a clock, so a
+    stalled event loop that delays Jev's request never cuts off a pick Jev
+    still delivers. It is never set when Jev made a pick: the record is
+    then already returned.
+
     Raises:
         ValueError: if `options` is empty (there is nothing to decide
             between), the description does not fit the options (see
@@ -493,6 +504,8 @@ async def decide(
     bounded_state = state[:_STATE_MAX_CHARS]
 
     if not jev_decides():
+        if jev_failed is not None:
+            jev_failed.set()
         guard_choice = await _run_guard_pick(
             harness, trace_id, bounded_state, options, instructions, criteria
         )
@@ -514,6 +527,9 @@ async def decide(
     if isinstance(jev, JevResult):
         return _jev_mode_record(point, options, jev, None, fallback_default)
 
+    # Jev has failed and says so, before the guard tier is asked (R-10).
+    if jev_failed is not None:
+        jev_failed.set()
     logger.warning(
         "Jev made no pick for decision %s (trace %s, %s); asking the guard tier",
         point,

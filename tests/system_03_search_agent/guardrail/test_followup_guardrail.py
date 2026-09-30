@@ -11,12 +11,14 @@ real node.
   it does not, no second attempt is made. A first attempt that ran out of
   time still gets its second at once (R-01, G-005). No verdict is still no
   answer, and no path passes the guardrail's budget.
-- R-06 (F-8.6-RJ03, RJ09): in Jev mode, a refusal that only Jev's OWN
-  relevancy pick could change waits no longer than Jev's own window
-  (`_JEV_OWN_PICK_WINDOW_S`), not for the guard tier's fallback pick. The
-  refusal is the same one, only sooner; Jev's own pick inside the window
+- R-06 (F-8.6-RJ03, RJ09), then R-10 (F-8.6-FA03): in Jev mode, a refusal
+  that only Jev's OWN relevancy pick could change waits only until
+  `decide()` says Jev failed (`jev_failed`), not for the guard tier's
+  fallback pick, and never on a clock of its own: a stalled event loop
+  that delays Jev's request no longer cuts off a pick Jev delivers inside
+  its own bound. The refusal is the same one, only sooner; Jev's own pick
   still decides exactly as before, through the real `decide()`.
-- With the provider at its code default, R-06 changes nothing.
+- With the provider at its code default, the signal changes nothing.
 
 ## What they do not cover
 
@@ -58,6 +60,7 @@ from tests.system_03_search_agent.model_stub import (
     COMPLIANT_GUARD_CLASSIFICATION,
     fake_response,
 )
+from tests.system_03_search_agent.virtual_clock import run_virtual
 
 
 @pytest.fixture(autouse=True)
@@ -117,7 +120,7 @@ async def _run_guardrail(text: str) -> tuple[list[Any], dict[str, Any], Any]:
         "context": RequestContext(surface="rest_sse"),
         "harness": harness,
         "seq": 0,
-        "start_monotonic": time.monotonic(),
+        "start_monotonic": graph_module.time.monotonic(),
     }
     result = await graph_module.guardrail_node(state)  # type: ignore[arg-type]
     return list(result.get("events", [])), result, harness
@@ -136,35 +139,98 @@ def _connection_error() -> BaseException:
     return litellm.APIConnectionError(message="connection reset (stub)", llm_provider="openrouter", model="m")
 
 
-def _classifier(monkeypatch: pytest.MonkeyPatch, *behaviours: Any) -> list[float]:
-    """Stub the guard classifier's requests, one behaviour per request, the
-    last repeating: "hang" sleeps past any budget, a float answers `_ADMIT`
-    after that many seconds, a callable returns an exception to raise or a
-    reply's content, anything else is the reply's content. Returns the
-    monotonic time of every request."""
-    times: list[float] = []
+#: What the `_prices` fixture's prices make a guard request cost: one that
+#: answered (`fake_response`'s 10 prompt and 5 completion tokens), and one
+#: cancelled, which `call_tier` charges the tier's whole output ceiling.
+_ANSWERED_GUARD_CALL = 10 * 1e-6 + 5 * 2e-6
+_CANCELLED_GUARD_CALL = harness_module._TIER_MAX_TOKENS["guard"] * 2e-6
 
-    async def _acompletion(**_kwargs: Any) -> Any:
+
+class _Requests(list):  # type: ignore[type-arg]
+    """The monotonic time of every classifier request, plus the most that
+    were ever in flight at once and the numbers of those cancelled."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.peak = 0
+        self.cancelled: list[int] = []
+
+
+def _classifier(monkeypatch: pytest.MonkeyPatch, *behaviours: Any, only_classifier: bool = False) -> _Requests:
+    """Stub the guard model's requests, one behaviour per request, the last
+    repeating: "hang" sleeps past any budget, a float answers `_ADMIT`
+    after that many seconds, a tuple `(seconds, outcome[, upstream host])`
+    waits and then takes `outcome`, a callable returns an exception to raise
+    or a reply's content, anything else is the reply's content. Times are
+    the running loop's, so the stub works on the virtual clock too. With
+    `only_classifier`, a request that is not the guardrail's classifier (a
+    guard pick through `decide`) is answered "on_topic" at once and not
+    counted."""
+    times = _Requests()
+    active = [0]
+
+    async def _acompletion(**kwargs: Any) -> Any:
+        if only_classifier and not _is_classifier_request(kwargs):
+            return fake_response("on_topic")
         behaviour = behaviours[min(len(times), len(behaviours) - 1)]
-        times.append(time.monotonic())
-        if behaviour == "hang":
-            await asyncio.sleep(60)
-            raise AssertionError("a hung request was never cut")
-        if isinstance(behaviour, float):
-            await asyncio.sleep(behaviour)
-            return fake_response(_ADMIT)
-        if callable(behaviour):
-            behaviour = behaviour()
-        if isinstance(behaviour, BaseException):
-            raise behaviour
-        return fake_response(behaviour)
+        times.append(asyncio.get_running_loop().time())
+        number = len(times)
+        active[0] += 1
+        times.peak = max(times.peak, active[0])
+        try:
+            if isinstance(behaviour, str) and behaviour == "hang":
+                await asyncio.sleep(10_000)
+                raise AssertionError("a hung request was never cut")
+            provider = None
+            if isinstance(behaviour, tuple):
+                delay, behaviour, *rest = behaviour
+                provider = rest[0] if rest else None
+                await asyncio.sleep(delay)
+            elif isinstance(behaviour, float):
+                await asyncio.sleep(behaviour)
+                behaviour = _ADMIT
+            if callable(behaviour):
+                behaviour = behaviour()
+            if isinstance(behaviour, BaseException):
+                raise behaviour
+            reply = fake_response(behaviour)
+            if provider is not None:
+                reply.provider = provider
+            return reply
+        except asyncio.CancelledError:
+            times.cancelled.append(number)
+            raise
+        finally:
+            active[0] -= 1
 
     monkeypatch.setattr(harness_module.litellm, "acompletion", _acompletion)
     return times
 
 
+def _is_classifier_request(kwargs: dict[str, Any]) -> bool:
+    """The guardrail's own classifier, not a guard pick asked through
+    `decide`, whose system message starts with the closed-option line."""
+    system = next((m["content"] for m in kwargs["messages"] if m["role"] == "system"), "")
+    return not system.startswith("Answer with exactly one of the offered options")
+
+
 def _gaps(times: list[float]) -> list[float]:
     return [later - earlier for earlier, later in itertools.pairwise(times)]
+
+
+def _node(monkeypatch: pytest.MonkeyPatch, text: str = _ORDINARY_QUESTION) -> tuple[list[Any], dict[str, Any], Any, float]:
+    """The real node on the virtual clock, with the real budget and the real
+    constants: (events, result, harness, seconds it took)."""
+
+    async def _go() -> tuple[list[Any], dict[str, Any], Any, float]:
+        started = asyncio.get_running_loop().time()
+        events, result, harness = await _run_guardrail(text)
+        return events, result, harness, asyncio.get_running_loop().time() - started
+
+    return run_virtual(monkeypatch, _go)
+
+
+_ADMITTED = {"passed": True, "category": "ok", "reason": None}
 
 
 # ---------------------------------------------------------------------------
@@ -409,30 +475,99 @@ async def test_with_jev_a_classifier_that_never_answers_is_never_an_admission(
 
 
 # ---------------------------------------------------------------------------
-# R-06: a refusal only Jev's own pick could change is not held for the guard
-# tier's fallback.
+# R-06, then R-10 (F-8.6-FA03): a refusal only Jev's own pick could change is
+# not held for the guard tier's fallback, and it waits on `decide()`'s own
+# signal that Jev failed, never on a clock.
 # ---------------------------------------------------------------------------
 
 
-def test_jevs_window_covers_decides_own_wait_for_jev() -> None:
-    """If `decide()` ever waited longer for Jev than this window, a late
-    Jev pick could be cut off here and a refusal made where it set one
-    aside before. This keeps the two in step."""
-    assert graph_module._JEV_OWN_PICK_WINDOW_S > decide_module._JEV_WAIT_S
-    assert graph_module._JEV_OWN_PICK_WINDOW_S < graph_module.budget_for_step("guardrail", "lookup")
+def _jev_reply(choice: str, other: str, *, after_s: float) -> Any:
+    """A `jev_client._post` stand-in: Jev's real reply shape, `after_s` late."""
+
+    async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
+        key = next(iter(body["questions"]))
+        await asyncio.sleep(after_s)
+        return httpx.Response(
+            200,
+            json={
+                "model": "jev-test",
+                "answers": {key: {"choice": choice, "confidence": 0.8, "probabilities": {choice: 0.9, other: 0.1}}},
+                "usage": {"input_tokens": 1, "output_tokens": 1, "cost": 0.00002},
+            },
+        )
+
+    return _post
+
+
+@pytest.mark.asyncio
+async def test_decide_says_jev_failed_before_it_asks_the_guard_tier(
+    monkeypatch: pytest.MonkeyPatch, _jev_on: None
+) -> None:
+    """The signal itself, through the real `decide()`: set once Jev fails,
+    and set BEFORE the guard tier's fallback is asked, so a caller waiting
+    on it never waits for that fallback."""
+    seen_when_guard_asked: list[bool] = []
+    failed = asyncio.Event()
+
+    async def _fallback(*_args: Any, **_kwargs: Any) -> str:
+        seen_when_guard_asked.append(failed.is_set())
+        return "on_topic"
+
+    async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
+        return httpx.Response(503, content=b"unavailable")
+
+    monkeypatch.setattr(jev_client_module, "_post", _post)
+    monkeypatch.setattr(decide_module, "_guard_fallback_pick", _fallback)
+    harness = harness_module.Harness("t-signal")
+    record = await decide_module.decide(
+        harness, "t-signal", "guardrail.relevancy", "x", ["on_topic", "off_topic"], jev_failed=failed
+    )
+    assert record.decided_by == "guard" and record.fallback_reason == "http_error"
+    assert seen_when_guard_asked == [True]
+
+
+@pytest.mark.asyncio
+async def test_decide_never_says_jev_failed_when_jev_picked(
+    monkeypatch: pytest.MonkeyPatch, _jev_on: None
+) -> None:
+    monkeypatch.setattr(jev_client_module, "_post", _jev_reply("on_topic", "off_topic", after_s=0.0))
+    failed = asyncio.Event()
+    harness = harness_module.Harness("t-picked")
+    record = await decide_module.decide(
+        harness, "t-picked", "guardrail.relevancy", "x", ["on_topic", "off_topic"], jev_failed=failed
+    )
+    assert record.decided_by == "jev"
+    assert not failed.is_set()
+
+
+@pytest.mark.asyncio
+async def test_with_the_guard_provider_decide_says_at_once_that_jev_will_not_pick(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _classifier(monkeypatch, "on_topic")
+    failed = asyncio.Event()
+    harness = harness_module.Harness("t-guard")
+    await decide_module.decide(
+        harness, "t-guard", "guardrail.relevancy", "x", ["on_topic", "off_topic"], jev_failed=failed
+    )
+    assert failed.is_set()
 
 
 def _relevancy(
     monkeypatch: pytest.MonkeyPatch, *, after_s: float, pick: str, by: str
 ) -> list[str]:
     """Stub `decide()` for `guardrail.relevancy`: a record after `after_s`,
-    Jev's own pick (`by` "jev") or the guard tier's after Jev failed."""
+    Jev's own pick (`by` "jev") or the guard tier's after Jev failed. When
+    Jev failed, the stub says so at once through `jev_failed`, exactly as
+    the real `decide()` does before it asks the guard tier."""
     asked: list[str] = []
 
     async def _decide(
         harness: Any, trace_id: str, point: str, state: str, options: Any, **kwargs: Any
     ) -> DecisionRecord:
         asked.append(point)
+        if by != "jev" and kwargs.get("jev_failed") is not None:
+            kwargs["jev_failed"].set()
         await asyncio.sleep(after_s)
         if by == "jev":
             return DecisionRecord(
@@ -464,13 +599,7 @@ def _jev_injection(monkeypatch: pytest.MonkeyPatch, pick: str) -> None:
     monkeypatch.setattr(graph_module, "call_jev", _call_jev)
 
 
-_FAST_WINDOW_S = 0.4
 _SLOW_FALLBACK_S = 3.0
-
-
-def _fast_window(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Jev's window shrunk so the arms run fast; the step budget stays real."""
-    monkeypatch.setattr(graph_module, "_JEV_OWN_PICK_WINDOW_S", _FAST_WINDOW_S)
 
 
 @pytest.mark.asyncio
@@ -480,13 +609,12 @@ async def test_with_jev_failing_an_off_topic_refusal_is_not_held_for_the_fallbac
 ) -> None:
     """RJ03: the classifier says off topic at once and Jev's relevancy pick
     fails, so only the guard tier's fallback is left, and its pick never
-    sets the refusal aside. The refusal comes at the end of Jev's window,
-    not after the fallback, and it is the same off-topic refusal.
+    sets the refusal aside. The refusal comes when Jev says it failed, not
+    after the fallback, and it is the same off-topic refusal.
 
     MUTATION PROOF: reading the R-03 branch against `step_deadline` again
     turns this red on the elapsed time.
     """
-    _fast_window(monkeypatch)
     _classifier(monkeypatch, _OFF_TOPIC)
     _jev_injection(monkeypatch, "not_injection")
     _relevancy(monkeypatch, after_s=_SLOW_FALLBACK_S, pick=fallback_pick, by="guard")
@@ -497,7 +625,7 @@ async def test_with_jev_failing_an_off_topic_refusal_is_not_held_for_the_fallbac
 
     guard = _guard(events)
     assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
-    assert elapsed < _FAST_WINDOW_S + 0.4, elapsed
+    assert elapsed < 1.0, elapsed
 
 
 @pytest.mark.asyncio
@@ -510,10 +638,9 @@ async def test_with_jev_failing_an_off_topic_refusal_is_not_held_for_the_fallbac
     ],
     ids=["Jev's own on_topic sets it aside", "Jev's own off_topic", "a fast fallback never sets it aside"],
 )
-async def test_with_jev_a_pick_inside_the_window_decides_as_before(
+async def test_with_jev_its_own_pick_decides_as_before(
     monkeypatch: pytest.MonkeyPatch, _jev_on: None, pick: str, by: str, passed: bool, category: str
 ) -> None:
-    _fast_window(monkeypatch)
     _classifier(monkeypatch, _OFF_TOPIC)
     _jev_injection(monkeypatch, "not_injection")
     _relevancy(monkeypatch, after_s=0.1, pick=pick, by=by)
@@ -526,30 +653,17 @@ async def test_with_jev_a_pick_inside_the_window_decides_as_before(
 async def test_with_jev_a_late_jev_pick_through_the_real_decide_still_sets_the_refusal_aside(
     monkeypatch: pytest.MonkeyPatch, _jev_on: None
 ) -> None:
-    """The window is not a guess about Jev's speed: through the REAL
-    `decide()` and the real constants, a Jev relevancy reply that comes back
-    just inside Jev's own 3-second bound is still read and still sets the
-    classifier's off-topic refusal aside, the tree-of-life admission R-03
-    made, and no guard fallback is asked."""
+    """Through the REAL `decide()` and the real constants, a Jev relevancy
+    reply that comes back just inside Jev's own 3-second bound is still
+    read and still sets the classifier's off-topic refusal aside, the
+    tree-of-life admission R-03 made, and no guard fallback is asked."""
     _classifier(monkeypatch, _OFF_TOPIC)
     _jev_injection(monkeypatch, "not_injection")
     fallback = AsyncMock(side_effect=AssertionError("the guard fallback is never asked"))
     monkeypatch.setattr(decide_module, "_guard_fallback_pick", fallback)
-
-    async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
-        key = next(iter(body["questions"]))
-        await asyncio.sleep(jev_client_module.JEV_TOTAL_TIMEOUT_S - 0.2)
-        return httpx.Response(
-            200,
-            json={
-                "model": "jev-test",
-                "answers": {key: {"choice": "on_topic", "confidence": 0.8,
-                                  "probabilities": {"on_topic": 0.9, "off_topic": 0.1}}},
-                "usage": {"input_tokens": 1, "output_tokens": 1, "cost": 0.00002},
-            },
-        )
-
-    monkeypatch.setattr(jev_client_module, "_post", _post)
+    monkeypatch.setattr(
+        jev_client_module, "_post", _jev_reply("on_topic", "off_topic", after_s=jev_client_module.JEV_TOTAL_TIMEOUT_S - 0.2)
+    )
     events, _, harness = await _run_guardrail(_TREE_OF_LIFE)
     assert _guard(events) == {"passed": True, "category": "ok", "reason": None}
     record = next(r for r in graph_module._done_decisions(harness) or [] if r.name == "guardrail.relevancy")
@@ -557,14 +671,116 @@ async def test_with_jev_a_late_jev_pick_through_the_real_decide_still_sets_the_r
     fallback.assert_not_called()
 
 
+_STALLS = [
+    ("while Jev's model is resolved", 1.0),
+    ("in the cap check inside Jev's wait", 0.6),
+    ("in the cap check inside Jev's wait", 0.8),
+    ("while Jev's reply is read", 0.6),
+    ("while Jev's reply is read", 1.0),
+    ("before Jev's reply arrives", 0.6),
+]
+
+
+@pytest.mark.parametrize(("where", "stall_s"), _STALLS, ids=[f"{s}s {w}" for w, s in _STALLS])
+def test_with_jev_a_stall_anywhere_in_jevs_wait_never_turns_its_admission_into_a_refusal(
+    monkeypatch: pytest.MonkeyPatch, _jev_on: None, where: str, stall_s: float
+) -> None:
+    """F-8.6-FA03, which F-72-J03 found still open, through the real
+    `decide()` and the real constants on the virtual clock. The classifier
+    says off topic; Jev's relevancy pick says on topic 2.9 s after its
+    request, inside its own 3-second bound. The server's event loop stalls
+    once, blocking, somewhere inside Jev's wait: where the builder's test put
+    it (resolving Jev's model, before `decide()`'s net is armed), where the
+    judge put it (the cap check inside that net, before Jev's request),
+    while Jev's reply is being read, or just before it arrives. Before, the
+    0.6 s and 0.8 s stalls in the cap check spent the net's half-second
+    margin and the question was refused as off topic. Now every clock on
+    Jev counts only the time the loop was free, and Jev's admission stands.
+
+    MUTATION PROOF: `wait_counting_free_time` counting real time again
+    (`counted += now - last`) turns the 0.8 s cap-check arm and the "before
+    Jev's reply arrives" arm red: the question is refused as off topic. The
+    reply-read arms stay green under it, because a reply already in hand
+    wins over the clock whatever the time."""
+    _classifier(monkeypatch, _OFF_TOPIC)
+    _jev_injection(monkeypatch, "not_injection")
+    fallback = AsyncMock(side_effect=AssertionError("the guard fallback is never asked"))
+    monkeypatch.setattr(decide_module, "_guard_fallback_pick", fallback)
+
+    def _stall() -> None:
+        decide_module.time.sleep(stall_s)  # the virtual clock's blocking stall
+
+    if where == "while Jev's model is resolved":
+        real_model = decide_module.resolve_jev_model
+        monkeypatch.setattr(decide_module, "resolve_jev_model", lambda: (_stall(), real_model())[1])
+    elif where == "in the cap check inside Jev's wait":
+        real_check = decide_module.check_jev_per_query_cap
+        monkeypatch.setattr(
+            decide_module, "check_jev_per_query_cap", lambda harness, trace_id: (_stall(), real_check(harness, trace_id))[1]
+        )
+    reply = _jev_reply("on_topic", "off_topic", after_s=0.0)
+
+    async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
+        if where == "while Jev's reply is read":
+            await asyncio.sleep(2.5)
+            _stall()  # the reply arrives at 2.9 s, inside the stall
+        elif where == "before Jev's reply arrives":
+            await asyncio.sleep(2.5)
+            _stall()  # the stall ends at 3.1 s, past Jev's own bound on the wall clock
+            await asyncio.sleep(0.1)  # and the reply comes at 3.2 s, 2.6 s of free time
+        else:
+            await asyncio.sleep(2.9)
+        return await reply(headers, body)
+
+    monkeypatch.setattr(jev_client_module, "_post", _post)
+    events, _, harness, elapsed = _node(monkeypatch, _TREE_OF_LIFE)
+
+    assert _guard(events) == _ADMITTED
+    assert elapsed > jev_client_module.JEV_TOTAL_TIMEOUT_S, elapsed  # past Jev's own bound on the wall clock
+    record = next(r for r in graph_module._done_decisions(harness) or [] if r.name == "guardrail.relevancy")
+    assert record.decided_by == "jev" and record.chosen == "on_topic"
+    fallback.assert_not_called()
+
+
+def test_with_jev_a_failure_signalled_mid_wait_ends_the_wait_at_once(
+    monkeypatch: pytest.MonkeyPatch, _jev_on: None
+) -> None:
+    """F-72-J07: the live order, which every other arm skipped. The
+    classifier says off topic at 0.05 s, so the guardrail is already
+    waiting when Jev fails at 2 s and `decide()` says so; the guard tier's
+    fallback would take 5 s more. The off-topic refusal comes at 2 s, not
+    7 s.
+
+    MUTATION PROOF: `_await_jev_own_pick` ignoring the event (waiting only
+    on the decision and the deadline) turns this red: 7.0 s."""
+    _classifier(monkeypatch, (0.05, _OFF_TOPIC))
+    _jev_injection(monkeypatch, "not_injection")
+
+    async def _decide(
+        harness: Any, trace_id: str, point: str, state: str, options: Any, **kwargs: Any
+    ) -> DecisionRecord:
+        await asyncio.sleep(2.0)
+        kwargs["jev_failed"].set()
+        await asyncio.sleep(5.0)
+        return DecisionRecord(
+            name=point, options=list(options), chosen="on_topic", decided_by="guard",
+            guard_choice="on_topic", fallback_reason="timeout",
+        )
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    events, _, _, elapsed = _node(monkeypatch, _TREE_OF_LIFE)
+    guard = _guard(events)
+    assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
+    assert elapsed == pytest.approx(2.0, abs=0.01)
+
+
 @pytest.mark.asyncio
 async def test_with_jev_an_injection_refusal_is_not_held_for_the_relevancy_fallback(
     monkeypatch: pytest.MonkeyPatch, _jev_on: None
 ) -> None:
     """RJ09: the classifier admits, Jev calls the text injection, and Jev's
-    relevancy pick fails. The injection refusal comes at the end of Jev's
-    window, not after the guard tier's fallback."""
-    _fast_window(monkeypatch)
+    relevancy pick fails. The injection refusal comes when Jev says it
+    failed, not after the guard tier's fallback."""
     _classifier(monkeypatch, _ADMIT)
     _jev_injection(monkeypatch, "injection")
     _relevancy(monkeypatch, after_s=_SLOW_FALLBACK_S, pick="on_topic", by="guard")
@@ -575,7 +791,7 @@ async def test_with_jev_an_injection_refusal_is_not_held_for_the_relevancy_fallb
 
     guard = _guard(events)
     assert guard is not None and guard["passed"] is False and guard["category"] == "injection"
-    assert elapsed < _FAST_WINDOW_S + 0.4, elapsed
+    assert elapsed < 1.0, elapsed
 
 
 @pytest.mark.asyncio
@@ -586,9 +802,8 @@ async def test_with_jev_an_injection_refusal_is_not_held_for_the_relevancy_fallb
 async def test_with_jev_an_injection_refusal_keeps_the_category_jevs_own_relevancy_gives(
     monkeypatch: pytest.MonkeyPatch, _jev_on: None, pick: str, category: str
 ) -> None:
-    """Inside Jev's window its own relevancy pick decides the category, as
-    before: off topic when it says so, injection otherwise."""
-    _fast_window(monkeypatch)
+    """Jev's own relevancy pick decides the category, as before: off topic
+    when it says so, injection otherwise."""
     _classifier(monkeypatch, _ADMIT)
     _jev_injection(monkeypatch, "injection")
     _relevancy(monkeypatch, after_s=0.1, pick=pick, by="jev")
@@ -598,15 +813,14 @@ async def test_with_jev_an_injection_refusal_keeps_the_category_jevs_own_relevan
 
 
 @pytest.mark.asyncio
-async def test_with_the_default_provider_the_window_changes_nothing(
+async def test_with_the_default_provider_the_signal_changes_nothing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Production's setting: the guard tier's relevancy pick is the only
     one, and it is waited for within the step's budget exactly as before,
-    past any Jev window."""
-    _fast_window(monkeypatch)
+    whatever the signal says."""
     _classifier(monkeypatch, _ADMIT)
-    asked = _relevancy(monkeypatch, after_s=_FAST_WINDOW_S + 0.4, pick="off_topic", by="guard")
+    asked = _relevancy(monkeypatch, after_s=0.8, pick="off_topic", by="guard")
     events, _, _ = await _run_guardrail(_TREE_OF_LIFE)
     guard = _guard(events)
     assert asked == ["guardrail.relevancy"]
