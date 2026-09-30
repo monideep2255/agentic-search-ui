@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Runs the CI gates locally before anything is staged. Syncs the four canonical docs and commits with a Conventional Commit subject. Pushes to develop for a card alone at risk-dial position one or two, or to a branch for a numbered phase or position three. Proves the remote advanced and confirms the deploy. Clears away leftover agent worktrees. Use when ending a work block or after a logical milestone.
+description: Runs the CI gates locally before anything is staged, ending on a scan of what the push would publish for secrets and private values. Syncs the four canonical docs and commits with a Conventional Commit subject. Pushes to develop for a card alone at risk-dial position one or two, or to a branch for a numbered phase or position three. Proves the remote advanced and confirms the deploy. Clears away leftover agent worktrees. Use when ending a work block or after a logical milestone.
 ---
 
 # /ship - gates, docs-sync, git-sync, then worktree cleanup
@@ -41,10 +41,38 @@ A chain like `pytest ... | tail -3 && git commit` reports `tail`'s exit code, no
 - `bash .github/gates/gate04_unit_suite.sh`: whenever any Python file under `src/`, `tests/`, `services/` or `tracker/` changed. Roughly five minutes. A docs-only change skips this and the report says so.
 - `npm run build` in `frontend/`: whenever any file under `frontend/` changed. Railway's own build is what fails silently otherwise, and this is the only local check that would catch it first.
 - `python3 tracker/check_doc_drift.py --check`: always. It checks document structure (tables of contents, the two append-only tables, phase and pull request references), compares no count and runs no tests, so it takes seconds. A fact it could not compute is a failure line naming why, never an "ok".
+- `python3 .claude/skills/ship/scripts/check_public_leaks.py`: always, and last, because it is the final check before anything is pushed. It scans what the push would publish for a secret or a private value (see the next subsection). Exit 0 is clean, 1 is a finding or a machine without the private-name check, 2 is that it could not run. Gate on that code, never through a pipe.
 
 ### A red gate stops the ship
 
 Fix the cause, then make a NEW commit. Never `--amend`.
+
+### The public-leak scan
+
+This repository is public, so a push is permanent and world-readable. The scan reads exactly what a push would publish and stops it when a line looks like a leak.
+
+What it reads:
+
+- Every added line of `git diff origin/develop...HEAD`, plus the staged and unstaged diff against HEAD.
+- Every untracked file that git does not ignore, whole, since a brand new file is the usual leak and a diff cannot see it.
+- Every commit message and every author and committer email in `origin/develop..HEAD`. Pass `--base <ref>` for another base.
+
+What it catches, each reported as `file:line [category]` with the matched value masked, never printed in full:
+
+- Secrets by shape: private key blocks, AWS access key ids, GitHub tokens, `sk-` provider keys, Slack tokens, Google keys, JWTs, `Bearer` tokens, a password inside a URL, and a key, secret, token or password assigned a long high-entropy value.
+- Local machine paths: a macOS, Linux or Windows home directory that names a person, except `<user>` and CI names such as `runner`.
+- Personal emails, and any author or committer email that is not a GitHub noreply address.
+- IPv4 addresses outside loopback, broadcast and the documentation ranges, and `ssh <user>@<host>` with a real host.
+
+What it cannot catch, so a clean run is necessary and not sufficient:
+
+- A private name or the owner's work identity, because a public file cannot list them. The scan runs the owner's machine-local check, found through the `exec` line of `.git/hooks/pre-commit`, on the staged diff. When that hook or script is absent it prints `private-name check NOT RUN on this machine` and exits 1, so a machine without it is never treated as clean. `--allow-missing-private-check` accepts that on purpose, for example in CI.
+- A leak already public on `develop`, `production` or another pushed branch. Removing one needs the owner, since it means rewriting history.
+- A secret that fits none of the shapes above, or one hidden in a binary file (skipped by name) or a file over 2 MB (reported as not scanned).
+
+A finding stops the push. Remove the line and make a NEW commit. Mark a line with `local-refs: allow` only when it is genuinely public information, the same marker the local hook honours. A secret that reached a pushed commit needs the owner and a rotation, not an edit.
+
+The scan runs once in Step 0, and again in Step 2 after the commit and before the push, because docs-sync edits files and the commit message is written after Step 0.
 
 ### CI runs after the push, so check it before claiming it
 
@@ -193,6 +221,7 @@ Additional context to pass to git-sync:
   - A card alone at position one or two: `develop` directly, once its position's steps have run.
   - A numbered phase, at any position: the `phase/N.M-...` branch with `-u`, then offer the pull request.
   - Position three, auth, the graph credential, the event schema, or anything under `.claude/`, hooks or settings: a `chore/` or `fix/` branch with a pull request.
+- Run the public-leak scan once more after the commit and before the push, and push only on exit 0. It now sees the commit message, the author identity and any file docs-sync edited.
 - Prove the push: compare `git rev-parse HEAD` with `git rev-parse origin/<branch>` and require equality; never a verbose curl trace (`docs/rules/Sandbox_diagnosis.md`).
 - After a push to develop, confirm the Railway deploy for that commit reached SUCCESS (the `develop` project's API service; a deploy takes two to three minutes) before telling the product owner anything is live; a push is not a deploy.
 
@@ -245,6 +274,7 @@ This step is deletion, so it follows `file-protection`: say what is going before
 - Do NOT push with an unexplained stray file in the tree. Every path from BOTH of Step 1b's sources, `git status --porcelain` and the filesystem walk, is classified there, or the push waits. A clean `git status` is not evidence the tree is clean, since `.gitignore` hides the duplicate-copy family from it.
 - Do NOT push if pre-commit hooks fail. Fix the cause and create a NEW commit (never `--amend` after a hook failure)
 - Do NOT push with any Step 0 gate red or unrun
+- Do NOT push with a public-leak finding, or with the scan unrun. A finding is removed or, for genuinely public information only, marked `local-refs: allow`. Never bypass the scan or the local hook (`--no-verify`) to get a push through
 - Do NOT push at a session end until `HANDOFF.md` has been rewritten this session (`/phase-checkpoint` Step 4); its `Last updated:` line reading today's date is the proof. No other document needs a date to be pushed
 
 ## Output
