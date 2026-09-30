@@ -2,7 +2,7 @@
 
 What a fresh session needs, and nothing else. Rewritten in place at every `/phase-checkpoint`, never appended to. It states no fact another file owns beyond the pointers in the last section; history goes to `requirements/Plan.md`'s Revision history and `testing/UI_fixes_done.md`, never here.
 
-Last updated: 2026-09-29.
+Last updated: 2026-09-30.
 
 ## Table of contents
 
@@ -18,6 +18,7 @@ Last updated: 2026-09-29.
 - Golden runs and test queries sign in with fresh test accounts made on develop; their sign-ins live only in the lead's scratch folder, never committed. A new session makes its own the same way (`LEARNINGS.md`, 2026-09-29).
 - Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`. Both Railway services redeploy on every push to `develop`.
 - Production: `v0.2.0`, tag `cde4f59`, released 2026-09-20. Nothing since is on it.
+- `/ship` runs a public-repository leak scan before every push, in both repositories (`.claude/skills/ship/scripts/check_public_leaks.py` here, `scripts/check_public_leaks.py` in data engineering): a secret blocks the push, and the owner's local private-name check runs or the scan stops. Its open items: `testing/Developer/reports/2026-09-29_ship_leak_scan/verifier.md`.
 - Merging into develop: the lead merges with `gh pr merge --merge --admin --delete-branch` once checks pass; develop's ruleset stays for outside contributors (`DECISIONS.md`, 2026-09-29). The harness's auto-mode check may still ask for the owner's approval in the conversation.
 - Releases: the release job tags `production` and never pushes to it. Card 65 fixes the release fix's open findings before the next release.
 - Parked tags, on the first laptop only: `parked/phase-8.4-2026-09-25`, `parked/phase-8.8-snippets-2026-09-25` and `parked/verify-facts-118-2026-09-27`.
@@ -40,6 +41,7 @@ The reviewers' probes from 2026-09-27 are gone, so any resumed phase 8.7 reviewe
 
 ## What awaits the product owner
 
+- Approve, through the permission system, making the leak scan's email findings warnings rather than blocks, as you asked on 2026-09-30; the permission layer refused the change as a security weakening, so emails still block (`DECISIONS.md`, 2026-09-30).
 - The privacy pre-commit and commit-msg hooks on the second laptop, from your private notes. Until they are in, every commit there is checked by hand.
 - `~/.local/bin/railway link` on the second laptop, choosing `system3-search-agent-develop`, so `/ship` can confirm deploys.
 - Retests: three cards left in the Retest column after the batch retest of 2026-09-29, each needing the owner's eye (`testing/Developer/reports/2026-09-29_retest/`). The owner approved the 39 that passed; the 9 that failed are cards 86 to 94 in To do.
