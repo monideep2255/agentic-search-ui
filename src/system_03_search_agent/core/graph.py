@@ -512,7 +512,7 @@ from system_03_search_agent.harness.coordinator_worker import (
     ToolExecutionResult,
     coordinator_worker_execute,
 )
-from system_03_search_agent.harness.decide import decide, jev_decides
+from system_03_search_agent.harness.decide import check_jev_per_query_cap, decide, jev_decides
 from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
@@ -524,6 +524,7 @@ from system_03_search_agent.harness.jev_client import (
     JevCallError,
     JevResult,
     call_jev,
+    wait_counting_free_time,
 )
 from system_03_search_agent.harness.tiers import Tier, resolve_jev_model
 from system_03_search_agent.synthesis.answer_layout import (
@@ -1395,7 +1396,8 @@ def _drop_features_decision(harness: Any) -> None:
 
 #: How long the guardrail waits for Jev's injection pick: Jev's own total
 #: bound plus the half-second margin `decide()` gives its own Jev call. An
-#: outer net only; the client's bound fires first.
+#: outer net only; the client's bound fires first. Both count only time the
+#: event loop was free (`wait_counting_free_time`; fix round, F-72-J03).
 _JEV_INJECTION_WAIT_S: Final[float] = JEV_TOTAL_TIMEOUT_S + 0.5
 
 #: How long after a Jev-mode decision starts Jev's OWN pick can still come
@@ -1564,9 +1566,10 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
     prompt admitted 5 where the guardrail's own classifier admitted 2. Here
     a failure is only a reason, and the caller keeps the measured
     classifier's verdict, which is already in hand. The per-query cap check
-    before the call and the charge after it mirror `decide()`'s own Jev
-    call, so the query pays for Jev exactly as it does for every other
-    decision.
+    before the call (`check_jev_per_query_cap`) and the charge after it
+    mirror `decide()`'s own Jev call, so the query pays for Jev exactly as
+    it does for every other decision, never $0 and never past its cap (fix
+    round, F-72-J02, J09).
 
     Returns the validated `JevResult`, or one of `JevCallError.reason`'s
     values ("timeout", "http_error", "malformed_reply", "invalid_option"),
@@ -1574,11 +1577,11 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
     Never raises, except for cancellation, which stops the call with it.
     """
     try:
-        cost_control.check_per_query_cap(harness, trace_id, "guard")
+        check_jev_per_query_cap(harness, trace_id)
     except cost_control.QueryCapExceededError:
         return "cost_cap"
     try:
-        result = await asyncio.wait_for(
+        result = await wait_counting_free_time(
             call_jev(
                 model=resolve_jev_model(),
                 question_key=_INJECTION.point,
@@ -1588,14 +1591,14 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
                 instructions=_INJECTION.instructions,
                 criteria=_INJECTION.criteria,
             ),
-            timeout=_JEV_INJECTION_WAIT_S,
+            _JEV_INJECTION_WAIT_S,
         )
     except JevCallError as exc:
         # A reply that came back but could not be used was still billed:
         # charge `billed_cost_usd`, exactly as `decide()`'s own Jev call does
-        # (fix round, F-8.6-J10). It is never above `MAX_JEV_COST_USD`: the
-        # stated amount when that is a usable one within the ceiling, the
-        # ceiling otherwise (F-8.6-V01, V03, RA01, RJ05).
+        # (fix round, F-8.6-J10). It is the `JEV_FLOOR_COST_USD` floor for
+        # every unusable body, whatever its shape, and `jev_client` has
+        # logged that amount (R-10 and its fix round, F-72-A03).
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)
         return exc.reason

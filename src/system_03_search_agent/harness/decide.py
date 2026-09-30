@@ -7,9 +7,9 @@ Depends on:
     - system_03_search_agent.harness.harness (Harness, HarnessCallError,
       Message)
     - system_03_search_agent.harness.cost_control (check_per_query_cap,
-      QueryCapExceededError)
+      per_query_cost_cap_usd, QueryCapExceededError)
     - system_03_search_agent.harness.jev_client (call_jev, JevCallError,
-      JevResult)
+      JevResult, MAX_JEV_COST_USD, wait_counting_free_time)
     - system_03_search_agent.harness.tiers (resolve_jev_model)
     - system_03_search_agent.contracts.events (DecisionRecord)
 
@@ -74,9 +74,11 @@ from system_03_search_agent.harness.cost_control import QueryCapExceededError
 from system_03_search_agent.harness.harness import Harness, HarnessCallError, Message
 from system_03_search_agent.harness.jev_client import (
     JEV_TOTAL_TIMEOUT_S,
+    MAX_JEV_COST_USD,
     JevCallError,
     JevResult,
     call_jev,
+    wait_counting_free_time,
 )
 from system_03_search_agent.harness.tiers import resolve_jev_model
 
@@ -98,6 +100,13 @@ _GUARD_BUDGET_S = 15.0
 #: around the whole request since the fix round, F-8.2-J03) plus a small
 #: margin for the cap check and scheduling. A second, outer net only: the
 #: client's own bound fires first.
+#:
+#: Both clocks count only time the server's event loop was free to read
+#: Jev's reply (`jev_client.wait_counting_free_time`; R-10 fix round,
+#: F-72-J03). Before, a stall of about half a second between this net
+#: being armed and Jev's request going out spent the half-second margin, so
+#: the net said "timeout" while Jev was still inside its own bound, and a
+#: question Jev judged on topic was refused as off topic (FA03).
 _JEV_WAIT_S = JEV_TOTAL_TIMEOUT_S + 0.5
 
 #: How long `decide()` waits for the guard tier's pick once Jev has failed
@@ -254,6 +263,35 @@ async def _run_guard_pick(
     return _parse_guard_choice(response.content, options)
 
 
+def check_jev_per_query_cap(harness: Harness, trace_id: str) -> None:
+    """The per-query cap's pre-flight for one Jev call, checked the way
+    every other model call is checked: refused when the running cost plus
+    what the call may be charged would pass the cap (fix round, F-72-J09).
+
+    Jev has no tier of its own, so the guard tier's estimate is checked as
+    before, and then the most one Jev call can be charged,
+    `MAX_JEV_COST_USD`, since a usable reply is charged the cost it states
+    up to that ceiling. Before, a Jev call was let through on the guard
+    tier's $0.003 estimate and an unusable reply then charged one cent, so
+    a question at $0.0965 of a $0.10 cap ended at $0.1065.
+
+    Raises:
+        QueryCapExceededError: the call would take the question past its cap.
+    """
+    cost_control.check_per_query_cap(harness, trace_id, "guard")
+    cap = cost_control.per_query_cost_cap_usd()
+    current = harness.get_query_cost_usd(trace_id)
+    if current + MAX_JEV_COST_USD > cap:
+        raise QueryCapExceededError(
+            f"asking Jev once more for query {trace_id!r} could take its running cost "
+            "past the per-query cap; stop issuing further model calls for this query "
+            "and move to Write with whatever tool results already exist",
+            query_cost_usd=current,
+            query_cap_usd=cap,
+            estimated_call_cost_usd=MAX_JEV_COST_USD,
+        )
+
+
 async def _run_jev_pick(
     harness: Harness,
     trace_id: str,
@@ -265,24 +303,20 @@ async def _run_jev_pick(
     instructions: str | None = None,
     criteria: Mapping[str, str] | None = None,
 ) -> JevResult:
-    """Jev's pick, cap-checked first exactly like the guard call above.
+    """Jev's pick, cap-checked first like every other model call.
 
-    Charges Jev's reported cost whether or not the reply is usable: a
-    reply that came back unusable carries its cost on
-    `JevCallError.billed_cost_usd` (fix round, F-8.6-J10). Raises
-    JevCallError (from `jev_client.call_jev`) or
-    `cost_control.QueryCapExceededError` on any failure; `_jev_attempt`
+    Charges every reply that came back, never $0 (fix round, F-72-J02,
+    A03, J09, the product owner's decision of 2026-09-29): a usable reply
+    the cost it states when that is a sensible amount, and any other reply
+    the small `JEV_FLOOR_COST_USD`, which `jev_client` has already fixed on
+    `JevResult.cost_usd` or `JevCallError.billed_cost_usd` and logged by
+    amount. The cap is checked first with the most one Jev call can be
+    charged (`check_jev_per_query_cap`), so no Jev charge takes the
+    question past its cap. Raises JevCallError (from `jev_client.call_jev`)
+    or `cost_control.QueryCapExceededError` on any failure; `_jev_attempt`
     catches both.
     """
-    # Jev has no tier of its own to draw a token-profile estimate from
-    # (estimate_call_cost_usd is keyed strictly to {"guard", "plan",
-    # "synth"}). Reusing the guard tier's conservative estimate is safe in
-    # the direction that matters: Jev's measured live cost
-    # ($0.0000148-$0.0000197 per call, see jev_client.py's module
-    # docstring) is far below the guard tier's own token-profile estimate,
-    # so this check never lets a call through that a Jev-specific estimate
-    # would have refused.
-    cost_control.check_per_query_cap(harness, trace_id, "guard")
+    check_jev_per_query_cap(harness, trace_id)
     try:
         result = await call_jev(
             model=model,
@@ -294,10 +328,11 @@ async def _run_jev_pick(
             criteria=criteria,
         )
     except JevCallError as exc:
-        # A reply that came back but could not be used (malformed, an option
-        # outside the set, a cost above the ceiling) was still billed: its
-        # reported cost is charged, never zero, and the cost cap then applies
-        # to the guard fallback as to any call (fix round, F-8.6-J10).
+        # A reply that came back but could not be used (any malformed body, an
+        # option outside the set, a cost that is not a sensible amount) was
+        # still billed: it is charged the floor it carries, never zero, and
+        # the cost cap then applies to the guard fallback as to any call
+        # (fix round, F-8.6-J10; R-10 and its fix round).
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
         raise
@@ -340,14 +375,20 @@ async def _jev_attempt(
     "invalid_option"), "cost_cap", "timeout" again when Jev's own bound did
     not fire and `_JEV_WAIT_S` did, or "unexpected_error". Never raises,
     except for cancellation: a caller that cancels the decision stops Jev's
-    call with it, since `asyncio.wait_for` cancels what it waits on.
+    call with it.
+
+    `_JEV_WAIT_S` counts only time the event loop was free, like Jev's own
+    bound (`wait_counting_free_time`; fix round, F-72-J03): a stall of the
+    server anywhere inside this wait, before Jev's request or while its
+    reply is read, never turns a pick Jev delivers inside its own bound
+    into a "timeout".
     """
     try:
-        return await asyncio.wait_for(
+        return await wait_counting_free_time(
             _run_jev_pick(
                 harness, trace_id, point, state, options, model, api_key, instructions, criteria
             ),
-            timeout=_JEV_WAIT_S,
+            _JEV_WAIT_S,
         )
     except JevCallError as exc:
         return exc.reason
