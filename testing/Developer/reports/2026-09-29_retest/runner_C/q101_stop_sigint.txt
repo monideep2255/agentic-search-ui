@@ -1,0 +1,7 @@
+exit 130
+--stdout--
+
+--stderr--
+s3: interrupted, stopping the run...
+error: the run ended before a final answer was received; any answer text above is incomplete and its citations may be partial.
+

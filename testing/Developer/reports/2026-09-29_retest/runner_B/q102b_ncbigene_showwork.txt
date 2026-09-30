@@ -1,0 +1,59 @@
+No search limit in effect yet
+Which diseases are associated with NCBIGene:672?
+New search
+
+? Answered21.7s · 4 tools · 6 sources from 1 layer
+
+Hide work ▴
+0.0s
+GUARD
+In scope. The question can be grounded in NCBI records.
+1.7s
+THINK
+Asks for diseases linked to a specific NCBI Gene ID, requiring one API call to resolve the gene and another to retrieve associated diseases.
+1.7s
+PLAN
+searching 2 layers for NCBIGene:672. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch
+1.8s
+ACT
+ncbi_efetch — 1 result
+2.0s
+ACT
+ncbi_efetch — 1 result
+2.3s
+ACT
+cypher_query — 4 results
+2.4s
+ACT
+cypher_query — 40 results
+
+Found 4 disease records for NCBIGene:672: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.⁠1–4
+
+NCBIGene:672 is associated with four diseases: familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4
+
+DISEASE RECORDS FOUND
+DISEASE	IDENTIFIER	
+Familial cancer of breast	MedGen:C0346153	⁠1
+Familial breast-ovarian cancer susceptibility 1	MedGen:C2676676	⁠2
+Pancreatic cancer susceptibility 4	MedGen:C3280442	⁠3
+Fanconi anemia complementation group S	MedGen:C4554406	⁠4
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+BRCA1	NCBIGene:672	⁠5
+BRCA1	NCBIGene:672	⁠6
+▶
+SOURCES
+6
+Based on 6 sources, not yet confirmed
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

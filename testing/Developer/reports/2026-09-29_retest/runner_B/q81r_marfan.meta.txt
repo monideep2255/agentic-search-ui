@@ -1,0 +1,35 @@
+{
+ "modes": [
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "=false",
+  "=false"
+ ],
+ "links": [
+  "https://www.ncbi.nlm.nih.gov/medgen/44287 -> https://www.ncbi.nlm.nih.gov/medgen/44287",
+  "https://pubmed.ncbi.nlm.nih.gov/35894201/ -> https://pubmed.ncbi.nlm.nih.gov/35894201/",
+  "https://pubmed.ncbi.nlm.nih.gov/38517496/ -> https://pubmed.ncbi.nlm.nih.gov/38517496/",
+  "https://www.ncbi.nlm.nih.gov/medgen/C0024796 -> https://www.ncbi.nlm.nih.gov/medgen/C0024796",
+  "https://pubmed.ncbi.nlm.nih.gov/2402263/ -> https://pubmed.ncbi.nlm.nih.gov/2402263/",
+  "https://pubmed.ncbi.nlm.nih.gov/37058316/ -> https://pubmed.ncbi.nlm.nih.gov/37058316/",
+  "https://pubmed.ncbi.nlm.nih.gov/8733052/ -> https://pubmed.ncbi.nlm.nih.gov/8733052/",
+  "https://www.ncbi.nlm.nih.gov/mesh/D008382 -> https://www.ncbi.nlm.nih.gov/mesh/D008382",
+  "https://clinicaltrials.gov/study/NCT00270686 -> https://clinicaltrials.gov/study/NCT00270686",
+  "https://clinicaltrials.gov/study/NCT00429364 -> https://clinicaltrials.gov/study/NCT00429364",
+  "https://clinicaltrials.gov/study/NCT00485368 -> https://clinicaltrials.gov/study/NCT00485368",
+  "https://clinicaltrials.gov/study/NCT00593710 -> https://clinicaltrials.gov/study/NCT00593710",
+  "https://clinicaltrials.gov/study/NCT00651235 -> https://clinicaltrials.gov/study/NCT00651235"
+ ],
+ "url": "https://search-agent-web-develop-2aeb.up.railway.app/"
+}

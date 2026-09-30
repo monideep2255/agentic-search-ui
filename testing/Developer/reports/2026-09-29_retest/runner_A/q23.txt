@@ -1,0 +1,61 @@
+QUESTION: What is rs334 and what condition is it associated with?
+LANDED=answer SECONDS=27.6
+
++ New search
+
+YOUR SEARCHES
+
+What is rs334 and what condition is it associated with?
+3 tools · 5 sources from 2 layers
+Which diseases are associated with BRCA1?
+22 sources · Sep 29
+s3-retest-a-20260929@example.com
+No search limit in effect yet
+What is rs334 and what condition is it associated with?
+New search
+
+? Answered24.3s · 3 tools · 5 sources from 2 layers
+
+Show work ▾
+
+Found 1 variant record record and 4 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other, rs334348, rs334353, c.-50T>C and rs334773.⁠1–5
+
+VARIANT RECORD RECORDS FOUND
+VARIANT	IDENTIFIER	
+not-provided, protective, likely-benign, pathogenic, other	rs334	⁠1
+LITERATURE VARIANT RECORDS FOUND
+VARIANT	IDENTIFIER	
+rs334348	rs334348	⁠2
+rs334353	rs334353	⁠3
+c.-50T>C	rs334558	⁠4
+rs334773	rs334773	⁠5
+▶
+SOURCES
+5
+Based on 5 sources, not yet confirmed
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== LINKS ===
+https://www.ncbi.nlm.nih.gov/snp/rs334
+https://www.ncbi.nlm.nih.gov/snp/rs334348
+https://www.ncbi.nlm.nih.gov/snp/rs334353
+https://www.ncbi.nlm.nih.gov/snp/rs334558
+https://www.ncbi.nlm.nih.gov/snp/rs334773
+=== CITATION ARIA (first 6) ===
+Sources 1 to 5: Source 1, layer 2; Source 2, layer 3; Source 3, layer 3; Source 4, layer 3; Source 5, layer 3
+Sources
+Source 1, layer 2
+Sources
+Source 2, layer 3
+Source 3, layer 3

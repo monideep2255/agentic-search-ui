@@ -1,0 +1,82 @@
+[Koch | think] Requires finding diseases linked to BRCA1 via gene-disease associations.
+[Koch | plan] searching 3 layers for NCBIGene:672. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search
+[tool] cypher_query (layer_1_graph): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] pubtator_annotate (layer_3_enrichment): running
+[tool] clinicaltrials_search (layer_3_enrichment): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] pubtator_annotate (layer_3_enrichment): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] ncbi_efetch (layer_2_api): running
+[tool] cypher_query (layer_1_graph): running
+[tool] pubtator_annotate (layer_3_enrichment): ok - ok: 1 record(s) (1 result(s))
+[tool] ncbi_efetch (layer_2_api): ok - dataset_report: 1 record(s) (1 result(s))
+[tool] ncbi_efetch (layer_2_api): ok - search: 10 id(s) (10 result(s), truncated)
+[tool] clinicaltrials_search (layer_3_enrichment): ok - ok: 5 record(s) (5 result(s))
+[tool] ncbi_efetch (layer_2_api): ok - summary: 1 record(s) (1 result(s))
+[tool] cypher_query (layer_1_graph): ok - 4 row(s) of 4 (4 result(s))
+[tool] cypher_query (layer_1_graph): ok - 40 row(s) of 40 (40 result(s))
+[tool] ncbi_efetch (layer_2_api): ok - search: 10 id(s) (10 result(s), truncated)
+[tool] ncbi_efetch (layer_2_api): ok - search: 5 id(s) (5 result(s), truncated)
+[tool] pubtator_annotate (layer_3_enrichment): ok - ok: 5 record(s) (5 result(s))
+[tool] ncbi_efetch (layer_2_api): ok - summary: 1 record(s) (1 result(s))
+[tool] ncbi_efetch (layer_2_api): ok - summary: 5 record(s) (5 result(s))
+[tool] ncbi_efetch (layer_2_api): ok - fetch: 10 record(s) (10 result(s))
+Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4]. 
+
+BRCA1 is associated with four diseases: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. 
+
+Disease records found
+
+Disease name: Familial cancer of breast [1]. Disease name: Familial breast-ovarian cancer susceptibility 1 [2]. Disease name: Pancreatic cancer susceptibility 4 [3]. Disease name: Fanconi anemia complementation group S [4]. 
+
+Gene records found
+
+Gene symbol: BRCA1 [5]. Gene name: BRCA1 [9]. 
+
+Pubmed records found
+
+Pubmed title: BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing [6]. Pubmed title: BRCA1 Antibodies Matter [11]. Pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [14]. Pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [17]. Pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [20]. 
+
+Clinvar records found
+
+Clinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [7]. Clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [12]. Clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [15]. Clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [18]. Clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [21]. 
+
+Omim records found
+
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN [8]. BRCA1 [8]. 
+
+Clinical trial records found
+
+Clinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [10]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [13]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [16]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [19]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [22]. 
+[answer]
+Based on 22 sources, not yet confirmed · High-risk claim
+
+References:
+[1] ncbi_efetch - https://www.ncbi.nlm.nih.gov/medgen/C0346153
+[2] ncbi_efetch - https://www.ncbi.nlm.nih.gov/medgen/C2676676
+[3] ncbi_efetch - https://www.ncbi.nlm.nih.gov/medgen/C3280442
+[4] ncbi_efetch - https://www.ncbi.nlm.nih.gov/medgen/C4554406
+[5] gene - https://www.ncbi.nlm.nih.gov/gene/672/
+[6] pubmed - https://pubmed.ncbi.nlm.nih.gov/28976962/
+[7] clinvar - https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/
+[8] omim - https://omim.org/entry/113705
+[9] gene - https://www.ncbi.nlm.nih.gov/gene/672
+[10] clinicaltrials.gov - https://clinicaltrials.gov/study/NCT00590109
+[11] pubmed - https://pubmed.ncbi.nlm.nih.gov/34421362/
+[12] clinvar - https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/
+[13] clinicaltrials.gov - https://clinicaltrials.gov/study/NCT00597987
+[14] pubmed - https://pubmed.ncbi.nlm.nih.gov/36914836/
+[15] clinvar - https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/
+[16] clinicaltrials.gov - https://clinicaltrials.gov/study/NCT00617656
+[17] pubmed - https://pubmed.ncbi.nlm.nih.gov/39261728/
+[18] clinvar - https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/
+[19] clinicaltrials.gov - https://clinicaltrials.gov/study/NCT00673335
+[20] pubmed - https://pubmed.ncbi.nlm.nih.gov/39265497/
+[21] clinvar - https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/
+[22] clinicaltrials.gov - https://clinicaltrials.gov/study/NCT00700778
+s3 ask "Which diseases are associated with BRCA1?"  0.19s user 0.05s system 1% cpu 13.292 total

@@ -1,0 +1,46 @@
+No search limit in effect yet
+▶
+Which diseases are associated with BRCA1?
+13 tools · 22 sources from 2 layers
+Show answer
+and BRCA2?
+New search
+
+✓ Answered16.5s · 13 tools · 18 sources from 3 layers
+
+Show work ▾
+
+I found 1 gene related to BRCA2.⁠1
+
+WHERE THIS ANSWER COMES FROM
+BRCA2 DNA repair associated	⁠1
+BRCA2	⁠2
+The BRCA1 and BRCA2 Genes in Early-Onset Breast Cancer Patients.	⁠3
+NM_000059.4(BRCA2):c.3870C>G (p.Cys1290Trp)	⁠4
+BRCA2 DNA REPAIR-ASSOCIATED PROTEIN; BRCA2	⁠5
+BRCA2 DNA REPAIR-ASSOCIATED PROTEIN; BRCA2	⁠5
+Establishing the Incidences of BRCA1 and BRCA2 Mutation by Combining DHPLC and Direct Sequencing in Ovarian Cancer	⁠6
+The functional impact of variants of uncertain significance in BRCA2.	⁠7
+NM_000059.4(BRCA2):c.7391_7393del (p.Gln2464_Ala2465delinsPro)	⁠8
+Study of Mitomycin-C in Patients With Advanced or Recurrent Pancreatic Cancer With Mutated BRCA2 Gene	⁠9
+Showing 1–10 of 19
+‹ Previous
+Page 1 of 2
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+18
+Based on 18 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

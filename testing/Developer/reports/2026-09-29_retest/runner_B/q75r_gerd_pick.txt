@@ -1,0 +1,48 @@
+No search limit in effect yet
+▶
+GERD
+0 tools · 0 sources
+Show answer
+What are the typical symptoms and risk factors of GERD?
+New search
+
+? Answered9.7s · 8 tools · 12 sources from 2 layers
+
+Show work ▾
+
+Found 5 pubmed records, 1 medgen record, 1 literature entity record and 5 clinical trial records for GERD.⁠1–12
+
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Gastroesophageal Reflux Disease.	PMID:29132520	⁠1
+Gastroesophageal Reflux Disease.	PMID:33351044	⁠5
+Gastroesophageal Reflux Disease.	PMID:36170502	⁠7
+Gastroesophageal reflux disease in children: What's new right now?	PMID:37034973	⁠9
+Gastroesophageal Reflux Disease.	PMID:37516506	⁠11
+MEDGEN RECORDS FOUND
+DISEASE	IDENTIFIER	
+Gastroesophageal reflux (GERD)	medgen 1795938	⁠2
+LITERATURE ENTITY RECORDS FOUND
+RECORD	IDENTIFIER	
+Gastroesophageal Reflux	@DISEASE_Gastroesophageal_Reflux	⁠3
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease	NCT00141960	COMPLETED	⁠4
+Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339)	NCT00163306	COMPLETED	⁠6
+Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents	NCT00181805	COMPLETED	⁠8
+On Demand Treatment of Reflux Disease	NCT00184522	COMPLETED	⁠10
+Treatment Of Gastroesophageal Reflux Disease By Endoscopic Fundoplication, A Placebo-Controlled Study	NCT00235677	COMPLETED	⁠12
+▶
+SOURCES
+12
+Based on 12 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

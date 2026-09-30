@@ -1,0 +1,47 @@
+== s3 ask (guest)
+exit 1
+stdout:
+stderr:
+s3: not logged in; run 's3 login' first
+== s3 ask --json (guest)
+exit 1
+stdout:
+{
+  "run_id": null,
+  "session_id": null,
+  "persona_name": null,
+  "complete": false,
+  "trust_outcome": null,
+  "trust_line": null,
+  "answer": "",
+  "citations": [],
+  "unresolved_markers": [],
+  "clarifying_question": null,
+  "clarifying_options": [],
+  "next_step": null,
+  "next_step_query": null,
+  "guard": null,
+  "error": {
+    "fatal": true,
+    "error_class": "sign_in_needed",
+    "source": "s3",
+    "message": "s3: not logged in; run 's3 login' first",
+    "retry_after_s": null
+  },
+  "stream": {
+    "skipped_frames": 0,
+    "truncated": false
+  }
+}
+stderr:
+s3: not logged in; run 's3 login' first
+== s3 mcp (guest)
+exit 127
+stdout:
+stderr:
+(eval):6: command not found: timeout
+== s3 mcp (guest, retry)
+exit 1
+stdout: ''
+stderr: s3: not logged in; run 's3 login' first
+

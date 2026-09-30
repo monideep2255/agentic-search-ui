@@ -1,0 +1,10 @@
+{
+ "modes": [
+  "=false",
+  "=false"
+ ],
+ "links": [
+  "https://www.ncbi.nlm.nih.gov/search/all/?term=recent%20papers%20on%20statins -> https://www.ncbi.nlm.nih.gov/search/all/?term=recent%20papers%20on%20statins"
+ ],
+ "url": "https://search-agent-web-develop-2aeb.up.railway.app/"
+}

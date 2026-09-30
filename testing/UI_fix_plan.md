@@ -17,8 +17,17 @@ In priority order.
 
 | # | Feature, in plain words | Item | Waiting on |
 |---|---|---|---|
-| 84 | R-10, the parts the fresh verifier found sound: a Jev reply that reached the provider is never charged $0, a stalled server never turns Jev's on-topic answer into a refusal, and a refused question's message tells the truth about when to try again | R-10 in `tracker/phase_8.6.md`; built and reviewed on the parked branch `fix/card72-r10-guardrail` (1961518c), not merged: `testing/Developer/reports/2026-09-29_card72/` | Next: re-cut from develop as its own change, without the hedge, with the verifier's V02, V03 and V04 in its acceptance |
-| 72 | A search fails with "a temporary error" because the guard model did not answer in time, twice: 4 of 150 golden runs on 2026-09-29. The first hedged design lost searches in a slow spell and let an off-topic question through on the relevancy check (F-72-V08), and was not merged | Diagnosis: `testing/Developer/reports/2026-09-29_card72/diagnosis.md`; the parked branch's verifier: F-72-V06 and V08 | After card 84: a redesign where any refusal beats an admit on every guard call, and a slow failure never waits longer than develop |
+| 86 | The web app's license notices: `clsx` still reads "no license file found" in THIRD_PARTY_NOTICES.txt (query 99) | card 60; failed the batch retest of 2026-09-29 (`testing/Developer/reports/2026-09-29_retest/`) | Nobody on it: a diagnosis first |
+| 87 | "Recent papers" asks how far back: `recent-onset diabetes treatment` is asked back though it should not be (query 84) | 12.15; failed the batch retest of 2026-09-29 (`testing/Developer/reports/2026-09-29_retest/`) | Nobody on it: a diagnosis first |
+| 88 | No restatement paragraph: `GERD` at Researcher shows no written answer above the tables (query 75) | 12.12; failed the batch retest of 2026-09-29 (`testing/Developer/reports/2026-09-29_retest/`) | Nobody on it: a diagnosis first |
+| 89 | The answer answers the question: one of two runs of the Mediterranean question never named Familial Mediterranean fever (query 73) | 12.10; failed the batch retest of 2026-09-29 (`testing/Developer/reports/2026-09-29_retest/`) | Nobody on it: a diagnosis first |
+| 90 | The seven questions the skip manager asked all answer: the Mediterranean question is intermittent, as card 89 (query 73) | 12.1; failed the batch retest of 2026-09-29 (`testing/Developer/reports/2026-09-29_retest/`) | Nobody on it: a diagnosis first |
+| 91 | MLH1 and MSH2 keep their own graph search: query 25 showed "One of the background searches did not finish" on both runs | G-033, G-037; failed the batch retest of 2026-09-29 (`testing/Developer/reports/2026-09-29_retest/`) | Nobody on it: a diagnosis first |
+| 92 | A chromosome range is answered with its genes and records: no dbVar records appear among the sources (queries 27 and 29) | the coordinate range; failed the batch retest of 2026-09-29 (`testing/Developer/reports/2026-09-29_retest/`) | Nobody on it: a diagnosis first |
+| 93 | An answer never lists the question's own words as diseases: query 25 failed on both runs, as card 91 | the question's own words; failed the batch retest of 2026-09-29 (`testing/Developer/reports/2026-09-29_retest/`) | Nobody on it: a diagnosis first |
+| 94 | Isolate questions answer with a table of isolates and their resistance genes: the default mode often shows names without genes, the blaCTX-M note is missing, a colistin question returns a suspicious zero, and a single-isolate answer lacks its details (queries 33, 35, 36, 44 and the isolate workflow); some counts differ only because the snapshot is newer | G-035; failed the batch retest of 2026-09-29 (`testing/Developer/reports/2026-09-29_retest/`) | Nobody on it: a diagnosis first |
+| 84 | R-10's guardrail fixes on their own | Built, then stopped at the owner's choice on 2026-09-29 after its adversary found an off-topic question and a disguised injection admitted when the provider rate-limits (F-84-A05, A07); parked on `fix/card84-r10-sound-parts` at 5a0adc02, records in `testing/Developer/reports/2026-09-29_card84/` | Returns only as a design written and agreed with the owner first; develop's guardrail stays as it is |
+| 72 | A search fails with "a temporary error" because the guard model did not answer in time, twice: 4 of 150 golden runs on 2026-09-29. The first hedged design lost searches in a slow spell and let an off-topic question through on the relevancy check (F-72-V08), and was not merged | Diagnosis: `testing/Developer/reports/2026-09-29_card72/diagnosis.md`; the parked branch's verifier: F-72-V06 and V08 | After card 84's design is agreed: a redesign where any refusal beats an admit on every guard call, and a slow failure never waits longer than develop |
 | 74 | G-006, a question about one PubMed paper's linked data, found nothing in all three passes on 2026-09-29, its graph search timing out each time; it answered 1 of 3 before | Card 63's golden run | Nobody on it |
 | 75 | An AI agent that sends an unknown argument whose name contains "bearer token" makes `s3 mcp` tell the person to log in again, and two Authorization headers or an empty "Bearer " get the wrong fixed message | Card 62's adversary F-62-A06 and judge F-62-J06; the fix `3842019f` was dropped because production does not send the field it keyed on (F-62-V03, `DECISIONS.md` 2026-09-29) | Nobody on it: land the server's `data.reason` refusal field first and release it to production, then the client change |
 | 77 | When the MedGen name lookup fails or times out, a question such as "Any trials for GERD?" searches no literature or trials, and the answer does not say so | Card 53's adversary, F-53-A11 | Nobody on it: an answer-path change, so its golden run blocks |
@@ -425,54 +434,6 @@ the last column.
 
 | # | What to check, in plain words | Item | Queries |
 |---|---|---|---|
-| 1 | A search that crashes writes "search crashed, trace <id>" and its reason to develop's log, and what you see on screen does not change | card 73, #139 | Nothing to try by hand: search a crash's trace id in develop's log (card 81 notes the reason sits on the lines below it) |
-| 2 | The Architecture and About pages say what the system actually does: the plan step decides whether literature and trial evidence are searched, each source has its own time limit, and no page names LitSense | card 53, #134 | 102 |
-| 3 | The Integrations page's install works on the first try in a fresh terminal, and `s3` shows the same trust line the web shows for an answer; the page prints no KGX install and says a KGX file comes from the operator | card 62, #133 | 101 |
-| 4 | A "not yet confirmed" answer reopens from your searches with its trust line and notes, and during an NCBI outage the note says the database is down and may be missing things, never that the answer has none | card 63, #128 | 100, 67 |
-| 5 | Stop works until the first sentence of the answer is on screen, and a stop in that window shows "Search stopped" and nothing of the answer | card 58 | 98 |
-| 6 | The web app carries its libraries' license notices: React, React DOM and MUI, each with its version and license text | card 60 | 99 |
-| 7 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | cards 49 and 21, phase 8.10 | 90 to 97, and 60 |
-| 8 | An answer about something else never says "MedGen lists no clinical features for ..." | card 1, T-8.6-06 | 87 |
-| 9 | At Researcher depth, a question about a disease's features names them in the written answer too | card 31, T-8.6-06 | 81 |
-| 10 | A question carrying hidden instructions, or asking to change the graph, is refused, and Jev makes that call | T-8.6-04, T-8.6-05, R-02 | 88, 89 |
-| 11 | A graph search that cannot finish gives up after 30 seconds, not 90 | card 45, R-09 | 59 |
-| 12 | The second writing call runs only when it can change the answer | card 3, T-8.6-07 | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-07 |
-| 13 | Jev's and DeepSeek's picks are compared offline instead of racing the answer | card 34, T-8.6-03 | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-03 |
-| 14 | The Answer modes card gives each mode its own block and says what the mode gives, never who the reader is; on a phone it now fits on screen | 13.2 | 86 |
-| 15 | A question the biomedical word list does not know is judged by the classifier, not refused: the tree of life is answered, pizza is refused, and off-topic follow-ups are refused | Jev as the classifier, golden row G-038 | 83 |
-| 16 | "Recent papers" asks how far back to search, and the choice narrows the papers | 12.15 | 84 |
-| 17 | Whether a question wants papers is a classifier's choice, not a word list | 12.16 part 3 | 85 |
-| 18 | Jev makes the small choices on develop and DeepSeek's pick is recorded beside it: read the comparison table | Jev, the probability model trial | Nothing to try by hand: `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md` |
-| 19 | The NCBI and enrichment calls are listed once as typed functions the classifier can choose from | 11.32, the function catalogue | Nothing to try by hand: `src/system_03_search_agent/tools/catalogue.py` |
-| 20 | Golden row G-035 accepts the Taxonomy link the product cites | the golden rows | Nothing to try by hand |
-| 21 | The graph's data gaps are handed to the repository that writes the graph | disease names, the hand-over | Nothing to try by hand: read `docs/data-engineering/Graph_data_hand_over_2026-09-25.md` |
-| 22 | The design card's four type values match the shipped code | 2.13, the four type values | Nothing to try by hand |
-| 23 | `/phase-checkpoint` names the counts line by what it holds | the checkpoint line | Nothing to try by hand |
-| 24 | A question about a disease's features names them, each cited to MedGen: in the written answer at Plain language, in the list at Researcher | 12.14 | 81 |
-| 25 | A good question is never refused because the think step's reply was malformed | 12.17 | 80 |
-| 26 | An answer can cite up to 30 sources, and a question about papers reaches them | the ceiling, the byte ceiling | 82 |
-| 27 | An NCBI outage no longer turns the build red | the live NCBI unit test | Nothing to try by hand: CI's unit gate deselects the live test |
-| 28 | "Based on N sources" equals the SOURCES count on the page | 12.11, 12.8 | 74 |
-| 29 | No broken sentences and no restatement paragraph | 12.12 | 75 |
-| 30 | The answer answers the question in plain sentences drawn from the papers, each cited | 12.10 | 73 |
-| 31 | A search clicked in the history rail, in the same tab, opens its saved answer | 12.13 | 67 |
-| 32 | Plain language and researcher differ on every question | 12.9 | 72 |
-| 33 | A one-to-three-word question is asked back, with choices written for its subject | 12.3 | 76 |
-| 34 | The seven questions your skip manager asked all answer | 12.1 | 68, 69, 73 |
-| 35 | A literature question typed in lowercase is not refused as "Outside biomedical research" | 12.2 | 70 |
-| 36 | A refusal says "Ask another question" | 12.4 | 71 |
-| 37 | A question naming no gene and no disease finds the papers, each shown once | 12.7 | 69 |
-| 38 | The MCP configuration on the Integrations page connects, and never sends you to an `http://` address | 11.30 | 60 |
-| 39 | History shows the saved answer at once, with Run again | 10.2 | 67 |
-| 40 | MeSH terms show as real terms, each linked to its MeSH record | G-019 | 64 |
-| 41 | The opening sentence's count agrees with the list beneath it | the opening count | 65 |
-| 42 | The Marfan phenotype question no longer says "I could not find evidence"; what it answers instead is 12.14 in To do | the phenotype template | 66 |
-| 43 | Two questions keep their own graph search: MLH1 and MSH2, and GEO datasets for TP53 | G-033, G-037 | 24, 25 |
-| 44 | A chromosome range is answered with its genes and records, and a range with no assembly asks which | the coordinate range | 27, 28, 29 |
-| 45 | An answer never lists the question's own words as diseases it did not address | the question's own words | 23, 25 |
-| 46 | A BioProject or BioSample accession is answered, and an unknown one is named as not found | the accessions | 30, 31, 32 |
-| 47 | Pathogen Detection isolate questions answer with a table of isolates and their resistance genes | G-035 | 33, 35, 36, 38, 39, 40, 44, and `testing/Product/queries/Isolate_search_queries_and_workflow.md` |
-| 48 | Copy an answer and paste it somewhere: no "Source 1, layer 2" text | 11.14 | 6 |
-| 49 | Open the answer-modes info button: no promise of a word count | 11.36 | 3 |
-| 50 | Change the mode while a search is running: it cannot change mid-search | 9.12 | 4 |
-| 51 | Open the app twice: different scientists, the same answer | 8.4 | 9 |
+| 1 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | cards 49 and 21, phase 8.10 | 90 to 97, and 60 |
+| 2 | A graph search that cannot finish gives up after 30 seconds, not 90 | card 45, R-09 | 59 |
+| 3 | A one-to-three-word question is asked back, with choices written for its subject | 12.3 | 76 |

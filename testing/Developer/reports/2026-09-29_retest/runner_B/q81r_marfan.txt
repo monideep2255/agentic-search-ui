@@ -1,0 +1,69 @@
+No search limit in effect yet
+What phenotypic features are associated with Marfan syndrome?
+New search
+
+✓ Answered10.4s · 8 tools · 85 sources from 2 layers
+
+Show work ▾
+
+Found 1 disease record for Marfan syndrome: Marfan syndrome.⁠13
+
+CLINICAL FEATURES
+
+MedGen lists these clinical features: Aortic regurgitation, Arachnodactyly, Astigmatism, Ectopia lentis, Esotropia, Exotropia, Pes planus, Glaucoma, Congestive heart failure and Hypertropia.⁠1–10 Early identification, diagnosis, and treatment can effectively prolong the life span of patients.⁠11
+
+Comprehensive review of Marfan Syndrome covers its epidemiology, etiology, clinical presentations, diagnostics, complications, and treatment modalities.⁠12
+
+DISEASE RECORDS FOUND
+DISEASE	IDENTIFIER	
+Marfan syndrome	MedGen:C0024796	⁠13
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Marfan syndrome.	PMID:2402263	⁠14
+[Latest advances in the diagnosis and treatment of Marfan syndrome].	PMID:35894201	⁠78
+What Is Marfan Syndrome?	PMID:37058316	⁠80
+Marfan syndrome.	PMID:38517496	⁠82
+Marfan syndrome.	PMID:8733052	⁠84
+MEDGEN RECORDS FOUND
+DISEASE	IDENTIFIER	
+Marfan syndrome	medgen 44287	⁠15
+CLINICAL FEATURES MEDGEN LISTS FOR MARFAN SYNDROME
+CLINICAL FEATURE	IDENTIFIER	
+Aortic regurgitation	HP:0001659	⁠1
+Arachnodactyly	HP:0001166	⁠2
+Astigmatism	HP:0000483	⁠3
+Ectopia lentis	HP:0001083	⁠4
+Esotropia	HP:0000565	⁠5
+Exotropia	HP:0000577	⁠6
+Pes planus	HP:0001763	⁠7
+Glaucoma	HP:0000501	⁠8
+Congestive heart failure	HP:0001635	⁠9
+Hypertropia	HP:0025586	⁠10
+Showing 1–10 of 70
+‹ Previous
+Page 1 of 7
+Next ›
+LITERATURE ENTITY RECORDS FOUND
+RECORD	IDENTIFIER	
+Marfan Syndrome	@DISEASE_Marfan_Syndrome	⁠76
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Studies of Heritable Disorders of Connective Tissue	NCT00270686	COMPLETED	⁠77
+Comparison of Two Medications Aimed at Slowing Aortic Root Enlargement in Individuals With Marfan Syndrome	NCT00429364	COMPLETED	⁠79
+Angiotensin Converting Enzyme Inhibitors in Marfan Syndrome	NCT00485368	COMPLETED	⁠81
+Losartan Versus Atenolol for the Treatment of Marfan Syndrome	NCT00593710	COMPLETED	⁠83
+A Randomized, Open-label, LOSARTAN Therapy on the Progression of Aortic Root Dilation in Patients With Marfan Syndrome	NCT00651235	UNKNOWN	⁠85
+▶
+SOURCES
+13
+Based on 13 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

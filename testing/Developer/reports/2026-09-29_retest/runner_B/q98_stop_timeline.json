@@ -1,0 +1,40 @@
+{
+ "pressInfo": {
+  "t": 26930,
+  "stop": true,
+  "stopDisabled": false,
+  "banner": true,
+  "answerChars": 0,
+  "stopped": false,
+  "answered": false
+ },
+ "timeline": [
+  {
+   "t": 50,
+   "stop": true,
+   "stopDisabled": true,
+   "banner": false,
+   "answerChars": 0,
+   "stopped": false,
+   "answered": false
+  },
+  {
+   "t": 972,
+   "stop": true,
+   "stopDisabled": false,
+   "banner": false,
+   "answerChars": 0,
+   "stopped": false,
+   "answered": false
+  },
+  {
+   "t": 26930,
+   "stop": true,
+   "stopDisabled": false,
+   "banner": true,
+   "answerChars": 0,
+   "stopped": false,
+   "answered": false
+  }
+ ]
+}

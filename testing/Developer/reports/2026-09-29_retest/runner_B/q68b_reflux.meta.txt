@@ -1,0 +1,10 @@
+{
+ "modes": [
+  "=false",
+  "=false"
+ ],
+ "links": [
+  "https://www.ncbi.nlm.nih.gov/search/all/?term=reflux%20disease -> https://www.ncbi.nlm.nih.gov/search/all/?term=reflux%20disease"
+ ],
+ "url": "https://search-agent-web-develop-2aeb.up.railway.app/"
+}

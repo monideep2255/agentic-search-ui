@@ -1,0 +1,51 @@
+No search limit in effect yet
+is there a trial recruiting for melanoma
+New search
+
+✓ Answered11.1s · 8 tools · 14 sources from 2 layers
+
+Show work ▾
+
+Found 5 clinical trial records and 1 disease record for melanoma: Modified Vaccine for High Risk or Low Residual Melanoma Patients, Follow-up of a National Cohort of Melanoma Resectable Stage II, Stage III or IV Patients or Unresectable Primary, A Randomized Trial to Assess the Role of Imaging During Follow Up After Radical Surgery of High Risk Melanoma, Melanoma Metastasized to the Brain and Steroids, Neoadjuvant Combination Immunotherapy for Stage III Melanoma and Melanoma.⁠2–7
+
+MELANOMA BIOLOGY CONTEXT
+
+Targeted therapies and immunotherapy have improved outcomes for metastatic melanoma.⁠1
+
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Modified Vaccine for High Risk or Low Residual Melanoma Patients	NCT01898039	RECRUITING	⁠2
+Follow-up of a National Cohort of Melanoma Resectable Stage II, Stage III or IV Patients or Unresectable Primary	NCT02828202	RECRUITING	⁠3
+A Randomized Trial to Assess the Role of Imaging During Follow Up After Radical Surgery of High Risk Melanoma	NCT03116412	RECRUITING	⁠4
+Melanoma Metastasized to the Brain and Steroids	NCT03563729	RECRUITING	⁠5
+Neoadjuvant Combination Immunotherapy for Stage III Melanoma	NCT03842943	RECRUITING	⁠6
+DISEASE RECORDS FOUND
+DISEASE	IDENTIFIER	
+Melanoma	MedGen:C0025202	⁠7
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Braf(V600E) cooperates with Pten loss to induce metastatic melanoma.	PMID:19282848	⁠8
+Biology of Melanoma.	PMID:33759772	⁠11
+Extracutaneous Melanoma.	PMID:33759775	⁠12
+Comparative Genomics Provides Etiologic and Biological Insight into Melanoma Subtypes.	PMID:36098958	⁠13
+Anorectal melanoma.	PMID:37395165	⁠14
+MEDGEN RECORDS FOUND
+DISEASE	IDENTIFIER	
+Melanoma	medgen 9944	⁠9
+LITERATURE ENTITY RECORDS FOUND
+RECORD	IDENTIFIER	
+Melanoma	@DISEASE_Melanoma	⁠10
+▶
+SOURCES
+13
+Based on 13 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
