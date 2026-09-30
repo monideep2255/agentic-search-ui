@@ -7,6 +7,7 @@ Built 2026-09-29 on `fix/card84-r10-sound-parts`, cut from develop `d9e05c4e`. O
 - [What a person notices](#what-a-person-notices)
 - [Commits](#commits)
 - [Reused from the parked branch](#reused-from-the-parked-branch)
+- [Acceptance line 1, corrected](#acceptance-line-1-corrected)
 - [Acceptance, line by line](#acceptance-line-by-line)
 - [The sweep](#the-sweep)
 - [Break-it results](#break-it-results)
@@ -16,11 +17,11 @@ Built 2026-09-29 on `fix/card84-r10-sound-parts`, cut from develop `d9e05c4e`. O
 ## What a person notices
 
 - No screening reply ever races another. A question is judged by one reply at a time, so an off-topic question is never admitted because a second reply to it came back faster (card 72's V08 cannot happen).
-- After one failed screening request, the answer comes as fast as on develop: the second request goes the moment the first fails (card 72's V06 is gone).
-- A screening request that fails slowly, followed by one that answers inside the 15 seconds, keeps the question, where develop failed it at 15 s (FJ11).
+- Whenever the screening model fails without rate-limiting, the person gets exactly what develop gave them, at the same moment: the same retries, the same waits, the same answer (card 72's V06 is gone, and R-05's one-second blip is still outlasted).
+- A screening request that fails slowly, followed by one that would answer inside the 15 seconds, still fails at 15 s, as on develop (FJ11 is open again; see the corrected section).
 - A question Jev judges on topic is not refused because the server paused where the judge put the pause, or anywhere else in Jev's wait up to 2 s of pause (FA03).
 - When the screening model is rate-limited and says how long to wait, the web app says "Try asking again in about N seconds"; when it says nothing, "Wait a little, then try asking again", never "in a moment".
-- The one thing a person could lose: a provider error lasting about a second that fails the first two screening requests now ends the search at once, which develop answered on its third request. See the last section.
+- The one thing a person could lose: a search whose screening call was rate-limited, since such a call now sends two requests at most and waits when the provider says to, where develop sent up to four at once.
 
 ## Commits
 
@@ -34,6 +35,9 @@ Built 2026-09-29 on `fix/card84-r10-sound-parts`, cut from develop `d9e05c4e`. O
 | `1e1aab4a` | fix(harness): Jev never takes a question past its cost cap, even two calls at once or the sentence check |
 | `d5f091e9` | fix(web-ui): a rate-limited search says how many seconds to wait, and to wait a little when no wait is known |
 | `48d5c24c` | docs: the debugging guide says how a Jev reply is charged and how a screening call sends its requests |
+| `ed0f5299` | docs: card 84's builder report |
+| `3e33c995` | fix(guardrail): screening keeps develop's retries for every failure but a rate limit, so no search develop answers is lost or slowed |
+| `f1b5828e` | docs: the debugging guide says screening keeps develop's retries and caps only a rate-limited call |
 
 ## Reused from the parked branch
 
@@ -45,6 +49,83 @@ From `fix/card72-r10-guardrail`, nothing of the hedge:
 - `4449b74a` and `ac3a471f` as `c1091c84`: `call_tier(retry=False)` keeping the reasoning fallback, and `LLMResponse.upstream_provider`. One docstring sentence about "a hedge" was reworded.
 - `7c028486`'s `useRunView` branch and test, adapted in `d5f091e9` (transient errors only, and the no-wait line changed).
 - Not reused: `26a47145` and everything in `c263c159` built on the hedge: its racing `ask_guard_model`, `second_request_at`, the stricter-reply ranks and its sweep. `ask_guard_model` on this branch is new code under the same name.
+
+## Acceptance line 1, corrected
+
+The lead corrected line 1 on 2026-09-29. R-10 caps only a RATE-LIMITED guard model at two requests, so:
+
+- A rate-limited call: at most two requests, a stated `Retry-After` honoured.
+- Every other failure: develop's behaviour exactly, its third and fourth requests and its timing included.
+- Always: never two requests in flight, and no hedge.
+
+This section supersedes what the sections below say about:
+
+- Line 1 and FJ11.
+- The sweep's counts.
+- Break-its M1 to M4, M8, M14, M15 and M21.
+
+### What changed
+
+- Commit `3e33c995`. `harness/decide.py` `ask_guard_model` now runs develop's policy request for request: `attempts` attempts (2 for the classifier, 1 for a guard pick), the first cut at `first_share` of the budget, an immediate resend of a transient error inside each attempt, and R-05's backoff between attempts (`GUARD_RETRY_BACKOFF_S`, `_attempt_wait_s`), with the cap pre-flight once per attempt.
+- The rate-limit rule overlays it: once any request meets a 429, no further request goes unless it is the second in all (`GUARD_RATE_LIMITED_MAX_REQUESTS = 2`); a stated `Retry-After` is waited out first, or ends the call when it would leave less than 3 s; that last request keeps all the rest of the budget.
+- Each request is still one `call_tier(retry=False)` in its own `enforce_timeout`, so a 429 is seen on the request that carried it; one request at a time.
+- The log line now reads "N requests" rather than "N of at most 2".
+
+### FJ11 is open again
+
+- R-10 line 2 (FJ11) was closed by giving the resend all of the 15 s instead of cutting it at the first attempt's 10 s. That changes develop's timing: whenever the resend hangs and develop's third request, sent at 10 s, would answer, the question is lost. Measured, the rejected variant (break-it C4) turns the sweep red on exactly those cases.
+- No policy can both admit FJ11's shape and keep develop's timing, so under the corrected line 1 FJ11 stays as on develop. `test_followup_guardrail.py::test_fj11_stays_as_on_develop_a_slow_failure_then_a_slow_answer_fails` pins it: a 503 at 9 s, a resend cut at 10 s, a third request at 10 s, the step error at 15 s.
+- This is the lead's or the owner's call: FJ11 closed with the losses above, or FJ11 open.
+
+### The sweep, rerun
+
+- Classifier, 10,306 cases (the same grid): develop answered 5,940. 4,872 were answered without a 429 on develop, and every one of them is answered here with the same requests, the same verdict, at the same moment: 0 lost, 0 later, 0 different.
+- The 1,068 cases develop answered after meeting a 429 are the only ones that differ: 630 lost, 210 the same but later, 216 the same and no later, 12 a different verdict (6 admitting where develop refused, 6 refusing where develop admitted; each is the reply to a request develop sent where this branch waited as the provider asked, or never sent).
+- No case had two requests in flight, passed its budget, or sent a request after a 429 other than as the second in all.
+- Pick, 280 cases: develop picked 150; 132 were picked without a 429, all held; the 18 rate-limited ones: 6 lost, 6 later, 6 the same.
+- R-05's RJ08 blip is answered on the third request as on develop (`test_the_sweep_reports_what_the_cap_gives_up`, `test_an_error_lasting_about_a_second_is_outlasted_as_on_develop`).
+- The develop port behind the sweep is unchanged, and was checked case for case against develop's real code at `d9e05c4e` (10,306 and 280 identical).
+
+### Tests changed
+
+- `test_guard_request_dominance.py`: the check is now "every case develop answered without a 429: same requests, same verdict, same moment"; `test_a_rate_limited_call_never_sends_a_third_request` replaces the old third-request test.
+- `test_followup_guardrail.py`: the FJ11 pin above; the RJ08 blip arm; `test_no_verdict_is_no_answer_and_no_path_passes_the_budget` now asserts the exact request count for 13 shapes (develop's four for errors every time, two once rate-limited); the unusable-then-error arm expects develop's three requests; the log line's wording.
+- `test_reland_guardrail.py`: `test_a_transient_error_twice_then_a_verdict` is back (connection errors, three requests, admitted), beside `test_a_rate_limited_call_stops_at_two_requests`.
+
+### Break-it, rerun
+
+The same byte-for-byte runner (`b84/mutate2.py`), every run `restored=True`, `git status` clean after.
+
+| # | Mutation | Red |
+| --- | --- | --- |
+| C1 | a rate-limited call allowed three requests | 2 |
+| C2 | no backoff between attempts (RJ08) | 3 |
+| C3 | no resend inside an attempt | 14 |
+| C4 | the resend keeps all 15 s (the old FJ11 fix) | 3 |
+| C5 | one attempt for the classifier | 24 |
+| C6 | a stated wait ignored | 3 |
+| C7 | an unusable reply ends the call | 5 |
+| C8 | the classifier on `call_tier`'s own retry | 24 |
+| C9 | the wait read only from the first request | 1 |
+| C10 | no upstream host in the log line | 1 |
+| M5, M6, M7 | Jev's clocks, the signal ignored, the signal never set | 3, 1, 1 |
+| M9 to M13 | Jev charges and the cap pre-flight | 4, 4, 2, 1, 6 |
+| M16, M17, M18 | the rate-limit wording | 9, 3, 4 |
+| M19, M20 | the pick on `call_tier`'s retry, the reasoning fallback | 2, 3 |
+| M23, M24 | the web app (vitest, unchanged code, from the first round) | 2, 1 |
+
+### Gates, rerun
+
+On `f1b5828e`, each polled until it exited.
+
+| Gate | Command | Result |
+| --- | --- | --- |
+| Unit suite, as `.github/gates/gate04_unit_suite.sh` runs it | `pytest -m "not integration" -q -rs`, CI's placeholder settings, with `USER_DB_URL` pointed at this machine's own PostgreSQL role (its database has no `postgres` role, which CI's service creates) | 6667 passed, 143 skipped, 24 deselected, 1 xfailed, exit 0, 393 s |
+| Touched tests | `tests/system_03_search_agent/guardrail/`, `harness/`, `core/test_graph.py`, `synthesis/test_sentence_check.py` | 1144 passed, 6 skipped |
+| Frontend tests | `npx vitest run` in `frontend/`, `node_modules` linked for the run and unlinked after | 59 files, 490 tests passed, exit 0 |
+| Lint | `ruff check .` | All checks passed |
+| Import order, as `.github/gates/gate02_import_order.sh` runs it | `isort --check-only --diff src tests services tracker alembic .claude .github` | exit 0 |
+| Doc structure | `tracker/check_doc_drift.py --check` | 0 stale, 0 structural |
 
 ## Acceptance, line by line
 
@@ -66,7 +147,7 @@ From `fix/card72-r10-guardrail`, nothing of the hedge:
 
 - Commit: `f5b06193`. Code: `decide.py:452`, the second request's budget is all that is left, not the first request's share.
 - Test: `test_a_slow_failure_then_an_answer_inside_the_budget_keeps_the_question` (a 503 at 9 s, the second answering 5.5 s after it is sent, admitted at 14.5 s; develop failed it at 15 s).
-- Status: closed.
+- Status: OPEN since the correction; see "Acceptance line 1, corrected".
 
 ### 4. R-10 line 3 as amended: every reply charged, never past the cap
 
@@ -105,6 +186,8 @@ From `fix/card72-r10-guardrail`, nothing of the hedge:
 - R-05's `_CLASSIFIER_RETRY_BACKOFF_S` is gone: under a two-request cap it only ever timed develop's third request.
 
 ## The sweep
+
+The counts in this section are the first build's, before the correction; the rerun's are in "Acceptance line 1, corrected".
 
 File: `tests/system_03_search_agent/guardrail/test_guard_request_dominance.py`.
 
@@ -174,6 +257,8 @@ Each polled until it exited, on `48d5c24c`.
 - `frontend/node_modules` was linked to the main checkout's for the frontend runs only, never staged, and unlinked after (`ls` then says no such file).
 
 ## Not closed, and choices the lead should see
+
+The first bullet is superseded by the correction: every failure but a rate limit now keeps develop's third and fourth requests, and FJ11 is open instead (see "Acceptance line 1, corrected").
 
 - Line 1 cannot be met in full as written, and this is the owner's trade. "At most two requests per guard call" and "a search develop answers is never lost and never slower" contradict each other, because develop sends up to four requests. Proof in one case: when the first request fails at once, develop resends at once. If the provider is healthy again, only a resend at once is as fast as develop; if the error lasts about a second, a resend at once fails too and develop answers on its third request, after R-05's 2 s backoff. No two-request policy wins both. This build keeps "never slower" and identical verdicts for everything develop answered within two requests, and gives up develop's third and fourth requests: 609 of 5,940 answered cases in the sweep, 570 of them lost, including R-05's RJ08 blip (`test_the_sweep_reports_what_the_cap_gives_up`, and `test_reland_guardrail.py::test_two_transient_errors_are_the_limit`, which replaced a pin of develop's third request). The alternatives for the owner:
   - Keep this build.
