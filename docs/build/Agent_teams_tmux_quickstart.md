@@ -34,4 +34,4 @@ When a phase has 2 or more builders, tmux splits the window into panes, one per 
 - "command not found: tmux": reinstall with `brew install tmux`.
 - Want to step away: detach with Ctrl-b then d. The session and its agents keep running. Return with `tmux attach`.
 
-Prerequisites already configured on this machine: tmux installed, `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`, and `teammateMode: tmux` in `~/.claude/settings.json`. The bossman skill also runs a tmux preflight at Step 1, so if you forget and launch outside tmux, it prints these steps before dispatching any builders.
+Prerequisites already configured on this machine: tmux installed, `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`, and `teammateMode: tmux` in the user-level `settings.json` (the `.claude` folder in the home directory). The bossman skill also runs a tmux preflight at Step 1, so if you forget and launch outside tmux, it prints these steps before dispatching any builders.
