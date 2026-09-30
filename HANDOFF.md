@@ -30,6 +30,7 @@ Every branch below is on GitHub. To pick one up: `git worktree add .claude/workt
 | Work | State | Where | Not done |
 |---|---|---|---|
 | R-10 and card 72's first guard fix: a hedged guard request, R-10's eight flags | Built and reviewed; the fresh verifier found an off-topic question could be admitted in a slow spell (F-72-V08), so the owner chose not to merge | `fix/card72-r10-guardrail` at 1961518c; records in `testing/Developer/reports/2026-09-29_card72/` | Reused by card 84 (R-10's sound parts) and card 72's redesign; not merged as is |
+| Card 84: R-10's guardrail fixes alone, no hedge | Built; its adversary found an off-topic question and a disguised injection admitted under a rate limit (F-84-A05, A07), so the owner stopped it | `fix/card84-r10-sound-parts` at 5a0adc02; records in `testing/Developer/reports/2026-09-29_card84/` | Returns only as a design agreed with the owner first |
 | Phase 8.7 builder A: the first sentence answers the question | Built, not reviewed; its unit suite never finished | `feat/8.7-s1` at 32e5945e | Review its own diff, run the suite, commit it properly |
 | Phase 8.7 builder B: records on screen while the summary is written | The `placement` field (1e030148); the screen work, not reviewed | `feat/8.7-s2` at cb407508 | The screen and App-level Stop tests, reshaping `App.stopUntilAnswer.test.tsx`, the mutation reds, the gates |
 | Phase 8.7 builder C: shorter waits, the Opus writer | Six commits, every mutation red | `feat/8.7-s3` at da2c04f6 | Its final gates |

@@ -208,6 +208,13 @@ What happened on 29 September, in plain words:
 - The fifty-question answer check that follows answered 98 of 150, three short of the bar. The lost answers came from the gatekeeper's model timing out, one search that crashed without saying why, and one question whose graph search timed out every time, none of them in the part the change touched. The owner kept the change and accepted the result rather than take it back out.
 - Two parked pieces of work were picked back up and reviewed: a first-try install for people using the system from a terminal or their own AI assistant, and pages that describe how the system works truthfully. Both wait for the owner to accept them. One fix inside the install work would have made signed-in assistants stop renewing their sign-in against the live site, so it was taken back out and will return in two steps.
 
+What happened on the evening of 29 September, in plain words:
+
+- The first-try install and the truthful pages were accepted and are on the practice site.
+- When a search crashes, the system now writes down why, so the cause can be traced.
+- Two attempts to stop the gatekeeper's timeouts were built and reviewed, and both were stopped before reaching the practice site: each time, the review found a way the change could let through a question the gatekeeper should refuse. The gatekeeper stays as it was, safe but losing about three searches in a hundred, until a design is agreed first.
+- The owner pointed out that work was growing faster than it was finishing. So the team ran every check waiting for the owner at once: 39 passed and were accepted, 9 failed and went back on the list, and 3 wait for the owner's own look.
+
 THE HONEST HEADLINE AS OF 27 SEPTEMBER, kept for the record, in one sentence: answers still open with a stock line of counts and take about seventeen seconds before their first word.
 
 The work that fixes both was part-built when the owner's computer restarted, and it is parked until the next session.
@@ -380,6 +387,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| Crash reasons in the log, the gatekeeper held back, and the waiting checks cleared | A search that crashes now leaves a written reason. Two changes to the gatekeeper were stopped because reviews found they could let the wrong question through. Every check waiting for the owner was run at once: 39 accepted, 9 sent back | 29 September, evening |
 | Checking the saved-answers change, and two parked pieces reviewed | The saved-answers change passed the owner's written checks; its fifty-question check came in at 98 of 150, three short, for reasons outside the change, and the owner kept it. A first-try install from the Integrations page and truthful pages about how the system works went through two review rounds and a fix round and wait for the owner to accept them | 29 September |
 | Saved answers that were not yet confirmed, and a plain word when NCBI is down | Answers marked "not yet confirmed" are now saved and can be reopened. During an NCBI outage the answer says which database is down and that it may be missing things from it. The work was reviewed twice over, because the first review's record was lost in the restart, and the second review found and fixed a note that contradicted the answer above it. A security warning about one of the building tools was cleared the same day. The work moved to a second computer, set up from nothing | 29 September |
 | Stop that works, the same answers from a terminal, and a safer release | Stop now works until the answer appears. People can ask from a terminal or their own AI assistant. Only the owner can change the main copies of both projects' code, and a release no longer rewrites the published copy. The data project had its first release, version 1.0.0. The rest of the day's work was parked when the computer restarted. A software library the site depends on released a new version that afternoon and broke the automatic checks, so the site was held on the version it had used all month | 27 September |
@@ -697,7 +705,7 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. The owner accepts the two reviewed pieces: the first-try install and the truthful pages. Then pick up the parked work that makes answers answer sooner, with the records on screen in about eight seconds and a first sentence that answers the question. The gatekeeper's timeouts, which cost three searches in a hundred, may go first if the owner says so.
+1. Fix the nine features that failed the owner's checks on 29 September, one at a time, starting with what people meet most: bacterial sample answers that leave out their resistance genes, and a GERD answer with no written summary. Or, if the owner prefers, pick up the parked work that makes answers answer sooner.
 2. The product owner retests what went live: reopening a "not yet confirmed" answer, Stop that works until the answer appears, the list of open-source libraries the site is built on, and asking from a terminal or an AI assistant.
 3. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
 4. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting for the owner's yes.
@@ -806,8 +814,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
-| About three searches in a hundred fail with "a temporary error" because the gatekeeper's model did not answer in time, twice in a row | First in the list of work to do, found on 29 September |
-| When a search crashes, nothing records why, so the cause cannot be traced afterwards | Second in the list of work to do, found on 29 September |
+| Nine features failed the owner's checks on 29 September, among them bacterial sample answers that leave out the resistance genes in the default setting, a GERD answer with no written summary, and a chromosome-range answer with no structural-variant records | Back on the list of work to do, each to be diagnosed first |
+| About three searches in a hundred fail with "a temporary error" because the gatekeeper's model did not answer in time, twice in a row | Two fixes were tried on 29 September and both stopped, because each could let through a question the gatekeeper should refuse. It comes back only as a design agreed with the owner first |
+| ~~When a search crashes, nothing records why, so the cause cannot be traced afterwards~~ | Fixed on 29 September: the reason is now written to the log; a smaller follow-up would put the search's reference on every line of it |
 | A saved answer, reopened, does not look exactly like the answer you read: a table shows all its rows at once, a note appears that was not there before, and the sources list is missing | On the list of work to do, found on 29 September |
 | ~~A sentence added overnight, "MedGen lists no clinical features for ...", appears in answers that never asked about features~~ | Fixed on 26 September; on the practice site, waiting for the product owner's retest |
 | The decision-model change turned away "Tell me about the tree of life" as off topic, let one brief error stop a whole question, and gave a less helpful message to a request to change the graph. It is off the practice site | Reworked and back on the practice site since 26 September; the product owner's retest decides |
