@@ -1,23 +1,29 @@
-"""Phase 8.6's re-land follow-up: the guardrail's R-05 and R-06, through the
-real node.
+"""Phase 8.6's re-land follow-up and R-10 without card 72's hedge (card
+84): the guardrail's guard-model calls and Jev's signal, through the real
+node.
 
 ## What these arms pin
 
-- R-05 (F-8.6-RJ01, RJ08, RA02): the guard classifier's second attempt
-  waits `_CLASSIFIER_RETRY_BACKOFF_S` after an ERROR, so an error lasting
-  about a second no longer ends the question, and a rate-limiting provider
-  is never sent more than the two requests of one attempt back to back.
-  A provider's own `Retry-After` is honoured when it fits the budget; when
-  it does not, no second attempt is made. A first attempt that ran out of
-  time still gets its second at once (R-01, G-005). No verdict is still no
-  answer, and no path passes the guardrail's budget.
-- R-06 (F-8.6-RJ03, RJ09), then R-10 (F-8.6-FA03): in Jev mode, a refusal
-  that only Jev's OWN relevancy pick could change waits only until
-  `decide()` says Jev failed (`jev_failed`), not for the guard tier's
-  fallback pick, and never on a clock of its own: a stalled event loop
-  that delays Jev's request no longer cuts off a pick Jev delivers inside
-  its own bound. The refusal is the same one, only sooner; Jev's own pick
-  still decides exactly as before, through the real `decide()`.
+- Card 84 (R-10 lines 2 and 4, F-8.6-FJ11, FJ04, FA02, FA05, FJ05; F-72-J04,
+  J05, J08, V05, V06): every guard-tier call the guardrail makes, the
+  classifier and the relevancy decision's guard pick, sends at most two
+  requests, one after the other, never two at once. The second goes when
+  develop's policy sent its own second: at once after an error (develop's
+  `call_tier` resend), at two thirds of the budget after a hung first
+  request (R-01), at once after an unusable reply. It keeps all the rest
+  of the budget, so a slow failure then an answer inside 15 s is admitted.
+  A stated `Retry-After` is waited out first, or, when it does not fit,
+  ends the question at once saying how long to wait; it is read from
+  whichever request carried it. Each call writes one log line naming each
+  request's outcome, time and upstream host. No verdict is still no
+  answer, and no path passes the budget.
+- R-06 (F-8.6-RJ03, RJ09), then R-10 (F-8.6-FA03, F-72-J03, J07): in Jev
+  mode, a refusal that only Jev's OWN relevancy pick could change waits
+  only until `decide()` says Jev failed (`jev_failed`), not for the guard
+  tier's fallback pick, and never on a clock of its own: a stalled event
+  loop anywhere in Jev's wait no longer cuts off a pick Jev delivers inside
+  its own bound. Jev's own pick still decides exactly as before, through
+  the real `decide()`.
 - With the provider at its code default, the signal changes nothing.
 
 ## What they do not cover
@@ -25,12 +31,13 @@ real node.
 - A live provider's real rate limits or real `Retry-After` headers: every
   model reply below is a stub, the 429 included.
 - How often a live classifier fails. The arms pin what the node does when
-  it does.
+  it does. `test_guard_request_dominance.py` sweeps the policy against
+  develop's over timings and verdicts.
 
-Most arms keep the real constants and the real 15-second budget and run in
-two or three seconds. The arms that walk every failure shape to its end
-shrink the budget, and scale the backoff and the second attempt's floor
-with it, so they run fast; those arms say so.
+The timing arms run the real node on a virtual clock
+(`tests/system_03_search_agent/virtual_clock.py`) with the real constants
+and the real 15-second budget, so they assert exact send times and run in
+milliseconds.
 """
 
 from __future__ import annotations
@@ -38,6 +45,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 import json
+import logging
 import time
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -139,6 +147,10 @@ def _connection_error() -> BaseException:
     return litellm.APIConnectionError(message="connection reset (stub)", llm_provider="openrouter", model="m")
 
 
+def _unavailable() -> BaseException:
+    return litellm.ServiceUnavailableError(message="503 (stub)", llm_provider="openrouter", model="m")
+
+
 #: What the `_prices` fixture's prices make a guard request cost: one that
 #: answered (`fake_response`'s 10 prompt and 5 completion tokens), and one
 #: cancelled, which `call_tier` charges the tier's whole output ceiling.
@@ -234,7 +246,9 @@ _ADMITTED = {"passed": True, "category": "ok", "reason": None}
 
 
 # ---------------------------------------------------------------------------
-# R-05: how long the second attempt waits, read from the failure alone.
+# Card 84: every guard-tier call sends at most two requests, one after the
+# other. Through the real node, on the virtual clock, with the real
+# constants and the real 15-second budget.
 # ---------------------------------------------------------------------------
 
 
@@ -242,45 +256,6 @@ def _call_error(cause: BaseException | None, source: str = "harness.call_tier") 
     error = HarnessCallError("stub", error_class="transient", source=source)
     error.__cause__ = cause
     return error
-
-
-@pytest.mark.parametrize(
-    ("error", "remaining_s", "wait_s"),
-    [
-        (_call_error(None, source="harness.enforce_timeout:guardrail"), 5.0, 0.0),
-        (_call_error(_connection_error()), 15.0, 2.0),
-        (_call_error(_connection_error()), 4.0, 1.0),
-        (_call_error(_connection_error()), 2.5, 0.0),
-        (_call_error(_rate_limited()), 15.0, 2.0),
-        (_call_error(_rate_limited("3")), 15.0, 3.0),
-        (_call_error(_rate_limited("0.5")), 15.0, 2.0),
-        (_call_error(_rate_limited("12")), 15.0, 12.0),
-        (_call_error(_rate_limited("12.5")), 15.0, None),
-        (_call_error(_rate_limited("20")), 15.0, None),
-        (_call_error(_rate_limited("soon")), 15.0, 2.0),
-    ],
-    ids=[
-        "an attempt that ran out of time: at once",
-        "an error, the budget untouched: the backoff",
-        "an error, four seconds left: shortened to keep three",
-        "an error, too little left for any wait: at once",
-        "a rate limit naming no wait: the backoff",
-        "a rate limit naming 3 s: 3 s",
-        "a rate limit naming less than the backoff: the backoff",
-        "a rate limit naming a wait that just fits",
-        "a rate limit naming a wait that does not fit: no second attempt",
-        "a rate limit naming 20 s: no second attempt",
-        "a Retry-After that is not a wait: the backoff",
-    ],
-)
-def test_the_second_attempts_wait(error: HarnessCallError, remaining_s: float, wait_s: float | None) -> None:
-    assert graph_module._CLASSIFIER_RETRY_BACKOFF_S == 2.0
-    assert graph_module._CLASSIFIER_MIN_SECOND_ATTEMPT_S == 3.0
-    got = graph_module._classifier_retry_wait_s(error, remaining_s)
-    if wait_s is None:
-        assert got is None
-    else:
-        assert got == pytest.approx(wait_s)
 
 
 @pytest.mark.parametrize("where", ["litellm_response_headers", "headers", "response"])
@@ -291,172 +266,282 @@ def test_retry_after_is_read_wherever_the_error_carries_it(where: str) -> None:
         cause.response = httpx.Response(429, headers={"retry-after": "4"})  # type: ignore[attr-defined]
     else:
         setattr(cause, where, {"RETRY-AFTER": "4"})
-    assert graph_module._classifier_retry_wait_s(_call_error(cause), 15.0) == pytest.approx(4.0)
+    error = _call_error(cause)
+    assert decide_module.rate_limit_behind(error) is cause
+    assert decide_module.provider_retry_after_s(cause) == pytest.approx(4.0)
 
 
 def test_a_retry_after_date_is_read_as_a_wait() -> None:
     when = format_datetime(datetime.now(UTC) + timedelta(seconds=6), usegmt=True)
-    wait = graph_module._classifier_retry_wait_s(_call_error(_rate_limited(when)), 15.0)
+    wait = decide_module.provider_retry_after_s(_rate_limited(when))
     assert wait is not None and 4.5 < wait <= 6.0
 
 
-# ---------------------------------------------------------------------------
-# R-05 through the real node, with the real constants and the real budget.
-# ---------------------------------------------------------------------------
+def test_the_first_request_keeps_two_thirds_and_the_budget_is_unchanged() -> None:
+    """Nothing the owner holds moved: the guardrail's 15 s, R-01's share,
+    and two requests at most."""
+    assert graph_module.budget_for_step("guardrail", "lookup") == 15.0
+    assert graph_module._CLASSIFIER_FIRST_ATTEMPT_SHARE == pytest.approx(2 / 3)
+    assert decide_module.GUARD_MAX_REQUESTS == 2
+    assert decide_module.GUARD_MIN_SECOND_REQUEST_S == 3.0
 
 
-@pytest.mark.asyncio
-async def test_an_error_lasting_about_a_second_no_longer_ends_the_question(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """RJ08's `blip`: the provider errors for one second after the first
-    request, then answers. Both of the first attempt's requests fail at
-    once; the second attempt waits the backoff and is admitted.
-
-    MUTATION PROOF: setting the backoff to 0.0 turns this red (the second
-    attempt's requests land inside the error and the step error follows).
-    """
-    first: list[float] = []
-
-    def _blip() -> Any:
-        first.append(time.monotonic())
-        return _connection_error() if time.monotonic() - first[0] < 1.0 else _ADMIT
-
-    times = _classifier(monkeypatch, _blip)
-    started = time.monotonic()
-    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
-    elapsed = time.monotonic() - started
-
+def test_a_first_request_that_hangs_gets_its_second_at_ten_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
+    """G-005's shape, R-01's fix, as on develop: the first request is cut at
+    two thirds of the budget and the second goes at once, alone."""
+    times = _classifier(monkeypatch, "hang", (0.6, _ADMIT))
+    events, result, _, elapsed = _node(monkeypatch)
     assert result.get("step_error") is None
-    assert _guard(events) == {"passed": True, "category": "ok", "reason": None}
-    assert len(times) == 3
-    assert _gaps(times)[1] >= graph_module._CLASSIFIER_RETRY_BACKOFF_S
-    assert elapsed < graph_module._CLASSIFIER_RETRY_BACKOFF_S + 1.0, elapsed
+    assert _guard(events) == _ADMITTED
+    assert _gaps(times) == [pytest.approx(10.0)]
+    assert times.peak == 1 and times.cancelled == [1]
+    assert elapsed == pytest.approx(10.6)
 
 
-@pytest.mark.asyncio
-async def test_a_rate_limit_storm_is_never_sent_more_than_two_requests_back_to_back(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """RJ01 and RA02: every request is a 429 that names no wait. The provider
-    gets `call_tier`'s own pair, then nothing for the backoff, then the
-    second attempt's pair, and the question ends in the step error, not an
-    answer. Before R-05 the four came within a hundredth of a second."""
+def test_an_error_is_followed_at_once_as_on_develop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """F-72-V06: one failed request no longer makes the person wait. The
+    second request goes the moment the first fails, when develop's
+    `call_tier` sent its own resend, so the answer comes at the same moment
+    as on develop.
+
+    MUTATION PROOF: a two-second backoff before the second request turns
+    this red: admitted at 2.65 s instead of 0.65 s."""
+    times = _classifier(monkeypatch, (0.05, _connection_error), (0.6, _ADMIT))
+    events, result, _, elapsed = _node(monkeypatch)
+    assert result.get("step_error") is None
+    assert _guard(events) == _ADMITTED
+    assert times == [pytest.approx(times[0]), pytest.approx(times[0] + 0.05)]
+    assert elapsed == pytest.approx(0.65)
+
+
+def test_a_slow_failure_then_an_answer_inside_the_budget_keeps_the_question(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R-10 line 2 (F-8.6-FJ11): the first request fails after 9 s, and the
+    second answers 5.5 s after it is sent, inside the 15 s. On develop the
+    second was cut at the first attempt's 10 s share and a third request
+    had 5 s, too little, so the question failed at 15 s; now the second
+    keeps all the rest and the question is admitted at 14.5 s.
+
+    MUTATION PROOF: giving the second request only the first request's
+    share (cut at 10 s) turns this red on the step error."""
+    times = _classifier(monkeypatch, (9.0, _unavailable), (5.5, _ADMIT))
+    events, result, _, elapsed = _node(monkeypatch)
+    assert result.get("step_error") is None
+    assert _guard(events) == _ADMITTED
+    assert _gaps(times) == [pytest.approx(9.0)]
+    assert elapsed == pytest.approx(14.5)
+
+
+def test_an_unusable_reply_is_followed_at_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    times = _classifier(monkeypatch, (0.5, "I will look this up."), (0.6, _ADMIT))
+    events, result, _, elapsed = _node(monkeypatch)
+    assert result.get("step_error") is None
+    assert _guard(events) == _ADMITTED
+    assert _gaps(times) == [pytest.approx(0.5)]
+    assert elapsed == pytest.approx(1.1)
+
+
+def test_an_unusable_reply_then_an_error_keeps_the_errors_words(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The step error's words follow the last request to end: an unusable
+    first reply, then a transient error, is the transient step error."""
+    times = _classifier(monkeypatch, "I will look this up.", _connection_error)
+    events, result, _, _ = _node(monkeypatch)
+    assert _guard(events) is None
+    assert result.get("step_error") == _STEP_ERROR
+    assert len(times) == 2
+
+
+def test_a_guard_model_that_cannot_turn_reasoning_off_still_screens(monkeypatch: pytest.MonkeyPatch) -> None:
+    """F-72-J08 at the front door: a guard model that refuses the reasoning
+    block is resent without it, inside the one request, and the question is
+    admitted, where `retry=False` alone failed it in 50 ms."""
+    sent: list[bool] = []
+
+    async def _acompletion(**kwargs: Any) -> Any:
+        sent.append("reasoning" in kwargs)
+        if "reasoning" in kwargs:
+            raise litellm.BadRequestError(
+                "Reasoning is mandatory for this endpoint and cannot be disabled.", model="m", llm_provider="openrouter"
+            )
+        return fake_response(_ADMIT)
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", _acompletion)
+    events, result, _, _ = _node(monkeypatch)
+    assert result.get("step_error") is None
+    assert _guard(events) == _ADMITTED
+    assert sent == [True, False]
+
+
+# ---------------------------------------------------------------------------
+# R-10 line 4: a rate-limited guard model gets two requests at most, a
+# stated wait is honoured from whichever request carried it, and the person
+# is told how long to wait.
+# ---------------------------------------------------------------------------
+
+_BUSY_NO_WAIT = (
+    "The service that checks each question is busy right now. "
+    "Wait a little before trying the query again."
+)
+_BUSY_WAIT_PASSED = "The service that checks each question was busy a moment ago. Try the query again."
+
+
+def _busy(seconds: int) -> str:
+    wait = "about 1 second" if seconds == 1 else f"about {seconds} seconds, not straight away"
+    return f"The service that checks each question is busy right now. Try the query again in {wait}."
+
+
+def _rate_limit_error(message: str, retry_after_s: int) -> dict[str, Any]:
+    return {
+        "fatal": True,
+        "scope": "step",
+        "source": "guardrail",
+        "error_class": "transient",
+        "message": message,
+        "retry_after_s": retry_after_s,
+    }
+
+
+def test_a_rate_limit_storm_costs_two_requests_and_says_to_wait(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R-10 (F-8.6-FJ04, FA02, FJ05): every request is a 429 naming no wait.
+    Two requests in all, never four, one after the other; the person is
+    told to wait a little, not to retry now.
+
+    MUTATION PROOF: `call_tier` with its own retry again (`retry=True`)
+    turns this red on the request count."""
     times = _classifier(monkeypatch, _rate_limited)
-    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
-
-    assert result.get("step_error") == _STEP_ERROR
+    events, result, _, _ = _node(monkeypatch)
+    assert result.get("step_error") == _rate_limit_error(_BUSY_NO_WAIT, 0)
     assert _guard(events) is None
-    assert len(times) == 4
-    gaps = _gaps(times)
-    assert gaps[1] >= 2.0, gaps
-    assert gaps[0] < 0.5 and gaps[2] < 0.5, gaps
+    assert len(times) == 2 and times.peak == 1
 
 
-@pytest.mark.asyncio
-async def test_a_providers_retry_after_is_honoured_when_it_fits(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    times = _classifier(monkeypatch, _rate_limited("3"), _rate_limited("3"), _ADMIT)
-    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+def test_a_providers_retry_after_is_honoured_when_it_fits(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R-10 (F-8.6-FA05): develop's `call_tier` resent 0.03 s after a 429
+    that said wait 3 s; now the second request waits the 3 s.
+
+    MUTATION PROOF: ignoring the stated wait turns this red on the gap."""
+    times = _classifier(monkeypatch, (0.05, _rate_limited("3")), (0.6, _ADMIT))
+    events, result, _, elapsed = _node(monkeypatch)
     assert result.get("step_error") is None
-    assert _guard(events) == {"passed": True, "category": "ok", "reason": None}
-    assert len(times) == 3
-    assert _gaps(times)[1] >= 3.0
+    assert _guard(events) == _ADMITTED
+    assert _gaps(times) == [pytest.approx(3.05)]
+    assert elapsed == pytest.approx(3.65)
 
 
-@pytest.mark.asyncio
-async def test_a_providers_retry_after_that_does_not_fit_gets_no_second_attempt(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_a_retry_after_that_does_not_fit_says_when_to_come_back(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R-10 (F-8.6-FA02): the provider says wait 20 s, which the budget
+    cannot fit. No second request, at once, and the person is told to try
+    again in about 20 seconds, with `retry_after_s` 20, not 0."""
     times = _classifier(monkeypatch, _rate_limited("20"))
-    started = time.monotonic()
-    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
-    elapsed = time.monotonic() - started
-    assert result.get("step_error") == _STEP_ERROR
+    events, result, _, elapsed = _node(monkeypatch)
+    assert result.get("step_error") == _rate_limit_error(_busy(20), 20)
     assert _guard(events) is None
-    assert len(times) == 2
-    assert elapsed < 1.0, elapsed
+    assert len(times) == 1
+    assert elapsed < 0.01
 
 
-@pytest.mark.asyncio
-async def test_a_hung_first_attempt_still_gets_its_second_at_once(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """G-005's shape, R-01's fix, unchanged: no backoff after a timeout."""
-    budget = graph_module.budget_for_step("guardrail", "lookup")
-    first_attempt = budget * graph_module._CLASSIFIER_FIRST_ATTEMPT_SHARE
-    times = _classifier(monkeypatch, "hang", _ADMIT)
-    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
-    assert result.get("step_error") is None
-    assert _guard(events) == {"passed": True, "category": "ok", "reason": None}
-    assert len(times) == 2
-    assert _gaps(times)[0] == pytest.approx(first_attempt, abs=0.3)
-
-
-# ---------------------------------------------------------------------------
-# R-05: no path passes the budget, and no verdict is no answer. The budget
-# is shrunk to 2.0 s and the backoff and floor scaled with it. The 0.3 s
-# tolerance is scheduling lag on a loaded machine; it stays under one
-# backoff, so a wait taken past the deadline is still caught.
-# ---------------------------------------------------------------------------
-
-_SHRUNK_BUDGET_S = 2.0
-_LAG_S = 0.3
-
-
-def _shrink(monkeypatch: pytest.MonkeyPatch) -> None:
-    real_budget = graph_module.budget_for_step
-
-    def _budget(step: str, query_class: Any) -> float:
-        return _SHRUNK_BUDGET_S if step == "guardrail" else real_budget(step, query_class)
-
-    monkeypatch.setattr(graph_module, "budget_for_step", _budget)
-    monkeypatch.setattr(graph_module, "_CLASSIFIER_RETRY_BACKOFF_S", 0.5)
-    monkeypatch.setattr(graph_module, "_CLASSIFIER_MIN_SECOND_ATTEMPT_S", 0.6)
-
-
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "behaviours",
+    ("behaviours", "requests", "message", "retry_after_s"),
     [
-        ("hang",),
-        (_rate_limited,),
-        (_rate_limited("0.6"), _rate_limited("0.6"), "hang"),
-        (_connection_error, _connection_error, "hang"),
-        (1.5, "hang"),
-        (1.5,),
-        (_rate_limited, _rate_limited, "hang"),
+        ((_rate_limited, _rate_limited("20")), 2, _busy(20), 20),
+        ((_rate_limited("3"), _rate_limited("7")), 2, _busy(7), 7),
+        ((_rate_limited, _rate_limited("1")), 2, _busy(1), 1),
+        ((_rate_limited("3"), _rate_limited), 2, _BUSY_WAIT_PASSED, 0),
+        ((_rate_limited("0"), _rate_limited), 2, _BUSY_WAIT_PASSED, 0),
     ],
     ids=[
-        "a hang every time",
-        "a 429 every time",
-        "429s naming a wait, then a hang",
-        "two errors, then a hang",
-        "a slow first reply cut, then a hang",
-        "a provider slower than the second attempt's share",
-        "429s naming none, then a hang",
+        "the second request carried it",
+        "both carried one: the later",
+        "one second: 'second', with no 'not straight away'",
+        "the first carried it and it has passed",
+        "a stated wait of 0",
     ],
 )
-async def test_no_verdict_is_no_answer_and_no_path_passes_the_budget(
+def test_a_retry_after_is_honoured_whichever_request_carried_it(
+    monkeypatch: pytest.MonkeyPatch, behaviours: tuple[Any, ...], requests: int, message: str, retry_after_s: int
+) -> None:
+    """R-10 (F-8.6-FA05) and F-72-J04: every request's `Retry-After` is
+    read; a wait already over is not given as "not straight away"."""
+    times = _classifier(monkeypatch, *behaviours)
+    events, result, _, _ = _node(monkeypatch)
+    assert result.get("step_error") == _rate_limit_error(message, retry_after_s)
+    assert _guard(events) is None
+    assert len(times) == requests
+
+
+@pytest.mark.parametrize(
+    ("wait_s", "message", "retry_after_s"),
+    [
+        (1.0, _busy(1), 1),
+        (0.2, _busy(1), 1),
+        (1.2, _busy(2), 2),
+        (20.0, _busy(20), 20),
+        (10.0**9, _busy(86_400), 86_400),
+        (0.0, _BUSY_WAIT_PASSED, 0),
+        (-3.0, _BUSY_WAIT_PASSED, 0),
+        (None, _BUSY_NO_WAIT, 0),
+        (float("inf"), _BUSY_NO_WAIT, 0),
+        (float("nan"), _BUSY_NO_WAIT, 0),
+    ],
+    ids=["1", "0.2", "1.2", "20", "a billion", "0", "-3", "none", "inf", "nan"],
+)
+def test_the_rate_limit_message_counts_seconds_in_words(wait_s: float | None, message: str, retry_after_s: int) -> None:
+    got = graph_module._rate_limited_step_error(wait_s)
+    assert got == _rate_limit_error(message, retry_after_s)
+
+
+# ---------------------------------------------------------------------------
+# No verdict is no answer, and no path passes the budget, sends a third
+# request or has two in flight.
+# ---------------------------------------------------------------------------
+
+_EVERY_FAILURE = [
+    ("hang",),
+    (_rate_limited,),
+    (_rate_limited("0.6"), _rate_limited("0.6"), "hang"),
+    (_connection_error, _connection_error, 0.1),
+    ((9.0, _unavailable), "hang"),
+    ("hang", _connection_error, 0.1),
+    ((1.5, _ADMIT), "hang"),
+    ("I will look this up.", "hang"),
+    ("I will look this up.", "I will look this up.", 0.1),
+    (_rate_limited("12.5"), 0.1),
+    (lambda: litellm.AuthenticationError(message="401 (stub)", llm_provider="openrouter", model="m"), 0.1),
+]
+_EVERY_FAILURE_IDS = [
+    "a hang every time",
+    "a 429 every time",
+    "429s naming a wait, then a hang",
+    "two errors, then an answer a third request would get",
+    "a slow error, then a hang",
+    "a hang, then an error, then an answer a third request would get",
+    "a slow first reply is not a failure",
+    "unusable, then a hang",
+    "two unusable replies, then an answer",
+    "a wait that leaves too little",
+    "a refused key",
+]
+
+
+@pytest.mark.parametrize("behaviours", _EVERY_FAILURE, ids=_EVERY_FAILURE_IDS)
+def test_no_verdict_is_no_answer_and_no_path_passes_the_budget(
     monkeypatch: pytest.MonkeyPatch, behaviours: tuple[Any, ...]
 ) -> None:
-    _shrink(monkeypatch)
-    _classifier(monkeypatch, *behaviours)
-    started = time.monotonic()
-    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
-    elapsed = time.monotonic() - started
-    assert result.get("step_error") == _STEP_ERROR
-    assert _guard(events) is None
-    assert elapsed < _SHRUNK_BUDGET_S + _LAG_S, elapsed
+    times = _classifier(monkeypatch, *behaviours)
+    events, result, _, elapsed = _node(monkeypatch)
+    assert len(times) <= decide_module.GUARD_MAX_REQUESTS
+    assert times.peak == 1
+    assert elapsed <= 15.0 + 1e-6
+    guard = _guard(events)
+    if result.get("step_error") is None:
+        assert guard == _ADMITTED and behaviours[0] == (1.5, _ADMIT)
+    else:
+        assert guard is None
 
 
-@pytest.mark.asyncio
-async def test_with_jev_a_classifier_that_never_answers_is_never_an_admission(
+def test_with_jev_a_classifier_that_never_answers_is_never_an_admission(
     monkeypatch: pytest.MonkeyPatch, _jev_on: None
 ) -> None:
     """Jev clearing the question cannot stand in for the guard classifier."""
-    _shrink(monkeypatch)
     _classifier(monkeypatch, _connection_error)
 
     async def _call_jev(**_kwargs: Any) -> Any:
@@ -469,9 +554,93 @@ async def test_with_jev_a_classifier_that_never_answers_is_never_an_admission(
         )
 
     monkeypatch.setattr(graph_module, "call_jev", _call_jev)
-    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    events, result, _, _ = _node(monkeypatch)
     assert result.get("step_error") == _STEP_ERROR
     assert _guard(events) is None
+
+
+# ---------------------------------------------------------------------------
+# Line 7: each guard call logs its time and the upstream host, with the
+# trace id, and nothing private.
+# ---------------------------------------------------------------------------
+
+
+def test_each_guard_call_logs_its_time_and_upstream_host_and_nothing_private(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """One WARNING line per guard call (develop's log keeps WARNING and
+    above only): the outcome, the time in all, and each request's outcome,
+    time and upstream host. Never the key, the question or the prompt, and
+    an upstream name from outside is cut and stripped of line breaks.
+
+    MUTATION PROOF: dropping the upstream host from the request's words
+    turns this red."""
+    _classifier(monkeypatch, "hang", (0.2, _ADMIT, "Deep\nInfra" + "x" * 100))
+    with caplog.at_level(logging.WARNING, logger=decide_module.__name__):
+        _, _, harness, _ = _node(monkeypatch)
+    ours = [r for r in caplog.records if r.getMessage().startswith("guard call guard classification")]
+    assert len(ours) == 1 and ours[0].levelname == "WARNING"
+    line = ours[0].getMessage()
+    assert line == (
+        f"guard call guard classification (trace {harness.trace_id}): answered after 10.20s in all, "
+        "2 of at most 2 requests; request 1: cut at its budget after 10.00s; "
+        f"request 2: answered after 0.20s, upstream DeepInfra{'x' * 55}"
+    )
+    for record in caplog.records:
+        text = record.getMessage()
+        assert "test-key" not in text
+        assert _ORDINARY_QUESTION not in text and "BRCA1" not in text
+        assert "Answer with exactly one" not in text and "\n" not in text
+
+
+# ---------------------------------------------------------------------------
+# F-72-J05: the relevancy decision's guard pick takes the same path.
+# ---------------------------------------------------------------------------
+
+
+def test_a_rate_limit_storm_gives_each_guard_call_two_requests(monkeypatch: pytest.MonkeyPatch) -> None:
+    """J05's probe: every guard-model request is a 429 naming no wait, for a
+    question the allowlist misses, so the relevancy decision's guard pick
+    runs beside the classifier. Each call sends two at most, one after the
+    other, as develop's pick already did."""
+    sent: dict[str, list[float]] = {"classifier": [], "pick": []}
+
+    async def _acompletion(**kwargs: Any) -> Any:
+        which = "classifier" if _is_classifier_request(kwargs) else "pick"
+        sent[which].append(asyncio.get_running_loop().time())
+        raise _rate_limited()
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", _acompletion)
+    _, result, _, _ = _node(monkeypatch, _TREE_OF_LIFE)
+    assert result.get("step_error") == _rate_limit_error(_BUSY_NO_WAIT, 0)
+    assert len(sent["classifier"]) == 2
+    assert len(sent["pick"]) == 2
+
+
+@pytest.mark.parametrize(("stated", "sent_at"), [("20", [0.0]), ("3", [0.0, 3.0])], ids=["does not fit", "fits"])
+def test_the_relevancy_pick_honours_a_retry_after(
+    monkeypatch: pytest.MonkeyPatch, stated: str, sent_at: list[float]
+) -> None:
+    """F-72-J05: the pick's second request waits out the stated wait, or is
+    not sent when it does not fit; develop's `call_tier` resent at once.
+
+    MUTATION PROOF: the pick on `call_tier`'s own retry turns both red."""
+    sent: list[float] = []
+    started: list[float] = []
+
+    async def _acompletion(**kwargs: Any) -> Any:
+        now = asyncio.get_running_loop().time()
+        started.append(now)
+        if _is_classifier_request(kwargs):
+            await asyncio.sleep(5.0)
+            return fake_response(_ADMIT)
+        sent.append(now - started[0])
+        raise _rate_limited(stated)
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", _acompletion)
+    events, _, _, _ = _node(monkeypatch, _TREE_OF_LIFE)
+    assert _guard(events) == _ADMITTED  # no pick fails open, as before
+    assert sent == [pytest.approx(t) for t in sent_at]
 
 
 # ---------------------------------------------------------------------------
@@ -843,20 +1012,18 @@ def test_the_stub_classifier_replies_parse() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "behaviours",
     [("I will look this up.",), ("hang", "I will look this up.")],
     ids=["two unusable replies", "a hang, then an unusable reply"],
 )
-async def test_no_usable_verdict_says_what_to_do_next(
+def test_no_usable_verdict_says_what_to_do_next(
     monkeypatch: pytest.MonkeyPatch, behaviours: tuple[Any, ...]
 ) -> None:
     """MUTATION PROOF: returning the parse error's own text again turns this
     red on the message."""
-    _shrink(monkeypatch)
     _classifier(monkeypatch, *behaviours)
-    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    events, result, _, _ = _node(monkeypatch)
     assert _guard(events) is None
     assert result.get("step_error") == {
         "fatal": True,

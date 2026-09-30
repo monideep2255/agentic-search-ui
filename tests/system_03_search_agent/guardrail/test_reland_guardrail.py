@@ -758,16 +758,24 @@ async def test_the_second_attempts_verdict_decides(
 
 
 @pytest.mark.asyncio
-async def test_a_transient_error_twice_then_a_verdict(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`call_tier` already retries a raised transient error once, inside the
-    first attempt; when both of its requests fail, the guardrail's second
-    attempt is the third request, and its verdict decides."""
+async def test_two_transient_errors_are_the_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Card 84 (R-10, at most two requests per guard call): two transient
+    errors end the question, and a third request, which would have answered,
+    is never sent. On develop `call_tier` resent inside each of two
+    attempts, so this was admitted on the third of four requests; that is
+    the one thing the two-request cap gives up, and
+    `test_guard_request_dominance.py` counts it."""
+    import litellm
+
+    def _error() -> BaseException:
+        return litellm.APIConnectionError(message="reset (stub)", llm_provider="openrouter", model="m")
+
     _shrink_budget(monkeypatch)
-    count = _classifier_calls(monkeypatch, _rate_limited(), _rate_limited(), _ADMIT)
+    count = _classifier_calls(monkeypatch, _error(), _error(), _ADMIT)
     events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
-    assert result.get("step_error") is None
-    assert _payload(events, "guard") == {"passed": True, "category": "ok", "reason": None}
-    assert count[0] == 3
+    assert result["step_error"]["error_class"] == "transient"
+    assert _payload(events, "guard") is None
+    assert count[0] == 2
 
 
 @pytest.mark.asyncio
@@ -775,9 +783,10 @@ async def test_a_transient_error_twice_then_a_verdict(monkeypatch: pytest.Monkey
 async def test_two_failed_attempts_give_the_fatal_step_error(
     monkeypatch: pytest.MonkeyPatch, failure: str
 ) -> None:
-    """No verdict, no answer: two hung attempts, or two attempts whose
-    requests are all rate limited, end in the fatal transient step error
-    with its honest message, inside the budget, and emit no verdict."""
+    """No verdict, no answer: two hung requests, or two rate-limited ones,
+    end in the fatal transient step error, inside the budget, and emit no
+    verdict. A rate limit that named no wait says to wait a little (R-10
+    line 4); two requests in all, never four (card 84)."""
     _shrink_budget(monkeypatch)
     behaviour = "hang" if failure == "hang" else _rate_limited()
     count = _classifier_calls(monkeypatch, behaviour)
@@ -791,12 +800,16 @@ async def test_two_failed_attempts_give_the_fatal_step_error(
         "scope": "step",
         "source": "guardrail",
         "error_class": "transient",
-        "message": "A step in this query hit a temporary error. Retrying the query may succeed.",
+        "message": (
+            "A step in this query hit a temporary error. Retrying the query may succeed."
+            if failure == "hang"
+            else "The service that checks each question is busy right now. "
+            "Wait a little before trying the query again."
+        ),
         "retry_after_s": 0,
     }
     assert _payload(events, "guard") is None
-    # Two attempts; `call_tier` retries a raised error once inside each.
-    assert count[0] == (2 if failure == "hang" else 4)
+    assert count[0] == 2
     assert elapsed < _SHRUNK_BUDGET_S + 0.2, elapsed
 
 
@@ -847,11 +860,11 @@ async def test_a_failure_that_is_not_transient_gets_no_second_attempt(
 
 
 def _recording_dispatch(monkeypatch: pytest.MonkeyPatch, first_runs_for: float) -> list[float]:
-    """Replace `_dispatch_tier_call` with a stand-in that records the budget
-    each attempt was given. The first attempt runs for `first_runs_for`
-    times its own budget and then fails with a transient error: 1.0 is a
-    timeout at its bound, more than 1.0 a stall its own bound did not cut.
-    The second answers at once."""
+    """Replace the harness's `enforce_timeout` with a stand-in that records
+    the budget each classifier request was given. The first request runs
+    for `first_runs_for` times its own budget and then fails with a
+    transient error: 1.0 is a failure at its bound, more than 1.0 a stall
+    its own bound did not cut. The second answers at once."""
     import asyncio
     from types import SimpleNamespace
 
@@ -859,22 +872,23 @@ def _recording_dispatch(monkeypatch: pytest.MonkeyPatch, first_runs_for: float) 
 
     budgets: list[float] = []
 
-    async def _dispatch(*_args: Any, budget_s: float, **_kwargs: Any) -> Any:
+    async def _enforce(_self: Any, _step: str, coro: Any, budget_s: float) -> Any:
+        coro.close()
         budgets.append(budget_s)
         if len(budgets) == 1:
             await asyncio.sleep(budget_s * first_runs_for)
             raise HarnessCallError("stub failure", error_class="transient")
-        return SimpleNamespace(content=_ADMIT)  # the `LLMResponse` field the node reads
+        return SimpleNamespace(content=_ADMIT, upstream_provider=None)  # the fields read
 
-    monkeypatch.setattr(graph_module, "_dispatch_tier_call", _dispatch)
+    monkeypatch.setattr(harness_module.Harness, "enforce_timeout", _enforce)
     return budgets
 
 
 @pytest.mark.asyncio
 async def test_the_two_attempts_share_the_step_budget(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The first attempt is given its share of what is left and, timing out
-    at its bound, leaves the second the rest, so together they never pass
-    the step's budget."""
+    """The first request is given its share of what is left and, failing at
+    its bound, leaves the second the rest, so together they never pass the
+    step's budget."""
     _shrink_budget(monkeypatch)
     budgets = _recording_dispatch(monkeypatch, first_runs_for=1.0)
     started = time.monotonic()
@@ -892,8 +906,8 @@ async def test_the_two_attempts_share_the_step_budget(monkeypatch: pytest.Monkey
 
 @pytest.mark.asyncio
 async def test_no_time_left_gives_no_second_attempt(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A first attempt that fails after the step's budget is gone gets no
-    second attempt: its failure is the step error."""
+    """A first request that fails after the step's budget is gone gets no
+    second: its failure is the step error."""
     _shrink_budget(monkeypatch)
     budgets = _recording_dispatch(monkeypatch, first_runs_for=2.2)
     events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
