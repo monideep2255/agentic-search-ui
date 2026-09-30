@@ -42,6 +42,7 @@ its per-query cap (J09).
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from types import SimpleNamespace
@@ -353,6 +354,71 @@ async def test_the_sentence_check_charges_the_floor(
         await sentence_check_module._ask_jev([], harness=harness, trace_id="s", timeout_s=3.0)
     assert excinfo.value.reason == _reason(shape)
     assert harness.get_query_cost_usd("s") == pytest.approx(JEV_FLOOR_COST_USD)
+
+
+def _patch_status(monkeypatch: pytest.MonkeyPatch, status: int) -> None:
+    async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
+        return httpx.Response(status, content=b"provider error")
+
+    monkeypatch.setattr(jev_client_module, "_post", _post)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [500, 429, 402])
+async def test_a_reply_with_another_status_is_charged_the_floor_at_every_site(
+    monkeypatch: pytest.MonkeyPatch, jev_mode: None, status: int
+) -> None:
+    """Card 84, F-72-V03: a 500, a 429 or a 402 is a reply that reached the
+    provider, so it is charged the floor, never $0, at `decide`, at the
+    injection pick and at the sentence check (the product owner's decision
+    of 2026-09-29).
+
+    MUTATION PROOF: `_send` raising its non-200 error with no charge again
+    turns every arm red on the cost."""
+    _patch_status(monkeypatch, status)
+    harness = Harness(trace_id="d")
+    record = await decide(harness, "d", "guardrail.relevancy", "x", ["on_topic", "off_topic"], default="on_topic")
+    assert record.fallback_reason is not None and record.fallback_reason.endswith("http_error")
+    assert harness.get_query_cost_usd("d") == pytest.approx(JEV_FLOOR_COST_USD)
+
+    harness = Harness(trace_id="i")
+    assert await graph_module._jev_injection_pick(harness, "i", "What does BRCA1 do?") == "http_error"
+    assert harness.get_query_cost_usd("i") == pytest.approx(JEV_FLOOR_COST_USD)
+
+    monkeypatch.setattr(sentence_check_module, "build_jev_state", lambda candidates: ("STATE", [object(), object()]))
+    harness = Harness(trace_id="s")
+    with pytest.raises(JevCallError) as excinfo:
+        await sentence_check_module._ask_jev([], harness=harness, trace_id="s", timeout_s=3.0)
+    assert excinfo.value.reason == "http_error"
+    assert harness.get_query_cost_usd("s") == pytest.approx(JEV_FLOOR_COST_USD)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["timeout", "transport"])
+async def test_a_call_no_reply_came_back_from_is_charged_nothing(
+    monkeypatch: pytest.MonkeyPatch, jev_mode: None, failure: str
+) -> None:
+    """The floor is for replies. A call that timed out, or never reached the
+    provider, carries no charge, as the decision's words say."""
+
+    async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
+        if failure == "transport":
+            raise httpx.ConnectError("refused (stub)")
+        await asyncio.sleep(60)
+        raise AssertionError("never reached")
+
+    monkeypatch.setattr(jev_client_module, "_post", _post)
+    monkeypatch.setattr(jev_client_module, "JEV_STALL_ALLOWANCE_S", 0.0)
+    with pytest.raises(JevCallError) as excinfo:
+        await call_jev_batch(
+            model="m",
+            state="x",
+            questions={"item_1": JevChoiceQuestion(options=("yes", "no"), instructions="i", criteria={"yes": "y", "no": "n"})},
+            api_key="k",
+            timeout_s=0.05,
+        )
+    assert excinfo.value.reason == ("timeout" if failure == "timeout" else "http_error")
+    assert excinfo.value.billed_cost_usd == 0.0
 
 
 def test_the_probe_bodies_are_what_they_claim() -> None:

@@ -212,8 +212,10 @@ class JevCallError(RuntimeError):
     whatever the body's shape (`_unusable_reply`; the R-10 fix round). A
     malformed reply, an option outside the set and a reply reporting a cost
     above the ceiling or no usable cost are all billed that floor, never the
-    reported figure and never $0.0. 0.0 only when no reply came back at
-    all: a timeout, a transport error, or a status other than 200.
+    reported figure and never $0.0. A reply with a status other than 200
+    also came back from the provider and carries the same floor (card 84,
+    F-72-V03). 0.0 only when no reply came back at all: a timeout or a
+    transport error.
     """
 
     def __init__(self, message: str, *, reason: str, billed_cost_usd: float = 0.0) -> None:
@@ -452,7 +454,8 @@ async def _send(
     Raises:
         JevCallError: reason="timeout" when the call does not complete
             within `timeout_s` in total, body included; reason="http_error"
-            on a transport failure or a non-200 status.
+            on a transport failure (charged nothing) or a non-200 status
+            (charged `JEV_FLOOR_COST_USD`, since the provider replied).
     """
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -478,10 +481,21 @@ async def _send(
     latency_ms = int((time.monotonic() - start) * 1000)
 
     if response.status_code != 200:
+        # A reply with a status other than 200 came back from the provider,
+        # so it is charged the floor like every other reply that came back
+        # and could not be used, never $0 (card 84, F-72-V03, the product
+        # owner's decision of 2026-09-29). The warning names the amount.
+        logger.warning(
+            "Jev's reply for %s was HTTP %d, not used; it is charged $%.4f",
+            subject,
+            response.status_code,
+            JEV_FLOOR_COST_USD,
+        )
         raise JevCallError(
             f"Jev returned HTTP {response.status_code} for {subject} "
-            f"({response.text[:200]!r}); {next_step}",
+            f"({response.text[:200]!r}); it is charged ${JEV_FLOOR_COST_USD:.4f}; {next_step}",
             reason="http_error",
+            billed_cost_usd=JEV_FLOOR_COST_USD,
         )
     return response, latency_ms
 

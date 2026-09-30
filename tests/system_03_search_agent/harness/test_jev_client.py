@@ -301,7 +301,7 @@ def _with_cost(body: dict[str, Any], cost: float) -> dict[str, Any]:
             "malformed_reply",
             JEV_FLOOR_COST_USD,
         ),
-        (httpx.Response(503, content=b"unavailable"), "http_error", 0.0),
+        (httpx.Response(503, content=b"unavailable"), "http_error", JEV_FLOOR_COST_USD),
     ],
     ids=["an option outside the set", "the wrong question key", "not JSON", "no cost stated", "HTTP 503"],
 )
@@ -314,8 +314,10 @@ async def test_an_unusable_reply_still_reports_what_it_cost(
     since a call that reached the provider and was billed should not be
     invisible to the cost caps. A 200 whose body is not JSON came back from
     the provider too, so it is billed the ceiling as well (re-land
-    follow-up R-07, F-8.6-RJ05); only "HTTP 503", where no reply came back
-    to bill, stays $0.0. Since re-land follow-up R-10, a reply that states a
+    follow-up R-07, F-8.6-RJ05). "HTTP 503" came back from the provider as
+    well, so it is billed the floor too (card 84, F-72-V03); only a call no
+    reply came back from stays $0.0. Since re-land follow-up R-10, a reply
+    that states a
     usable amount but cannot be used is charged the ceiling too: nothing in
     a reply the loop cannot use is trusted, its cost included (F-8.6-FJ02)."""
     monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=reply))
