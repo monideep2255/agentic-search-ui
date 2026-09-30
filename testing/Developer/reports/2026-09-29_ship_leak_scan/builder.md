@@ -60,8 +60,8 @@ Placeholders that never fire on any shaped category: values under 8 characters, 
 
 - Untracked files are scanned whole. Step 0 runs before anything is staged, so a brand new file is invisible to every diff, and a new file is the usual leak.
 - The scan runs a second time in Step 2, after the commit and before the push. Docs-sync edits files after Step 0, and the commit message and identity exist only after it. The skill says so.
-- Private IPv4 ranges are flagged, because the privacy rule lists internal IP addresses. Test fixtures that use one (a `10.x` address) will need the allow marker. One such line exists in System 3 history (see the wide run below).
-- Extra placeholders the brief did not list: the reserved test top level names, addresses whose domain has a `noreply` label, the `git@` local part for ssh remotes, file-like names, all of 127.0.0.0/8, and the `ghr_` and `sk-proj-` prefixes as detected shapes. Each came from a false positive seen in a 150 commit wide run of System 3 history, which fell from 14 findings to 1.
+- Private IPv4 ranges are flagged, because the privacy rule lists internal IP addresses. Test fixtures that use one (a `10.x` address) will need the allow marker. One such line exists in System 3 history (see the wide run below): a forwarded-header unit test, which is the scanner's intended policy hit rather than an employer-internal address.
+- Extra placeholders the brief did not list: the reserved test top level names, addresses whose domain has a `noreply` label, the `git@` local part for ssh remotes, file-like names, all of 127.0.0.0/8, and the `ghr_` and `sk-proj-` prefixes as detected shapes. Each came from a false positive seen in a `--base HEAD~150` run of System 3 history (150 first-parent steps, 549 commits), which fell from 14 findings to 1.
 - The private-name check reads only the staged diff, as briefed. Run in Step 0 before anything is staged, it mostly proves the check exists on this machine, and the hook itself does the real work at commit time. It does not see a private name in a commit already made on the branch with the hook bypassed. Widening it means `--all`, which reads every tracked file and is slow, so it is left to the owner.
 
 ## Break-it results
@@ -116,7 +116,7 @@ rc=0
 
 The owner's machine-local hook also blocked the first System 3 skill commit on a Windows style home path written in the skill's prose (`SKILL.md` line 63). The line was reworded to "a macOS, Linux or Windows home directory that names a person" and committed anew.
 
-A wide run of System 3, `--base HEAD~150`, gave one finding: a private `10.x` address in a test fixture, `tests/services/graph_query_service/test_forwarded_address.py:38`. It is a true positive under the rule and was left alone.
+A wide run of System 3, `--base HEAD~150` (150 first-parent steps, 549 commits), gave one finding: `tests/services/graph_query_service/test_forwarded_address.py:38`, a forwarded-header unit test that pairs a documentation address with an RFC 1918 `10.x` value. That is the scanner's intended policy hit on a private range, not an employer-internal address, and it was left alone. Corrected in the fix round, after the judge's F-LS-J14.
 
 ## Gate counts
 
@@ -145,8 +145,8 @@ Data engineering worktree: 93 new tests passed. The repository configures no lin
 
 Found by a wide run of the data engineering repository, `--base HEAD~60`, against commits that are already on its `develop`. None is in this branch's range, so nothing was edited. Values are not repeated here.
 
-- 41 of the last 60 commits carry an author or committer email that is not a GitHub noreply address (27 with an NCBI domain, 14 with an NIH domain). The privacy rule calls a work address the owner's work identity. Removing it means rewriting history, which is the owner's call.
+- 41 of the last 60 commits carry an author or committer email that is not a GitHub noreply address, each at a work domain. The privacy rule calls a work address the owner's work identity. Removing it means rewriting history, which is the owner's call. Corrected in the fix round, after the judge's F-LS-J15: the domains are no longer named here.
 - `docs/learnings.md` line 997 holds a Windows home path that names a person, inside an rsync example.
-- One commit message (`7c064578`) carries a private style IPv4 address.
+- One commit message (`7c064578`) carries a public, globally routable IPv4 address on a line that mentions the server, very likely the graph server's own address. That is the privacy rule's server-address category, not a harmless private-range value, and it is for the owner to decide on. Corrected in the fix round, after the judge's F-LS-J13, which checked the address with booleans only; the value is not repeated here.
 
 System 3's last 150 commits show no identity finding.
