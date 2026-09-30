@@ -1050,6 +1050,15 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-09-30, overnight. `/SHIP` GAINS A LEAK SCAN IN BOTH REPOSITORIES; BRANCHES CLEANED. What awaits the owner and the next action: `HANDOFF.md`.
+
+- The owner asked for `/ship` to check for leaks of personal information and secret keys before anything is pushed to either public repository. The scan reads every commit a push would publish, blocks on any secret, and runs the owner's local private-name check or stops (#145, data engineering #11). Its judge and adversary found a secret added then removed still published, and a private-name check that read nothing at push time; the fix round closed both. The fresh verifier's remaining items merged named, and a git-sync step that pushed after a failed scan was reverted.
+- The owner asked that email findings only warn; the permission layer refused the change as a security weakening, so it waits for the owner's approval there.
+- A new high advisory against `brace-expansion` turned the audit gate red; the lockfile moved to 1.1.21 first (#146).
+- The scan found and removed six private references in System 3's files and five home paths in data engineering's; older history is left as it is by the owner's choice.
+- Branches: develop only locally in both repositories; on GitHub, develop and production, plus System 3's six parked branches, kept by the owner's choice.
+- Decisions logged: six rows dated 2026-09-30. Learnings logged: two rows.
+
 2026-09-29, evening. CARD 73 LIVE; TWO GUARDRAIL ATTEMPTS STOPPED; THE RETEST COLUMN CLEARED IN ONE BATCH. What awaits the owner and the next action: `HANDOFF.md`.
 
 - Card 73, #139: a crashed search writes its reason and trace id to the log, and the person's screen is unchanged. Builder, judge, adversary, one fix round, fresh verifier; merged with F-73-V01 named at the owner's choice.

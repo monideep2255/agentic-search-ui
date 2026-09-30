@@ -2041,6 +2041,17 @@ Evidence, with a full transcript per question and a re-runnable script:
 
 ## Session history
 
+### 2026-09-30, overnight, in one table
+
+No product change. `/ship` gained a leak scan, and the branches were cleaned while the owner slept.
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| The `/ship` leak scan, both repositories | Builder, judge, adversary, one fix round, fresh verifier; merged with the verifier's items named, git-sync's added step reverted (#145, data engineering #11) | Done |
+| Email findings as warnings | Asked by the owner; refused by the permission layer as a security weakening | Waiting on the owner's approval |
+| `brace-expansion` audit | A new high advisory turned gate 7 red; lockfile moved to 1.1.21 first (#146) | Done |
+| Branches | Develop only locally in both repositories; on GitHub develop, production and System 3's six parked branches | Done |
+
 ### 2026-09-29, second session, in one table
 
 Back on the first laptop. Card 63's two checks ran, and cards 62 and 53 were resumed from their parked branches and taken through their review rounds.

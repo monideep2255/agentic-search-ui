@@ -159,4 +159,4 @@ For a laptop with nothing installed. The commands are for macOS on Apple silicon
 | How a phase or a card runs | `.claude/skills/bossman-mode/SKILL.md` and its `reference/` files |
 | How a release is cut | `docs/build/Release_flow.md` |
 
-How to start: read this file, then `git status --short` and `git worktree list`. Expect `develop` alone locally, with the parked branches listed by `git branch -r`; on the first laptop, the parked branches are local too. Then read the board's Retest and To do columns. Run `/phase-checkpoint` then `/ship` at the session's end.
+How to start: read this file, then `git status --short` and `git worktree list`. Expect `develop` alone locally, on every laptop, with the parked branches listed by `git branch -r`. Then read the board's Retest and To do columns. Run `/phase-checkpoint` then `/ship` at the session's end.

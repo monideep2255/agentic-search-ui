@@ -18,7 +18,7 @@ Nothing here requires a document to carry today's date:
 - Build harness review item D2 removed the column and the gate, delegated by the product owner on 2026-09-25 (DECISIONS.md, the lead implements both harness reviews' takeaways).
 - Now `HANDOFF.md` is rewritten at every session end, and every other document is edited when its fact changes.
 
-Last updated: 2026-09-29.
+Last updated: 2026-09-30.
 
 ## Table of contents
 
@@ -58,7 +58,7 @@ Last updated: 2026-09-29.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-09-29 that begins "The owner approves the 39 Retest cards that passed", the last row at the fourth 2026-09-29 checkpoint. Of the nine rows read at this checkpoint, one changes a process this skill follows, work narrows, recorded on the board's row above; the other eight (merging with `--admin`, card 73 merged named, card 72's hedge chosen and then parked, the Jev charge, card 84's timing and its stop, and the batch retest's approvals) change a merge route, code and which cards exist, not a registered document's shape, job or owner.
+Guarded through the DECISIONS.md row dated 2026-09-30 that begins "`brace-expansion` moves from 1.1.18 to 1.1.21", the last row at the 2026-09-30 checkpoint. The six rows read at this checkpoint (the `/ship` leak scan and its merge with named items, the email-warning change the permission layer refused, the data engineering history left as it is, the parked branches kept, and the audit fix first) change `/ship`'s process, a lockfile and which branches exist, not a registered document's shape, job or owner.
 
 The two 2026-09-27 checkpoints guarded the rows before them. Three of those changed a registered document's job or a process this skill runs, each cited in its row above: the test queries document as the gate, a `/verify` pass starting the seven-day close, and owner decisions asked at once.
 
