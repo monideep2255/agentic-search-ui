@@ -133,6 +133,12 @@ class LLMResponse:
     transient failure or after a reasoning refusal is included, since the
     person waited for it. `call_tier` always sets it; None only for a
     response built some other way.
+
+    `upstream_provider` is the host OpenRouter says served the reply, from
+    the reply's own `provider` field, bounded and printable, or None when
+    it names none (card 72, D's logging). OpenRouter chooses that host per
+    call when no provider is pinned, so a slow spell can be tied to one. It
+    is logged by the caller that wants it and never sent anywhere.
     """
 
     content: str
@@ -142,6 +148,27 @@ class LLMResponse:
     model_id: str
     tier: Tier
     elapsed_s: float | None = None
+    upstream_provider: str | None = None
+
+
+#: The longest upstream provider name `_upstream_provider` keeps.
+_UPSTREAM_PROVIDER_MAX_CHARS = 64
+
+
+def _upstream_provider(response: Any) -> str | None:
+    """The host OpenRouter says served `response`, or None (card 72).
+
+    litellm keeps a reply's non-standard top-level fields as attributes, so
+    OpenRouter's `"provider": "<host>"` is `response.provider`. It is text
+    from outside the process, so only a string is read, cut to
+    `_UPSTREAM_PROVIDER_MAX_CHARS`, with anything unprintable dropped, before
+    it can reach a log line.
+    """
+    raw = getattr(response, "provider", None)
+    if not isinstance(raw, str):
+        return None
+    cleaned = "".join(ch for ch in raw if ch.isprintable()).strip()[:_UPSTREAM_PROVIDER_MAX_CHARS]
+    return cleaned or None
 
 
 # Exceptions where the request itself was never the problem: a provider- or
@@ -568,6 +595,7 @@ class Harness:
         *,
         cache_prefix: str | None = None,
         max_tokens: int | None = None,
+        retry: bool = True,
     ) -> LLMResponse:
         """Issue one model call for `tier` through LiteLLM/OpenRouter.
 
@@ -605,6 +633,20 @@ class Harness:
           from every later call in the process. Any other 400, one that
           merely mentions reasoning included, is not retried.
 
+        With `retry=False` (re-land follow-up R-10, card 72) the transient
+        retry is not taken: one request for the answer is sent, and any
+        failure is raised, classified, from that request's own exception,
+        so the caller reads a rate limit's `Retry-After` from the request
+        that carried it. Every guard-tier call the guardrail makes passes it
+        (`harness.decide.ask_guard_model`), because that path decides for
+        itself when its one further request goes, one after the other,
+        never two at once, and promises the provider at most two per call
+        (card 84). The reasoning fallback is still taken (R-10 fix round,
+        F-72-J08): it is not a second request for the same answer but the
+        only way a model that cannot turn reasoning off can be asked at all,
+        and without it such a guard model would fail every question at the
+        front door in 50 ms. Every other caller keeps both retries.
+
         Any other recoverable or unexpected failure raises immediately. A
         retried call is a genuinely new attempt against the same target,
         so if it succeeds its own `call_cost_usd` is computed and metered
@@ -638,7 +680,8 @@ class Harness:
             "max_tokens": _TIER_MAX_TOKENS[tier] if max_tokens is None else max_tokens,
         }
 
-        transient_retry_left = True
+        transient_retry_left = retry
+        # Taken whatever `retry` says (F-72-J08); see the docstring.
         reasoning_fallback_left = True
         attempt = 0
         started = time.monotonic()
@@ -723,6 +766,7 @@ class Harness:
                     model_id=model_id,
                     tier=tier,
                     elapsed_s=elapsed_s,
+                    upstream_provider=_upstream_provider(response),
                 )
 
     def last_call_elapsed_s(self, trace_id: str, tier: Tier) -> float | None:
