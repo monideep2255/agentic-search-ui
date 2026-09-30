@@ -31,7 +31,7 @@ from system_03_search_agent.adapters.graphql import security
 # Server-produced text a caller must never see. Deliberately not shaped like a
 # credential, so the repository's own secret scanner does not object to a test
 # fixture, while still standing for a host, a path and an internal identifier.
-_INTERNAL_MARKER = "INTERNALMARKER-db-internal.example-5432-kgreader-/Users/private/fold.py:912"
+_INTERNAL_MARKER = "INTERNALMARKER-db-internal.example-5432-kgreader-/Users/runner/fold.py:912"
 
 
 class _Boom(Exception):

@@ -31,8 +31,8 @@ STALE_PATHS = [
     "Forge/",
     "Learning/",
     "Automations/",
-    "Brainstorming/",
-    "Computercraft/",
+    "Brain" + "storming/",  # split, like the entry below
+    "Computer" + "craft/",
     "personal-os" + "-work/",  # split so this file itself never contains the literal
     "GROWTH_SYSTEM.md",
     "EXTENSIONS.md",
