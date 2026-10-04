@@ -1,4 +1,4 @@
-import type { Register } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 import { config } from './config.ts'
 import { inside, matchesAny } from './kit/paths.ts'
 import { basename } from './kit/shell.ts'

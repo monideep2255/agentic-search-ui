@@ -1,4 +1,4 @@
-import type { Register } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 import { config } from './config.ts'
 
 type ModInfo = { folder: string; name: string; trigger: string; what: string; description: string; unreadable: boolean }

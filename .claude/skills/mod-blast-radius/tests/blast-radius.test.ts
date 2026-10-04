@@ -1,7 +1,9 @@
 import { test, expect } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
+import { config as live } from '../hooks/config.ts'
 import { findRisky, slugOf } from '../hooks/rules.ts'
+
 import { config as dataEngineering } from './fixtures/data-engineering.config.ts'
 import { config as ui } from './fixtures/ui.config.ts'
 
@@ -85,7 +87,7 @@ test('rm -rf build triggers, and Cancel denies', async ($, on) => {
   fakeTools(on, 'Cancel', asked)
   fakePane(on, true, opened)
   fakeProcess(on, rmReplies)
-  const r = await $.tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  const r = await $.tool.call({ tool: 'Bash', command: 'CLAUDE_APPROVED_DELETE=1 rm -rf build' })
   expect(r.deny).toContain('did not approve')
   expect(opened).toEqual(['blast-radius'])
   expect(asked[0]).toContain('rm -rf build')
@@ -96,7 +98,7 @@ test('Proceed calls through to the tool', async ($, on) => {
   fakeTools(on, 'Proceed')
   fakePane(on, true)
   fakeProcess(on, rmReplies)
-  const r = await $.tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  const r = await $.tool.call({ tool: 'Bash', command: 'CLAUDE_APPROVED_DELETE=1 rm -rf build' })
   expect(r.deny).toBeUndefined()
   expect(r.result).toBe('ran')
 })
@@ -105,7 +107,7 @@ test('a free-text answer other than Proceed denies', async ($, on) => {
   fakeTools(on, 'proceed please')
   fakePane(on, true)
   fakeProcess(on, rmReplies)
-  const r = await $.tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  const r = await $.tool.call({ tool: 'Bash', command: 'CLAUDE_APPROVED_DELETE=1 rm -rf build' })
   expect(r.deny).toContain('did not approve')
 })
 
@@ -113,7 +115,7 @@ test('a dismissed question denies', async ($, on) => {
   fakeTools(on, 'throw')
   fakePane(on, true)
   fakeProcess(on, rmReplies)
-  const r = await $.tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  const r = await $.tool.call({ tool: 'Bash', command: 'CLAUDE_APPROVED_DELETE=1 rm -rf build' })
   expect(r.deny).toContain('did not approve')
 })
 
@@ -126,7 +128,7 @@ test('the pane shows the full report while the question is open', async ($, on) 
   })
   fakePane(on, true)
   fakeProcess(on, rmReplies)
-  await $.tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  await $.tool.call({ tool: 'Bash', command: 'CLAUDE_APPROVED_DELETE=1 rm -rf build' })
   expect(shown.join('\n')).toContain('build: 41 MB, tracked')
 })
 
@@ -140,7 +142,7 @@ test('a dry run that fails is reported as failed, never as nothing affected', as
   })
   fakePane(on, true)
   fakeProcess(on, argv => (argv[0] === 'du' ? 'throw' : argv[0] === 'git' ? { exitCode: 128, stderr: 'fatal: not a git repository' } : undefined))
-  const r = await $.tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  const r = await $.tool.call({ tool: 'Bash', command: 'CLAUDE_APPROVED_DELETE=1 rm -rf build' })
   expect(r.deny).toContain('did not approve')
   expect(asked[0]).toContain('2 checks failed')
   const text = shown.join('\n')
@@ -163,7 +165,7 @@ test('a guard that throws denies through its catch handler', async ($, on) => {
     throw new Error('boom')
   })
   fakeProcess(on, rmReplies)
-  const r = await $.tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  const r = await $.tool.call({ tool: 'Bash', command: 'CLAUDE_APPROVED_DELETE=1 rm -rf build' })
   expect(r.deny).toContain('guard failed')
 })
 
@@ -221,7 +223,7 @@ test('a pane that cannot be seated falls back to the band', async ($, on) => {
   })
   fakePane(on, false)
   fakeProcess(on, rmReplies)
-  const r = await $.tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  const r = await $.tool.call({ tool: 'Bash', command: 'CLAUDE_APPROVED_DELETE=1 rm -rf build' })
   expect(r.deny).toContain('did not approve')
   expect(shown.join('\n')).toContain('build: 41 MB, tracked')
 })
@@ -335,4 +337,32 @@ test('deferToPublicGuard: empty by default, filled in the public configs, and sl
   const r = await $.tool.call({ tool: 'Bash', command: 'git push --force origin feature/x' })
   expect(r.deny).toContain('did not approve')
   expect(asked.length).toBe(1)
+})
+
+test('skipUnless: under the personal config an rm the shell guard would refuse is not asked about, an approved one is; without it every rm asks', async ($, on) => {
+  const asked: string[] = []
+  fakeTools(on, 'Proceed', asked)
+  fakePane(on, true)
+  fakeProcess(on, rmReplies)
+  // The module reads this repository's own config, so a public repository
+  // (no skipUnless) checks the other branch: a plain rm is asked about.
+  if (!live.skipUnless) {
+    const plain = await $.tool.call({ tool: 'Bash', command: 'rm -rf build' })
+    expect(plain.deny).toBeUndefined()
+    expect(asked.length).toBe(1)
+    expect(asked[0]).toContain('rm -rf build')
+    return
+  }
+  {
+    const plain = await $.tool.call({ tool: 'Bash', command: 'rm -rf build' })
+    expect(plain.deny).toBeUndefined()
+    expect(asked.length).toBe(0)
+    const approved = await $.tool.call({ tool: 'Bash', command: 'CLAUDE_APPROVED_DELETE=1 rm -rf build' })
+    expect(approved.deny).toBeUndefined()
+    expect(asked.length).toBe(1)
+    expect(asked[0]).toContain('rm -rf build')
+    const found = await $.tool.call({ tool: 'Bash', command: 'find . -name x -delete' })
+    expect(found.deny).toBeUndefined()
+    expect(asked.length).toBe(2)
+  }
 })

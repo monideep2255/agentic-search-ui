@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { Register } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 import { config } from './config.ts'
 
 type Probe = 'up' | 'down' | 'unknown'

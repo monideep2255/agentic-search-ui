@@ -1,4 +1,4 @@
-import type { Register } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 import { config } from './config.ts'
 import type { HostSource } from './config.ts'
 import { inside, matchesAny } from './kit/paths.ts'
@@ -87,8 +87,8 @@ async function check($: EngineInterface, rel: string) {
     }
   }
 
-  if (findings.size === 0) return
-  const all = [...findings].sort()
+  const all = [...findings].sort().filter(f => !config.acknowledged.some(h => f.startsWith(h + ' in ')))
+  if (all.length === 0) return
   const shown = all.slice(0, config.maxFindings).map(f => `citation hosts drift: ${f}`)
   const more = all.length > shown.length ? ` (+${all.length - shown.length} more)` : ''
   $.ui.toast(shown.join('; ') + more)

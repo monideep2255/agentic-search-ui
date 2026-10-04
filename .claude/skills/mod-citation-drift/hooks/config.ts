@@ -56,6 +56,10 @@ export const config = {
     },
   ] as HostSource[],
 
+  // Hosts whose one-sided presence is known and accepted, so it is not reported on every edit.
+  // A finding about one of these hosts is dropped. Remove an entry once the lists agree on it.
+  acknowledged: ['omim.org', 'www.omim.org'] as string[],
+
   // Most findings shown in one toast.
   maxFindings: 4,
 }

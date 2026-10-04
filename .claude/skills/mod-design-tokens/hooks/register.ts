@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { Register } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 import { config } from './config.ts'
 import { inside } from './kit/paths.ts'
 
@@ -70,9 +70,11 @@ async function maybeRun($: EngineInterface, filePath: string, result: { deny?: s
     const rel = inside(repo.root, filePath)
     if (rel === undefined || !rel.startsWith(config.watchedPrefix)) return
     if (!config.watchedExtensions.some(x => rel.endsWith(x))) return
-    if (await read($, isPending)) return
     const now = await $.clock.now()
     const last = await read($, lastRunAt)
+    // A hot reload cancels the pending timer but leaves isPending true, so a flag older than the
+    // debounce window plus a margin is stale and does not hold the check off.
+    if ((await read($, isPending)) && now <= last + config.debounceMs + 5000) return
     const wait = last + config.debounceMs - now
     if (wait <= 0) {
       await runCheck($, repo.root)

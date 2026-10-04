@@ -265,7 +265,10 @@ async function defersToPublicGuard($: EngineInterface, m: Match): Promise<boolea
 
 export const register: Register = on => {
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
-    const found = findRisky(e.command, config.extraRules)
+    const found = findRisky(e.command, config.extraRules).filter(m => {
+      const need = config.skipUnless?.[m.rule]
+      return need === undefined || need.test(e.command)
+    })
     const matches: Match[] = []
     for (const m of found) if (!(await defersToPublicGuard($, m))) matches.push(m)
     if (matches.length === 0) return next(e)

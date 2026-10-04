@@ -7,7 +7,7 @@ import { programInfo, segments } from './kit/shell.ts'
 const SUMMARY_LINES = 30
 
 type Target = { root: string; policy: RemotePolicy | undefined; slug: string | undefined }
-type Call = { dir: string | undefined; sub: string; args: string[] }
+type Call = { dir: string | undefined; sub: string; args: string[]; configs: string[] }
 
 async function run($: EngineInterface, argv: readonly string[], init: { cwd?: string; timeoutMs?: number; stdin?: string } = {}) {
   try {
@@ -57,12 +57,15 @@ function callsOf(command: string): Call[] {
     if (p[0].split('/').pop() !== 'git') continue
     let dir = info.cwd !== undefined ? joinDir(cd, info.cwd) : cd
     let i = 1
+    const configs: string[] = []
     while (i < p.length && p[i].startsWith('-')) {
       if (p[i] === '-C') { if (p[i + 1] !== undefined) dir = joinDir(dir, p[i + 1]); i += 2; continue }
-      if (p[i] === '-c' || p[i] === '--git-dir' || p[i] === '--work-tree') { i += 2; continue }
+      if (p[i] === '-c') { if (p[i + 1] !== undefined) configs.push(p[i + 1]); i += 2; continue }
+      if (p[i].startsWith('-c') && p[i].length > 2 && !p[i].startsWith('--')) { configs.push(p[i].slice(2)); i++; continue }
+      if (p[i] === '--git-dir' || p[i] === '--work-tree') { i += 2; continue }
       i++
     }
-    if (i < p.length) out.push({ dir, sub: p[i], args: p.slice(i + 1) })
+    if (i < p.length) out.push({ dir, sub: p[i], args: p.slice(i + 1), configs })
   }
   return out
 }
@@ -190,8 +193,8 @@ async function scan($: EngineInterface, target: Target, withStaged: boolean, isC
 async function commitDecision($: EngineInterface, call: Call, target: Target): Promise<string | undefined> {
   const skip = ['-m', '-F', '-c', '-C', '-t', '--message', '--file', '--reuse-message', '--reedit-message', '--template']
   const skipped = call.args.includes('--no-verify') || hasShortFlag(call.args, 'n', skip)
-  if (skipped) {
-    return `${$.plugin.name}: ${target.slug} is public, so --no-verify and -n are not allowed on a commit. Run the commit without them so the hooks and the leak scan run.`
+  if (skipped || call.configs.some(c => c.toLowerCase().startsWith('core.hookspath'))) {
+    return `${$.plugin.name}: ${target.slug} is public, so --no-verify, -n, and -c core.hooksPath are not allowed on a commit. Run the commit without them so the hooks and the leak scan run.`
   }
   return scan($, target, true, true)
 }
