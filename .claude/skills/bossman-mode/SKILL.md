@@ -1,6 +1,6 @@
 ---
 name: bossman-mode
-description: "Autonomous execution for System 3, one cadence with a risk dial: a copy or layout fix gets builder, clerk and product review; runnable behaviour adds the judge and the adversary; auth, the graph credential, the event schema or .claude/ adds a branch and a pull request. Picked by what a person sees first, capped at 8 hours and 8 dispatches, ending on a product review of develop. TRIGGER on 'bossman mode', 'run the phase', 'go build this', 'let's execute', 'run the UI fix loop'. DO NOT TRIGGER in architecture or planning discussions, nor for one bounded edit or a status question."
+description: "Autonomous build execution with a risk dial: copy fixes get a builder and product review, runnable behavior adds a judge and adversary, sensitive areas add a branch and pull request. TRIGGER on 'bossman mode', 'run the phase', 'go build this'. Not for planning or one-off edits."
 argument-hint: "[--phase N.M] [--ui] [--status] [--stop]"
 ---
 
@@ -270,6 +270,7 @@ Read the file for the stage you are at. Do not read all of them at phase open.
 
 | Stage | Read |
 | --- | --- |
+| Activation: what this mode suspends and what it never suspends | `.claude/rules-reference/bossman-mode.md`, the full text behind the short `bossman-mode` rule |
 | Tier names to models | `docs/build/Build_workflow_cadence.md`, "Provider mapping" |
 | Opening, splitting and dispatching a numbered phase, what a worker is handed, the ledger and its dispatch table, gates, checkpoint, merge | `reference/Phase_execution.md` |
 | The judge, the adversary, the fix-and-verify round, the ledger rules | `reference/Review_rounds.md` |

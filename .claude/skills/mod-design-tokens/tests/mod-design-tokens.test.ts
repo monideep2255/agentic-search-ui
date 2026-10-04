@@ -58,6 +58,19 @@ test('an edit inside the debounce window waits instead of running', async ($, on
   expect(w.afterMs).toEqual([15_000])
 })
 
+test('a stale pending flag left by a hot reload does not hold the check off forever', async ($, on) => {
+  const w = world(); fake(on, w)
+  await edit($)
+  w.now += 5_000
+  await edit($)
+  expect(w.runs).toBe(1)
+  expect(w.afterMs).toEqual([15_000])
+  // The timer was cancelled by a reload and never fired: isPending is still true. Well past the window, an edit runs.
+  w.now += 60_000
+  await edit($)
+  expect(w.runs).toBe(2)
+})
+
 test('a path outside frontend/src is ignored', async ($, on) => {
   const w = world(); fake(on, w)
   await edit($, '/repo/src/app.py')

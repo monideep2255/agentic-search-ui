@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Runs the CI gates locally before anything is staged, ending on a scan of what the push would publish for secrets and private values. Syncs the four canonical docs and commits with a Conventional Commit subject. Pushes to develop for a card alone at risk-dial position one or two, or to a branch for a numbered phase or position three. Proves the remote advanced and confirms the deploy. Clears away leftover agent worktrees. Use when ending a work block or after a logical milestone.
+description: Run CI gates locally, scan the push for secrets, sync the four canonical documents, commit, push to develop or a branch by risk position, and confirm the deploy. Use when ending a work block or after a milestone.
 ---
 
 # /ship - gates, docs-sync, git-sync, then worktree cleanup
@@ -96,7 +96,7 @@ Dispatch the `docs-sync` sub-agent (`.claude/agents/docs-sync.md`).
 It will:
 
 1. Run `git status --short` to see what changed
-2. Use its routing to identify which canonical docs need updating (CLAUDE.md, AGENTS.md, README.md, DECISIONS.md)
+2. Use its routing to identify which canonical docs need updating (CLAUDE.md, AGENTS.md, `.claude/README.md`, README.md, DECISIONS.md)
 3. Read only affected docs
 4. Make surgical edits, not rewrites
 5. Report what changed (or "no changes needed")
@@ -105,7 +105,7 @@ Wait for docs-sync to complete before proceeding. Its edits may add files to the
 
 ### What docs-sync owns, and what it must not touch
 
-docs-sync edits only CLAUDE.md, AGENTS.md, README.md and DECISIONS.md. Everything else a session boundary changes is owned by `/phase-checkpoint`, and the list of those documents is not written here: it is every row of `tracker/Living_documents.md` whose owner is `/phase-checkpoint` (the handoff, the board, the done file, the test queries, Plan.md and PROGRESS.md, as of 2026-09-26).
+docs-sync edits only CLAUDE.md, AGENTS.md, `.claude/README.md`, README.md and DECISIONS.md. Everything else a session boundary changes is owned by `/phase-checkpoint`, and the list of those documents is not written here: it is every row of `tracker/Living_documents.md` whose owner is `/phase-checkpoint` (the handoff, the board, the done file, the test queries, Plan.md and PROGRESS.md, as of 2026-09-26).
 
 A push does not need `/phase-checkpoint` first. One thing does, at a session end only: `HANDOFF.md` is rewritten before the push (`/phase-checkpoint` Step 4 is the procedure), so the next session starts from what is true. Every other document is edited when its fact changes, not because a date is due, and nothing here checks that a document carries today's date.
 

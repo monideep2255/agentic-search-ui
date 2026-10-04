@@ -38,6 +38,8 @@ If tests are missing for the change, write them first, then re-run precommit. Pr
 
 Before shipping a release or opening a pull request, run a deep security scan on the branch. The always-on security-guidance layer already reviews each change as it lands, so this gate is the full audit that a release milestone earns, not a repeat of the per-change check.
 
+The plugin is off in `.claude/settings.json` since 2026-10-04, so its skills cost no context in other sessions (`DECISIONS.md`, 2026-10-04). Turn it on for this step, in `/plugin` or with `"claude-security@claude-plugins-official": true` under `enabledPlugins` in the gitignored `.claude/settings.local.json`, and off again once the scan is triaged. A release does not skip the scan because the plugin is off.
+
 1. Run `/claude-security` and pick Scan codebase, or say "scan my branch".
 2. Review the findings. For anything real, run `/claude-security` again, pick Suggest patches, review each patch, then apply with `git apply CLAUDE-SECURITY-<timestamp>/patches/F1.patch`.
 3. Do not ship with an unreviewed High or Critical finding. Triage every finding to fixed or explicitly accepted before Step 4.

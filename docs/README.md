@@ -31,6 +31,7 @@ Last updated: 2026-09-26.
 | Watch parallel builders in live panes | `build/Agent_teams_tmux_quickstart.md` |
 | Run the security scan before a pull request | `Claude_security_plugin_usage.md` |
 | Find out what an agent mod does or how to call it | `Agent_mods.md`, or type `/mods` |
+| Find out what loads every turn, the token budget, or how to re-measure it | `Context_budget.md`, or type `/context-budget` |
 | Design anything that runs more than one agent against a shared resource | `architecture/Multi_agent_system_design_explained.md` |
 
 ## The folders

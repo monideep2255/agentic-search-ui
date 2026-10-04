@@ -49,9 +49,25 @@ test('one extra host in the frontend list toasts', async ($, on) => {
 
 test('a host the pattern names but the lists lack toasts', async ($, on) => {
   const toasts: string[] = []
+  fake(on, { ...base(), [EVENTS]: events('    r"|(?:www\\.)?example\\.org/"\n') }, toasts)
+  await $.tool.call({ tool: 'Edit', file_path: '/repo/' + EVENTS, old_string: 'a', new_string: 'b' })
+  expect(toasts[0]).toContain('example.org in ' + EVENTS + ' only')
+})
+
+test('an acknowledged host is dropped from the report', async ($, on) => {
+  const toasts: string[] = []
   fake(on, { ...base(), [EVENTS]: events('    r"|(?:www\\.)?omim\\.org/"\n') }, toasts)
   await $.tool.call({ tool: 'Edit', file_path: '/repo/' + EVENTS, old_string: 'a', new_string: 'b' })
-  expect(toasts[0]).toContain('omim.org in ' + EVENTS + ' only')
+  expect(toasts).toEqual([])
+})
+
+test('an unacknowledged host beside an acknowledged one still toasts alone', async ($, on) => {
+  const both: string[] = []
+  fake(on, { ...base(), [EVENTS]: events('    r"|(?:www\\.)?omim\\.org/"\n    r"|(?:www\\.)?example\\.org/"\n') }, both)
+  await $.tool.call({ tool: 'Edit', file_path: '/repo/' + EVENTS, old_string: 'a', new_string: 'b' })
+  expect(both.length).toBe(1)
+  expect(both[0]).toContain('example.org in ' + EVENTS + ' only')
+  expect(both[0]).not.toContain('omim.org')
 })
 
 test('a list host missing from the spec toasts', async ($, on) => {

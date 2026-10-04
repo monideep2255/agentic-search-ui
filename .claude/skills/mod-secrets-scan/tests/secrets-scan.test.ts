@@ -80,7 +80,7 @@ test('the allow comment skips only its own line', async ($, on) => {
 test('allowPaths is empty by default, so no path is skipped', async ($, on) => {
   fake($, on)
   const r = await $.tool.call({ tool: 'Write', file_path: 'fixtures/sample.env', content: 'sk-' + 'a'.repeat(24) })
-  expect(r.deny).toBeDefined()
+  expect(r.deny).toContain('OpenAI-style sk- key')
 })
 
 test('the deny reason never holds the full value', async ($, on) => {
@@ -119,5 +119,6 @@ test('clean output raises no toast', async ($, on) => {
 test('a guard that breaks still denies', async ($, on) => {
   on('tool.call', () => { throw new Error('boom') })
   const r = await $.tool.call({ tool: 'Bash', command: 'echo hello' })
-  expect(r.deny).toBeDefined()
+  expect(r.deny).toContain('mod-secrets-scan')
+  expect(r.deny).toContain('the guard failed')
 })

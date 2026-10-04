@@ -65,6 +65,31 @@ for (const [name, text] of pythonCases) {
   })
 }
 
+test('frontend: a declaration named location, and commented-out code, are silent', async ($, on) => {
+  const w = world(); fake(on, w)
+  await edit($, TSX, 'const location = useLocation()')
+  await edit($, TSX, '  let location = next')
+  await edit($, TSX, '{/* dangerouslySetInnerHTML is banned here */}')
+  await edit($, TSX, 'const a = 1 // el.innerHTML = html')
+  await edit($, TSX, 'const a = 1 /* document.write(x) */')
+  expect(w.toasts).toEqual([])
+})
+
+test('frontend: a real redirect assignment still warns', async ($, on) => {
+  const w = world(); fake(on, w)
+  await edit($, TSX, 'location = next')
+  expect(w.toasts.length).toBe(1)
+  expect(w.toasts[0]).toContain('redirect')
+})
+
+test('python: an English prompt f-string is silent, an uppercase SQL f-string still warns', async ($, on) => {
+  const w = world(); fake(on, w)
+  await edit($, pythonPath, 'prompt = f"Please select the best answer from the list {items}"')
+  expect(w.toasts).toEqual([])
+  await edit($, pythonPath, 'cur.execute(f"SELECT id FROM users WHERE id = {uid}")')
+  expect(w.toasts.length).toBe(1)
+})
+
 test('python: parameterized SQL is silent', async ($, on) => {
   const w = world(); fake(on, w)
   await edit($, pythonPath, 'cur.execute("SELECT id FROM users WHERE id = %s", (uid,))')

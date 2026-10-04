@@ -1,7 +1,12 @@
 ---
 description: "Before installing any npm or PyPI package, or wiring up any MCP server or MCP-shaped tool integration (cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup), run checks that catch live supply-chain compromise before a CVE exists: version and timestamp verification, install-script inspection, and an enable-versus-trust gate for anything that executes code."
 scope: portable
-alwaysApply: true
+alwaysApply: false
+paths:
+  - "**/requirements*.txt"
+  - "**/pyproject.toml"
+  - "**/package.json"
+  - "**/package-lock.json"
 ---
 
 ## Supply-chain security

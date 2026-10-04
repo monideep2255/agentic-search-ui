@@ -1,12 +1,12 @@
 #!/bin/bash
 # scope: project
-# depends_on: [.claude/rules/, .claude/skills/, CLAUDE.md, AGENTS.md]
+# depends_on: [.claude/rules/, .claude/rules-reference/, .claude/skills/, CLAUDE.md, AGENTS.md]
 # depended_by: [.claude/settings.json]
 #
 # SessionStart hook: scan context files for prompt injection patterns before
 # they are injected into the system prompt.
 #
-# Scans: .claude/rules/, .claude/skills/ SKILL.md files, CLAUDE.md, AGENTS.md
+# Scans: .claude/rules/, .claude/rules-reference/, .claude/skills/ SKILL.md files, CLAUDE.md, AGENTS.md
 # Checks for: role hijack, instruction override, exfiltration, invisible unicode
 
 REPO_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
@@ -65,6 +65,11 @@ scan_file() {
 
 # Scan rules
 for file in "$REPO_DIR"/.claude/rules/*.md; do
+  [ -f "$file" ] && scan_file "$file"
+done
+
+# Scan the full rule texts the short rules point to (read into context on demand)
+for file in "$REPO_DIR"/.claude/rules-reference/*.md; do
   [ -f "$file" ] && scan_file "$file"
 done
 

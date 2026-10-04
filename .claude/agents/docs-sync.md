@@ -1,6 +1,6 @@
 ---
 name: docs-sync
-description: Keeps the 4 canonical docs in sync when the repository changes (CLAUDE.md, AGENTS.md, README.md, DECISIONS.md). Surgical updates only.
+description: Keeps the 5 canonical documents in sync when the repository changes (CLAUDE.md, AGENTS.md, .claude/README.md, README.md, DECISIONS.md). Surgical updates only.
 scope: project
 tools: Read, Edit, Glob, Grep
 model: sonnet
@@ -28,8 +28,9 @@ Two tiers. Always check both.
 
 | File | Purpose | Sync rule |
 | --- | --- | --- |
-| `CLAUDE.md` | Claude Code instructions (source of truth) | Skills table, agents table, reference docs table, current focus, last-updated line |
-| `AGENTS.md` | Mirror of CLAUDE.md for all other AI agents (Gemini, Copilot, GPT) | Must stay identical to CLAUDE.md at all times. Any change to CLAUDE.md tables is applied here too. |
+| `CLAUDE.md` | Claude Code instructions (source of truth) | Current focus, working agreements, last-updated line. Since 2026-10-04 it holds no index tables, only pointers to `.claude/README.md` |
+| `.claude/README.md` | The indexes: sub-agents, skills, the rules loading map, reference docs, build order, running with a different agent | Skills table, sub-agents table, rules list, reference docs table, last-updated line |
+| `AGENTS.md` | Mirror of CLAUDE.md for all other AI agents (Gemini, Copilot, GPT) | Must stay identical to CLAUDE.md at all times. Any change to CLAUDE.md is applied here too. |
 | `README.md` | Public project overview | Status table, Quick start section, documentation links table, stale doc references |
 | `DECISIONS.md` | Append-only architecture decision log | Never edit existing rows. Only append new rows at the bottom. |
 
@@ -60,11 +61,11 @@ Map each category of change to the docs that need checking.
 
 | Changed path / event | Files to check |
 | --- | --- |
-| `.claude/skills/` (new or removed) | `CLAUDE.md` and `AGENTS.md` Skills table |
-| `.claude/agents/` (new or removed) | `CLAUDE.md` and `AGENTS.md` Sub-agents table |
-| `.claude/rules/` or `docs/rules/` (a rule added, removed, moved, or its `paths:` frontmatter changed) | The rules list under `CLAUDE.md`'s and `AGENTS.md`'s Skills section: which rules always load, which load on matching paths, and which is read on demand |
+| `.claude/skills/` (new or removed) | `.claude/README.md` Skills table |
+| `.claude/agents/` (new or removed) | `.claude/README.md` Sub-agents table |
+| `.claude/rules/`, `.claude/rules-reference/` or `docs/rules/` (a rule added, removed, moved, or its `paths:` frontmatter changed) | The rules list under `.claude/README.md`'s Rules section: which rules always load, which load on matching paths, and which are read on demand. `CLAUDE.md`'s Working agreements only when a rule summarized there changes |
 | `.claude/hooks/` | No doc update needed (hooks are internal) |
-| `docs/` (file added or removed) | `CLAUDE.md` Reference docs table, `README.md` documentation links |
+| `docs/` (file added or removed) | `.claude/README.md` Reference docs table, `README.md` documentation links |
 | `src/` (new module) | `README.md` architecture section |
 | `frontend/` changes | `README.md` |
 | New non-trivial decision (library, pattern, scope change) | `DECISIONS.md` (append row with date, alternatives, why) |
@@ -102,7 +103,7 @@ Say exactly which files were touched, which lines changed, and why. Mention Tier
 1. Surgical only. Replace only the specific lines that changed. Never rewrite a whole section.
 2. Sentence case in all headings per `.claude/rules/writing-style.md`.
 3. No bold, no em dashes, no emoji in docs.
-4. Skills table in `CLAUDE.md`: one row per skill, short description, invocation trigger.
+4. Skills table in `.claude/README.md`: one row per skill, short description, invocation trigger. `CLAUDE.md` keeps only the pointer.
 5. Do not add documentation for System 1/2 ETL code. Scope is System 3 only.
 6. Never delete DECISIONS.md rows. Only append.
 7. Never commit or push. Report the edits; /ship's git-sync step commits them.

@@ -1,4 +1,4 @@
-import type { Register } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 import { config } from './config.ts'
 import { scan } from './scan.ts'
 import { inside } from './kit/paths.ts'

@@ -1,6 +1,6 @@
 ---
 name: first-principles
-description: Explains concepts using first-principles thinking, breaking complex topics into fundamental truths with simple language. TRIGGER when user asks "what is X", "explain Y", "how does X work", "teach me about", "I don't understand", or needs a technical concept clarified. Also trigger on "break this down" or "ELI5". DO NOT TRIGGER for planning tasks (use action-planner) or code review (use objective-review).
+description: Explains a concept from first principles in simple language. TRIGGER on 'what is X', 'explain Y', 'how does X work', 'teach me about', 'break this down', 'ELI5'. Not for planning (use action-planner) or code review (use objective-review).
 ---
 
 # First principles & simple explanations

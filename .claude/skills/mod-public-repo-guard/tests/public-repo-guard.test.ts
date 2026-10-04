@@ -67,6 +67,21 @@ test('a public commit with --no-verify denies', async ($, on) => {
   expect(r.deny).toContain('--no-verify')
 })
 
+test('a public commit with -c core.hooksPath denies, in any spelling, while other -c settings pass', async ($, on) => {
+  arrange(on, { remote: DE })
+  for (const cmd of [
+    'git -c core.hooksPath=/dev/null commit -m x',
+    'git -c core.hookspath=/dev/null commit -m x',
+    'git -ccore.hooksPath=/dev/null commit -m x',
+    'git -c user.name=x -c core.hooksPath=. commit -m x',
+  ]) {
+    const r = await $.tool.call({ tool: 'Bash', command: cmd })
+    expect(r.deny).toContain('core.hooksPath')
+  }
+  const ok = await $.tool.call({ tool: 'Bash', command: 'git -c user.name=x commit -m x' })
+  expect(ok.deny).toBeUndefined()
+})
+
 test('a public commit with -n or a -an cluster denies', async ($, on) => {
   arrange(on, { remote: DE })
   const a = await $.tool.call({ tool: 'Bash', command: 'git commit -n -m x' })
@@ -238,7 +253,8 @@ test('a thrown error denies', async ($, on) => {
   on('tool.call', () => ({ result: 'ran' }) as never)
   on('session.repo', () => { throw new Error('boom') })
   const r = await $.tool.call({ tool: 'Bash', command: 'git push origin main' })
-  expect(r.deny).toBeDefined()
+  expect(r.deny).toContain(PLUGIN)
+  expect(r.deny).toContain('the guard failed')
 })
 
 test('commands that are not commit or push pass', async ($, on) => {

@@ -1,6 +1,6 @@
 ---
 name: phase-reviewer
-description: Independent judge, adversary or re-review round for a build phase. Runs probes and tests against the phase's code, files findings as rows in the phase's ledger, and closes nothing. Dispatched by name at cadence stage 6, never by trigger phrase. Distinct from objective-review, which critiques documents and plans and cannot run anything: this one needs Bash to execute probes, and deliberately has no Write or Edit tool.
+description: Independent judge or adversary for a build phase: runs probes and tests, files findings in the phase ledger, closes nothing. Dispatched by name, never by phrase. Unlike objective-review, it runs code.
 scope: project
 tools: Read, Grep, Glob, Bash
 model: opus
