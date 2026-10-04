@@ -33,7 +33,7 @@ On demand (paid only when used):
 
 Two account-level settings change the standing set without any change to this repository:
 
-- Synced skills and plugins (Claude Code 2.1.275): a CLI signed in with a claude.ai account loads the skills and plugins enabled on that account. Opt out with `"syncClaudeAiSkills": false` or `"syncClaudeAiPlugins": false` in user settings.
+- Synced skills and plugins (Claude Code 2.1.275): a CLI signed in with a claude.ai account loads the skills and plugins enabled on that account. Opt out with `"syncClaudeAiSkills": false` or `"syncClaudeAiPlugins": false` in user settings. The opt-out does not shrink the total: measured October 4, 2026, it cut the skills figure by about 3.3k and raised the system tools figure by about 3.4k, so standing context stayed at 31k.
 - Project instructions (Claude Code 2.1.277): a repository with `AGENTS.md` and no `CLAUDE.md` now loads `AGENTS.md`. This repository has both, so only `CLAUDE.md` loads. The `/config` option Project instructions can load both; leave it off, because `AGENTS.md` here is a copy of `CLAUDE.md` and loading both would pay for the same text twice.
 
 ## Before and after
