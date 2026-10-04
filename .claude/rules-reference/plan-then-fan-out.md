@@ -4,7 +4,7 @@ The complete text of `.claude/rules/plan-then-fan-out.md` as it stood on 2026-10
 
 ## Plan then fan out (reasoning model decomposes, cheaper models execute)
 
-When work fans out to parallel agents, split the roles by model tier. The strongest reasoning model (Opus) owns the plan: it scouts the terrain, decomposes the work into tightly scoped, self-contained, non-overlapping tasks, and writes each task a contract. Cheaper, faster models (Sonnet 5 for substantive extraction and analysis, Haiku 4.5 for mechanical lookup and formatting) own execution: each runs one bounded task in parallel. The expensive reasoning is spent once, on the decomposition and the final synthesis. The repetitive execution is spent cheaply, in parallel.
+When work fans out to parallel agents, split the roles by model tier. The strongest reasoning model (Opus) owns the plan: it scouts the terrain, decomposes the work into tightly scoped, self-contained, non-overlapping tasks, and writes each task a contract. Cheaper, faster models (Sonnet for substantive extraction and analysis, Haiku for mechanical lookup and formatting) own execution: each runs one bounded task in parallel. The expensive reasoning is spent once, on the decomposition and the final synthesis. The repetitive execution is spent cheaply, in parallel.
 
 ### Only the lead fans out
 
@@ -53,7 +53,7 @@ Reasoning model (Opus), before any fan-out:
 Reasoning model (Opus), after the workers return:
 - Synthesize the parts into the deliverable and own final judgment. Workers produce parts, the planner assembles the whole.
 
-Worker models (Sonnet 5, or Haiku 4.5 for purely mechanical work):
+Worker models (Sonnet, or Haiku for purely mechanical work):
 - One bounded task each, in parallel, writing structured output to a named file, returning a short summary so the planner's context stays lean.
 
 ### How to apply

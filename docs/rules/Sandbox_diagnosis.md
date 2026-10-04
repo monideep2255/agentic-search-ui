@@ -43,10 +43,10 @@ After a durable fix, verify with evidence from the actual command path, not a cl
 
 ```bash
 git push origin HEAD
-git rev-parse HEAD origin/main   # both hashes must be identical
+git rev-parse HEAD origin/<branch>   # both hashes must be identical
 ```
 
-Identical hashes prove the push authenticated (a rejected or read-only credential leaves `origin/main` behind) and reached the remote through the sandbox proxy. To check auth before pushing without touching the remote, `git ls-remote origin >/dev/null && echo reachable` returns exit 0 only when the credential works. This is the same discipline as `goal-contracts`: stop on verified evidence, not on feel.
+Identical hashes prove the push authenticated (a rejected or read-only credential leaves `origin/<branch>` behind) and reached the remote through the sandbox proxy. To check auth before pushing without touching the remote, `git ls-remote origin >/dev/null && echo reachable` returns exit 0 only when the credential works. This is the same discipline as `goal-contracts`: stop on verified evidence, not on feel.
 
 Do not capture a verbose HTTPS auth trace to prove a push. `GIT_CURL_VERBOSE=1` and `GIT_TRACE_CURL=1` print the request headers, and `GIT_TRACE_REDACT` masks only the older HTTP/1.1 log format, not the HTTP/2 frame trace curl emits when the server negotiates `h2` (the default for GitHub). A verbose push captured for handshake evidence can print the `Authorization: Basic <token>` header in cleartext into the session transcript, forcing a credential rotation. The hash comparison above proves the same thing and leaks nothing.
 

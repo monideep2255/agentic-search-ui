@@ -30,7 +30,7 @@ Two tiers. Always check both.
 | --- | --- | --- |
 | `CLAUDE.md` | Claude Code instructions (source of truth) | Current focus, working agreements, last-updated line. Since 2026-10-04 it holds no index tables, only pointers to `.claude/README.md` |
 | `.claude/README.md` | The indexes: sub-agents, skills, the rules loading map, reference docs, build order, running with a different agent | Skills table, sub-agents table, rules list, reference docs table, last-updated line |
-| `AGENTS.md` | Mirror of CLAUDE.md for all other AI agents (Gemini, Copilot, GPT) | Must stay identical to CLAUDE.md at all times. Any change to CLAUDE.md is applied here too. |
+| `AGENTS.md` | Mirror of CLAUDE.md for all other AI agents (Gemini, Copilot, GPT) | Generated from CLAUDE.md by `.claude/hooks/sync-agents-md.sh`, which copies line 4 onward on every edit of CLAUDE.md. Verify it matches; never hand-edit it. |
 | `README.md` | Public project overview | Status table, Quick start section, documentation links table, stale doc references |
 | `DECISIONS.md` | Append-only architecture decision log | Never edit existing rows. Only append new rows at the bottom. |
 
@@ -69,7 +69,7 @@ Map each category of change to the docs that need checking.
 | `src/` (new module) | `README.md` architecture section |
 | `frontend/` changes | `README.md` |
 | New non-trivial decision (library, pattern, scope change) | `DECISIONS.md` (append row with date, alternatives, why) |
-| `requirements.txt` / `pyproject.toml` | No doc update unless a CLI entry point was added/removed (then `CLAUDE.md` Skills or scripts table) |
+| `requirements.txt` / `pyproject.toml` | No doc update unless a CLI entry point was added/removed (then the `.claude/README.md` Skills table) |
 | `README.md` itself | Check for stale doc links (paths that no longer exist in `docs/`) |
 | `src/` file added, renamed, or deleted | `docs/build/Debugging_guide.md` needs a row change in the same commit. Remind the caller; enforced by `tests/system_03_search_agent/test_debugging_guide_coverage.py` |
 | `testing/`, `tracker/`, `requirements/`, `HANDOFF.md`, `PROGRESS.md`, or `LEARNINGS.md` changed | Owned by /phase-checkpoint or the learnings skill. Verify only, do not edit here |

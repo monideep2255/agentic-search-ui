@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Run CI gates locally, scan the push for secrets, sync the four canonical documents, commit, push to develop or a branch by risk position, and confirm the deploy. Use when ending a work block or after a milestone.
+description: Run CI gates locally, scan the push for secrets, sync the canonical documents, commit, push to develop or a branch by risk position, and confirm the deploy. Use when ending a work block or after a milestone.
 ---
 
 # /ship - gates, docs-sync, git-sync, then worktree cleanup
@@ -87,7 +87,7 @@ The scan runs twice: last in Step 0, and again in Step 2 after the commit and be
 
 ### CI runs after the push, so check it before claiming it
 
-CI runs failed from 2026-09-22 into 2026-09-24 while the account's billing setting blocked Actions, and completed green on `develop` again on 2026-09-25 and 2026-09-26 (`gh run list --branch develop`). Check `gh run list --branch develop --limit 3` for the pushed commit before claiming CI ran on it. A push that changes only Markdown runs no workflow (`paths-ignore` in `.github/workflows/ci.yml`), so for a documentation-only push the local gates are the only evidence, and the report says so rather than imply CI backed it up.
+Check `gh run list --branch develop --limit 3` for the pushed commit before claiming CI ran on it. A push that changes only Markdown runs no workflow (`paths-ignore` in `.github/workflows/ci.yml`), so for a documentation-only push the local gates are the only evidence, and the report says so rather than imply CI backed it up.
 
 ## Step 1: docs-sync agent
 

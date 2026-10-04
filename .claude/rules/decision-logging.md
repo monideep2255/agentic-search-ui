@@ -47,6 +47,4 @@ The `Why` cell is wrapped in a `<details>` dropdown, and every existing row foll
 - **Ask:** before logging something the user might consider too minor
 - **Deny:** never delete or modify existing decision entries (they're a historical record)
 
-**In software projects:** decisions accumulate fast. Log aggressively - the cost of re-debating a settled choice is always higher than the cost of one extra table row.
-
-**In documentation projects:** decisions are rarer and usually get promoted to rules. Log the ones that fall between "too small for a rule" and "too persistent for memory."
+Decisions accumulate fast in a software project. Log them: the cost of re-debating a settled choice is always higher than the cost of one extra table row.

@@ -51,7 +51,6 @@ WRONG_REPO_TERMS = [
     "book-builder",
     "meeting-notes",
     "Confluence",
-    "chakrabortim" + "2",  # split so this file itself never contains the literal
 ]
 
 # tools/integrations this repository does not use

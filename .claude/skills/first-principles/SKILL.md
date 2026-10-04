@@ -7,7 +7,7 @@ description: Explains a concept from first principles in simple language. TRIGGE
 
 ## When to use this skill
 
-Activate when Monideep:
+Activate when the user:
 - Asks "what is X" or "how does Y work"
 - Needs a technical concept explained
 - Is learning something new
@@ -99,7 +99,7 @@ Six behavioral criteria (from Aristotle through Bezos):
 
 The underlying trait: A first principles thinker has a disposition toward knowledge, not a domain or a technique. They treat beliefs as things to be earned, not inherited.
 
-When explaining concepts, model these behaviors. When Monideep asks "what is X", your explanation should itself demonstrate first-principles reasoning, not just use simple language.
+When explaining concepts, model these behaviors. When the user asks "what is X", your explanation should itself demonstrate first-principles reasoning, not just use simple language.
 
 ## Limits to be honest about
 
