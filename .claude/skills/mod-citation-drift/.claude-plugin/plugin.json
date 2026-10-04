@@ -1,0 +1,6 @@
+{
+  "name": "mod-citation-drift",
+  "version": "1.0.0",
+  "description": "After an edit under the synthesis, contracts, or answer components, compares the allowed citation host lists in the frontend, the end to end spec, and the Python contract, and toasts when they disagree. Trigger: Auto",
+  "author": { "name": "Monideep Chakraborti" }
+}

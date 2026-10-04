@@ -1,0 +1,6 @@
+{
+  "name": "mod-tool-budgets",
+  "version": "1.0.0",
+  "description": "After an edit to a search agent tool, compares the tool's declared timeout with the per tool timeout table in the tool call budgets rule and toasts on a missing or differing value. Trigger: Auto",
+  "author": { "name": "Monideep Chakraborti" }
+}

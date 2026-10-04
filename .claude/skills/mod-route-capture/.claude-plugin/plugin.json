@@ -1,0 +1,7 @@
+{
+  "name": "mod-route-capture",
+  "version": "1.0.0",
+  "description": "Tracks which frontend screens a turn changed, offers a one-line band, and runs the screen capture checks on request, listing pass or fail per check in a pane. Trigger: Auto band after a turn that edits frontend/src, or /capture [all]",
+  "author": { "name": "Monideep Chakraborti" },
+  "types": "./types/index.d.ts"
+}
