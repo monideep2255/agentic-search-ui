@@ -20,7 +20,7 @@ Purpose: take one named markdown document, either an existing one that needs res
 
 ## Why this exists
 
-Punctuation linting is not the value here. Across 171 markdown files and 48,906 lines in this repository there are zero em dashes and bold text in only 5 files, so the mechanical writing-style checks are already close to universally followed. The defect this skill exists to fix is prose walls: `requirements/Plan.md` has 64 paragraph lines over 600 characters, the longest 1,580; `requirements/phase_6/Continuation_prompt.md` has 22 such lines in 621, the longest 1,441; `CLAUDE.md` line 16 is a single table cell of roughly 12,000 characters. Nothing enforced the house style before this skill existed: `tracker/check_doc_drift.py` checks facts against source, not style, by its own docstring, and `skill-adapt-verify`'s `verify_adaptation.py` checks style but only inside `.claude/`. No script and no skill closed that gap for the rest of the repository until now.
+Punctuation linting is not the value here: the mechanical writing-style checks are already close to universally followed. The defect this skill exists to fix is prose walls, the long paragraphs and table cells that cram many facts into one block. `tracker/check_doc_drift.py` checks facts against source, not style, by its own docstring, and `skill-adapt-verify`'s `verify_adaptation.py` checks style but only inside `.claude/`, so this skill closes the gap for the rest of the repository.
 
 ## Table of contents
 
@@ -67,7 +67,7 @@ Punctuation linting is not the value here. Across 171 markdown files and 48,906 
 
 Three hard stops. Each is a stop, not a workaround, and the first is enforced by more than this document.
 
-- Locked documents: `requirements/PRD.md` and `requirements/Technical_specification.md` are frozen until the Step 6.2 reconciliation. Both `check_preservation.py` and `check_style.py` refuse these paths themselves, exit code 3, so the guarantee is structural rather than an instruction the model could be talked out of. This is `system-design-patterns.md` pattern 8: the strongest constraint is removing the ability, not asking the model not to use it.
+- Locked documents: `requirements/PRD.md` and `requirements/Technical_specification.md` are locked. Both `check_preservation.py` and `check_style.py` refuse these paths themselves, exit code 3, so the guarantee is structural rather than an instruction the model could be talked out of. This is `system-design-patterns.md` pattern 8: the strongest constraint is removing the ability, not asking the model not to use it.
 - Batch requests: "clean up all the docs" is refused. Offer `check_style.py --dir` instead, which sweeps a directory in report-only mode and never edits, producing a prioritized list the owner picks from. A read is not a rewrite, and this skill only ever performs the latter on a single named target.
 - Capture documents: meeting notes, session notes, and continuation prompts are exempt from the no-prose-walls rule by `writing-style.md`'s own exemption list. Ask before proceeding if the named target is one of these, since the exemption is a default, not an absolute bar the owner cannot waive for a specific file.
 

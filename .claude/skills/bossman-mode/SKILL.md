@@ -18,15 +18,7 @@ This file and its four reference files are the one home of the build loop. Since
 
 It points at the one reference file the current stage needs, so a review round does not pay for the dispatch instructions and a single card does not pay for either.
 
-Redesigned on 2026-09-24 from `docs/build/Bossman_mode_redesign.md`, whose eight decisions the product owner accepted in full ("Accept all eight"). They are the last eight rows of `DECISIONS.md` dated that day. What the old loop did:
-
-- It ran a premise gate on every phase.
-- Its cap on review rounds could be authorised away.
-- It never looked at the deployed product.
-
-It certified 35 phases, after which the golden questions answered in 13 of 85 runs. The loop below ends every change on the running product.
-
-Merged into one cadence on 2026-09-25. The 2026-09-24 decision scheduled the merge for after the next build phase closed, and three closed on 2026-09-25. The build harness review of that day found a documentation-only phase paying for a judge round while a fix-loop card with runnable behaviour got no engineering review at all. The product owner delegated the review's takeaways to the lead (`DECISIONS.md`, 2026-09-25, "The lead implements both harness reviews' takeaways").
+Every change ends on the running product: the loop below finishes with a product review of deployed develop and the owner's retest. The redesign behind it is `docs/build/Bossman_mode_redesign.md`, accepted on 2026-09-24 and recorded in `DECISIONS.md`.
 
 ## Table of contents
 

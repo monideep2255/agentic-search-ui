@@ -8,7 +8,7 @@ argument-hint: "[--log] [--recall <topic>] [--brief <phase>]"
 
 A running log of what broke and what fixed it, with the dead ends in between. The point is not the file. The point is that it gets read before work starts, so the same wall is not hit twice.
 
-`LEARNINGS.md` at the repository root is already specified in `requirements/Plan.md` as the input to the Step 6.2 reconciliation and a seed for Phase 7 iteration. This skill is what writes and reads it.
+`LEARNINGS.md` at the repository root is the build-failure log, and a seed for Phase 7 iteration in `requirements/Plan.md`. This skill is what writes and reads it.
 
 ## Table of contents
 
@@ -85,7 +85,7 @@ A log nobody reads is filing, not learning. Reading is mandatory at these points
 - Before opening any build phase. The `task-tracker` open operation requires it. Filter by the phase's tools and layers.
 - Before retrying anything that failed once. Check whether the dead end is already recorded.
 - Before wiring any tool in the seven-tool roster, since API behavior traps accumulate here.
-- At the Step 6.2 reconciliation, where this file is the captured record that updates the PRD, tech spec, and strategic memo rather than doing it from memory.
+
 
 `--brief <phase>`: print only the entries tagged to that phase and to its tools and layers. This is the form a builder should receive, not the whole file.
 

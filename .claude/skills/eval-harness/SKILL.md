@@ -45,7 +45,7 @@ This is the evaluation and metrics skill for System 3. It answers "does this act
 
 - Before building a new tool, agent step, or answer-generation feature: define acceptance criteria first.
 - During development: run evals to measure progress against targets.
-- Before shipping any answer-generation feature: run the offline evaluation gate (the 8-point rubric plus hard-fails) against the v1 must-pass set, and verify cite-or-refuse and citation-coverage targets. This is not optional polish, it is the gate.
+- Before shipping any answer-generation feature: verify cite-or-refuse and citation-coverage targets. The evaluation track closed on 2026-08-31, so the gate that runs is the golden consistency run in `.claude/skills/bossman-mode/reference/Product_review.md`, Step 2. The offline gate below (the 8-point rubric plus hard-fails against the v1 must-pass set) stays available to invoke by name.
 - After changes to a tool, prompt, or agent step: regression test against the fixed query set.
 - When proposing a new competency question, at design time or through the online feedback loop: run it through the moat test before adding it to any must-pass or should-pass set.
 

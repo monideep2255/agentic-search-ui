@@ -31,9 +31,9 @@ What counts:
 
 Skills, rules, and agents do not need `depends_on`/`depended_by`:
 
-- Skills: every skill is enumerated in CLAUDE.md's skills table, one row per skill naming its purpose and invocation. That table is the dependency record; a separate frontmatter field would just duplicate it, the same reasoning that already applies to agents below.
+- Skills: every skill is enumerated in the Skills table in `.claude/README.md`, one row per skill naming its purpose and invocation. That table is the dependency record; a separate frontmatter field would just duplicate it, the same reasoning that already applies to agents below.
 - Rules: every rule in `.claude/rules/` is loaded automatically regardless of whether anything declares a link to it. A rule with no `paths:` frontmatter loads each session; a rule with `paths:` loads when a file matching one of its globs is read. The one rule kept in `docs/rules/` loads only when read, and `CLAUDE.md` names the situation that calls for it. There is no "undiscoverable" failure mode to guard against.
-- Agents: agents are invoked by name from a small, fixed roster listed in CLAUDE.md's sub-agent table. That table is the dependency record; a separate frontmatter field would just duplicate it.
+- Agents: agents are invoked by name from a small, fixed roster listed in the Sub-agents table in `.claude/README.md`. That table is the dependency record; a separate frontmatter field would just duplicate it.
 
 If a skill, rule, or agent cross-references another component in its prose (as this rule does), that is fine and encouraged, but it is not a tracked, enforced field.
 
@@ -70,8 +70,3 @@ Writes:
 - Use relative paths from repository root
 - Update when you notice drift, don't let it go stale
 - This rule is enforced by convention, not by tooling, and only within its actual scope (hooks). If you skip it, future-you will have to grep through 50 files to figure out what broke
-- Known open item: `.claude/hooks/session-start.sh` reads `CLAUDE.md` directly but declares no `depends_on` header. This is a real violation under this rule as written, not a hypothetical one. Add the header comment the next time that hook is touched; it is recorded here rather than fixed on the spot so this rule change stays a documentation-only edit.
-
-### Why this rule narrowed from skills-and-hooks to hooks-only
-
-This rule used to make `depends_on`/`depended_by` mandatory for skills too. An audit found only 4 of the (then) 13 skills carried the fields at all, and the skill that carried them most fully still had entries in its `depended_by` list that did not hold up against the files they pointed to. A field absent from most skills and unreliable where present was not tracking dependencies, it was recording intentions. Mandating it bought no real discoverability, since a field nobody keeps current is not more discoverable than no field at all, and CLAUDE.md's skills table already does the discovery job for skills, the same way it already does for agents. The mandate narrowed to hooks because hooks are the one category where that fallback does not exist: nothing else lists them. If this rule is ever widened back to include skills, re-run that audit first and confirm the field would actually be kept current, not just declared once at creation.

@@ -10,7 +10,7 @@ Rules for all documentation and external-facing content in this repository.
 - No em dashes, en dashes, or mid-sentence hyphens as punctuation. These are a strong AI-written signal. Instead, use transition words (additionally, next, also, specifically, in particular), commas, relative clauses ("which", "where", "who"), or restructure into separate sentences. Use colons for lists. Hyphens with spaces ( - ) are acceptable only in tables and bullet labels (e.g. "Label - description")
 - **Sentence case in headings and document titles** - not title case. Capitalize only:
   - The first word of the heading
-  - Proper nouns (people: Monideep; organizations: NCBI, NIH, Hetzner)
+  - Proper nouns (people's names; organizations: NCBI, NIH, Hetzner)
   - Names of months (January, March) and days of the week (Monday, Thursday)
   - Proper adjectives derived from proper nouns (British, Chinese, American, Dutch)
   - Acronyms and initialisms (AI, ML, NLP, RAG, LLM, SVMs, APIs)

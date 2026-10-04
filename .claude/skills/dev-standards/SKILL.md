@@ -14,7 +14,7 @@ depended_by:
 
 # Dev standards skill
 
-Use this skill when building, reviewing, or preparing to deploy any code in the agentic search system. It applies the production quality bar adapted from NCBI Web Platform (NWS) enterprise standards for the System 3 stack: FastAPI, LangGraph, React, PostgreSQL, and the multi-model LLM harness.
+Use this skill when building, reviewing, or preparing to deploy any code in the agentic search system. It applies a production quality bar for the System 3 stack: FastAPI, LangGraph, React, PostgreSQL, and the multi-model LLM harness.
 
 ## When to invoke
 
@@ -218,7 +218,7 @@ Issues to fix before production:
 
 ## Reference
 
-Source standards: adapted from NWS-style production coding standards
+
 
 Deployment pipeline: LOCAL (Docker Compose) -> Staging -> Production
 Security tools: bandit (SAST), safety/pip-audit (dependency audit), semgrep (patterns)

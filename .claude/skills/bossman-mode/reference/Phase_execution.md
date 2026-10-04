@@ -292,7 +292,7 @@ Print a checkpoint naming, one line each:
 - The golden floor, if the phase touches the answer path, which the product review measures after merge.
 - The scope check against `v1-scope-boundary`.
 - The learnings logged, and the decisions taken without asking with the reason for each, in the user's words.
-- The blockers, the context health tier, and the next phase with its user-chair reason.
+- The blockers and the next phase with its user-chair reason.
 
 Any entry under regressions means the phase escalated rather than closed.
 
@@ -309,22 +309,7 @@ Level 2 (unattended overnight execution) is deferred by product-owner decision o
 
 ## Context management
 
-Long sessions degrade as context fills. You cannot read your own token count, so watch output quality instead.
-
-| Tier | Usage | Behaviour |
-| --- | --- | --- |
-| PEAK | 0-30% | Full operation. Read files freely, inline results |
-| GOOD | 30-50% | Normal operation |
-| DEGRADING | 50-70% | Economize reads to headers and frontmatter for routing decisions. Summarize sub-agent results in one line. Warn at the next checkpoint |
-| CRITICAL | 70%+ | Checkpoint immediately with `/phase-checkpoint`, so `HANDOFF.md` carries the state, and tell the user to start a fresh session |
-
-Degradation signals. Any two in one phase mean DEGRADING regardless of estimated usage:
-
-- Increasing vagueness where file paths belong.
-- Skipped protocol steps.
-- Repeated phrases or filler.
-- Sub-agent prompts getting shorter than earlier dispatches.
-- Summaries that restate rather than synthesize.
+When the session's context runs long, run `/phase-checkpoint` so `HANDOFF.md` carries the state, and tell the user to start a fresh session.
 
 Every phase boundary is a context reset point. `HANDOFF.md` is the handoff document, and it carries:
 
