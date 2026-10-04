@@ -1,5 +1,5 @@
 ---
-paths: ["src/**/*", "frontend/src/**/*", "services/**/*", "tracker/phase_*.md", "testing/Future.md"]
+paths: ["requirements/PRD.md", "requirements/Technical_specification.md", "src/**/*", "frontend/src/**/*", "services/**/*", "tracker/phase_*.md", "testing/Future.md"]
 ---
 ## V1 scope boundary
 

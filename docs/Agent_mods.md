@@ -25,13 +25,14 @@ A mod is a folder under `.claude/skills/mod-<name>/` that holds a plugin manifes
 
 ## The mods
 
-Fourteen mods: six shared with the other agentic search repositories, and eight built for this repository.
+Fifteen mods: seven shared with the other agentic search repositories, and eight built for this repository.
 
 ### Shared (in all three repositories)
 
 | Mod | What it does | How it starts | What it blocks | Notes |
 |-----|--------------|---------------|----------------|-------|
 | mod-blast-radius | Dry-runs a risky Bash command, shows what it would touch in a pane, and asks before it runs | Auto, then asks Proceed or Cancel | A risky command until you press Proceed: recursive or forced delete, `find -delete`, destructive git commands, `alembic` migrations, `psql` with DROP or TRUNCATE | Extra rules here: `railway down`, `delete`, `redeploy`, `up`, and variable changes on the live service. The dry run is `railway status` |
+| mod-context-budget | Reads the standing context at session start (instruction files, skills listing, agents, MCP tools) and compares it with a recorded budget of 19,700 tokens. Costs no standing tokens | Auto, and `/context-budget` | Nothing | Toasts and sets the status line when over budget. `/context-budget` lists every instruction file with its tokens. Budget and method: [Context_budget.md](Context_budget.md) |
 | mod-context-weather | Shows context fullness as a weather band above the prompt, with a sparkline, last-turn change, and cache warmth. Nudges you to compact when you step away while the cache is warm | Auto, and `/precompact` | Nothing | Cache window is 5 minutes here, and the nudge fires after 4 idle minutes above 60,000 tokens |
 | mod-help | Lists the installed mods, warns when an unknown plugin auto-loads from `.claude/skills`, and reminds you once a day | `/mods` or `/mods <mod-name>` | Nothing | Points at this guide |
 | mod-public-repo-guard | Guards `git commit` and `git push` in the public repositories | Auto, and asks Proceed or Cancel before a push to `develop` | Skipped hooks (`--no-verify`, `-n`), force pushes, `--all` and `--mirror`, pushes to `production` or `main`, and any commit or push when the leak scanner fails or is missing | The leak scanner is the one under `.claude/skills/ship/scripts/`. A push to `develop` is allowed only after you confirm |
@@ -57,6 +58,7 @@ Fourteen mods: six shared with the other agentic search repositories, and eight 
 - `/replay`: step through the last turn's file edits.
 - `/precompact`: compact the conversation now, while the cache is warm.
 - `/capture [all]`: screenshot and check the changed frontend screens, or all of them.
+- `/context-budget`: list the standing context by file and category against the budget.
 - `/trace [card N | phase N.N]`: list the source files behind the current card or phase reference.
 
 ## Turning one off
@@ -99,6 +101,6 @@ Shell hooks in `.claude/settings.json` that each guard complements:
 
 ## Maintenance
 
-The six shared mods are maintained in a separate source and copied into this repository. Edit them through that source, not here, or the next copy overwrites the change. The `hooks/config.ts` file in each shared mod holds this repository's own settings and is never overwritten by the copy. The eight mods listed under This repository only are built and edited here.
+The seven shared mods are maintained in a separate source and copied into this repository. Edit them through that source, not here, or the next copy overwrites the change. The `hooks/config.ts` file in each shared mod holds this repository's own settings and is never overwritten by the copy. The eight mods listed under This repository only are built and edited here.
 
 Each mod must pass `claude plugin validate` and `claude plugin test` before it is committed.

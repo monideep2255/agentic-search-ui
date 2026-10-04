@@ -35,6 +35,9 @@ Short forms of rules that load only with the files they govern, so they also hol
 - Log every non-trivial choice between alternatives as an append-only `DECISIONS.md` row (Date, Decision, Alternatives considered, Why in a `<details>` dropdown). Full rule: `.claude/rules/decision-logging.md`.
 - Before `npm install`, `pip install`, a version bump, or adding an MCP server or tool integration, read `.claude/rules/supply-chain-security.md` and `.claude/rules/ai-security-standards.md`. A path cannot trigger them for a shell command.
 - Before writing or reviewing code, the production, AI security and design rules load with the file. A shell-only change to code still follows them.
+- An agent never deploys to production, runs a migration against a live database, deletes user or graph data, or writes to the knowledge graph without a human approving that specific action first, in Bash or through any MCP tool. Full rule: `.claude/rules/ai-security-standards.md`.
+- Before any agent dispatch outside bossman mode, read `.claude/rules/plan-then-fan-out.md` and `.claude/rules/goal-contracts.md`. A worker never dispatches.
+- This repository is public. Branch model: phase branches, one pull request into `develop`, no direct push to `develop` or `production`; `production` moves only by a merged release pull request. Full rule: `.claude/rules/git-workflow.md`.
 - Rules, their loading map and full texts: `.claude/README.md`, "Rules", and `.claude/rules-reference/`. Another agent reads every rule in `.claude/rules/`, `.claude/rules-reference/` and `docs/rules/` explicitly, and `.claude/README.md`, "Running this project with a different agent".
 
 ## Architecture
@@ -55,6 +58,8 @@ Multi-model harness with three tiers:
 - Guard tier: fast, cheap model for input validation and guardrails
 - Plan tier: mid-range model for Think's question analysis, and for writing a graph query in Act when no template fits. The Plan step picks its tools in code
 - Synth tier: strongest model for final answer synthesis and citation assembly
+
+Context budget: `docs/Context_budget.md`. Agent mods guide: `docs/Agent_mods.md`.
 
 Reference documents under `docs/`, with when to read each: `.claude/README.md`, "Reference docs". The build order is `requirements/Technical_specification.md` Section 25.
 
