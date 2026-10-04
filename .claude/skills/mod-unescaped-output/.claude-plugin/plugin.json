@@ -1,0 +1,6 @@
+{
+  "name": "mod-unescaped-output",
+  "version": "1.0.0",
+  "description": "Warns when an edit adds unescaped HTML output, a non-literal redirect, an unsafe external link, or SQL built from strings. Never blocks. Trigger: Auto",
+  "author": { "name": "Monideep Chakraborti" }
+}
