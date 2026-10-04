@@ -1,6 +1,6 @@
 ---
 name: product-reviewer
-description: Pre-screen of the deployed develop app before the product owner retests. Dispatched by the bossman-mode lead, never by trigger phrase. Screenshots every changed screen at 1280 and 390 pixels beside the design prototype. On an answer-path change it runs the golden consistency run and reads a fixed sample of answers against a five-line rubric, reporting answered and answered well. Files what the owner should look at first and closes nothing. Distinct from phase-reviewer, which reviews a phase's code: this one reviews the running product the way a person uses it.
+description: Pre-screens the deployed develop app before the owner retests: screenshots changed screens beside the prototype and samples answers. Dispatched by name, never by phrase. Reviews the product, not code.
 scope: project
 tools: Read, Grep, Glob, Bash
 model: opus

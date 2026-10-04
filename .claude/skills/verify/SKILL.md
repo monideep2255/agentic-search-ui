@@ -1,6 +1,6 @@
 ---
 name: verify
-description: "Run the product and prove a change the way a person sees it: on the local stack or deployed develop, a script captures each changed screen at 1280 and 390 pixels, then the model judges each screenshot beside the design prototype, one pass or fail line per check with its file. TRIGGER on \"verify\", \"QA this\", \"check it on the site\", \"does it look right\". Distinct from /precommit, which checks the code and never runs the product."
+description: "Run the product and prove a change visually: capture changed screens at 1280 and 390 pixels and judge each beside the design prototype. TRIGGER on 'verify', 'QA this', 'does it look right'. Unlike /precommit, which checks code only."
 scope: project
 ---
 

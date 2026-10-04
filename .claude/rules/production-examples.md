@@ -4,8 +4,10 @@ scope: portable
 alwaysApply: false
 paths:
   - "src/**/*"
-  - "frontend/src/**/*"
+  - "frontend/**/*"
+  - "tests/**/*"
   - "services/**/*"
+  - "alembic/**/*"
   - ".claude/settings.json"
   - ".claude/hooks/block-bash-delete.sh"
 ---

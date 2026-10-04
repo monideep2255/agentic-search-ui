@@ -1,6 +1,6 @@
 ---
 name: learnings
-description: Capture and recall build-time failures in LEARNINGS.md, what broke, what was tried and what fixed it, written before the worker continues rather than reconstructed later. Use the moment something breaks during a build, and before opening any build phase. TRIGGER on "log this", "that broke", "add to learnings", "what do we know about X" or "have we hit this before". It also runs automatically at the start of any build phase. Distinct from DECISIONS.md, which records choices between alternatives, and from task-tracker, which records what is assigned rather than what went wrong.
+description: Capture and recall build-time failures in LEARNINGS.md: what broke, what was tried, what fixed it. TRIGGER on 'log this', 'that broke', 'add to learnings', 'have we hit this before'; also runs at the start of a build phase. Unlike DECISIONS.md (choices) and task-tracker (assignments).
 argument-hint: "[--log] [--recall <topic>] [--brief <phase>]"
 ---
 

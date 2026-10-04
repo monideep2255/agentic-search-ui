@@ -1,6 +1,6 @@
 ---
 name: eval-harness
-description: "Evaluation framework for System 3, operationalizing requirements/Evaluation_playbook.md: the 8-point rubric and its 13-of-16 pass threshold, the hard-fail conditions checked every run, the coverage metric, the moat test that selects and tiers competency questions, the v1 must-pass set (Q1, Q3, Q4, Q5, Q6, Q8, Q10), model selection, the online feedback loop, and the pass@k / pass^k / pass-fail-abstain outcome model the rubric composes with. Use before building an agent component to define acceptance criteria, during development to measure progress, and before shipping any answer-generation feature to run the offline evaluation gate (cite-or-refuse, citation coverage, hard-fail checks). Distinct from dev-standards, which is the production-readiness review (security, testing, quality, deployment): this is the evaluation and metrics skill, answering whether a component's or the agent's output is correct and honest against the locked playbook, not whether the code is safe to ship."
+description: "Evaluation framework for System 3: rubric, hard-fail checks, coverage metric, and pass@k outcomes from the evaluation playbook. Use before building an agent component, while measuring progress, and before shipping answer features. Unlike dev-standards, it judges correctness, not shipping safety."
 scope: project
 depends_on:
   - CLAUDE.md

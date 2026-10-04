@@ -3,7 +3,7 @@ description: "Log non-trivial decisions to DECISIONS.md when choosing between al
 scope: portable
 alwaysApply: false
 depends_on: [DECISIONS.md]
-paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", "testing/UI_fixes_done.md", "docs/build/*", ".claude/skills/bossman-mode/*", ".claude/skills/bossman-mode/reference/*", "{tracker,requirements}/**/*"]
+paths: ["tracker/phase_*.md", ".claude/skills/phase-checkpoint/**/*", ".claude/skills/learnings/**/*"]
 ---
 ## Decision logging
 

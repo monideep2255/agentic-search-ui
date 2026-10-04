@@ -636,7 +636,9 @@ HEDGE_WORD_RE = re.compile(
 # topics used to live in standalone files, `file-naming.md`, `no-prose-
 # walls.md`, and `clarify-before-drafting.md`; they were merged into
 # `writing-style.md` and `preserve-your-thinking.md` respectively and the
-# standalone files deleted.) A reference inside one of these files is what
+# standalone files deleted. Since 2026-10-04 the full text of both rules,
+# these sections included, lives in `.claude/rules-reference/`, with a short
+# summary left in `.claude/rules/`.) A reference inside one of these files is what
 # that session reported at the time, never a claim about the document's
 # current state.
 # Real case this caught, from when this script still checked counts:

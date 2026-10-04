@@ -1,6 +1,6 @@
 ---
 name: objective-review
-description: Teaches Claude to provide critical, objective feedback instead of agreement and encouragement, for general work, documentation, and plans. For production-code readiness review, use dev-standards instead. Use when Monideep asks "review this", "is this good", "am I missing something", or presents work for feedback.
+description: Gives critical, evidence-based feedback instead of agreement, for general work, documents, and plans. Use on 'review this', 'is this good', 'am I missing something'. For production-code readiness use dev-standards instead.
 ---
 
 # Objective review skill

@@ -1,6 +1,6 @@
 ---
 name: task-tracker
-description: Maintain the in-repo build record, the phase ledgers under tracker/ (tickets, acceptance criteria, status, evidence, an append-only history per ticket) beside the board of cards in testing/UI_fix_plan.md. Use when opening a numbered phase, when a builder finishes or blocks, when the product owner asks what the status is, and at every checkpoint. TRIGGER on "open the ledger", "what is in flight", "status of phase N", "add a ticket", "mark done". Distinct from phase-checkpoint (planning documents at a boundary) and from LEARNINGS.md (what broke, not what is assigned).
+description: Maintain the phase ledgers under tracker/ and the UI fix board: tickets, status, evidence, history. TRIGGER on 'open the ledger', 'what is in flight', 'status of phase N', 'add a ticket', 'mark done'. Unlike phase-checkpoint (planning documents) and LEARNINGS.md (failures).
 argument-hint: "[--open N.M] [--status] [--close TICKET-ID]"
 ---
 

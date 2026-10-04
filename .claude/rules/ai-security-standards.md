@@ -1,7 +1,18 @@
 ---
 description: "AI security non-negotiables for System 3 code and agent work: treat AI output as untrusted, defend against prompt injection in retrieved NCBI and enrichment data, sandbox execution, protect secrets, least-privilege agents, human approval for high-risk actions, secure the supply chain."
 scope: portable
-alwaysApply: true
+alwaysApply: false
+paths:
+  - "**/*.py"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.sh"
+  - "alembic/**/*"
+  - ".claude/agents/**/*"
+  - ".claude/skills/**/*"
+  - ".claude/hooks/**/*"
+  - ".claude/settings.json"
+  - ".mcp.json"
 ---
 
 ## AI security standards

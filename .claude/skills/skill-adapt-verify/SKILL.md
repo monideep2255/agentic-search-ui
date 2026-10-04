@@ -1,6 +1,6 @@
 ---
 name: skill-adapt-verify
-description: Verify that a skill copied or adapted from a private personal operating system repository has been properly adapted for this repository. Catches stale private-repo paths, NWS/Django/GQuery references, broken sub-agent pointers, writing-style violations, and missing frontmatter. Use after copying any .claude/skills/* or .claude/agents/* file from that private repository (typically symlinked under reference/) or from any other external repository.
+description: Verify a skill or agent copied from another repository was adapted here: stale paths, foreign project references, broken pointers, style violations, missing frontmatter. Use after copying any .claude/skills or .claude/agents file.
 ---
 
 # skill-adapt-verify
