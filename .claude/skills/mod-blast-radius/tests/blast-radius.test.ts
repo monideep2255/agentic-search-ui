@@ -339,14 +339,14 @@ test('deferToPublicGuard: empty by default, filled in the public configs, and sl
   expect(asked.length).toBe(1)
 })
 
-test('skipUnless: under the personal config an rm the shell guard would refuse is not asked about, an approved one is; without it every rm asks', async ($, on) => {
+test('skipWhen: under the personal config only an rm the shell guard refuses goes unasked; wrapped and indirect deletes ask; without it every rm asks', async ($, on) => {
   const asked: string[] = []
   fakeTools(on, 'Proceed', asked)
   fakePane(on, true)
   fakeProcess(on, rmReplies)
   // The module reads this repository's own config, so a public repository
-  // (no skipUnless) checks the other branch: a plain rm is asked about.
-  if (!live.skipUnless) {
+  // (no skipWhen) checks the other branch: a plain rm is asked about.
+  if (!(live as { skipWhen?: unknown }).skipWhen) {
     const plain = await $.tool.call({ tool: 'Bash', command: 'rm -rf build' })
     expect(plain.deny).toBeUndefined()
     expect(asked.length).toBe(1)
@@ -364,5 +364,20 @@ test('skipUnless: under the personal config an rm the shell guard would refuse i
     const found = await $.tool.call({ tool: 'Bash', command: 'find . -name x -delete' })
     expect(found.deny).toBeUndefined()
     expect(asked.length).toBe(2)
+    // The guard cannot see these, so the mod must ask about every one.
+    const bypasses = ['sudo rm -rf build', '/bin/rm -rf build', 'bash -c "rm -rf build"', 'find . -name x -exec rm {} +', 'echo $(rm -rf build)']
+    for (const command of bypasses) {
+      const before = asked.length
+      const r = await $.tool.call({ tool: 'Bash', command })
+      expect(r.deny).toBeUndefined()
+      expect(asked.length).toBe(before + 1)
+    }
   }
+})
+
+test('skipWhen mirrors guard-bash.sh: it is true only for a bare rm the guard refuses', () => {
+  const skip = (live as { skipWhen?: Record<string, (c: string) => boolean> }).skipWhen?.['rm -r or -f']
+  if (!skip) return
+  for (const c of ['rm -rf build', 'cd x && rm -rf build', 'ls; rmdir old']) expect(skip(c)).toBe(true)
+  for (const c of ['CLAUDE_APPROVED_DELETE=1 rm -rf build', 'sudo rm -rf build', '/bin/rm -rf build', 'bash -c "rm -rf build"', 'find . -exec rm {} +', 'echo $(rm -rf build)']) expect(skip(c)).toBe(false)
 })
