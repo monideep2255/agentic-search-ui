@@ -30,6 +30,7 @@ Last updated: 2026-09-26.
 | Unblock a command the sandbox refused | `rules/Sandbox_diagnosis.md`, before ever disabling the sandbox |
 | Watch parallel builders in live panes | `build/Agent_teams_tmux_quickstart.md` |
 | Run the security scan before a pull request | `Claude_security_plugin_usage.md` |
+| Find out what an agent mod does or how to call it | `Agent_mods.md`, or type `/mods` |
 | Design anything that runs more than one agent against a shared resource | `architecture/Multi_agent_system_design_explained.md` |
 
 ## The folders

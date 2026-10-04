@@ -251,6 +251,7 @@ The reference documents are indexed in [`docs/README.md`](docs/README.md) and de
 | Doc | What it covers |
 |-----|---------------|
 | [Graph data hand over, 2026-09-25](docs/data-engineering/Graph_data_hand_over_2026-09-25.md) | Measured graph-data gaps handed from System 3 to the data-engineering repository: source-vocabulary disease names, missing phenotype edges, no MeSH term names, an empty Gene vertex |
+| [Agent mods guide](docs/Agent_mods.md) | Every agent mod, how it starts, what it blocks, and how to turn one off |
 | [Build workflow cadence](docs/build/Build_workflow_cadence.md) | Since 2026-09-25 a pointer holding the provider mapping, the tier-to-model table. It was the quick reference for how a build phase runs, with its stages, who acts at each, and the model and effort per stage. Its stage 5 premise gate, mandatory and blocking for a model-generating phase, was retired on 2026-09-24 for everything except answer behaviour. The build loop now lives in [the bossman-mode skill](.claude/skills/bossman-mode/SKILL.md), one cadence with a risk dial |
 | [CI gate scripts](.github/gates/README.md) | Why the CI workflow contains no inline shell: one script per Section 24 gate, and the premise-gate defeats that forced the design |
 
