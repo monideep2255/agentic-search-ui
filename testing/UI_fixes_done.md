@@ -152,6 +152,7 @@ decisions in its To do column.
 | 12.11 | The sources chip and the trust line disagree | Approved 2026-09-29, batch retest | 74 |
 | 12.12 | Broken sentences and repeated records | Failed the 2026-09-29 batch retest, back in To do as card 88 | 75 |
 | 12.13 | Clicking a search in the history rail re-runs it instead of showing the saved answer | Approved 2026-09-29, batch retest | 67 |
+| 12.15 | A question asking for RECENT papers should ask what recent means: "recent paper on statin, should have asked a clarification of year range" | RAISED 2026-09-23 in `testing/User-feedback/fix-2/`. LIVE on develop 2026-10-05 as card 87 (#162), in Retest, queries 84 and 76; it was NOT STARTED | The product owner's comment is the screenshot's filename. `recent papers on statins` is four words and names what it wants, so 12.3's rule rightly does not ask it back; this is a different clarification, about a time window rather than a subject. Recorded so it is not lost; not being built. Evidence: `testing/Developer/reports/2026-09-23_fix2/findings.md` |
 | card 58 | Stop works until the first sentence of the answer is on screen, and a stop in that window shows "Search stopped" and nothing of the answer | Approved 2026-09-29, batch retest | 98 |
 | card 60 | The web app carries its libraries' license notices: React, React DOM and MUI, each with its version and license text | Failed the 2026-09-29 batch retest, back in To do as card 86 | 99 |
 | card 63 | A "not yet confirmed" answer reopens from your searches with its trust line and notes, and during an NCBI outage the note says the database is down and may be missing things, never that the answer has none | Approved 2026-09-29, batch retest | 100, 67 |
@@ -187,6 +188,19 @@ decisions in its To do column.
 | the question's own words | An answer never lists the question's own words as diseases it did not address | Failed the 2026-09-29 batch retest, back in To do as card 93 | 23, 25 |
 | the accessions | A BioProject or BioSample accession is answered, and an unknown one is named as not found | Approved 2026-09-29, batch retest | 30, 31, 32 |
 | G-035 | Pathogen Detection isolate questions answer with a table of isolates and their resistance genes | Failed the 2026-09-29 batch retest, back in To do as card 94 | 33, 35, 36, 38, 39, 40, 44, and `testing/Product/queries/Isolate_search_queries_and_workflow.md` |
+| card 89 | The Mediterranean question names Familial Mediterranean fever and has a written answer | Live, awaiting your retest | 73 |
+| card 88 | GERD shows a written answer above its tables at both depths | Live, awaiting your retest | 75, 68 |
+| card 74 | A question about one paper's linked data lists the records NCBI links to it, or says plainly there are none | Live, awaiting your retest | 104 |
+| card 94, part | E. coli isolates show their resistance genes in Plain language, the colistin search finds mcr carriers, and the answer says which gene families were searched | Live, awaiting your retest | 33 to 37 |
+| cards 92 and 95 | A chromosome window lists its dbVar records, and its first sentence shows no raw bracketed numbers | Live, awaiting your retest | 27, 29 |
+| cards 91 and 77 | The TP53 dataset question no longer says a search did not finish, and when a search does fail the note says which and why | Live, awaiting your retest | 25, and "Any trials for GERD?" in 76 |
+| card 87 | "recent-onset diabetes treatment" is answered directly; GERD, BRCA1 and Marfan alone are still asked back | Live, awaiting your retest | 84, 76 |
+| cards 96 and 97 | Muir-Torré syndrome is spelled correctly, and no OMIM row appears twice | Live, awaiting your retest | 24 |
+| card 46 and decision D1 | When no written summary survives, one plain line says why and the records found are listed | Live, awaiting your retest | none yet |
+| cards 79, 80 and 85, part | The Integrations page shows the command line tools' commands, the About page shows its layer cards first, and two page sentences are corrected | Live, awaiting your retest | 102, 59, 60 |
+| card 86 | Every library's license text ships with the web app | Live, awaiting your retest | 99 |
+| card 13 | The MODY genes question passes its citation check; superseded by 11.20, and the board proposes closing it | Live, awaiting your retest | 78 |
+| card 98 | An empty reply from the guard model asks the person to try again | Live, awaiting your retest | none, nothing to type |
 
 ## What is done, in summary
 
@@ -421,15 +435,17 @@ fixed.
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-09-29. THE ONE THING TO KNOW: card 63 stays on develop. Its test queries 100 and 67 passed, and its golden run answered 98 of 150, below its floor of 101; the owner kept it and accepted the run, and the floor for the next change stays 101 (`DECISIONS.md`). Cards 62 and 53 finished their review rounds and are live on develop (#133, #134), with the two rule lists card 53 named (#135); both await the owner's retest, queries 101 and 102. Card 73 (#139) followed: a crashed search logs its reason. The guard fix, R-10 with card 72's hedge, failed its fresh verifier and is parked on its branch by the owner's choice; card 84 was then built and stopped at the owner's choice, and guardrail work returns only as an agreed design. A batch retest of the Retest column ran the same day: the owner approved the 39 cards that passed, and the 9 that failed are cards 86 to 94 in To do. `HANDOFF.md` lists each piece.
+LAST UPDATED 2026-10-05. THE ONE THING TO KNOW: twenty-one pull requests merged into develop today (#155 to #175), the whole-board plan in `testing/Board_plan.md` now orders the work, and card 56 failed live and is back at the top of To do. The final run of the test queries passed 9 of 10; the one failure is the SARS-CoV-2 question, which still answered about the disease SARS (`testing/Developer/reports/2026-10-05_final_test_queries/results.md`). `HANDOFF.md` says what to do next.
 
 What is live on develop:
 
-- Product code through card 63's merge (`25800026`), after #129 (`fbe85117`) moved two dev-only frontend packages past a high advisory that had turned gate 7 red. Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`.
+- Every item in the board's Retest column, newest first: cards 89, 88, 74, 94 part, 92 with 95, 91 with 77, 87, 96 with 97, 46, 79, 80 and 85 part, 86, 13 (proposed for closing, superseded by 11.20), then three older cards. Each is one row in "Done features at a glance" above, with its query number.
+- Card 98 (an empty guard reply asks the person to try again) is live with no query to type.
+- Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`. Both Railway services redeploy on every push to `develop`.
 - What each numbered phase delivered and what stays open: its ledger, `tracker/phase_N.M.md`. Phase 8.7's ledger says where each builder stopped.
-- Production is unchanged on `v0.2.0`. The release job tags `production` and never pushes to it, and only the owner changes `develop` and `production`: the owner merges each pull request in the browser, and the assistant never passes `--admin`.
+- Production is unchanged on `v0.2.0`. The release job tags `production` and never pushes to it, and only the owner changes `develop` and `production`.
 
-What awaits the product owner's retest is the Retest column of `testing/UI_fix_plan.md`, newest first, cards 53 and 62 at the top; each card names its query numbers in `testing/Test_queries_and_workflows.md`.
+What awaits the product owner is under "What is waiting on the product owner" below.
 
 This section is also the shared plan. What we agreed, what is done and what is
 next all live here rather than in a session that disappears, so the product
@@ -478,7 +494,10 @@ option rather than a queued task.
 
 ### What is parked, and why
 
-- WHAT WAS IN FLIGHT ON 2026-09-27 AND IS STILL PARKED: phase 8.7's three builders and card 58's product review. Card 63 landed on 2026-09-29, and cards 53 and 62 were resumed and reviewed the same day and wait on the owner's merge. Each parked piece, its branch and what it still needs: `HANDOFF.md`.
+- Parked on 2026-10-05, each with its reason:
+  - Phase 8.7 (the strongest writer, first sentence answers, records within seconds): waiting on an OpenRouter top-up, about $38.50 left against up to $60. Decisions are taken; the resume plan is `testing/Developer/reports/2026-10-05_phase_8.7_resume/plan.md`, and each builder's branch is in `HANDOFF.md`.
+  - The guardrail design (cards 84 and 72): waits on a fuller day of guard-call logs. Today's sample: Jev decides in 0.12 to 0.29 seconds, and the guard model's on-topic check takes 1.3 to 7.3 seconds across five upstream hosts. Develop's guardrail stays as it is; the parked branches are `fix/card72-r10-guardrail` and `fix/card84-r10-sound-parts`.
+  - Card 56 (SARS-CoV-2 answered as the disease SARS): its fix (#173) passed locally and failed on develop, so it is back in To do. The next step is why develop still reads "SARS" as a disease.
 - Older work parked at tags: `parked/phase-8.4-2026-09-25`, `parked/phase-8.8-snippets-2026-09-25` and `parked/verify-facts-118-2026-09-27`.
 - THE ARCHITECTURE WORK IS NOT PARKED. The product owner will build it, so
   its six cards, 8 to 13 in the board's To do, wait on nobody. Corrected
@@ -496,16 +515,20 @@ option rather than a queued task.
 
 ### What is waiting on the product owner
 
-Checked 2026-09-29 against `DECISIONS.md`:
-
+- The Retest column of `testing/UI_fix_plan.md`, newest first, card 89 at the top; each card names its queries in `testing/Test_queries_and_workflows.md`.
+- Decisions D5 to D21 in `testing/Board_plan.md`: each carries the lead's recommended default, taken unless the owner objects.
+- The OpenRouter top-up that phase 8.7 waits on.
+- Card 99, decided 2026-10-05 as measure first: the pair check is measured on all 144 faithful rewordings before the owner decides whether to ship the qualifier check.
 - The privacy pre-commit hooks on the second laptop, and `railway link` there so deploys can be confirmed.
-- Retests: the board's Retest column, newest first, card 63 at the top.
+
+Carried from 2026-09-29 and not re-checked today:
+
 - Four checks of under a minute each, the only rows still not approved:
   - Copy an answer and paste it somewhere (11.14)
   - Open the answer-modes info button (11.36)
   - Change the mode while a search is running (9.12)
   - Open the app twice to see different scientists with the same answer (8.4)
-- Still undecided from the older standing list: the three `theme.ts` logo tokens, the 720px nav, and the four golden test rows. The rest of that list was decided on 2026-09-25: the medical-advice line, the trust-line wording, the source ceiling, the provenance note and the mode toggle's placement.
+- Still undecided from the older standing list: the three `theme.ts` logo tokens, the 720px nav, and the four golden test rows.
 
 ### Loose ends, named rather than left
 
@@ -522,8 +545,8 @@ Checked 2026-09-29 against `DECISIONS.md`:
   - a BioProject accession (G-007)
   - and on some passes Lynch syndrome (G-003)
 
-  THE COORDINATE RANGE IS FIXED (`66b3811`, the same night); the isolate and
-  the accession are item 2 of the next list. G-005 and G-022 resolve an
+  THE COORDINATE RANGE IS FIXED (`66b3811`, the same night); the isolate
+  and the accession are card 94 and the accession answers in To do. G-005 and G-022 resolve an
   entity and find nothing; G-036 never calls Layer 1.
 - THE VARIANCE HALF OF L-01 was NOT the act budget and NOT a follow-up: the
   graph server's own log shows the question's OWN search, taking the model
@@ -584,6 +607,11 @@ Checked 2026-09-29 against `DECISIONS.md`:
   release can reach develop thirteen minutes after it is published. Not
   started, and it is the product owner's call.
 
+- ADDED 2026-10-05:
+  - Card 57 shows "Building, wave 0" on the board while the day's facts record #161 as touching it; the board's word stands until the owner retests it.
+  - The untracked board-plan report folder holds copies whose names end in " 2" (`brief 2.md` and the like), the same copying seen on 2026-09-25. They are not committed.
+  - Factory, a second development agent, works the screen and wording lane (cards 43, 44, 18, 23, 24, 25, 47 and the rest of 61) in its own worktrees on `factory/` branches; the lead keeps the answer path, the board, the plan and the one merge queue.
+
 ### Notes carried over from the old tracker
 
 Carried over from the plan's own "Additional notes" when it became a
@@ -608,136 +636,69 @@ board on 2026-09-24.
 
 ### Next, in order
 
-Written 2026-09-25 in the order of that day's To do column, and not re-ordered since. The board's To do column now leads with newer cards, card 2 first. Where the two differ, the board's order wins. Ahead of every item below, since 2026-09-29: the owner's pick from cards 86 to 94, which failed the batch retest, or phase 8.7 from `HANDOFF.md`, one piece at a time; cards 72 and 73, the guard timeouts behind card 63's lost golden runs, lead the board's To do column. The items below keep the reasons behind the older cards.
+Rewritten 2026-10-05 in the order of the board's To do column, top to bottom, one line per card. The board is the order; this list gives each card's reason or a pointer to its detail. `testing/Board_plan.md` holds the dependencies and the waves, and the order work is built in.
 
-The earlier framing of this list, kept because it still holds:
+1. Card 56: Failed live 2026-10-05; first, why develop still reads "SARS" as a disease when the local runs did not. Diagnosis: `testing/Developer/reports/2026-10-05_card56/diagnosis.md`.
+2. Card 99: Measure the pair check on all 144 faithful rewordings before deciding to ship (owner, 2026-10-05). Design: `testing/Developer/reports/2026-10-05_qualifier_check/design.md`.
+3. Card 94: Part live. Still open: the place and accession columns, a follow-up such as "from 2023", and a single-isolate lookup (wave 4 of `testing/Board_plan.md`).
+4. Card 84: Parked on `fix/card84-r10-sound-parts`; returns only as a design agreed with the owner first, from the logs.
+5. Card 72: Logging live (#159); the guardrail design with card 84 waits on a fuller day of logs.
+6. Card 75: Land the server's `data.reason` refusal field and release it to production, then the client change.
+7. Card 85: Part live. Still open: the facts checker's remaining gaps and three logging gaps.
+8. Card 2: Phase 8.7 with card 50; waiting on the OpenRouter top-up. Design: `testing/Developer/reports/2026-09-26_phase_8.7/design.md`.
+9. Card 4: Tell the reader when the search was drafted rather than checked; keyed on the query being drafted, never on empty or failed. Nobody on it.
+10. Card 5: Models chosen per task by tier; phase 8.7 builds the per-model effort setting, on develop first (owner, 2026-09-27).
+11. Card 6: The agentic loop, the owner's second quote under their model architecture direction. Nobody on it.
+12. Card 7: Hard and soft edges over a fuller graph; read `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md` first (11.29). Nobody on it.
+13. Card 8: Trust-line wording (9.9): the owner chose "say what was checked"; planned in phase 8.9 from the parked 8.4 commit.
+14. Card 9: Judge answer quality once answering is reliable (10.4). Nobody on it.
+15. Card 11: The same question returns different papers; not reproducible, fix reverted (`tracker/phase_8.1.md` F-8.1-03).
+16. Card 12: The trust verdict changes on identical evidence; the fix was reverted (F-8.1-A13).
+17. Card 14: One 127-second search against a median of 14; a timeout that stops the wait but not the work (F-8.1-05).
+18. Card 15: Step 1 live (#171). Next: the remaining anchors, per decision D5, no model-written search except true count questions.
+19. Card 16: G-005 and G-022 find nothing, and G-036 never searches the graph. Nobody on it.
+20. Card 17: Building, wave 0 (reworded sentence that switches papers on a generic title word); order in `testing/Board_plan.md`.
+21. Card 18: A multi-sentence record shows as several list rows; the helper is on the 8.4 branch, its wiring is not built.
+22. Card 19: The paced handoff may show a false writing step on another path (11.28). Nobody on it.
+23. Card 20: An isolate search filters only by gene prefix; year is built on the 8.4 branch, location needs the plan step.
+24. Card 22: One answer shows several different totals (D-2); the owner decides.
+25. Card 23: The provenance note under the variant-to-disease table; the owner decides.
+26. Card 24: Where the mode toggle goes; the owner decides, and decision D21 sets the cost of switching on an answer.
+27. Card 25: Install the public USWDS package: decided 2026-09-25, not built.
+28. Card 29: The sentence that answers the question under each cited paper; built and parked on `parked/phase-8.8-snippets-2026-09-25`.
+29. Card 30: The BRCA1 pathogenic-variants question lists 40 unclassified variants and drops the honest caveat (F-8.1-A16).
+30. Card 32: A graph search column named `clinical_features` would be read as MedGen's (F-8.1-V02).
+31. Card 33: G-004 and G-006 stopped answering since 2026-09-22; the golden run of 2026-09-25 is the evidence.
+32. Card 35: An off-topic follow-up containing a word such as "cell" still gets through (F-8.2-V01).
+33. Card 36: A picked "How far back" window is lost after a restart or deploy (F-8.2-V02).
+34. Card 37: `rs334` lists near-miss variants as if they were rs334; planned in phase 8.9.
+35. Card 38: Some answers list records that cannot answer the question (no species, no title); planned in phase 8.9.
+36. Card 40: Carry out the two harness reviews; the build-harness hooks and always-loaded rules need the owner's yes.
+37. Card 42: The build team checks the product the way a person uses it; proposal `docs/build/Verify_loop_proposal.md` waits for the owner's yes.
+38. Card 43: On a phone a long variant name scrolls the page sideways; a layout card in Factory's lane.
+39. Card 44: Two small controls fall under the 4.5 contrast minimum; Factory's lane, check `frontend/src/theme.ts` first.
+40. Card 47: The design prototype still draws the navy home hero; Factory's lane, a design-file card.
+41. Card 48: A fuzzy question should ask which aspect is meant first; extends Think's ask-back, decided by Jev, never a word list.
+42. Card 50: Nobody waits in silence: records within seconds, sentences one by one; phase 8.7 with card 2.
+43. Card 51: Part live (#156). Still open: the page claims the checker does not yet check.
+44. Card 52: Every answer ends by offering the next useful step; designed in `testing/Developer/reports/2026-09-26_conversation_next_steps/design.md`, a numbered phase after 8.7 and 8.9.
+45. Card 54: Reopening a long answer loses citations after the fiftieth; needs a diagnosis of the capture bound first.
+46. Card 55: The test queries document is the gate; the golden run is an alarm only (decision D4).
+47. Card 57: Building, wave 0: a cited sentence can show a quote that lacks its own numbers (F-8.10-A11).
+48. Card 59: A stopped question reads as answered after a reload; the run record and session memory must learn about the stop.
+49. Card 61: Ten small edge cases in the command line and the MCP bridge (F-8.10-V01 to V10).
+50. Card 67: A reopened outage answer still says the database is down "right now"; decide whether the note is dated or reworded.
+51. Card 71: A reopened answer does not look like the one read; first, which is right about the "could not be verified" note.
 
-- Nothing below is a retest. Every item is engineering or a decision, ordered by what the person typing the question feels first.
-- The night's record, per phase: `tracker/phase_8.1.md`, `tracker/phase_8.2.md` and `tracker/phase_8.5.md`.
-
-1. An answer about something else can say "MedGen lists no clinical features for ...": 15 golden answers carry it, one "for Seen by breast cancer nurse" inside a question about how many genes relate to breast cancer. Source: `testing/Developer/reports/2026-09-25_product_review_8.1/report.md`, from phase 8.1's fix round. Added 2026-09-25 from the overnight build.
-2. Every answer opens with the code-built "Found N ... records for X" line, whatever the writing model, so its first sentence never answers the question. Source: `testing/Developer/reports/2026-09-25_writer_bench/results.md` and the 8.1 product review. Added 2026-09-25 from the overnight build.
-3. Answers got slower overnight: the golden run's median was 17.1 seconds after phase 8.1 and 21.9 after phase 8.2. Source: `testing/Developer/reports/2026-09-25_phase_8.2_golden/summary.md`. Added 2026-09-25 from the overnight build.
-4. TELL THE READER WHEN A SEARCH WAS DRAFTED RATHER THAN CHECKED. Worker E
-   established that when no code template matches, the plan-tier model writes
-   the Cypher fresh, and two drafts are not equivalent. The data already
-   exists: `CypherQueryOutput.template` is None exactly in that case, and
-   `_cypher_output_to_structured_fields` currently drops it. THE TRAP, and the
-   reason this is not the obvious one-liner: the degradation is `ok` to `ok`, a
-   hundred rows then one count, NEVER an `empty`, so any rule keyed on
-   empty-or-failed misses the case that actually costs the reader their
-   evidence. Key it on the query having been drafted. The stronger version of
-   this item is to close the remaining model path entirely, the way `27d68ae`
-   closed it for gene questions.
-5. MODELS CHOSEN PER TASK BY TIER, point d) of the direction and the product
-   owner's example of how models should be chosen: open source where an
-   equivalent is available, frontier models where they are needed. The
-   standing rule at the end of the direction holds against it: iterate the
-   harness first and swap the model second.
-6. THE AGENTIC LOOP, the product owner's second quote under their direction:
-   interpret the objective, make a plan, use tools, check intermediate
-   results, adjust when something fails, and produce or apply the final
-   result. Their point is that the value lies in completing the entire loop,
-   not simply in generating something plausible. Its words are under To do on
-   the board.
-7. 11.29's BUILD, now that its scoping document exists and is measured. Read
-   `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md`
-   first: it counts how many golden questions need multi-hop (five, all walking
-   one already-built shape), how many need data the graph does not hold
-   (twelve), and says plainly that vector embeddings and a RAG pipeline have a
-   motivating count of zero here. Its own first recommendation is that the
-   grounding gate, which accepts a verbatim excerpt and rejects a faithful
-   paraphrase, is what actually stands between the product and being worth
-   reading instead of a general chatbot. Its detail sits under To do on the
-   board.
-8. 9.9, the trust-line wording. The product owner's decision.
-   Since 2026-09-25: built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop.
-9. 10.4, judging answer quality once answering is reliable.
-10. THE LOCK FILE for the Python build, the product owner's call. Its detail is
-   the last of "Loose ends, named rather than left" above.
-   Since 2026-09-25: decided 2026-09-25, not built.
-11. THE SAME QUESTION DOES NOT ALWAYS RETURN THE SAME PAPERS, item 11.21's
-   promise. Its detail is in "Notes carried over from the old tracker" above.
-   Since 2026-09-25: tried 2026-09-25, not reproducible, fix reverted: `tracker/phase_8.1.md` F-8.1-03.
-12. `trust_outcome` IS UNSTABLE on identical evidence, under "What is open and
-   not on this list as its own item" above.
-   Since 2026-09-25: tried 2026-09-25, the fix labelled correct answers as disagreeing and was reverted: F-8.1-A13.
-13. THE MODY-GENES GROUNDING FAILURE, 5 of 6 runs, unowned since 2026-09-20.
-   Under "Shipped days", 2026-09-20.
-   Since 2026-09-25: tried 2026-09-25, the fix weakened the citation check and was reverted: F-8.1-J01.
-14. THE 127.1 SECOND RUN, against a median of 13.6, unowned since 2026-09-20.
-   Under "Shipped days", 2026-09-20.
-   Since 2026-09-25: diagnosed 2026-09-25, a timeout that stops the wait but not the work: F-8.1-05.
-15. CLOSE THE REMAINING MODEL PATH OR REFUSE AND ASK, the first of the two
-   items L-01's row in Set 11 names as "each its own item". Item 7 is the
-   second. The questions still on that path are named under "Shipped days",
-   2026-09-22.
-16. G-005, G-022 AND G-036, which L-01's deterministic half set aside: the
-   first two resolve an entity and find nothing, the third never calls
-   Layer 1. Under "Loose ends, named rather than left" above.
-17. 12.16 PART 4's RESIDUAL, the switch rule anchored on a generic title word.
-   Its row is under "Detail for items on the board".
-   Since 2026-09-25: built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop.
-18. A MULTI-SENTENCE RECORD RENDERS AS SEVERAL LIST ROWS under one heading,
-   with no test. Under "Loose ends, named rather than left" above.
-   Since 2026-09-25: a helper is on the 8.4 branch, its wiring in `core/graph.py` is not built.
-19. 11.28's RESIDUAL RISK, a transient false Write on any other path. Its
-   detail is in Set 11's detail for 11.28.
-20. THE ISOLATE SEARCH HAS NO FILTER BEYOND THE GENE PREFIX. Under "Shipped
-   days", 2026-09-22.
-   Since 2026-09-25: year from the question built on the 8.4 branch, location needs the plan step.
-21. 11.30's TWO COMMAND LINE SNIPPETS, blocked rather than run because no `s3`
-   client was installed. Its detail is in Set 11's detail for 11.30.
-   Since 2026-09-25: measured 2026-09-25, the page fix is on the 8.4 branch.
-22. D-2, FOUR UNEXPLAINED TOTALS IN ONE ANSWER, a product decision. Under
-   "Shipped days", 2026-09-20.
-   Since 2026-09-25: the screen half is on the 8.4 branch, the backend wording is not built.
-23. THE PROVENANCE NOTE, on the standing list under "What is waiting on the
-   product owner" above.
-   Since 2026-09-25: a helper is on the 8.4 branch, its wiring in `core/graph.py` is not built.
-24. THE MODE TOGGLE's PLACEMENT, on the same standing list.
-   Since 2026-09-25: built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop.
-25. 2.13's STAGE 1, installing the public USWDS package, which waits for the
-   product owner's yes, in 2.13's row.
-   Since 2026-09-25: decided 2026-09-25, not built.
-26. THE SEVEN TEST FILES the deletion inventory set aside, awaiting the
-   product owner's ruling. Under "Loose ends, named rather than left" above.
-   Since 2026-09-25: decided 2026-09-25; the deletion was reverted because one file pinned three controls (F-8.5-V08).
-27. MERGING BOSSMAN MODE's TWO MODES, which waits for the next build phase.
-   Under "Session history", 2026-09-24 evening.
-28. THE TRACKED FILE DELETED MID-SESSION, cause unknown. Same place.
-   Since 2026-09-25: lead found 2026-09-25: a process makes " 2" copies inside the repository mid-session (a ref file, `.git/index 2`), likely iCloud Desktop sync.
-29. Show the sentences that answer the question, quoted under each paper, so nobody has to open the paper to find them: from NCBI's LitSense, probed on about ten golden questions before it is built. Source: [13.1](#detail-131); probed twice 2026-09-25, useful for 4 of 20 papers, not built: `testing/Developer/reports/2026-09-25_phase_8.4/litsense_probe/findings.md`. Added 2026-09-25 from the overnight build.
-30. `Which BRCA1 variants are pathogenic?` lists 40 unclassified variants and the model's honest caveat is stripped. Source: `tracker/phase_8.1.md` F-8.1-A16, found 2026-09-25, older than that night. Added 2026-09-25 from the overnight build.
-31. At Researcher depth a question about a disease's features shows them in the list but not in the written answer: give them room in the prompt only when a classifier decides the question asks about features. Source: F-8.1-V01. Added 2026-09-25 from the overnight build.
-32. A graph search column named `clinical_features` would be read as MedGen's clinical features. Source: F-8.1-V02. Added 2026-09-25 from the overnight build.
-33. Two golden questions that answered on 2026-09-22 no longer do: G-004, a Salmonella isolate question that runs no search, and G-006, sequence data for PMID 11237011. Source: the golden run of 2026-09-25, `testing/Developer/reports/2026-09-25_phase_8.1_golden/`. Added 2026-09-25 from the overnight build.
-34. Jev's comparison table is mostly empty: let DeepSeek's pick land any time before the answer finishes, not within one second. Source: `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md`. Added 2026-09-25 from the overnight build.
-35. An off-topic follow-up that happens to contain a biomedical word such as "cell" or "study" still gets through, as it did before tonight. Source: `tracker/phase_8.2.md` F-8.2-V01. Added 2026-09-25 from the overnight build.
-36. A picked "How far back" window is lost after a restart or deploy, and nothing tells the person. Source: F-8.2-V02. Added 2026-09-25 from the overnight build.
-
-NOT ON THIS LIST, and deliberately: the explanation half of item 11.31. The
-product owner approved the current state as is on 2026-09-21. The remaining
-lever is recorded in "The result that should shape what happens next" above as
-a standing option, not as queued work.
+Not on this list, deliberately: the explanation half of item 11.31. The owner approved the current state as is on 2026-09-21. The remaining lever is recorded in "The result that should shape what happens next" above as a standing option, not as queued work.
 
 ### How to start the next session
 
-1. Read `HANDOFF.md`, then "Where we stopped" above, then the session tables
-   under "Session history" below, newest first.
-2. Run `git status` and `git worktree list`. Both should be clean, with local
-   carrying `develop` alone and the parked branches `HANDOFF.md` lists on
-   GitHub, listed by `git branch -r`.
-3. Read "What is parked, and why" before picking anything up. OMIM is live
-   WITH its title filter; the two ship together and neither is re-enabled or
-   removed without the other.
-4. Pick up the board, `testing/UI_fix_plan.md`: the product owner's retests
-   in its Retest column first, each card naming its queries in
-   `testing/Test_queries_and_workflows.md`, then the open pull requests and
-   the parked work `HANDOFF.md` lists, then its To do column from the top.
-   Golden runs and test queries sign in with fresh test accounts made on
-   develop, never committed. The call ceiling is measured
-   and stays at twenty.
+1. Read `HANDOFF.md`, "The one next action" (the lead rewrites it at each checkpoint, so read the current one), then "Where we stopped" above, then the session tables under "Session history" below, newest first.
+2. Run `git status` and `git worktree list`. Local carries `develop` alone and the parked branches `HANDOFF.md` lists are on GitHub, listed by `git branch -r`.
+3. Read "What is parked, and why" before picking anything up. OMIM is live WITH its title filter; the two ship together and neither is re-enabled or removed without the other.
+4. Retests: the board's Retest column, `testing/UI_fix_plan.md`. Its cards today are 89, 88, 74, 94 part, 92 with 95, 91 with 77, 87, 96 with 97, 46, 79, 80 and 85 part, 86 and 13, then three older cards. Each names its queries in `testing/Test_queries_and_workflows.md`.
+5. Then build from `testing/Board_plan.md` wave by wave, as `HANDOFF.md` says, taking the board's To do column from the top. Golden runs and test queries sign in with fresh test accounts made on develop, never committed. The call ceiling is measured and stays at twenty.
 
 ## Detail for items on the board
 
@@ -751,6 +712,14 @@ Built: · Live: · Approved:
 - What you noted: "Only once questions answer reliably, judge answer quality: the grader, or a domain expert reading the answers."
 - What's expected: a quality pass with the grader or a domain expert, once R38's consistency run shows reliable answering. This is a developer check, not a hand test.
 
+### 99 The sentence check approves rewordings that drop a qualifier
+
+- What a person sees: an answer can show a broader claim than its source. "Young children" is shown as "children", or a dropped "potentially" makes a hedged finding read as certain. Develop has done this since the check began.
+- Found by: the card 89 measurement, 2026-10-05, `testing/Developer/reports/2026-10-05_wave3/sentence_check.md`.
+- Design: `testing/Developer/reports/2026-10-05_qualifier_check/design.md`.
+- Decision, the owner, 2026-10-05: measure the pair check on all 144 faithful rewordings first, then decide whether to ship.
+- Where it stands: nobody on it until that measurement runs; the card is second in the board's To do.
+
 ### Set 11, still open
 
 Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-24. That covers Set 11's open rows with the detail behind them, and the product owner's direction on the model architecture of 2026-09-23.
@@ -760,7 +729,6 @@ Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-
 | # | The feedback | Status | Where it stands |
 |---|---|---|---|
 | 12.14 | `What phenotypic features are associated with Marfan syndrome?` names no phenotypic feature at either depth | RAISED 2026-09-23 in `testing/User-feedback/fix-2/`. NOT STARTED | Plain language answered "Found 1 disease record, 37 sequence variant records and 3 gene records for Marfan syndrome" and researcher "Found 1 disease record for Marfan syndrome: Marfan syndrome." The question asks for features and the answer substitutes an adjacent record type. This is the honest gap the 2026-09-23 shipped list's retest item 5 named, now query 66: removing the dead template stopped a search that could never work, and nothing that CAN answer it runs instead. Evidence: `testing/Developer/reports/2026-09-23_fix2/findings.md` |
-| 12.15 | A question asking for RECENT papers should ask what recent means: "recent paper on statin, should have asked a clarification of year range" | RAISED 2026-09-23 in `testing/User-feedback/fix-2/`. NOT STARTED, nobody on it | The product owner's comment is the screenshot's filename. `recent papers on statins` is four words and names what it wants, so 12.3's rule rightly does not ask it back; this is a different clarification, about a time window rather than a subject. Recorded so it is not lost; not being built. Evidence: `testing/Developer/reports/2026-09-23_fix2/findings.md` |
 | 12.16 | No hardcoded decisions: "Please do not hardcode! Hopefully not that dumb" | RAISED 2026-09-24 by the product owner. Parts 1, 2 and 4 LIVE on develop 2026-09-24; part 3 NOT STARTED | AUDITED THE SAME NIGHT. No product code special-cases a test question by its text: every mention of the feedback questions in `src/` is a comment recording a measurement. WHAT IS HARDCODED, and what happens to each: (1) three model prompts use examples LIFTED FROM THE TEST QUESTIONS, the answer writer's "Caffeine improves endurance performance", the guardrail's "does coffee help exercise performance", and the sentence checker's "kidney" for "renal" and "mouth" for "oral cavity" from the GERD answer; that is teaching to the test, and they are replaced with neutral examples outside the test set, IN PROGRESS; (2) 12.3's clarify-or-proceed decided by word lists, REDESIGNED as a classifier decision, IN PROGRESS; (3) item 12.7's literature-request routing, decided by a word list (paper, publication, article and kin), to become a classifier decision, NOT STARTED; (4) the grounding gate's phrase lists added on 2026-09-23 for broken sentences and references ("however", "Another", "This ...", a "Yes," opener), which sit beside the exact checks the product owner asked to stay deterministic (quote in the record, numbers, negation), DECIDED 2026-09-24 BY THE PRODUCT OWNER: "Structure, not words", chosen over keeping them as exact backstops and over handing them to the model check. THE REPLACEMENTS, IN PROGRESS: a sentence copied from the middle of a record's sentence and starting in lowercase is that sentence's back half and is dropped, decided from where the words sit in the record, not from a list of connectives; any other lowercase start is capitalised; a reworded sentence that switches to a record the sentence before it did not cite must name something from its own record's title, decided from the records' own titles, not from a list of pointing words; the "Another ..." list is removed, since the restatement rule already drops a sentence that only repeats a row the list shows; the "Yes," or "No," opener stays, stated as the one exception because yes and no are the whole class of English answer words rather than a sample of phrasings. Measured before shipping. The distinction that governs all four: code VERIFIES exactly; a DECISION goes to a classifier. WHAT SHIPPED 2026-09-24: part 1, the three prompt examples replaced with neutral ones, and the guardrail re-measured live, 68 checks and 0 wrong, the coffee question admitted 10 of 10 without its own example; part 2, 12.3 as a classifier decision; part 4, the phrase lists replaced by `_starts_inside_record_sentence` and `_names_its_record`, replayed over three live replies with nothing a reader needed dropped. A RESIDUAL OF PART 4, found in the live run and stated rather than hidden: the switch rule is satisfied by any shared title word, and a generic one is a weak anchor. After a Tay-Sachs sentence, "No patient carried more than one of these mutations" cited a BRCA paper whose title says "patients", so "these mutations" reads as Tay-Sachs while the paper means BRCA founder mutations. The phrase list it replaced would have missed it too, since "these" is not the first word. Not fixed |
 | 12.17 | A good question sometimes fails at the think step and shows a refusal | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it | Seen twice in about forty live runs over 2026-09-23 and 2026-09-24: `Does coffee help make exercise more effective?` and `is there a trial recruiting for melanoma`, both at researcher depth, each failing with "the plan tier's response did not match the think classification schema". Neither question reaches 12.3's ask-back, which only reads one to three words, so tonight's work did not cause it. The reader sees a refusal for a question the product answers on every other run. Evidence: `testing/Developer/reports/2026-09-24_no_hardcoding/live_runs/` |
 
@@ -2040,6 +2008,37 @@ Evidence, with a full transcript per question and a re-runnable script:
 | 12.5 | Can these questions be answered at all, and how? | ANSWERED, and this is the encouraging half | ONE ALREADY DOES (`reflux disease`, eight cited MedGen concepts). YES for the other six, with tools already built and data that exists. `Any trials for GERD?`: `clinicaltrials_search` with `query_cond` taken from a disease anchor rather than only a gene symbol. `reflux disease` and `GERD`: a live MedGen lookup for the concept, plus PubMed, plus the trials registry. `papers on caffeine and exercise` and the two population questions: a PubMed search on the topic, no gene anchor needed. THE HONEST LIMIT on `Does coffee help make exercise more effective?`: the product can return what has been published and must never return a verdict on whether coffee works. SO THE CONSTRAINT IS ROUTING AND VOCABULARY, NOT CAPABILITY, which is the opposite of the graph disease-name finding from the same day that cannot be fixed from this repository at all |
 
 ## Session history
+
+### 2026-10-05, in one table
+
+Twenty-one pull requests merged (#155 to #175), thirteen cards moved to Retest, the board went from 78 to 52 cards, and the test queries ran three times on develop. The day's facts: `testing/Developer/reports/2026-10-05_board_plan/day_facts.md`.
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| The whole-board plan and the board clean-up (#155) | Nine diagnoses, the plan with decisions D1 to D4 and the filing rule; four dead cards removed (53, 62, 90, 93), ten moved to `testing/Future.md` rows 48 to 57 | Done; D5 to D21 wait on the owner's objection |
+| Card 51, part (#156) | The facts checker passes again after the 2026-10-04 rewording | Retest, part |
+| Card 86 (#157) | Every library's license text ships with the web app | Retest, query 99 |
+| Cards 92 and 94, part (#158) | Chromosome windows list their dbVar records; the colistin search finds mcr carriers instead of a false zero | Retest |
+| Card 72, part (#159) | One log line per guard-model and Jev call | Part live; the guardrail design waits on logs |
+| Card 91 (#160) | The TP53 dataset question uses the checked graph search | Retest, query 25 |
+| Cards 88 and 57 (#161, #163) | GERD keeps its reworded answer sentences, a record cited twice shows each sentence's own quote, and a repair draft with more grounded sentences wins | Card 88 in Retest, queries 75 and 68; card 57 still Building on the board |
+| Card 87 (#162) | "recent-onset diabetes treatment" is answered; a bare subject is still asked back | Retest, queries 84 and 76 |
+| Card 95 (#164) | No raw bracketed markers in a long first sentence | Retest, queries 27 and 29 |
+| Card 94, part (#165, #174) | Plain language shows the isolates and genes table; the table also shows an organism record beside the isolates | Retest, queries 33 to 37 |
+| Cards 97 and 98 (#166) | One row per record, no duplicated OMIM row; an empty guard reply asks to try again | Card 97 in Retest, query 24; card 98 live with no query |
+| Cards 79, 80 and 85, part (#167) | The Integrations card shows its commands, About shows its layer cards first, two page sentences corrected | Retest, queries 102, 59 and 60 |
+| Card 46 and decision D1 (#168) | When no written summary survives, one plain line says why; a capped question lists what it gathered | Retest, no query yet |
+| Cards 91, 77 and 94, part (#169) | The answer names which search failed and why, which gene families an isolate search used, and when trials were not searched | Retest |
+| Card 96 (#170) | "Muir-Torré syndrome" spelled right; NCBI's record carries broken encoding, repaired on arrival | Retest, query 24 |
+| Card 15, step 1 (#171) | A question about one paper uses a checked graph search | Part live; the remaining anchors per D5 |
+| Card 74 (#172) | A paper's linked data from NCBI's live links | Retest, query 104 |
+| Card 56 (#173) | Organisms resolve through NCBI Taxonomy, with SRA and assembly routes | Failed live; back at the top of To do |
+| Card 89 (#175) | The sentence check reads the whole record sentence a quote sits in; the writer quotes whole sentences | Retest, query 73 |
+| Card 13 | Proposed for closing, superseded by 11.20 | Retest, query 78 |
+| Card 99, new | The sentence check approves rewordings that drop a qualifier | To do; measure first |
+| The test queries on develop | Morning: 84, 76, 99, 1, 75, 68, 27, 29, 25 and 24 passed, 33, 34 and 37 failed; afternoon: 27, GERD, Integrations and About at 1280 and 390 passed, 33 and 37 failed, fixed by #174; final: 9 of 10 passed, the SARS-CoV-2 question failed | Reports under `testing/Developer/reports/2026-10-05_*_test_queries/` |
+| Phase 8.7 | Resume plan written and its decisions taken | Parked, waiting on an OpenRouter top-up |
+| Process | Factory takes the screen and wording lane; lessons logged in `LEARNINGS.md` (the shared git stash, CI starvation, untracked evidence and the leak guard, Jev's literal criteria, fixtures from real answers, paths with a space, parallel builders on one file) | Standing |
 
 ### 2026-09-30, overnight, in one table
 

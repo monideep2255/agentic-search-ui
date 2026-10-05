@@ -1,0 +1,154 @@
+{
+ "q": "For a Salmonella enterica isolate, what SNP cluster does it belong to, which AMR genes does it carry, and which isolates are within 5 SNPs of it?",
+ "elapsed": 4.4,
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "6c0a8f81-000f-4222-8601-468e33550664",
+   "seq": 0,
+   "ts": "2026-10-05T21:08:24.851001Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "6c0a8f81-000f-4222-8601-468e33550664",
+   "seq": 2,
+   "ts": "2026-10-05T21:08:26.481916Z",
+   "payload": {
+    "narrative": "Requires graph traversal: find isolate, then its SNP cluster, then AMR genes, then neighboring isolates within 5 SNPs.",
+    "query_class": "multi_hop",
+    "resolved_entities": [],
+    "clarifying_question": "Which resistance gene or gene family should the isolates carry? For example ESBL (the blaCTX-M family), carbapenemase (blaKPC, blaNDM, blaOXA-48, blaVIM, blaIMP), colistin resistance (mcr), or a gene name such as blaCTX-M-15.",
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "6c0a8f81-000f-4222-8601-468e33550664",
+   "seq": 4,
+   "ts": "2026-10-05T21:08:26.486948Z",
+   "payload": {
+    "narrative": "no tool selected; the answer asks a question back before any search",
+    "tool_calls": [],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "6c0a8f81-000f-4222-8601-468e33550664",
+   "seq": 5,
+   "ts": "2026-10-05T21:08:26.490847Z",
+   "payload": {
+    "text": "Which resistance gene or gene family should the isolates carry? For example ESBL (the blaCTX-M family), carbapenemase (blaKPC, blaNDM, blaOXA-48, blaVIM, blaIMP), colistin resistance (mcr), or a gene name such as blaCTX-M-15.",
+    "marker_ids": [],
+    "kind": null,
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "6c0a8f81-000f-4222-8601-468e33550664",
+   "seq": 6,
+   "ts": "2026-10-05T21:08:26.490998Z",
+   "payload": {
+    "outcome": "refuse",
+    "risk_tier": "unknown",
+    "grounded": false,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": "Which resistance gene or gene family should the isolates carry? For example ESBL (the blaCTX-M family), carbapenemase (blaKPC, blaNDM, blaOXA-48, blaVIM, blaIMP), colistin resistance (mcr), or a gene name such as blaCTX-M-15.",
+    "fallback_link": "https://www.ncbi.nlm.nih.gov/search/all/?term=For%20a%20Salmonella%20enterica%20isolate%2C%20what%20SNP%20cluster%20does%20it%20belong%20to%2C%20which%20AMR%20genes%20does%20it%20carry%2C%20and%20which%20isolates%20are%20within%205%20SNPs%20of%20it%3F"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "6c0a8f81-000f-4222-8601-468e33550664",
+   "seq": 7,
+   "ts": "2026-10-05T21:08:26.491061Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 4094,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 124
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 135
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 208
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 196
+     }
+    ]
+   }
+  }
+ ]
+}

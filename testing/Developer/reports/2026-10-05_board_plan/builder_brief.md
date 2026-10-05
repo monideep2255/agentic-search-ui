@@ -5,6 +5,7 @@ You build one small change from `testing/Board_plan.md`, wave 1. Your prompt nam
 ## Rules
 
 - Work only inside your worktree, `.claude/worktrees/<name>` under the repository root, where your branch is checked out from `origin/develop`. Quote paths: the repository path contains a space.
+- Never use `git stash`: the stash stack is shared by every worktree. To prove a test fails on old code, use a temporary WIP commit or copy the old file with `git show origin/develop:<file>` into a scratch path.
 - Do not dispatch agents. Do not push, open pull requests, or touch another branch or worktree. Commit locally when done: a Conventional Commits subject in sentence case, one logical change, and no Co-Authored-By or any other trailer.
 - Read the diagnosis your prompt names in full before coding, from the main repository root (it is not in your worktree).
 - Decisions belong to the classifier model; code only verifies. Never put a test question, a disease or gene name, or a word list into code or a prompt to make a case pass.

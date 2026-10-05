@@ -1,0 +1,707 @@
+{
+ "q": "Find SRA runs of SARS-CoV-2 sequenced on Illumina from clinical respiratory samples, and explain why each one matched.",
+ "elapsed": 13.5,
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 0,
+   "ts": "2026-10-05T21:07:58.979308Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 2,
+   "ts": "2026-10-05T21:08:01.748393Z",
+   "payload": {
+    "narrative": "Requires linking across multiple data sources: organism (SARS-CoV-2), sequencing platform (Illumina), sample type (clinical respiratory), and SRA metadata. (SARS: 3 MedGen records matched by name)",
+    "query_class": "multi_hop",
+    "resolved_entities": [
+     {
+      "text": "SARS",
+      "curie": "MedGen:C1519126",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302012",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302019",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 4,
+   "ts": "2026-10-05T21:08:02.259514Z",
+   "payload": {
+    "narrative": "searching 3 layers for sars coronavirus protease pathway. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-8f36bf04cc88",
+      "layer": "layer_1_graph",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-e87ffa2e01c1",
+      "layer": "layer_3_enrichment",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-1f77cb9bc622",
+      "layer": "layer_3_enrichment",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-9fdb2e3eb09d",
+      "layer": "layer_2_api",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1145f5e7dee5",
+      "layer": "layer_2_api",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b60fa67305b8",
+      "layer": "layer_2_api",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-60adb3be67f7",
+      "layer": "layer_3_enrichment",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-0e83646bd059",
+      "layer": "layer_2_api",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "SARS",
+      "curie": "MedGen:C1519126",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302012",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302019",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 6,
+   "ts": "2026-10-05T21:08:02.262780Z",
+   "payload": {
+    "call_id": "cq-8f36bf04cc88",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 7,
+   "ts": "2026-10-05T21:08:02.262872Z",
+   "payload": {
+    "call_id": "pa-e87ffa2e01c1",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 8,
+   "ts": "2026-10-05T21:08:02.262901Z",
+   "payload": {
+    "call_id": "ct-1f77cb9bc622",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 9,
+   "ts": "2026-10-05T21:08:02.262920Z",
+   "payload": {
+    "call_id": "ne-9fdb2e3eb09d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 10,
+   "ts": "2026-10-05T21:08:02.262934Z",
+   "payload": {
+    "call_id": "ne-1145f5e7dee5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 11,
+   "ts": "2026-10-05T21:08:02.262948Z",
+   "payload": {
+    "call_id": "ne-b60fa67305b8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 12,
+   "ts": "2026-10-05T21:08:02.262963Z",
+   "payload": {
+    "call_id": "pa-60adb3be67f7",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 13,
+   "ts": "2026-10-05T21:08:02.262976Z",
+   "payload": {
+    "call_id": "ne-0e83646bd059",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 14,
+   "ts": "2026-10-05T21:08:02.452481Z",
+   "payload": {
+    "call_id": "ne-9fdb2e3eb09d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 15,
+   "ts": "2026-10-05T21:08:02.457729Z",
+   "payload": {
+    "call_id": "ct-1f77cb9bc622",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 16,
+   "ts": "2026-10-05T21:08:02.458358Z",
+   "payload": {
+    "call_id": "pa-e87ffa2e01c1",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 17,
+   "ts": "2026-10-05T21:08:02.594985Z",
+   "payload": {
+    "call_id": "ne-1145f5e7dee5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "search: 0 id(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 18,
+   "ts": "2026-10-05T21:08:04.483806Z",
+   "payload": {
+    "call_id": "cq-8f36bf04cc88",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 19,
+   "ts": "2026-10-05T21:08:04.483981Z",
+   "payload": {
+    "call_id": "ne-b60fa67305b8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 20,
+   "ts": "2026-10-05T21:08:04.484018Z",
+   "payload": {
+    "call_id": "pa-60adb3be67f7",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 21,
+   "ts": "2026-10-05T21:08:04.633794Z",
+   "payload": {
+    "call_id": "ne-0e83646bd059",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 22,
+   "ts": "2026-10-05T21:08:04.636216Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 23,
+   "ts": "2026-10-05T21:08:11.067869Z",
+   "payload": {
+    "text": "Found 1 medgen record for SARS: SARS Coronavirus Protease Pathway [1]. ",
+    "marker_ids": [
+     "ne-0e83646bd059-1"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "SARS Coronavirus Protease Pathway",
+     "SARS"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 24,
+   "ts": "2026-10-05T21:08:11.067969Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 25,
+   "ts": "2026-10-05T21:08:11.067991Z",
+   "payload": {
+    "text": "Medgen records found\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 26,
+   "ts": "2026-10-05T21:08:11.068010Z",
+   "payload": {
+    "text": "",
+    "marker_ids": [],
+    "kind": "table_header",
+    "cells": [
+     "Disease",
+     "Identifier"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 27,
+   "ts": "2026-10-05T21:08:11.068029Z",
+   "payload": {
+    "text": "Medgen title: SARS Coronavirus Protease Pathway [1]. ",
+    "marker_ids": [
+     "ne-0e83646bd059-1"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "SARS Coronavirus Protease Pathway",
+     "medgen 276768"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 28,
+   "ts": "2026-10-05T21:08:11.068047Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 29,
+   "ts": "2026-10-05T21:08:11.068064Z",
+   "payload": {
+    "text": "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
+    "marker_ids": [],
+    "kind": "note",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 30,
+   "ts": "2026-10-05T21:08:11.068080Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 31,
+   "ts": "2026-10-05T21:08:11.068096Z",
+   "payload": {
+    "text": "Note: this answer does not address the following entities named in the question: SARS Coronavirus Protease Pathway, Probable SARS (severe acute respiratory syndrome), SARS (severe acute respiratory syndrome) confirmed. Ask about them individually for a complete answer.",
+    "marker_ids": [],
+    "kind": "note",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 32,
+   "ts": "2026-10-05T21:08:11.068117Z",
+   "payload": {
+    "citation_id": "ne-0e83646bd059-1",
+    "display_index": 1,
+    "source": "medgen",
+    "source_id": "276768",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/276768",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "medgen title: SARS Coronavirus Protease Pathway",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 33,
+   "ts": "2026-10-05T21:08:11.068183Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-0e83646bd059-1",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 34,
+   "ts": "2026-10-05T21:08:11.068219Z",
+   "payload": {
+    "outcome": "ask",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "371ab46f-87ab-4aa6-97fb-0232a3165a20",
+   "seq": 36,
+   "ts": "2026-10-05T21:08:11.068363Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 4,
+    "elapsed_ms": 13117,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 1 source, not yet confirmed",
+    "layer_calls_used": 18,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 212
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 139
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.94,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 170
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 196
+     }
+    ]
+   }
+  }
+ ]
+}

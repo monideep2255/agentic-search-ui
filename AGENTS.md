@@ -61,7 +61,7 @@ Multi-model harness with three tiers:
 
 Context budget: `docs/Context_budget.md`. Agent mods guide: `docs/Agent_mods.md`.
 
-Reference documents under `docs/`, with when to read each: `.claude/README.md`, "Reference docs". The build order is `requirements/Technical_specification.md` Section 25.
+Reference documents under `docs/`, with when to read each: `.claude/README.md`, "Reference docs". The build order is `requirements/Technical_specification.md` Section 25. The order of the open board cards is `testing/Board_plan.md`.
 
 ## Agent loop pattern (every query follows this)
 
@@ -109,4 +109,4 @@ The table of sub-agents and their trigger words is in `.claude/README.md`, "Sub-
 
 The table of skills is in `.claude/README.md`, "Skills". The invocation is always the skill's exact name; a shortened alias does not resolve.
 
-Last updated: 2026-10-04
+Last updated: 2026-10-05

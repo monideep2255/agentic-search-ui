@@ -1,0 +1,45 @@
+Are there any beneficial variants typically found in people of mediterranean descent?
+New search
+
+✓ Answered12.0s · 3 tools · 7 sources from 1 layer
+
+Show work ▾
+
+I found 5 published papers on this topic.⁠3–7
+
+Familial Mediterranean fever is a condition caused by mutations in the MEFV gene that mainly affects people of Mediterranean descent, including Turkish, Jewish, Arabic, and Armenian populations.⁠1
+
+The study identified harmful variants in 218 distinct genes across 176 families, documenting the wide genetic diversity underlying these disorders.⁠2
+
+WHERE THIS ANSWER COMES FROM
+Diagnosis and management of G6PD deficiency.	⁠3
+High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.	⁠4
+Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Consortium.	⁠5
+Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.	⁠6
+Molecular analyses of MEFV gene mutation variants in Turkish population.	⁠7
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+5
+Based on 5 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- LINKS ---
+ -> https://pubmed.ncbi.nlm.nih.gov/35098403/
+ -> https://pubmed.ncbi.nlm.nih.gov/34582790/
+ -> https://pubmed.ncbi.nlm.nih.gov/16225031/
+ -> https://pubmed.ncbi.nlm.nih.gov/37782073/
+ -> https://pubmed.ncbi.nlm.nih.gov/39042260/
+
+TIME_TO_ANSWER_SECONDS=13.2 askback=false

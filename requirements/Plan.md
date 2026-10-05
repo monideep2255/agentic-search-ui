@@ -1050,6 +1050,30 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-05. TWENTY-ONE PULL REQUESTS MERGED (#155 TO #175); PHASE 8.7, THE GUARDRAIL DESIGN AND CARD 56 HELD. What awaits the owner and the next action: `HANDOFF.md`. The day's facts: `testing/Developer/reports/2026-10-05_board_plan/day_facts.md`.
+
+- What landed, by what a person notices:
+  - GERD keeps its reworded answer sentences, and a record cited twice shows each sentence's own quote (#161); a repair draft with more grounded sentences on the same records wins (#163).
+  - The sentence check reads the whole record sentence a quote sits in, and the writer quotes whole sentences (#175).
+  - The Mediterranean question names Familial Mediterranean fever.
+  - Plain language shows the isolates and genes table (#165); the isolates table also shows an organism record beside the isolates (#174); the answer names which gene families an isolate search used (#169); the colistin search finds mcr carriers instead of a false zero (#158).
+  - Chromosome windows list their dbVar records (#158).
+  - A question about one paper uses a checked graph search (#171), and a paper's linked data comes from NCBI's live links (#172); the TP53 dataset question uses the checked graph search (#160).
+  - Organisms resolve through NCBI Taxonomy, with SRA and assembly routes (#173).
+  - "recent-onset diabetes treatment" is answered, and a bare subject is still asked back (#162).
+  - Notes say which search failed and why, and when trials were not searched (#169); when no written summary survives, one plain line says why, and a capped question lists what it gathered (#168).
+  - No raw "[21]" markers in a long first sentence (#164); one row per record and an empty guard reply asks to try again (#166); "Muir-Torré syndrome" is repaired on arrival (#170).
+  - The Integrations card shows its commands and About shows its layer cards first (#167); every library's license text ships with the web app (#157).
+  - One log line per guard-model and Jev call (#159); the facts checker passes again (#156); documents and the board clean-up (#155).
+- The gate: the final run of the test queries document on develop passed 9 of 10 (`testing/Developer/reports/2026-10-05_final_test_queries/results.md`). The SARS-CoV-2 question still answered about the disease SARS.
+- Held, and why:
+  - Phase 8.7 (the strongest writer, first sentence answers, records within seconds): resume plan written, decisions taken, waiting on a model account top-up (`testing/Developer/reports/2026-10-05_phase_8.7_resume/plan.md`).
+  - The guardrail design (cards 84 and 72): waits on a fuller day of guard-call logs. Today's sample: Jev decided in 0.12 to 0.29 seconds; the guard model's on-topic check took 1.3 to 7.3 seconds across five upstream hosts.
+  - Card 56: passed locally, failed on develop, back in To do; next is why.
+  - Card 99, new: the sentence check approves rewordings that drop a qualifier; waits on measuring the pair check first.
+- The board: four dead cards removed, ten moved to `testing/Future.md`, thirteen moved to Retest, card 99 added, card 56 returned. Factory, a second development agent, now works the screen and wording lane on its own branches; the lead keeps the answer path, the board, the plan and the merge queue.
+- Decisions logged: `DECISIONS.md`, rows dated 2026-10-05, covering the whole-board plan (D1 to D4), the filing rule, phase 8.7's resume terms, the sentence check reading the whole record sentence, card 56's build choices, card 89 shipping, dropped qualifiers measured first, and Factory's lane. The plan itself: `testing/Board_plan.md`. Learnings logged in `LEARNINGS.md`, 2026-10-05.
+
 2026-09-30, overnight. `/SHIP` GAINS A LEAK SCAN IN BOTH REPOSITORIES; BRANCHES CLEANED. What awaits the owner and the next action: `HANDOFF.md`.
 
 - The owner asked for `/ship` to check for leaks of personal information and secret keys before anything is pushed to either public repository. The scan reads every commit a push would publish, blocks on any secret, and runs the owner's local private-name check or stops (#145, data engineering #11). Its judge and adversary found a secret added then removed still published, and a private-name check that read nothing at push time; the fix round closed both. The fresh verifier's remaining items merged named, and a git-sync step that pushed after a failed scan was reverted.

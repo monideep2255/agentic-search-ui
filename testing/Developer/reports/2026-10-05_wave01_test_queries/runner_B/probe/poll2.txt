@@ -1,0 +1,59 @@
+QUESTION: recent-onset diabetes treatment
+LANDED=answer SECONDS=22.6
+
+recent-onset diabetes treatment
+New search
+
+✓ Answered21.2s · 3 tools · 6 sources from 1 layer
+
+Show work ▾
+
+I found 5 published papers on this topic.⁠2–6
+
+That review describes how high blood sugar and abnormal blood fats drive nerve damage in both type 1 and type 2 diabetes, and outlines the medications commonly used to manage the resulting pain.⁠1
+
+WHERE THIS ANSWER COMES FROM
+Risk of diabetes-associated diseases in subgroups of patients with recent-onset diabetes: a 5-year follow-up study.	⁠2
+Anti-interleukin-21 antibody and liraglutide for the preservation of β-cell function in adults with recent-onset type 1 diabetes: a randomised, double-blind, placebo-controlled, phase 2 trial.	⁠3
+Diabetic peripheral neuropathy essentials: a narrative review.	⁠4
+A first-in-human, open-label Phase 1b and a randomised, double-blind Phase 2a clinical trial in recent-onset type 1 diabetes with AG019 as monotherapy and in combination with teplizumab.	⁠5
+Baricitinib and β-Cell Function in Patients with New-Onset Type 1 Diabetes.	⁠6
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+5
+Based on 5 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+BUTTONS:
+New search
+Show work ▾
+2–6
+1
+2
+3
+4
+5
+6
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+
+LINKS:
+ -> https://pubmed.ncbi.nlm.nih.gov/36786097/
+ -> https://pubmed.ncbi.nlm.nih.gov/31345776/
+ -> https://pubmed.ncbi.nlm.nih.gov/33662334/
+ -> https://pubmed.ncbi.nlm.nih.gov/37782353/
+ -> https://pubmed.ncbi.nlm.nih.gov/38055252/

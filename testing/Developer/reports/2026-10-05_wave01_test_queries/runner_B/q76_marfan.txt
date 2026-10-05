@@ -1,0 +1,35 @@
+QUESTION: Marfan
+LANDED=answer SECONDS=9.1
+
+Marfan
+New search
+
+7.9s · 0 tools · 0 sources
+
+Show work ▾
+One more detail needed
+What aspect of Marfan syndrome are you interested in?
+https://www.ncbi.nlm.nih.gov/search/all/?term=Marfan
+
+ASK ANOTHER QUESTION
+
+Ask
+Which gene is associated with Marfan syndrome?
+What are the symptoms and diagnostic criteria for Marfan syndrome?
+Are there any clinical trials for Marfan syndrome treatments?
+What does recent research say about Marfan syndrome?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+BUTTONS:
+New search
+Show work ▾
+Ask
+Which gene is associated with Marfan syndrome?
+What are the symptoms and diagnostic criteria for Marfan syndrome?
+Are there any clinical trials for Marfan syndrome treatments?
+What does recent research say about Marfan syndrome?
+
+LINKS:
+https://www.ncbi.nlm.nih.gov/search/all/?term=Marfan -> https://www.ncbi.nlm.nih.gov/search/all/?term=Marfan

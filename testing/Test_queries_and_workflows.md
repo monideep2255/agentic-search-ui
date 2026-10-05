@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-09-29.
+Last updated: 2026-10-05.
 
 Every entry has the same three parts:
 
@@ -662,6 +662,35 @@ What you should see:
 - The BioSample record and up to ten of its SRA runs are among the sources.
 - No "which gene, variant or condition do you mean?" request.
 - Why it matters: a person who already found a BioSample id in a paper or a database wants to know what came from that exact sample, not to be redirected into naming a gene they never asked about.
+
+### 103. An organism's records, not a disease with a similar name (card 56)
+
+Queries to try:
+
+- `Find SRA runs of SARS-CoV-2 sequenced on Illumina from clinical respiratory samples`
+- `Which genome assemblies are available for Mycobacterium tuberculosis?`
+
+What you should see:
+
+- The answer is about the organism named: SARS-CoV-2 runs from NCBI's SRA, or M. tuberculosis assemblies, each record linked to its NCBI page.
+- Never a disease record for "SARS" or any other disease read out of the organism's name.
+- The organism's NCBI Taxonomy record among the sources.
+- The Illumina and sample-type conditions are not yet applied to the search; the answer must not claim they were.
+- Why it matters: before 2026-10-05 the first question was answered confidently about the disease SARS, a confident wrong record.
+
+### 104. The data records linked to one paper (card 74, G-006)
+
+Queries to try:
+
+- `What sequence data is linked to PMID 11237011?`
+
+What you should see:
+
+- The records NCBI links to that paper, such as sequence records, BioProjects, SRA runs or genome assemblies, each linked to its NCBI page.
+- When NCBI lists more records than are shown, one line says how many there are and how many are shown.
+- When NCBI links no record of a kind, one plain sentence says so, rather than an empty answer.
+- No "One of the background searches did not finish" line from a graph search timing out.
+- Why it matters: the knowledge graph holds no link from a paper to its data, so before 2026-10-05 this question found nothing in every run.
 
 ## 5. Pathogen isolates
 
