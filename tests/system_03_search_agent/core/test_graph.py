@@ -7074,6 +7074,26 @@ async def test_a_decision_nobody_made_is_recorded_as_what_the_run_did(
     assert graph_module._done_decisions(harness) == [record]
 
 
+def test_ask_back_spec_says_a_subject_plus_a_wanted_kind_is_a_request() -> None:
+    """Card 87: a short message that names a subject and the kind of thing
+    wanted (including therapy options) is answered, not asked back.
+
+    This pins the spec text only. Which way the classifier picks is checked
+    by live runs against it (testing/Developer/reports/2026-10-05_wave1/
+    card87.md), which a unit test cannot do.
+    """
+    spec = graph_module._ASK_BACK
+    proceed = spec.criteria["proceed"]
+    ask_back = spec.criteria["ask_back"]
+
+    assert "therapy options" in proceed
+    assert "variants" in proceed, "the old example must not be dropped"
+    assert "followed by a word that names the wanted kind of information" in proceed
+    assert "is a request, not a bare subject" in proceed
+    assert "no word saying what to find out" in ask_back
+    assert spec.fail_open == "proceed"
+
+
 # ---------------------------------------------------------------------------
 # F-8.5-J07: the two non-timing controls the deleted
 # test_write_streaming_premise.py's W4 pinned. W4 was removed with the rest
