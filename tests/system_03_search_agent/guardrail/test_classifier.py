@@ -374,3 +374,11 @@ def test_the_injection_decisions_description_fits_the_seam() -> None:
     for text in (INJECTION_DECISION_INSTRUCTIONS, *INJECTION_DECISION_CRITERIA.values()):
         assert 0 < len(text) <= 1000
         assert "?" not in text and "'" not in text, "no quoted or example query"
+
+
+def test_a_reply_with_no_content_is_an_unusable_reply_not_a_crash() -> None:
+    """A model reply whose content is None raised AttributeError from
+    `.strip()` and ended the search "failed unexpectedly". It is now the same
+    unusable-reply error a malformed reply raises."""
+    with pytest.raises(ClassificationUnavailableError):
+        parse_classification(None)
