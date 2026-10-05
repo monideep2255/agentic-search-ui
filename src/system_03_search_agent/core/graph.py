@@ -2808,6 +2808,34 @@ async def _confirmed_taxon_for_extraction(
     return _taxon_for_extraction(kept)
 
 
+async def _organism_spans_not_rejected(entities: list[_ThinkExtractedEntity]) -> list[str]:
+    """The organism spans the model tagged that NCBI Taxonomy did not reject.
+
+    Card 56 (2026-10-05). The same rule `_confirmed_taxon_for_extraction`
+    applies, and the same cached lookup, so it costs no second call: a span
+    Taxonomy answers with zero hits is not an organism, whatever the model
+    called it ("MODY" on 2 of 20 GCK runs), and is left out; a span it
+    confirms, or one the check could not run for, is kept. Distinct spans
+    in the model's order, at most `_MAX_LIVE_SYMBOL_LOOKUPS` checked.
+    """
+    kept: list[str] = []
+    seen: set[str] = set()
+    checked = 0
+    for entity in entities:
+        if entity.entity_type != "organism":
+            continue
+        span = entity.text.strip()
+        if not span or span.casefold() in seen:
+            continue
+        seen.add(span.casefold())
+        if checked < _MAX_LIVE_SYMBOL_LOOKUPS:
+            checked += 1
+            if await _organism_is_known(span) is False:
+                continue
+        kept.append(span)
+    return kept
+
+
 #: How many disease spans a question may spend live MedGen lookups on.
 _MAX_LIVE_DISEASE_LOOKUPS = 3
 #: The most MedGen records one disease mention may bind by title
@@ -3158,7 +3186,9 @@ _MAX_FALLBACK_CANDIDATES = 3
 
 
 def _gene_shaped_fallback_candidates(
-    query_text: str, exact_matches: list[EventResolvedEntity]
+    query_text: str,
+    exact_matches: list[EventResolvedEntity],
+    organism_spans: Sequence[str] = (),
 ) -> list[str]:
     """Gene-shaped tokens worth ONE live lookup each, when the model found none.
 
@@ -3198,10 +3228,25 @@ def _gene_shaped_fallback_candidates(
     typed CURIE's prefix is never looked up as a symbol. At most
     `_MAX_FALLBACK_CANDIDATES`, in question order, de-duplicated after
     upper-casing, since `resolve_symbol_to_curie` upper-cases anyway.
+
+    Card 56 (2026-10-05): tokens inside a span the model tagged as an
+    organism, and NCBI Taxonomy did not reject (`organism_spans`, from
+    `_organism_spans_not_rejected`), are excluded the same way. Measured
+    live on 3 of 3 runs of a SARS-CoV-2 question: the token rule split
+    "SARS-CoV-2" on its hyphens, "SARS" passed the all-capitals shape,
+    MedGen matched it to three disease records and the answer was about
+    the disease SARS, which the person never asked about. A token cut out
+    of an organism's name is a piece of that name, never a gene or a
+    disease of its own.
     """
     claimed: list[tuple[int, int]] = []
     for entity in exact_matches:
         for match in re.finditer(re.escape(entity.text), query_text):
+            claimed.append((match.start(), match.end()))
+    for span in organism_spans:
+        if not span.strip():
+            continue
+        for match in re.finditer(re.escape(span.strip()), query_text, re.IGNORECASE):
             claimed.append((match.start(), match.end()))
 
     candidates: list[str] = []
@@ -3884,6 +3929,19 @@ async def _think(
         )
     else:
         model_resolution = await _confirm_extracted_entities(classification.entities)
+    # Card 56 (2026-10-05): the organism spans Taxonomy did not reject, read
+    # from the lookup `_confirm_extracted_entities` just made (cached, so no
+    # second call). They keep the fallbacks below from cutting a token out
+    # of an organism's name, and let the question asked back name the
+    # organism instead of asking for a gene. Empty on the window, accession
+    # and isolate paths, which confirm no model span at all.
+    organism_spans: list[str] = []
+    if not (
+        (window_genes is not None and window_genes.genes)
+        or accession_plan is not None
+        or isolate_question is not None
+    ):
+        organism_spans = await _organism_spans_not_rejected(classification.entities)
     if window_genes is not None:
         # The window's genes come first, ahead of anything the model named,
         # and their presence is what stops the gene-shaped and disease
@@ -3925,7 +3983,8 @@ async def _think(
         fallback_taxon = await _confirmed_taxon_for_extraction(classification.entities)
         if fallback_taxon is not None:
             fallback_confirmed = await _confirm_fallback_candidates(
-                _gene_shaped_fallback_candidates(query.text, exact_matches), fallback_taxon
+                _gene_shaped_fallback_candidates(query.text, exact_matches, organism_spans),
+                fallback_taxon,
             )
             if fallback_confirmed:
                 # A symbol the fallback confirmed is no longer unresolved;
@@ -3958,9 +4017,9 @@ async def _think(
     ):
         disease_fallback: list[tuple[str, str]] = []
         fallback_disclosures: list[str] = []
-        for candidate in _gene_shaped_fallback_candidates(query.text, exact_matches)[
-            :_MAX_LIVE_DISEASE_LOOKUPS
-        ]:
+        for candidate in _gene_shaped_fallback_candidates(
+            query.text, exact_matches, organism_spans
+        )[:_MAX_LIVE_DISEASE_LOOKUPS]:
             bound, matched = await resolve_disease_mention_to_curies(candidate)
             for curie in bound:
                 if curie not in {c for _, c in disease_fallback}:
@@ -4070,6 +4129,10 @@ async def _think(
         )
         else None
     )
+    if clarification is not None and organism_spans:
+        # Card 56: the question named an organism, so its subject is not
+        # missing; which kind of record about it is.
+        clarification = _organism_record_question(organism_spans[0])
     if window is not None and window.assembly is None:
         clarification = coordinate_window.ASSEMBLY_QUESTION
     if isolate_question is not None and isolate_question.clarification is not None:
@@ -5945,6 +6008,31 @@ CLARIFICATION_QUESTION: Final = (
     "mean? Ask again naming it, for example \"Which variants cause disease "
     "in BRCA1?\", and the follow-up will use it."
 )
+
+#: Characters of the organism's name the question below may quote back. The
+#: name is the person's own span, cleaned to the characters
+#: `_ORGANISM_NAME_CHARS` admits, so the question stays well under
+#: `ThinkPayload.clarifying_question`'s 500-character bound.
+_MAX_ORGANISM_NAME_IN_QUESTION_CHARS: Final[int] = 60
+
+
+def _organism_record_question(organism: str) -> str:
+    """What the answer asks when the question names an organism and no gene.
+
+    Card 56 (2026-10-05). `CLARIFICATION_QUESTION` asks "which gene, variant
+    or condition do you mean?", which is the wrong question for a person who
+    named Mycobacterium tuberculosis and asked for its genome assemblies:
+    they named their subject, and what is missing is which kind of record
+    about it they want. The organism is named back in the person's own
+    spelling, never a word this code chose.
+    """
+    name = " ".join(_ORGANISM_NAME_CHARS.sub(" ", organism).split())
+    name = name[:_MAX_ORGANISM_NAME_IN_QUESTION_CHARS].strip() or "this organism"
+    return (
+        f"One more detail is needed: which kind of record about {name} do you "
+        f"want? Ask again naming it, for example \"Published papers about "
+        f"{name}\"."
+    )
 
 
 def _needs_clarification(
