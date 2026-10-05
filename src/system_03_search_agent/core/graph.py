@@ -6903,7 +6903,13 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     "clinvar_overlap": (
         "title", "germline_classification", "gene_symbol", "chr_start", "chr_end", "assembly",
     ),
-    "dbvar_overlap": ("variant_type", "gene_name", "chr_start", "chr_end", "assembly"),
+    # Card 92 (2026-10-05): a dbVar record has no title of its own, and its
+    # `variant_type` and `gene_name` are lists, which the finding builder
+    # treats as unusable, so every dbVar row used to be dropped. The row now
+    # leads with a `title` built in code from the record's own fields
+    # (`_dbvar_overlap_fields`), as ClinVar leads with NCBI's, and the two
+    # list fields are joined into plain text.
+    "dbvar_overlap": ("title", "variant_type", "gene_name", "chr_start", "chr_end", "assembly"),
     # Fix-plan item 2 (2026-09-22). The four summaries an accession question
     # plans, each led by the field a person recognises the record by. SRA's
     # `runs` is the markup-bearing string NCBI returns, which carries the run
@@ -6940,6 +6946,55 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
     # feature could not be quoted by a sentence naming one of them.
     "medgen_summary": ("title", "definition", "semantictype"),
 }
+
+#: Card 92 (2026-10-05): the breadth purpose whose records carry list-valued
+#: fields and no title, so a readable title is built for each row.
+_DBVAR_OVERLAP_PURPOSE: Final[str] = "dbvar_overlap"
+
+
+def _joined_text(value: Any) -> str:
+    """A list of strings as one comma-separated string, a string as itself,
+    anything else (null, a number, a dict) as the empty string."""
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (list, tuple)):
+        return ", ".join(v.strip() for v in value if isinstance(v, str) and v.strip())
+    return ""
+
+
+def _dbvar_overlap_fields(fields: dict[str, Any]) -> dict[str, Any]:
+    """One dbVar overlap record's allow-listed fields with a leading `title`
+    and its list fields joined into text.
+
+    The title is built only from the record's own fields: its variant type,
+    the genes it names and where it sits on the assembly, for example
+    "copy number variation overlapping BRCA1, NBR2 (chr17:43115725-43125364,
+    GRCh38)". A part the record lacks is left out, never filled in. A record
+    with none of the parts gets no title, so the next field is tried as
+    before.
+    """
+    allowed = _BREADTH_FIELDS_BY_PURPOSE[_DBVAR_OVERLAP_PURPOSE]
+    kept = {key: fields[key] for key in allowed if key in fields and key != "title"}
+    for key in ("variant_type", "gene_name"):
+        if key in kept:
+            kept[key] = _joined_text(kept[key])
+    variant_type = kept.get("variant_type") or ""
+    genes = _joined_text(fields.get("gene_name"))
+    chromosome = fields.get("chr")
+    start, end = fields.get("chr_start"), fields.get("chr_end")
+    place = ""
+    if chromosome and isinstance(start, int) and isinstance(end, int):
+        place = f"chr{chromosome}:{start}-{end}"
+        assembly = _joined_text(fields.get("assembly"))
+        if assembly:
+            place = f"{place}, {assembly}"
+    title = variant_type or ("dbVar record" if genes or place else "")
+    if genes:
+        title = f"{title} overlapping {genes}"
+    if place:
+        title = f"{title} ({place})"
+    return {"title": title, **kept} if title else kept
+
 
 #: Item 2b (2026-09-22). The one breadth purpose whose records are checked
 #: against the question's own gene before any of them becomes a row.
@@ -7337,7 +7392,9 @@ def _ncbi_efetch_output_to_structured_fields(
             "curie": "",
             "node_or_edge_type": record.db or "ncbi_efetch",
             "fields": (
-                {key: record.fields[key] for key in allowed if key in record.fields}
+                _dbvar_overlap_fields(record.fields)
+                if purpose == _DBVAR_OVERLAP_PURPOSE
+                else {key: record.fields[key] for key in allowed if key in record.fields}
                 if allowed is not None
                 else {
                     key: value
