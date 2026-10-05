@@ -729,9 +729,10 @@ def select_template(
     3. With no shape matched, a `lookup` or an `exploratory` question about
        the entity is the record itself, and so is a `single_hop` or
        `multi_hop` question whose anchor is a Gene (2026-09-22, the
-       measured reasons are in the code below). An `aggregate` question
-       with no shape, or a Disease or Article anchor on the two hop
-       classes, is None, the model path.
+       measured reasons are in the code below). So is an `aggregate`
+       question about a Gene that asks for no count (2026-10-05). An
+       `aggregate` question that asks for a count, or a Disease or Article
+       anchor on the two hop classes, is None, the model path.
     4. A matched hop on a question asking "how many" (any class), or on an
        `aggregate` question saying "count" or "number of", becomes the
        count form, for a single anchor only (a count over several anchors
@@ -783,6 +784,18 @@ def select_template(
             return _record_template(anchor_label, param_names)
         if anchor_label == "Gene" and tool_input.query_class in (
             QueryClass.SINGLE_HOP, QueryClass.MULTI_HOP
+        ):
+            return _record_template(anchor_label, param_names)
+        # 2026-10-05 (card 91): the `aggregate` class is a model's guess and
+        # varies run to run for one question. A Gene question with no shape
+        # that asks for no count is not a count question, so it takes the
+        # record like the other classes; the generated query for it was
+        # rejected by the validator and no graph search ran. A count request
+        # (`_wants_count`) and a Disease or Article anchor keep the model path.
+        if (
+            anchor_label == "Gene"
+            and tool_input.query_class is QueryClass.AGGREGATE
+            and not _wants_count(tool_input)
         ):
             return _record_template(anchor_label, param_names)
         return None

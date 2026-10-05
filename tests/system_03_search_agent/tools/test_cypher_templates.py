@@ -174,6 +174,15 @@ def _select(
         # for any golden question, and G-037 lost its own search on every
         # pass to a generated query the validator rejected.
         ("Tell me about BRCA1", [BRCA1], "multi_hop", "gene_record_one", None),
+        # 2026-10-05 (card 91): a Gene question with no shape and no count
+        # request takes the record on the aggregate class too.
+        (
+            "Find GEO expression datasets studying TP53 in human tumour samples.",
+            [TP53],
+            "aggregate",
+            "gene_record_one",
+            None,
+        ),
         (
             "Find GEO expression datasets studying TP53 in human tumour samples.",
             [TP53],
@@ -350,7 +359,8 @@ def test_the_mixed_variants_template_binds_the_gene_and_the_disease() -> None:
         # or Article anchor on the hop classes, where a list Think resolved
         # from a common noun would turn a correct refusal into a page of
         # unrelated records (G-014, pass 3).
-        ("Tell me about BRCA1", [BRCA1], "aggregate"),
+        ("How many records does BRCA1 have?", [BRCA1], "aggregate"),
+        ("Count the records for BRCA1", [BRCA1], "aggregate"),
         ("Tell me about breast cancer", [BREAST_CANCER], "single_hop"),
         ("Tell me about breast cancer", [BREAST_CANCER], "multi_hop"),
         ("Tell me about PMID:11237011", [PMID], "multi_hop"),
