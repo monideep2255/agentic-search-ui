@@ -12417,7 +12417,19 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 # omissions, and it implies the claim set is non-empty, so
                 # both of the old conditions are subsumed rather than
                 # accumulated alongside it.
-                if reported_after > reported_before:
+                #
+                # Card 88 (2026-10-05): a repair that keeps EVERY record the
+                # first answer reported (a superset, possibly equal) and shows
+                # more grounded sentences is also kept. Measured locally on
+                # the GERD question: a first draft with one surviving sentence
+                # beat a repair with three on the same abstract, so the reader
+                # got one sentence. What F-4.5-J-13 protects still holds: no
+                # reported record can be dropped, and every sentence either
+                # way passed the same grounding pass.
+                more_on_the_same_records = reported_after >= reported_before and len(
+                    repaired_grounding.sentences
+                ) > len(grounding.sentences)
+                if reported_after > reported_before or more_on_the_same_records:
                     synth_text = repaired_text
                     grounding = repaired_grounding
                     model_layout = repaired_layout
