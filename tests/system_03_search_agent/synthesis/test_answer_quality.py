@@ -561,3 +561,24 @@ def test_researcher_asks_for_the_quote_a_reworded_sentence_rests_on() -> None:
     assert "ends with the marker of the finding it rests on" in researcher, (
         f"populate-check: cite-or-refuse is not stated: {researcher!r}"
     )
+
+
+def test_rule_3a_asks_for_whole_record_sentences_one_quote_each() -> None:
+    """Card 89 (the owner's decision, 2026-10-05, option 2 of
+    `testing/Developer/reports/2026-10-05_sentence_check/design.md`): rule 3a
+    asked for a five-to-thirty-word span, so the writer quoted a fragment and
+    then wrote a sentence that also covered the rest of the record sentence,
+    or the next one, and the sentence check rightly rejected it. Rule 3a now
+    asks for each record sentence drawn on, whole, one quote per sentence.
+    The text stays in the fixed system block, so the cached prefix is still
+    byte-identical across queries."""
+    rule = findings_module.SYNTH_SYSTEM_INSTRUCTION.split("3a. ", 1)[1].split("\n4. ", 1)[0]
+
+    assert "five to thirty" not in rule, rule
+    assert "Quote the whole sentence of the finding" in rule, rule
+    assert "one quote per sentence" in rule, rule
+    assert '[4: "First sentence."][4: "Second sentence."]' in rule, rule
+    assert "say NOTHING MORE than the quoted words" in rule.replace("\n", " "), (
+        f"populate-check: the nothing-more rule must stay: {rule!r}"
+    )
+    assert "never turn a negative finding into a positive one" in rule.replace("\n", " "), rule
