@@ -13,6 +13,7 @@ Builder report, branch `fix/card89-whole-sentence-quotes`, 2026-10-05. Built opt
 - [Borderline approvals](#borderline-approvals)
 - [What the person sees, per run](#what-the-person-sees-per-run)
 - [What is not covered](#what-is-not-covered)
+- [Develop control, side by side](#develop-control-side-by-side)
 
 ## Verdict
 
@@ -138,3 +139,31 @@ Every other approval (71) is a faithful rewording of its record sentence(s). No 
 - The claim's stored evidence quote stays the writer's words. The design suggested storing the widened sentence as the citation's evidence; the lead's brief did not ask for it and it changes what the citation shows, so it is not built.
 - Deep technical depth was not traced.
 - What the lead must decide: whether to hold card 89, or ask the owner whether the "young children" to "children" class and the dropped "potentially" class are acceptable losses. Neither option here causes them; Jev approves them against the whole sentence, and today's check approves the first one on some runs too.
+
+## Develop control, side by side
+
+Asked by the lead after the hold, 2026-10-05: the same 15 traces, the same harness and the same labelling, against origin/develop's code (`1a071cc2`), with no branch change. The code came out by `git archive origin/develop src` into the session scratchpad, so nothing in the repository changed. `1a071cc2` is four merges ahead of this branch's base (cards 46, 95 and 96 to 98: notes, record lists, the cap path, the guard's empty reply); none touches grounding, the sentence check or rule 3a. Spend about $0.19, no reruns. Raw output: `sentence_check_raw/develop_control/` (labels `cr`, `cp`, `cm` match `gr`, `gp`, `md`).
+
+| Measure | Develop (origin/develop) | Branch (options 1 and 2) |
+|---|---|---|
+| Sentences sent to the check | 159 | 155 |
+| Approved | 54 | 86 |
+| Clear additions approved | 4 (3 shown) | 6 (5 shown) |
+| "young children" shown as "children" | 3: cp2 c1 i4 (0.73), cp4 c2 i6 (0.72), cp5 c1 i3 (0.81), all shown | 4: gp1, gp2, gp3, gp5 (0.71 to 0.81), all shown |
+| "potentially attributable to GERD" dropped | 1: cp1 c2 i4 (0.61), "These symptoms are among the most commonly reported to primary care providers", not shown | 2: gp1 c2 i6 (not shown), gp4 c2 i6 (shown) |
+| Borderline approvals | 11 | 9 |
+| Prose sentences shown, GERD Researcher | 7, refused, 1, 3, 6 | 6, 5, 5, 5, 7 |
+| Prose sentences shown, GERD Plain | 1, 3, 3, 4, 3 | 4, 3, 4, 2, 5 |
+| Prose sentences shown, Mediterranean | 1, 0, 0, 6, 3 | 2, 5, 3, 4, 2 |
+| Familial Mediterranean fever named | 0 of 5 | 3 of 5 |
+| Mediterranean runs with no prose ("not yet confirmed") | 2 (cm2, cm3) | 0 |
+
+Develop's borderline approvals, by the same patterns as the branch's: "hallmark" for "typical" (cr1 c1 i3, cr3 c1 i3); "fundamentally a clinical diagnosis" (cr4 c2 i7); "pediatric GERD pathogenesis" for a general statement in a paediatric review (cr5 c2 i4); "carries risks" for "associated with" (cp1 c2 i5); "Risk factors for GERD include" for pathogenesis factors (cp2 c1 i3, cp3 c2 i5, cp5 c2 i3); "the muscular valve" as a gloss (cp4 c1 i4); "spread across 10 different forms" dropping "seen in greater than 1% of patients" (cm5 c1 i8); "most episodes resolve on their own, though a blood transfusion is occasionally needed" for "self-limited" and "in rare instances" (cm5 c2 i3).
+
+Reading it:
+
+- Develop fails the owner's ship bar too. Today's check approves the same two kinds of addition, at the same probabilities (the "children" class at 0.72 to 0.81 on develop, 0.71 to 0.81 on the branch), and shows three of them to the person in 15 runs against five on the branch. Neither option creates the failure; it is Jev's verdict on these rewordings, with or without whole sentences.
+- What the branch changes for the person: Familial Mediterranean fever reaches the screen in 3 of 5 runs against 0 of 5, no Mediterranean run ends with no prose (develop: 2 of 5), and GERD Researcher shows 5 to 7 prose sentences every run. On develop that is 1 to 7, and cr1's 7 were sentences copied word for word that passed code alone.
+- Approved additions per approved sentence are close: 4 of 54 on develop, 6 of 86 on the branch. The branch shows more sentences, so in absolute terms it shows two more additions across 15 runs.
+- Develop's cr2 hit "A step in this query hit a temporary error" and refused at $0.0004 with nothing sent to the check; it was not rerun, per the budget. cp4's count of 4 includes "Is identified by PMID 36170502", a record line, not prose.
+- The labels are still one reader's. cp1 c2 i4 counts as an addition because "These symptoms" states as GERD's what the paper calls potentially attributable to GERD; a reader who takes "these" as hedged by the sentence before would count develop at 3.
