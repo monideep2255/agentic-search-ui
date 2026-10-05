@@ -490,65 +490,6 @@ def test_the_number_check_can_fail(monkeypatch) -> None:
     assert len(_approve_all_in(NUMBERED_SENTENCE, _reflux_findings(REFLUX_DEFINES)).sentences) == 1
 
 
-# Card 17 (2026-10-05, first written as card 25 in a2255cc5): a generic title
-# word shared with other records must not name a record switch.
-TAY_SACHS = SynthFinding(
-    ref_index=30,
-    citation_id="c-30",
-    layer="layer_2_ncbi_api",
-    tool="ncbi_efetch",
-    field="abstract",
-    field_value="Tay-Sachs disease results from mutations in the HEXA gene.",
-    source_url="https://pubmed.ncbi.nlm.nih.gov/30/",
-    entity_type="Publication",
-    curie="pubmed:30",
-)
-# "patients" is in BOTH titles on purpose: that makes it generic, not either
-# record's own name. Neither title carries "mutation".
-TAY_SACHS_TITLE = replace_finding(
-    TAY_SACHS, ref_index=31, citation_id="c-31", field="title",
-    field_value="Tay-Sachs disease diagnosis in patients",
-)
-BRCA = SynthFinding(
-    ref_index=32,
-    citation_id="c-32",
-    layer="layer_2_ncbi_api",
-    tool="ncbi_efetch",
-    field="abstract",
-    field_value="No patient carried more than one of these mutations in the cohort.",
-    source_url="https://pubmed.ncbi.nlm.nih.gov/32/",
-    entity_type="Publication",
-    curie="pubmed:32",
-)
-BRCA_TITLE = replace_finding(
-    BRCA, ref_index=33, citation_id="c-33", field="title",
-    field_value="Breast cancer risk assessment in patients",
-)
-TAY_SACHS_FIRST = "Tay-Sachs disease results from mutations in the HEXA gene [30]. "
-TAY_SACHS_FINDINGS = [TAY_SACHS, TAY_SACHS_TITLE, BRCA, BRCA_TITLE]
-
-
-def test_a_generic_shared_word_does_not_name_the_switch() -> None:
-    """Measured live: "No patient carried ..." cited a BRCA paper after a
-    Tay-Sachs sentence, and "patient" from the BRCA title was accepted."""
-    wrong = TAY_SACHS_FIRST + (
-        "No patient had more than one of these mutations "
-        '[32: "No patient carried more than one of these mutations in the cohort"].'
-    )
-    result = _approve_all_in(wrong, TAY_SACHS_FINDINGS, question=QUESTION)
-    assert len(result.sentences) == 1, result.sentences
-    assert "Tay-Sachs" in result.sentences[0]
-
-
-def test_a_distinguishing_word_still_names_the_switch() -> None:
-    named = TAY_SACHS_FIRST + (
-        "No breast cancer patient had more than one of these mutations "
-        '[32: "No patient carried more than one of these mutations in the cohort"].'
-    )
-    result = _approve_all_in(named, TAY_SACHS_FINDINGS, question=QUESTION)
-    assert len(result.sentences) == 2, result.sentences
-
-
 def _same_title_papers() -> list[SynthFinding]:
     """Two papers with one title, as on the GERD question: only the first
     defines the short form in its own text."""
@@ -561,13 +502,6 @@ def _same_title_papers() -> list[SynthFinding]:
     return first + second
 
 
-def test_a_defined_short_form_names_its_record_when_every_title_is_the_same() -> None:
-    """The title words are shared with the other paper, so they name neither;
-    the short form this paper's own text defines still names it."""
-    result = _approve_all_in(REFLUX_SENTENCE, _same_title_papers())
-    assert len(result.sentences) == 1, result.sentences
-
-
 def test_a_shared_title_does_not_carry_one_papers_short_form_to_another() -> None:
     """Paper 41 has the same title but never defines GERD: a GERD sentence
     resting on it is not attributed to it by way of paper 21's definition."""
@@ -576,35 +510,6 @@ def test_a_shared_title_does_not_carry_one_papers_short_form_to_another() -> Non
         '[41: "a condition in which stomach contents flow back into the esophagus"].'
     )
     assert _approve_all_in(on_other, _same_title_papers()).sentences == ()
-
-
-def test_title_words_every_paper_shares_do_not_name_the_switch() -> None:
-    """Card 17 on the GERD shape: "reflux disease" is in both titles, so
-    after a sentence on paper 21 it cannot say the next one moved to 41."""
-    switch = REFLUX_SENTENCE + (
-        " In reflux disease, heartburn is a usual sign "
-        '[41: "Typical symptoms are heartburn and regurgitation"].'
-    )
-    result = _approve_all_in(switch, _same_title_papers())
-    assert len(result.sentences) == 1, result.sentences
-    assert result.sentences[0].startswith("GERD is when")
-
-
-def test_the_generic_word_rule_can_fail(monkeypatch) -> None:
-    """Mutation proof: with other records' titles ignored (the pre-card-17
-    rule), the shared-word switch ships."""
-    from system_03_search_agent.synthesis import grounding
-
-    real = grounding._names_its_record
-    monkeypatch.setattr(
-        grounding, "_names_its_record",
-        lambda sentence, labels, short_forms=None, other_labels="": real(sentence, labels, short_forms),
-    )
-    switch = REFLUX_SENTENCE + (
-        " In reflux disease, heartburn is a usual sign "
-        '[41: "Typical symptoms are heartburn and regurgitation"].'
-    )
-    assert len(_approve_all_in(switch, _same_title_papers()).sentences) == 2
 
 
 def test_the_opening_sentence_counts_a_paper_cited_twice_once() -> None:

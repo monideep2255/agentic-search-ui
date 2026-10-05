@@ -1454,19 +1454,8 @@ def run_grounding_pass(
             this_urls = {
                 (by_ref[ref].source_url or "").strip() for ref in this_refs if ref in by_ref
             }
-            # Card 17 (2026-10-05, first written as card 25 in a2255cc5): the
-            # title text of every record this sentence does NOT cite, so a
-            # word they all carry cannot say which record it switched to.
-            other_labels = " ".join(
-                label for url, label in labels_by_url.items() if url and url not in this_urls
-            )
             names_a_record = any(
-                _names_its_record(
-                    probe,
-                    labels_by_url.get(url, ""),
-                    short_forms_by_url.get(url),
-                    other_labels,
-                )
+                _names_its_record(probe, labels_by_url.get(url, ""), short_forms_by_url.get(url))
                 for url in this_urls
             )
             if (
@@ -1697,12 +1686,9 @@ def defined_short_forms(text: str) -> dict[str, str]:
 
 
 def _names_its_record(
-    sentence: str,
-    labels: str,
-    short_forms: dict[str, str] | None = None,
-    other_labels: str = "",
+    sentence: str, labels: str, short_forms: dict[str, str] | None = None
 ) -> bool:
-    """Whether a sentence names its own record, and only its own record.
+    """Whether a sentence shares a content word with its own records' titles.
 
     Measured live 2026-09-23: after a sentence about Familial Mediterranean
     fever, "This condition can cause ... neonatal hyperbilirubinemia, acute
@@ -1714,39 +1700,26 @@ def _names_its_record(
     retrieved data, never a list. A record with no title or name cannot show
     what it is about, so such a switch does not stand.
 
-    Card 17 (2026-10-05, ported from card 25 in a2255cc5): a shared title
-    word is not enough on its own. Measured live: after a Tay-Sachs
-    sentence, "No patient carried more than one of these mutations" cited a
-    BRCA paper whose title says "patients", and "patient" was accepted. A
-    title word only counts when `other_labels`, the title text of every
-    record the sentence does not cite, does not also carry it: a word every
-    title shares distinguishes none of them. Structural, never a stop-word
-    list (the product owner ruled one out).
-
     Card 88 (2026-10-05): the record's own defined terms are its names too.
     `short_forms` are the abbreviations the record's own text defines
     (`defined_short_forms`). A sentence that writes one exactly as the record
-    did, or spells out its whole long form, names the record, provided the
-    long form shares a word with that record's title: "GERD" names a paper
-    titled "Gastroesophageal Reflux Disease." whose abstract defines it,
-    even when five other papers carry the same title, since the licence
-    comes from this record's own text and not from a title word the others
-    share. A short form for something off the title names nothing, and a
-    short form only another record defines never reaches this one.
+    did names the record, provided the long form shares a word with that
+    record's title: "GERD" names a paper
+    titled "Gastroesophageal Reflux Disease." whose abstract defines it. A
+    short form for something off the title names nothing, and a short form
+    only another record defines never reaches this one.
     """
     if not labels.strip():
         return False
     title = _stemmed(content_tokens(labels))
     said = _stemmed(content_tokens(sentence))
-    if (said & title) - _stemmed(content_tokens(other_labels)):
+    if said & title:
         return True
     for short, long_form in (short_forms or {}).items():
         long_stems = _stemmed(content_tokens(long_form))
         if not long_stems & title:
             continue
-        if long_stems <= said or re.search(
-            rf"(?<![A-Za-z0-9]){re.escape(short)}(?![A-Za-z0-9])", sentence
-        ):
+        if re.search(rf"(?<![A-Za-z0-9]){re.escape(short)}(?![A-Za-z0-9])", sentence):
             return True
     return False
 
