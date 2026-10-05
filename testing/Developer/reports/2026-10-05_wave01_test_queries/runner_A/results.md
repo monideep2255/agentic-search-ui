@@ -6,15 +6,15 @@ Questions used: 13 of 16 (one probe of `GERD` at Researcher, `probe.*`, plus 12 
 
 ## Table of contents
 
-- Deviation that affects queries 75 and 68
-- Query 75
-- Query 68
-- Query 27
-- Query 29
-- Query 25
-- Query 24
-- Other things seen
-- Summary
+- [Deviation that affects queries 75 and 68](#deviation-that-affects-queries-75-and-68)
+- [Query 75, GERD at Researcher (3 runs)](#query-75-gerd-at-researcher-3-runs)
+- [Query 68, GERD in Plain language (3 runs)](#query-68-gerd-in-plain-language-3-runs)
+- [Query 27, chr17 window (1 run)](#query-27-chr17-window-1-run)
+- [Query 29, CFTR window (1 run)](#query-29-cftr-window-1-run)
+- [Query 25, TP53 GEO datasets (3 runs)](#query-25-tp53-geo-datasets-3-runs)
+- [Query 24, MLH1 and MSH2 (1 run)](#query-24-mlh1-and-msh2-1-run)
+- [Other things seen](#other-things-seen)
+- [Summary](#summary)
 
 ## Deviation that affects queries 75 and 68
 
