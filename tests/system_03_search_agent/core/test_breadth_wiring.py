@@ -796,12 +796,15 @@ async def test_an_ncbi_efetch_timeout_records_the_timed_out_kind(
     assert len(timed_out) == 1, recorded[-1]
     assert timed_out[0]["tool"] == "ncbi_efetch"
     assert not any(item.get("kind") == "other" for item in recorded[-1]), recorded[-1]
-    # A timeout keeps the original note: asking again can help.
+    # A timeout still says asking again can help, and now says which source.
     notes = [
         e.payload["text"] for e in events
         if e.type == "token" and e.payload.get("kind") == "note"
     ]
-    assert graph_module.FAILED_SEARCH_NOTE in notes, notes
+    assert any(
+        "NCBI records" in note and "took too long" in note and "Ask again" in note
+        for note in notes
+    ), notes
 
 
 @pytest.mark.asyncio
