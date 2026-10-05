@@ -1,0 +1,815 @@
+{
+ "q": "papers on statins since 2022",
+ "seconds": 33.0,
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 0,
+   "ts": "2026-10-05T16:31:21.605459Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 2,
+   "ts": "2026-10-05T16:31:24.286516Z",
+   "payload": {
+    "narrative": "The question asks for recent papers on a broad topic (statins) without specifying a single database or a specific fact, making it open-ended.",
+    "query_class": "exploratory",
+    "resolved_entities": [],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 4,
+   "ts": "2026-10-05T16:31:24.288604Z",
+   "payload": {
+    "narrative": "no gene, variant or disease was named, so searching the published literature for: statins",
+    "tool_calls": [
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-5894d51bdfa4",
+      "layer": "layer_2_api",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d517008f512a",
+      "layer": "layer_2_api",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-eb273917cac9",
+      "layer": "layer_3_enrichment",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 6,
+   "ts": "2026-10-05T16:31:24.289554Z",
+   "payload": {
+    "call_id": "ne-5894d51bdfa4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 7,
+   "ts": "2026-10-05T16:31:24.289585Z",
+   "payload": {
+    "call_id": "ne-d517008f512a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 8,
+   "ts": "2026-10-05T16:31:24.289596Z",
+   "payload": {
+    "call_id": "pa-eb273917cac9",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 9,
+   "ts": "2026-10-05T16:31:24.571502Z",
+   "payload": {
+    "call_id": "ne-5894d51bdfa4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 10,
+   "ts": "2026-10-05T16:31:24.839244Z",
+   "payload": {
+    "call_id": "pa-eb273917cac9",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 11,
+   "ts": "2026-10-05T16:31:25.041632Z",
+   "payload": {
+    "call_id": "ne-d517008f512a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 12,
+   "ts": "2026-10-05T16:31:25.042779Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 13,
+   "ts": "2026-10-05T16:31:52.195276Z",
+   "payload": {
+    "text": "Found 5 pubmed records: Statins stimulate atherosclerosis and heart failure: pharmacological mechanisms. [3], Effect of statins on atherosclerotic plaque. [4], An updated review of pharmacokinetic drug interactions and pharmacogenetics of statins. [5], Statins in hereditary myopathies: to give or not to give. [6] and Ticagrelor and Statins: Dangerous Liaisons? [7]. ",
+    "marker_ids": [
+     "ne-d517008f512a-1",
+     "ne-d517008f512a-2",
+     "ne-d517008f512a-3",
+     "ne-d517008f512a-4",
+     "ne-d517008f512a-5"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "An updated review of pharmacokinetic drug interactions and pharmacogenetics of statins.",
+     "Statins stimulate atherosclerosis and heart failure: pharmacological mechanisms.",
+     "Statins in hereditary myopathies: to give or not to give.",
+     "Effect of statins on atherosclerotic plaque.",
+     "Ticagrelor and Statins: Dangerous Liaisons?"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 14,
+   "ts": "2026-10-05T16:31:52.195340Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 15,
+   "ts": "2026-10-05T16:31:52.195350Z",
+   "payload": {
+    "text": "Atherosclerotic Plaque Effects\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 16,
+   "ts": "2026-10-05T16:31:52.195357Z",
+   "payload": {
+    "text": "Whether these benefits arise purely from lipid lowering or from pleiotropic cholesterol-independent effects remains incompletely understood [1]. ",
+    "marker_ids": [
+     "ne-d517008f512a-7"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 17,
+   "ts": "2026-10-05T16:31:52.195365Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 18,
+   "ts": "2026-10-05T16:31:52.195372Z",
+   "payload": {
+    "text": "Ticagrelor\u2013Statin Drug\u2013Drug Interaction\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 19,
+   "ts": "2026-10-05T16:31:52.195378Z",
+   "payload": {
+    "text": "This interaction was not observed with aspirin, clopidogrel, or prasugrel, and careful evaluation is advised when ticagrelor is co-prescribed with certain statins [2]. ",
+    "marker_ids": [
+     "ne-d517008f512a-10"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 20,
+   "ts": "2026-10-05T16:31:52.195385Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 21,
+   "ts": "2026-10-05T16:31:52.195391Z",
+   "payload": {
+    "text": "Pubmed records found\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 22,
+   "ts": "2026-10-05T16:31:52.195398Z",
+   "payload": {
+    "text": "",
+    "marker_ids": [],
+    "kind": "table_header",
+    "cells": [
+     "Paper",
+     "Identifier"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 23,
+   "ts": "2026-10-05T16:31:52.195406Z",
+   "payload": {
+    "text": "Pubmed title: Statins stimulate atherosclerosis and heart failure: pharmacological mechanisms [3]. ",
+    "marker_ids": [
+     "ne-d517008f512a-1"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Statins stimulate atherosclerosis and heart failure: pharmacological mechanisms.",
+     "PMID:25655639"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 24,
+   "ts": "2026-10-05T16:31:52.195415Z",
+   "payload": {
+    "text": "Pubmed title: Effect of statins on atherosclerotic plaque [4]. ",
+    "marker_ids": [
+     "ne-d517008f512a-2"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Effect of statins on atherosclerotic plaque.",
+     "PMID:30642643"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 25,
+   "ts": "2026-10-05T16:31:52.195422Z",
+   "payload": {
+    "text": "Pubmed title: An updated review of pharmacokinetic drug interactions and pharmacogenetics of statins [5]. ",
+    "marker_ids": [
+     "ne-d517008f512a-3"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "An updated review of pharmacokinetic drug interactions and pharmacogenetics of statins.",
+     "PMID:32729746"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 26,
+   "ts": "2026-10-05T16:31:52.195429Z",
+   "payload": {
+    "text": "Pubmed title: Statins in hereditary myopathies: to give or not to give [6]. ",
+    "marker_ids": [
+     "ne-d517008f512a-4"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Statins in hereditary myopathies: to give or not to give.",
+     "PMID:38889624"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 27,
+   "ts": "2026-10-05T16:31:52.195436Z",
+   "payload": {
+    "text": "Pubmed title: Ticagrelor and Statins: Dangerous Liaisons [7]. ",
+    "marker_ids": [
+     "ne-d517008f512a-5"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Ticagrelor and Statins: Dangerous Liaisons?",
+     "PMID:39348077"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 28,
+   "ts": "2026-10-05T16:31:52.195446Z",
+   "payload": {
+    "citation_id": "ne-d517008f512a-7",
+    "display_index": 1,
+    "source": "pubmed",
+    "source_id": "30642643",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30642643/",
+    "layer": "layer_2_api",
+    "field": "abstract",
+    "claim_text": "Whether these benefits arise purely from lipid lowering or from pleiotropic cholesterol-independent effects remains incompletely understood",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 29,
+   "ts": "2026-10-05T16:31:52.195465Z",
+   "payload": {
+    "citation_id": "ne-d517008f512a-10",
+    "display_index": 2,
+    "source": "pubmed",
+    "source_id": "39348077",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39348077/",
+    "layer": "layer_2_api",
+    "field": "abstract",
+    "claim_text": "This interaction was not observed with aspirin, clopidogrel, or prasugrel, and careful evaluation is advised when ticagrelor is co-prescribed with certain statins",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 30,
+   "ts": "2026-10-05T16:31:52.195474Z",
+   "payload": {
+    "citation_id": "ne-d517008f512a-1",
+    "display_index": 3,
+    "source": "pubmed",
+    "source_id": "25655639",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/25655639/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Statins stimulate atherosclerosis and heart failure: pharmacological mechanisms",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 31,
+   "ts": "2026-10-05T16:31:52.195481Z",
+   "payload": {
+    "citation_id": "ne-d517008f512a-2",
+    "display_index": 4,
+    "source": "pubmed",
+    "source_id": "30642643",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30642643/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Effect of statins on atherosclerotic plaque",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 32,
+   "ts": "2026-10-05T16:31:52.195489Z",
+   "payload": {
+    "citation_id": "ne-d517008f512a-3",
+    "display_index": 5,
+    "source": "pubmed",
+    "source_id": "32729746",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32729746/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: An updated review of pharmacokinetic drug interactions and pharmacogenetics of statins",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 33,
+   "ts": "2026-10-05T16:31:52.195496Z",
+   "payload": {
+    "citation_id": "ne-d517008f512a-4",
+    "display_index": 6,
+    "source": "pubmed",
+    "source_id": "38889624",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38889624/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Statins in hereditary myopathies: to give or not to give",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 34,
+   "ts": "2026-10-05T16:31:52.195504Z",
+   "payload": {
+    "citation_id": "ne-d517008f512a-5",
+    "display_index": 7,
+    "source": "pubmed",
+    "source_id": "39348077",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39348077/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Ticagrelor and Statins: Dangerous Liaisons",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 35,
+   "ts": "2026-10-05T16:31:52.195522Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-d517008f512a-7",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 36,
+   "ts": "2026-10-05T16:31:52.195537Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-d517008f512a-10",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 37,
+   "ts": "2026-10-05T16:31:52.195545Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-d517008f512a-1",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 38,
+   "ts": "2026-10-05T16:31:52.195554Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-d517008f512a-2",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 39,
+   "ts": "2026-10-05T16:31:52.195561Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-d517008f512a-3",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 40,
+   "ts": "2026-10-05T16:31:52.195569Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-d517008f512a-4",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 41,
+   "ts": "2026-10-05T16:31:52.195577Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-d517008f512a-5",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 42,
+   "ts": "2026-10-05T16:31:52.195589Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "99b4b245-79f6-4c37-81f9-1ebad6899f08",
+   "seq": 44,
+   "ts": "2026-10-05T16:31:52.195663Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 32516,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 5 sources",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 147
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.99,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 165
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 167
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "wants_literature",
+      "decided_by": "jev",
+      "jev_choice": "wants_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 177
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,5509 @@
+[
+ {
+  "type": "guard",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 0,
+  "ts": "2026-10-05T16:30:13.823548Z",
+  "payload": {
+   "passed": true,
+   "category": "ok",
+   "reason": null
+  }
+ },
+ {
+  "type": "think",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 2,
+  "ts": "2026-10-05T16:30:15.612515Z",
+  "payload": {
+   "narrative": "The query asks for a list of genes and ClinVar records within a specified genomic region, which requires assembly of multiple records. (the window chr7:117,480,025-117,668,665 (GRCh38) overlaps 21 genes; the 10 nearest its start are searched: CFTR, CFTR-AS1, CFTR-AS2, LOC111674463, LOC111674464, LOC113664106, LOC113664107, LOC113219471, LOC113219472, LOC111674473)",
+   "query_class": "aggregate",
+   "resolved_entities": [
+    {
+     "text": "CFTR",
+     "curie": "NCBIGene:1080",
+     "confidence": 1.0
+    },
+    {
+     "text": "CFTR-AS1",
+     "curie": "NCBIGene:111082987",
+     "confidence": 1.0
+    },
+    {
+     "text": "CFTR-AS2",
+     "curie": "NCBIGene:140577507",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC111674463",
+     "curie": "NCBIGene:111674463",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC111674464",
+     "curie": "NCBIGene:111674464",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC113664106",
+     "curie": "NCBIGene:113664106",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC113664107",
+     "curie": "NCBIGene:113664107",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC113219471",
+     "curie": "NCBIGene:113219471",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC113219472",
+     "curie": "NCBIGene:113219472",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC111674473",
+     "curie": "NCBIGene:111674473",
+     "confidence": 1.0
+    }
+   ],
+   "clarifying_question": null,
+   "clarifying_options": null
+  }
+ },
+ {
+  "type": "plan",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 4,
+  "ts": "2026-10-05T16:30:15.615251Z",
+  "payload": {
+   "narrative": "searching 3 layers for NCBIGene:1080. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+   "tool_calls": [
+    {
+     "tool": "cypher_query",
+     "call_id": "cq-51df19d3c945",
+     "layer": "layer_1_graph",
+     "persona": "Avery",
+     "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-c27386d28fee",
+     "layer": "layer_2_api",
+     "persona": "Levi-Montalcini",
+     "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-505838035d09",
+     "layer": "layer_2_api",
+     "persona": "Levi-Montalcini",
+     "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-5568e6cc80bb",
+     "layer": "layer_2_api",
+     "persona": "Levi-Montalcini",
+     "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+    },
+    {
+     "tool": "pubtator_annotate",
+     "call_id": "pa-b705abc42887",
+     "layer": "layer_3_enrichment",
+     "persona": "Ehrlich",
+     "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+    },
+    {
+     "tool": "clinicaltrials_search",
+     "call_id": "ct-31b4d77a9804",
+     "layer": "layer_3_enrichment",
+     "persona": "Ehrlich",
+     "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-dac174b7fddc",
+     "layer": "layer_2_api",
+     "persona": "Levi-Montalcini",
+     "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-80d452c918c7",
+     "layer": "layer_2_api",
+     "persona": "Levi-Montalcini",
+     "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-ea66b5235b35",
+     "layer": "layer_2_api",
+     "persona": "Levi-Montalcini",
+     "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-5e11f23b9bc0",
+     "layer": "layer_2_api",
+     "persona": "Levi-Montalcini",
+     "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+    },
+    {
+     "tool": "pubtator_annotate",
+     "call_id": "pa-6b463a9dff1f",
+     "layer": "layer_3_enrichment",
+     "persona": "Ehrlich",
+     "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-1ff5a67682c8",
+     "layer": "layer_2_api",
+     "persona": "Levi-Montalcini",
+     "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-770ee2e881c6",
+     "layer": "layer_2_api",
+     "persona": "Levi-Montalcini",
+     "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-4dbc76161842",
+     "layer": "layer_2_api",
+     "persona": "Levi-Montalcini",
+     "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+    },
+    {
+     "tool": "cypher_query",
+     "call_id": "cq-509f88aae0ad",
+     "layer": "layer_1_graph",
+     "persona": "Avery",
+     "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+    }
+   ],
+   "resolved_entities": [
+    {
+     "text": "CFTR",
+     "curie": "NCBIGene:1080",
+     "confidence": 1.0
+    },
+    {
+     "text": "CFTR-AS1",
+     "curie": "NCBIGene:111082987",
+     "confidence": 1.0
+    },
+    {
+     "text": "CFTR-AS2",
+     "curie": "NCBIGene:140577507",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC111674463",
+     "curie": "NCBIGene:111674463",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC111674464",
+     "curie": "NCBIGene:111674464",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC113664106",
+     "curie": "NCBIGene:113664106",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC113664107",
+     "curie": "NCBIGene:113664107",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC113219471",
+     "curie": "NCBIGene:113219471",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC113219472",
+     "curie": "NCBIGene:113219472",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC111674473",
+     "curie": "NCBIGene:111674473",
+     "confidence": 1.0
+    }
+   ]
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 6,
+  "ts": "2026-10-05T16:30:15.616458Z",
+  "payload": {
+   "call_id": "cq-51df19d3c945",
+   "tool": "cypher_query",
+   "layer": "layer_1_graph",
+   "status": "running",
+   "persona": "Avery",
+   "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 7,
+  "ts": "2026-10-05T16:30:15.616495Z",
+  "payload": {
+   "call_id": "ne-c27386d28fee",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 8,
+  "ts": "2026-10-05T16:30:15.616505Z",
+  "payload": {
+   "call_id": "ne-505838035d09",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 9,
+  "ts": "2026-10-05T16:30:15.616513Z",
+  "payload": {
+   "call_id": "ne-5568e6cc80bb",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 10,
+  "ts": "2026-10-05T16:30:15.616522Z",
+  "payload": {
+   "call_id": "pa-b705abc42887",
+   "tool": "pubtator_annotate",
+   "layer": "layer_3_enrichment",
+   "status": "running",
+   "persona": "Ehrlich",
+   "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 11,
+  "ts": "2026-10-05T16:30:15.616530Z",
+  "payload": {
+   "call_id": "ct-31b4d77a9804",
+   "tool": "clinicaltrials_search",
+   "layer": "layer_3_enrichment",
+   "status": "running",
+   "persona": "Ehrlich",
+   "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 12,
+  "ts": "2026-10-05T16:30:15.616538Z",
+  "payload": {
+   "call_id": "ne-dac174b7fddc",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 13,
+  "ts": "2026-10-05T16:30:15.616546Z",
+  "payload": {
+   "call_id": "ne-80d452c918c7",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 14,
+  "ts": "2026-10-05T16:30:15.616554Z",
+  "payload": {
+   "call_id": "ne-ea66b5235b35",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 15,
+  "ts": "2026-10-05T16:30:15.616562Z",
+  "payload": {
+   "call_id": "ne-5e11f23b9bc0",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 16,
+  "ts": "2026-10-05T16:30:15.616569Z",
+  "payload": {
+   "call_id": "pa-6b463a9dff1f",
+   "tool": "pubtator_annotate",
+   "layer": "layer_3_enrichment",
+   "status": "running",
+   "persona": "Ehrlich",
+   "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 17,
+  "ts": "2026-10-05T16:30:15.616578Z",
+  "payload": {
+   "call_id": "ne-1ff5a67682c8",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 18,
+  "ts": "2026-10-05T16:30:15.616585Z",
+  "payload": {
+   "call_id": "ne-770ee2e881c6",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 19,
+  "ts": "2026-10-05T16:30:15.616593Z",
+  "payload": {
+   "call_id": "ne-4dbc76161842",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 20,
+  "ts": "2026-10-05T16:30:15.616601Z",
+  "payload": {
+   "call_id": "cq-509f88aae0ad",
+   "tool": "cypher_query",
+   "layer": "layer_1_graph",
+   "status": "running",
+   "persona": "Avery",
+   "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 21,
+  "ts": "2026-10-05T16:30:15.805567Z",
+  "payload": {
+   "call_id": "pa-b705abc42887",
+   "tool": "pubtator_annotate",
+   "layer": "layer_3_enrichment",
+   "status": "ok",
+   "persona": "Ehrlich",
+   "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich",
+   "summary": "ok: 1 record(s)",
+   "result_count": 1,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 22,
+  "ts": "2026-10-05T16:30:15.957940Z",
+  "payload": {
+   "call_id": "ne-5568e6cc80bb",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+   "summary": "dataset_report: 1 record(s)",
+   "result_count": 1,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 23,
+  "ts": "2026-10-05T16:30:16.045002Z",
+  "payload": {
+   "call_id": "ct-31b4d77a9804",
+   "tool": "clinicaltrials_search",
+   "layer": "layer_3_enrichment",
+   "status": "ok",
+   "persona": "Ehrlich",
+   "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich",
+   "summary": "ok: 5 record(s)",
+   "result_count": 5,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 24,
+  "ts": "2026-10-05T16:30:16.084569Z",
+  "payload": {
+   "call_id": "ne-dac174b7fddc",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+   "summary": "search: 5 id(s)",
+   "result_count": 5,
+   "truncated": true
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 25,
+  "ts": "2026-10-05T16:30:16.184333Z",
+  "payload": {
+   "call_id": "cq-509f88aae0ad",
+   "tool": "cypher_query",
+   "layer": "layer_1_graph",
+   "status": "ok",
+   "persona": "Avery",
+   "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+   "summary": "17 row(s) of 17",
+   "result_count": 17,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 26,
+  "ts": "2026-10-05T16:30:16.190315Z",
+  "payload": {
+   "call_id": "ne-ea66b5235b35",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+   "summary": "search: 10 id(s)",
+   "result_count": 10,
+   "truncated": true
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 27,
+  "ts": "2026-10-05T16:30:16.194182Z",
+  "payload": {
+   "call_id": "ne-80d452c918c7",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+   "summary": "search: 10 id(s)",
+   "result_count": 10,
+   "truncated": true
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 28,
+  "ts": "2026-10-05T16:30:16.253321Z",
+  "payload": {
+   "call_id": "ne-4dbc76161842",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+   "summary": "summary: 1 record(s)",
+   "result_count": 1,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 29,
+  "ts": "2026-10-05T16:30:16.569068Z",
+  "payload": {
+   "call_id": "ne-505838035d09",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+   "summary": "coordinate_overlap: 5 record(s)",
+   "result_count": 5,
+   "truncated": true
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 30,
+  "ts": "2026-10-05T16:30:16.693016Z",
+  "payload": {
+   "call_id": "ne-c27386d28fee",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+   "summary": "coordinate_overlap: 5 record(s)",
+   "result_count": 5,
+   "truncated": true
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 31,
+  "ts": "2026-10-05T16:30:17.799247Z",
+  "payload": {
+   "call_id": "cq-51df19d3c945",
+   "tool": "cypher_query",
+   "layer": "layer_1_graph",
+   "status": "ok",
+   "persona": "Avery",
+   "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+   "summary": "100 row(s) of 100",
+   "result_count": 100,
+   "truncated": true
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 32,
+  "ts": "2026-10-05T16:30:18.021029Z",
+  "payload": {
+   "call_id": "pa-6b463a9dff1f",
+   "tool": "pubtator_annotate",
+   "layer": "layer_3_enrichment",
+   "status": "ok",
+   "persona": "Ehrlich",
+   "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich",
+   "summary": "ok: 5 record(s)",
+   "result_count": 5,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 33,
+  "ts": "2026-10-05T16:30:18.182376Z",
+  "payload": {
+   "call_id": "ne-770ee2e881c6",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+   "summary": "summary: 1 record(s)",
+   "result_count": 1,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 34,
+  "ts": "2026-10-05T16:30:18.186675Z",
+  "payload": {
+   "call_id": "ne-1ff5a67682c8",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+   "summary": "summary: 5 record(s)",
+   "result_count": 5,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 35,
+  "ts": "2026-10-05T16:30:18.326230Z",
+  "payload": {
+   "call_id": "ne-5e11f23b9bc0",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Levi-Montalcini",
+   "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+   "summary": "fetch: 10 record(s)",
+   "result_count": 10,
+   "truncated": false
+  }
+ },
+ {
+  "type": "step",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 36,
+  "ts": "2026-10-05T16:30:18.329997Z",
+  "payload": {
+   "step": "write",
+   "status": "started"
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 37,
+  "ts": "2026-10-05T16:30:29.431051Z",
+  "payload": {
+   "text": "Found 1 gene record and 48 sequence variant records for CFTR, CFTR-AS1, CFTR-AS2, LOC111674463, LOC111674464, LOC113664106, LOC113664107, LOC113219471, LOC113219472 and LOC111674473 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44][45][46][47][48][49]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-1",
+    "cq-51df19d3c945-2",
+    "cq-51df19d3c945-3",
+    "cq-51df19d3c945-4",
+    "cq-51df19d3c945-5",
+    "cq-51df19d3c945-6",
+    "cq-51df19d3c945-7",
+    "cq-51df19d3c945-8",
+    "cq-51df19d3c945-9",
+    "cq-51df19d3c945-10",
+    "cq-51df19d3c945-11",
+    "cq-51df19d3c945-12",
+    "cq-51df19d3c945-13",
+    "cq-51df19d3c945-14",
+    "cq-51df19d3c945-15",
+    "cq-51df19d3c945-16",
+    "cq-51df19d3c945-17",
+    "cq-51df19d3c945-18",
+    "cq-51df19d3c945-19",
+    "cq-51df19d3c945-20"
+   ],
+   "kind": "claim",
+   "cells": null,
+   "emphasis": [
+    "LOC111674463",
+    "LOC111674464",
+    "LOC113664106",
+    "LOC113664107",
+    "LOC113219471",
+    "LOC113219472",
+    "LOC111674473",
+    "CFTR-AS1",
+    "CFTR-AS2",
+    "CFTR"
+   ]
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 38,
+  "ts": "2026-10-05T16:30:29.431145Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 39,
+  "ts": "2026-10-05T16:30:29.431169Z",
+  "payload": {
+   "text": "Gene records found\n\n",
+   "marker_ids": [],
+   "kind": "heading",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 40,
+  "ts": "2026-10-05T16:30:29.431179Z",
+  "payload": {
+   "text": "",
+   "marker_ids": [],
+   "kind": "table_header",
+   "cells": [
+    "Gene",
+    "Identifier"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 41,
+  "ts": "2026-10-05T16:30:29.431191Z",
+  "payload": {
+   "text": "Gene NCBIGene:1080, name: CF transmembrane conductance regulator [1]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-1"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "CF transmembrane conductance regulator",
+    "NCBIGene:1080"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 42,
+  "ts": "2026-10-05T16:30:29.431201Z",
+  "payload": {
+   "text": "Gene symbol: CFTR [51]. ",
+   "marker_ids": [
+    "ne-5568e6cc80bb-51"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "CFTR",
+    "NCBIGene:1080"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 43,
+  "ts": "2026-10-05T16:30:29.431211Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 44,
+  "ts": "2026-10-05T16:30:29.431220Z",
+  "payload": {
+   "text": "Sequence variant records found\n\n",
+   "marker_ids": [],
+   "kind": "heading",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 45,
+  "ts": "2026-10-05T16:30:29.431230Z",
+  "payload": {
+   "text": "",
+   "marker_ids": [],
+   "kind": "table_header",
+   "cells": [
+    "Variant",
+    "Identifier"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 46,
+  "ts": "2026-10-05T16:30:29.431240Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1000823, name: NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr) [2]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-2"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr)",
+    "ClinVar:1000823"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 47,
+  "ts": "2026-10-05T16:30:29.431251Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1002760, name: NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala) [3]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-3"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala)",
+    "ClinVar:1002760"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 48,
+  "ts": "2026-10-05T16:30:29.431262Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1003660, name: NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser) [4]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-4"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser)",
+    "ClinVar:1003660"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 49,
+  "ts": "2026-10-05T16:30:29.431273Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1007213, name: NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu) [5]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-5"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu)",
+    "ClinVar:1007213"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 50,
+  "ts": "2026-10-05T16:30:29.431283Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1009171, name: NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala) [6]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-6"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala)",
+    "ClinVar:1009171"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 51,
+  "ts": "2026-10-05T16:30:29.431293Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1009391, name: NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn) [7]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-7"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn)",
+    "ClinVar:1009391"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 52,
+  "ts": "2026-10-05T16:30:29.431304Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1009463, name: NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys) [8]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-8"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys)",
+    "ClinVar:1009463"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 53,
+  "ts": "2026-10-05T16:30:29.431314Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1010196, name: NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro) [9]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-9"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro)",
+    "ClinVar:1010196"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 54,
+  "ts": "2026-10-05T16:30:29.431324Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1011536, name: NM_000492.4(CFTR):c.3064G>A (p.Val1022Met) [10]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-10"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.3064G>A (p.Val1022Met)",
+    "ClinVar:1011536"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 55,
+  "ts": "2026-10-05T16:30:29.431334Z",
+  "payload": {
+   "text": "SequenceVariant record ClinVar:1012571 [11]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-11"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.744-9G>T",
+    "ClinVar:1012571"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 56,
+  "ts": "2026-10-05T16:30:29.431344Z",
+  "payload": {
+   "text": "SequenceVariant record ClinVar:1012572 [12]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-12"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.744-7_744-4del",
+    "ClinVar:1012572"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 57,
+  "ts": "2026-10-05T16:30:29.431354Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1018653, name: NM_000492.4(CFTR):c.364T>A (p.Tyr122Asn) [13]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-13"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.364T>A (p.Tyr122Asn)",
+    "ClinVar:1018653"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 58,
+  "ts": "2026-10-05T16:30:29.431364Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1018890, name: NM_000492.4(CFTR):c.4028G>A (p.Gly1343Asp) [14]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-14"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.4028G>A (p.Gly1343Asp)",
+    "ClinVar:1018890"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 59,
+  "ts": "2026-10-05T16:30:29.431374Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1024644, name: NM_000492.4(CFTR):c.4244T>G (p.Val1415Gly) [15]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-15"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.4244T>G (p.Val1415Gly)",
+    "ClinVar:1024644"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 60,
+  "ts": "2026-10-05T16:30:29.431384Z",
+  "payload": {
+   "text": "SequenceVariant record ClinVar:1027585 [16]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-16"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1585-2A>T",
+    "ClinVar:1027585"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 61,
+  "ts": "2026-10-05T16:30:29.431395Z",
+  "payload": {
+   "text": "SequenceVariant record ClinVar:1027591 [17]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-17"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1680-893T>C",
+    "ClinVar:1027591"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 62,
+  "ts": "2026-10-05T16:30:29.431404Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1029874, name: NM_000492.4(CFTR):c.389T>C (p.Leu130Pro) [18]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-18"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.389T>C (p.Leu130Pro)",
+    "ClinVar:1029874"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 63,
+  "ts": "2026-10-05T16:30:29.431411Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1029875, name: NM_000492.4(CFTR):c.407T>G (p.Leu136Arg) [19]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-19"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.407T>G (p.Leu136Arg)",
+    "ClinVar:1029875"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 64,
+  "ts": "2026-10-05T16:30:29.431419Z",
+  "payload": {
+   "text": "SequenceVariant record ClinVar:1029876 [20]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-20"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.490-25A>G",
+    "ClinVar:1029876"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 65,
+  "ts": "2026-10-05T16:30:29.431426Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1035472, name: NM_000492.4(CFTR):c.242T>A (p.Phe81Tyr) [21]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-21"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.242T>A (p.Phe81Tyr)",
+    "ClinVar:1035472"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 66,
+  "ts": "2026-10-05T16:30:29.431433Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1036122, name: NM_000492.4(CFTR):c.3498C>G (p.Phe1166Leu) [22]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-22"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.3498C>G (p.Phe1166Leu)",
+    "ClinVar:1036122"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 67,
+  "ts": "2026-10-05T16:30:29.431440Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1037205, name: NM_000492.4(CFTR):c.2755T>A (p.Tyr919Asn) [23]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-23"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.2755T>A (p.Tyr919Asn)",
+    "ClinVar:1037205"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 68,
+  "ts": "2026-10-05T16:30:29.431447Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1037208, name: NM_000492.4(CFTR):c.3590A>G (p.His1197Arg) [24]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-24"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.3590A>G (p.His1197Arg)",
+    "ClinVar:1037208"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 69,
+  "ts": "2026-10-05T16:30:29.431454Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1038310, name: NM_000492.4(CFTR):c.3157A>T (p.Thr1053Ser) [25]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-25"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.3157A>T (p.Thr1053Ser)",
+    "ClinVar:1038310"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 70,
+  "ts": "2026-10-05T16:30:29.431461Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1038737, name: NM_000492.4(CFTR):c.1444A>G (p.Ile482Val) [26]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-26"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1444A>G (p.Ile482Val)",
+    "ClinVar:1038737"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 71,
+  "ts": "2026-10-05T16:30:29.431468Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1039311, name: NM_000492.4(CFTR):c.2800G>A (p.Gly934Ser) [27]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-27"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.2800G>A (p.Gly934Ser)",
+    "ClinVar:1039311"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 72,
+  "ts": "2026-10-05T16:30:29.431474Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1040997, name: NM_000492.4(CFTR):c.1077A>G (p.Gln359=) [28]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-28"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1077A>G (p.Gln359=)",
+    "ClinVar:1040997"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 73,
+  "ts": "2026-10-05T16:30:29.431481Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1042311, name: NM_000492.4(CFTR):c.1796C>G (p.Thr599Ser) [29]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-29"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1796C>G (p.Thr599Ser)",
+    "ClinVar:1042311"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 74,
+  "ts": "2026-10-05T16:30:29.431488Z",
+  "payload": {
+   "text": "SequenceVariant record ClinVar:1043026 [30]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-30"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1210-12_1210-11insGTG",
+    "ClinVar:1043026"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 75,
+  "ts": "2026-10-05T16:30:29.431495Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1043097, name: NM_000492.4(CFTR):c.3767C>G (p.Ala1256Gly) [31]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-31"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.3767C>G (p.Ala1256Gly)",
+    "ClinVar:1043097"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 76,
+  "ts": "2026-10-05T16:30:29.431503Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1043398, name: NM_000492.4(CFTR):c.1178T>G (p.Val393Gly) [32]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-32"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1178T>G (p.Val393Gly)",
+    "ClinVar:1043398"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 77,
+  "ts": "2026-10-05T16:30:29.431510Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1044113, name: NM_000492.4(CFTR):c.4357C>G (p.Arg1453Gly) [33]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-33"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.4357C>G (p.Arg1453Gly)",
+    "ClinVar:1044113"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 78,
+  "ts": "2026-10-05T16:30:29.431516Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1044502, name: NM_000492.4(CFTR):c.2764G>A (p.Val922Ile) [34]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-34"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.2764G>A (p.Val922Ile)",
+    "ClinVar:1044502"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 79,
+  "ts": "2026-10-05T16:30:29.431523Z",
+  "payload": {
+   "text": "SequenceVariant record ClinVar:1046296 [35]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-35"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.489+5T>C",
+    "ClinVar:1046296"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 80,
+  "ts": "2026-10-05T16:30:29.431530Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1048778, name: NM_000492.4(CFTR):c.89dup (p.Arg31fs) [36]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-36"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.89dup (p.Arg31fs)",
+    "ClinVar:1048778"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 81,
+  "ts": "2026-10-05T16:30:29.431538Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1051107, name: NM_000492.4(CFTR):c.3239A>G (p.Lys1080Arg) [37]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-37"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.3239A>G (p.Lys1080Arg)",
+    "ClinVar:1051107"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 82,
+  "ts": "2026-10-05T16:30:29.431544Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1052121, name: NM_000492.4(CFTR):c.1502C>T (p.Thr501Ile) [38]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-38"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1502C>T (p.Thr501Ile)",
+    "ClinVar:1052121"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 83,
+  "ts": "2026-10-05T16:30:29.431551Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1052165, name: NM_000492.4(CFTR):c.851T>C (p.Met284Thr) [39]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-39"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.851T>C (p.Met284Thr)",
+    "ClinVar:1052165"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 84,
+  "ts": "2026-10-05T16:30:29.431558Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1053721, name: NM_000492.4(CFTR):c.508C>A (p.Arg170Ser) [40]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-40"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.508C>A (p.Arg170Ser)",
+    "ClinVar:1053721"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 85,
+  "ts": "2026-10-05T16:30:29.431565Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1053748, name: NM_000492.4(CFTR):c.1909C>A (p.Gln637Lys) [41]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-41"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1909C>A (p.Gln637Lys)",
+    "ClinVar:1053748"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 86,
+  "ts": "2026-10-05T16:30:29.431642Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1054952, name: NM_000492.4(CFTR):c.3500T>A (p.Ile1167Asn) [42]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-42"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.3500T>A (p.Ile1167Asn)",
+    "ClinVar:1054952"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 87,
+  "ts": "2026-10-05T16:30:29.431649Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1055358, name: NM_000492.4(CFTR):c.941G>C (p.Gly314Ala) [43]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-43"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.941G>C (p.Gly314Ala)",
+    "ClinVar:1055358"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 88,
+  "ts": "2026-10-05T16:30:29.431655Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1060053, name: NM_000492.4(CFTR):c.1685T>C (p.Val562Ala) [44]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-44"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1685T>C (p.Val562Ala)",
+    "ClinVar:1060053"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 89,
+  "ts": "2026-10-05T16:30:29.431662Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1064446, name: NM_000492.4(CFTR):c.1409T>A (p.Val470Glu) [45]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-45"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1409T>A (p.Val470Glu)",
+    "ClinVar:1064446"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 90,
+  "ts": "2026-10-05T16:30:29.431669Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1064636, name: NM_000492.4(CFTR):c.878T>C (p.Leu293Pro) [46]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-46"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.878T>C (p.Leu293Pro)",
+    "ClinVar:1064636"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 91,
+  "ts": "2026-10-05T16:30:29.431675Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1065566, name: NM_000492.4(CFTR):c.327T>G (p.Tyr109Ter) [47]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-47"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.327T>G (p.Tyr109Ter)",
+    "ClinVar:1065566"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 92,
+  "ts": "2026-10-05T16:30:29.431682Z",
+  "payload": {
+   "text": "SequenceVariant record ClinVar:1065569 [48]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-48"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.274-8558G>A",
+    "ClinVar:1065569"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 93,
+  "ts": "2026-10-05T16:30:29.431688Z",
+  "payload": {
+   "text": "SequenceVariant record ClinVar:1065570 [49]. ",
+   "marker_ids": [
+    "cq-51df19d3c945-49"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.54-6168A>G",
+    "ClinVar:1065570"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 94,
+  "ts": "2026-10-05T16:30:29.431695Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 95,
+  "ts": "2026-10-05T16:30:29.431702Z",
+  "payload": {
+   "text": "Clinvar records found\n\n",
+   "marker_ids": [],
+   "kind": "heading",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 96,
+  "ts": "2026-10-05T16:30:29.431708Z",
+  "payload": {
+   "text": "",
+   "marker_ids": [],
+   "kind": "table_header",
+   "cells": [
+    "Variant",
+    "Identifier"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 97,
+  "ts": "2026-10-05T16:30:29.431715Z",
+  "payload": {
+   "text": "Clinvar title: NM_000492.4(CFTR):c.4243-5C>G [50]. ",
+   "marker_ids": [
+    "ne-c27386d28fee-50"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.4243-5C>G",
+    "VCV004992204"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 98,
+  "ts": "2026-10-05T16:30:29.431722Z",
+  "payload": {
+   "text": "Clinvar title: NM_000492.4(CFTR):c.1209+1988_1392+2067inv [53]. ",
+   "marker_ids": [
+    "ne-1ff5a67682c8-53"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1209+1988_1392+2067inv",
+    "VCV001705265"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 99,
+  "ts": "2026-10-05T16:30:29.431728Z",
+  "payload": {
+   "text": "Clinvar title: NM_000492.4(CFTR):c.4177G>T (p.Ala1393Ser) [56]. ",
+   "marker_ids": [
+    "ne-c27386d28fee-59"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.4177G>T (p.Ala1393Ser)",
+    "VCV004992853"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 100,
+  "ts": "2026-10-05T16:30:29.431735Z",
+  "payload": {
+   "text": "Clinvar title: NM_000492.4(CFTR):c.1392+2072_1392+2074del [58]. ",
+   "marker_ids": [
+    "ne-1ff5a67682c8-61"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1392+2072_1392+2074del",
+    "VCV001705266"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 101,
+  "ts": "2026-10-05T16:30:29.431742Z",
+  "payload": {
+   "text": "Clinvar title: NM_000492.4(CFTR):c.3757T>C (p.Leu1253=) [60]. ",
+   "marker_ids": [
+    "ne-c27386d28fee-66"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.3757T>C (p.Leu1253=)",
+    "VCV004993576"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 102,
+  "ts": "2026-10-05T16:30:29.431748Z",
+  "payload": {
+   "text": "Clinvar title: NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [62]. ",
+   "marker_ids": [
+    "ne-1ff5a67682c8-68"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA",
+    "VCV001705980"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 103,
+  "ts": "2026-10-05T16:30:29.431756Z",
+  "payload": {
+   "text": "Clinvar title: NM_000492.4(CFTR):c.3469-319A>T [64]. ",
+   "marker_ids": [
+    "ne-c27386d28fee-72"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.3469-319A>T",
+    "VCV004994638"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 104,
+  "ts": "2026-10-05T16:30:29.431763Z",
+  "payload": {
+   "text": "Clinvar title: NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [66]. ",
+   "marker_ids": [
+    "ne-1ff5a67682c8-74"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT",
+    "VCV001705981"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 105,
+  "ts": "2026-10-05T16:30:29.431769Z",
+  "payload": {
+   "text": "Clinvar title: NM_000492.4(CFTR):c.1584+43C>T [68]. ",
+   "marker_ids": [
+    "ne-c27386d28fee-78"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4(CFTR):c.1584+43C>T",
+    "VCV004995184"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 106,
+  "ts": "2026-10-05T16:30:29.431776Z",
+  "payload": {
+   "text": "Clinvar title: NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [70]. ",
+   "marker_ids": [
+    "ne-1ff5a67682c8-80"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del",
+    "VCV001706438"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 107,
+  "ts": "2026-10-05T16:30:29.431783Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 108,
+  "ts": "2026-10-05T16:30:29.431789Z",
+  "payload": {
+   "text": "Pubmed records found\n\n",
+   "marker_ids": [],
+   "kind": "heading",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 109,
+  "ts": "2026-10-05T16:30:29.431795Z",
+  "payload": {
+   "text": "",
+   "marker_ids": [],
+   "kind": "table_header",
+   "cells": [
+    "Paper",
+    "Identifier"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 110,
+  "ts": "2026-10-05T16:30:29.431801Z",
+  "payload": {
+   "text": "Pubmed title: Molecular Structure of the Human CFTR Ion Channel [52]. ",
+   "marker_ids": [
+    "ne-5e11f23b9bc0-52"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Molecular Structure of the Human CFTR Ion Channel.",
+    "PMID:28340353"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 111,
+  "ts": "2026-10-05T16:30:29.431808Z",
+  "payload": {
+   "text": "Pubmed title: Bicarbonate Transport in Cystic Fibrosis and Pancreatitis [57]. ",
+   "marker_ids": [
+    "ne-5e11f23b9bc0-60"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Bicarbonate Transport in Cystic Fibrosis and Pancreatitis.",
+    "PMID:35011616"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 112,
+  "ts": "2026-10-05T16:30:29.431814Z",
+  "payload": {
+   "text": "Pubmed title: ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria [61]. ",
+   "marker_ids": [
+    "ne-5e11f23b9bc0-67"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria.",
+    "PMID:36220763"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 113,
+  "ts": "2026-10-05T16:30:29.431821Z",
+  "payload": {
+   "text": "Pubmed title: Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators [65]. ",
+   "marker_ids": [
+    "ne-5e11f23b9bc0-73"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators.",
+    "PMID:36264792"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 114,
+  "ts": "2026-10-05T16:30:29.431828Z",
+  "payload": {
+   "text": "Pubmed title: In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis [69]. ",
+   "marker_ids": [
+    "ne-5e11f23b9bc0-79"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis.",
+    "PMID:38388235"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 115,
+  "ts": "2026-10-05T16:30:29.431833Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 116,
+  "ts": "2026-10-05T16:30:29.431839Z",
+  "payload": {
+   "text": "Omim records found\n\n",
+   "marker_ids": [],
+   "kind": "heading",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 117,
+  "ts": "2026-10-05T16:30:29.431845Z",
+  "payload": {
+   "text": "",
+   "marker_ids": [],
+   "kind": "table_header",
+   "cells": [
+    "Record",
+    "Identifier"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 118,
+  "ts": "2026-10-05T16:30:29.431852Z",
+  "payload": {
+   "text": "CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR [54]. ",
+   "marker_ids": [
+    "ne-770ee2e881c6-54"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR; CFTR",
+    "omim 602421"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 119,
+  "ts": "2026-10-05T16:30:29.431859Z",
+  "payload": {
+   "text": "CFTR [54]. ",
+   "marker_ids": [
+    "ne-770ee2e881c6-54"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR; CFTR",
+    "omim 602421"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 120,
+  "ts": "2026-10-05T16:30:29.431865Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 121,
+  "ts": "2026-10-05T16:30:29.431872Z",
+  "payload": {
+   "text": "Clinical trial records found\n\n",
+   "marker_ids": [],
+   "kind": "heading",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 122,
+  "ts": "2026-10-05T16:30:29.431878Z",
+  "payload": {
+   "text": "",
+   "marker_ids": [],
+   "kind": "table_header",
+   "cells": [
+    "Trial",
+    "Identifier",
+    "Status"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 123,
+  "ts": "2026-10-05T16:30:29.431884Z",
+  "payload": {
+   "text": "Clinical trial name: NPDT Evaluation in Children With CFTR and (PSC) [55]. ",
+   "marker_ids": [
+    "ct-31b4d77a9804-56"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NPDT Evaluation in Children With CFTR and (PSC)",
+    "NCT00179439",
+    "COMPLETED"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 124,
+  "ts": "2026-10-05T16:30:29.431891Z",
+  "payload": {
+   "text": "Clinical trial name: Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [59]. ",
+   "marker_ids": [
+    "ct-31b4d77a9804-63"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation",
+    "NCT00865904",
+    "COMPLETED"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 125,
+  "ts": "2026-10-05T16:30:29.431897Z",
+  "payload": {
+   "text": "Clinical trial name: Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [63]. ",
+   "marker_ids": [
+    "ct-31b4d77a9804-69"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects",
+    "NCT01078740",
+    "COMPLETED"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 126,
+  "ts": "2026-10-05T16:30:29.431904Z",
+  "payload": {
+   "text": "Clinical trial name: Effects of Sildenafil on CFTR-dependent Ion Transport Activity [67]. ",
+   "marker_ids": [
+    "ct-31b4d77a9804-75"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Effects of Sildenafil on CFTR-dependent Ion Transport Activity",
+    "NCT01132482",
+    "COMPLETED"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 127,
+  "ts": "2026-10-05T16:30:29.431910Z",
+  "payload": {
+   "text": "Clinical trial name: Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [71]. ",
+   "marker_ids": [
+    "ct-31b4d77a9804-81"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators",
+    "NCT01348204",
+    "COMPLETED"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 128,
+  "ts": "2026-10-05T16:30:29.431917Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 129,
+  "ts": "2026-10-05T16:30:29.431924Z",
+  "payload": {
+   "text": "Note: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query",
+   "marker_ids": [],
+   "kind": "note",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 130,
+  "ts": "2026-10-05T16:30:29.431931Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 131,
+  "ts": "2026-10-05T16:30:29.431937Z",
+  "payload": {
+   "text": "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
+   "marker_ids": [],
+   "kind": "note",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 132,
+  "ts": "2026-10-05T16:30:29.431943Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 133,
+  "ts": "2026-10-05T16:30:29.431949Z",
+  "payload": {
+   "text": "Note: this answer does not address the following entities named in the question: CFTR-AS1, CFTR-AS2, LOC111674463, LOC111674464, LOC113664106, LOC113664107, LOC113219471, LOC113219472, LOC111674473. Ask about them individually for a complete answer.",
+   "marker_ids": [],
+   "kind": "note",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 134,
+  "ts": "2026-10-05T16:30:29.431968Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-1",
+   "display_index": 1,
+   "source": "NCBIGene",
+   "source_id": "NCBIGene:1080",
+   "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "Gene NCBIGene:1080, name: CF transmembrane conductance regulator A live NCBI value for this field is more current per Section 7.1 ('CFTR'); see citation [51].",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "CF transmembrane conductance regulator"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 135,
+  "ts": "2026-10-05T16:30:29.431997Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-2",
+   "display_index": 2,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1000823",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000823",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1000823, name: NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 136,
+  "ts": "2026-10-05T16:30:29.432006Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-3",
+   "display_index": 3,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1002760",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002760",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1002760, name: NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 137,
+  "ts": "2026-10-05T16:30:29.432014Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-4",
+   "display_index": 4,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1003660",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003660",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1003660, name: NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 138,
+  "ts": "2026-10-05T16:30:29.432022Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-5",
+   "display_index": 5,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1007213",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007213",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1007213, name: NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 139,
+  "ts": "2026-10-05T16:30:29.432030Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-6",
+   "display_index": 6,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1009171",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009171",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1009171, name: NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 140,
+  "ts": "2026-10-05T16:30:29.432037Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-7",
+   "display_index": 7,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1009391",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009391",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1009391, name: NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 141,
+  "ts": "2026-10-05T16:30:29.432046Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-8",
+   "display_index": 8,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1009463",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009463",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1009463, name: NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 142,
+  "ts": "2026-10-05T16:30:29.432054Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-9",
+   "display_index": 9,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1010196",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010196",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1010196, name: NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 143,
+  "ts": "2026-10-05T16:30:29.432062Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-10",
+   "display_index": 10,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1011536",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1011536",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1011536, name: NM_000492.4(CFTR):c.3064G>A (p.Val1022Met)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.3064G>A (p.Val1022Met)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 144,
+  "ts": "2026-10-05T16:30:29.432070Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-11",
+   "display_index": 11,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1012571",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012571",
+   "layer": "layer_1_graph",
+   "field": "curie",
+   "claim_text": "SequenceVariant record ClinVar:1012571",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "hedged",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 145,
+  "ts": "2026-10-05T16:30:29.432079Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-12",
+   "display_index": 12,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1012572",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012572",
+   "layer": "layer_1_graph",
+   "field": "curie",
+   "claim_text": "SequenceVariant record ClinVar:1012572",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "hedged",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 146,
+  "ts": "2026-10-05T16:30:29.432087Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-13",
+   "display_index": 13,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1018653",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1018653",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1018653, name: NM_000492.4(CFTR):c.364T>A (p.Tyr122Asn)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.364T>A (p.Tyr122Asn)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 147,
+  "ts": "2026-10-05T16:30:29.432094Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-14",
+   "display_index": 14,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1018890",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1018890",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1018890, name: NM_000492.4(CFTR):c.4028G>A (p.Gly1343Asp)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.4028G>A (p.Gly1343Asp)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 148,
+  "ts": "2026-10-05T16:30:29.432102Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-15",
+   "display_index": 15,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1024644",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1024644",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1024644, name: NM_000492.4(CFTR):c.4244T>G (p.Val1415Gly)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.4244T>G (p.Val1415Gly)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 149,
+  "ts": "2026-10-05T16:30:29.432109Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-16",
+   "display_index": 16,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1027585",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1027585",
+   "layer": "layer_1_graph",
+   "field": "curie",
+   "claim_text": "SequenceVariant record ClinVar:1027585",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "hedged",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 150,
+  "ts": "2026-10-05T16:30:29.432116Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-17",
+   "display_index": 17,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1027591",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1027591",
+   "layer": "layer_1_graph",
+   "field": "curie",
+   "claim_text": "SequenceVariant record ClinVar:1027591",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "hedged",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 151,
+  "ts": "2026-10-05T16:30:29.432123Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-18",
+   "display_index": 18,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1029874",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1029874",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1029874, name: NM_000492.4(CFTR):c.389T>C (p.Leu130Pro)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.389T>C (p.Leu130Pro)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 152,
+  "ts": "2026-10-05T16:30:29.432130Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-19",
+   "display_index": 19,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1029875",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1029875",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1029875, name: NM_000492.4(CFTR):c.407T>G (p.Leu136Arg)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.407T>G (p.Leu136Arg)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 153,
+  "ts": "2026-10-05T16:30:29.432138Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-20",
+   "display_index": 20,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1029876",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1029876",
+   "layer": "layer_1_graph",
+   "field": "curie",
+   "claim_text": "SequenceVariant record ClinVar:1029876",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "hedged",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 154,
+  "ts": "2026-10-05T16:30:29.432145Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-21",
+   "display_index": 21,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1035472",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1035472",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1035472, name: NM_000492.4(CFTR):c.242T>A (p.Phe81Tyr)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.242T>A (p.Phe81Tyr)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 155,
+  "ts": "2026-10-05T16:30:29.432152Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-22",
+   "display_index": 22,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1036122",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1036122",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1036122, name: NM_000492.4(CFTR):c.3498C>G (p.Phe1166Leu)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.3498C>G (p.Phe1166Leu)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 156,
+  "ts": "2026-10-05T16:30:29.432159Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-23",
+   "display_index": 23,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1037205",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1037205",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1037205, name: NM_000492.4(CFTR):c.2755T>A (p.Tyr919Asn)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.2755T>A (p.Tyr919Asn)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 157,
+  "ts": "2026-10-05T16:30:29.432167Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-24",
+   "display_index": 24,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1037208",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1037208",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1037208, name: NM_000492.4(CFTR):c.3590A>G (p.His1197Arg)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.3590A>G (p.His1197Arg)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 158,
+  "ts": "2026-10-05T16:30:29.432174Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-25",
+   "display_index": 25,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1038310",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1038310",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1038310, name: NM_000492.4(CFTR):c.3157A>T (p.Thr1053Ser)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.3157A>T (p.Thr1053Ser)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 159,
+  "ts": "2026-10-05T16:30:29.432181Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-26",
+   "display_index": 26,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1038737",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1038737",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1038737, name: NM_000492.4(CFTR):c.1444A>G (p.Ile482Val)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.1444A>G (p.Ile482Val)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 160,
+  "ts": "2026-10-05T16:30:29.432188Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-27",
+   "display_index": 27,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1039311",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1039311",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1039311, name: NM_000492.4(CFTR):c.2800G>A (p.Gly934Ser)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.2800G>A (p.Gly934Ser)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 161,
+  "ts": "2026-10-05T16:30:29.432195Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-28",
+   "display_index": 28,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1040997",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1040997",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1040997, name: NM_000492.4(CFTR):c.1077A>G (p.Gln359=)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.1077A>G (p.Gln359=)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 162,
+  "ts": "2026-10-05T16:30:29.432202Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-29",
+   "display_index": 29,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1042311",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1042311",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1042311, name: NM_000492.4(CFTR):c.1796C>G (p.Thr599Ser)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.1796C>G (p.Thr599Ser)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 163,
+  "ts": "2026-10-05T16:30:29.432210Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-30",
+   "display_index": 30,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1043026",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1043026",
+   "layer": "layer_1_graph",
+   "field": "curie",
+   "claim_text": "SequenceVariant record ClinVar:1043026",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "hedged",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 164,
+  "ts": "2026-10-05T16:30:29.432218Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-31",
+   "display_index": 31,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1043097",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1043097",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1043097, name: NM_000492.4(CFTR):c.3767C>G (p.Ala1256Gly)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.3767C>G (p.Ala1256Gly)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 165,
+  "ts": "2026-10-05T16:30:29.432225Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-32",
+   "display_index": 32,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1043398",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1043398",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1043398, name: NM_000492.4(CFTR):c.1178T>G (p.Val393Gly)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.1178T>G (p.Val393Gly)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 166,
+  "ts": "2026-10-05T16:30:29.432232Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-33",
+   "display_index": 33,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1044113",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1044113",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1044113, name: NM_000492.4(CFTR):c.4357C>G (p.Arg1453Gly)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.4357C>G (p.Arg1453Gly)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 167,
+  "ts": "2026-10-05T16:30:29.432240Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-34",
+   "display_index": 34,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1044502",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1044502",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1044502, name: NM_000492.4(CFTR):c.2764G>A (p.Val922Ile)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.2764G>A (p.Val922Ile)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 168,
+  "ts": "2026-10-05T16:30:29.432248Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-35",
+   "display_index": 35,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1046296",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1046296",
+   "layer": "layer_1_graph",
+   "field": "curie",
+   "claim_text": "SequenceVariant record ClinVar:1046296",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "hedged",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 169,
+  "ts": "2026-10-05T16:30:29.432255Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-36",
+   "display_index": 36,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1048778",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1048778",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1048778, name: NM_000492.4(CFTR):c.89dup (p.Arg31fs)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.89dup (p.Arg31fs)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 170,
+  "ts": "2026-10-05T16:30:29.432262Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-37",
+   "display_index": 37,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1051107",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1051107",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1051107, name: NM_000492.4(CFTR):c.3239A>G (p.Lys1080Arg)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.3239A>G (p.Lys1080Arg)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 171,
+  "ts": "2026-10-05T16:30:29.432270Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-38",
+   "display_index": 38,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1052121",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1052121",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1052121, name: NM_000492.4(CFTR):c.1502C>T (p.Thr501Ile)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.1502C>T (p.Thr501Ile)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 172,
+  "ts": "2026-10-05T16:30:29.432277Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-39",
+   "display_index": 39,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1052165",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1052165",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1052165, name: NM_000492.4(CFTR):c.851T>C (p.Met284Thr)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.851T>C (p.Met284Thr)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 173,
+  "ts": "2026-10-05T16:30:29.432285Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-40",
+   "display_index": 40,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1053721",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1053721",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1053721, name: NM_000492.4(CFTR):c.508C>A (p.Arg170Ser)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.508C>A (p.Arg170Ser)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 174,
+  "ts": "2026-10-05T16:30:29.432292Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-41",
+   "display_index": 41,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1053748",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1053748",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1053748, name: NM_000492.4(CFTR):c.1909C>A (p.Gln637Lys)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.1909C>A (p.Gln637Lys)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 175,
+  "ts": "2026-10-05T16:30:29.432299Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-42",
+   "display_index": 42,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1054952",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1054952",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1054952, name: NM_000492.4(CFTR):c.3500T>A (p.Ile1167Asn)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.3500T>A (p.Ile1167Asn)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 176,
+  "ts": "2026-10-05T16:30:29.432307Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-43",
+   "display_index": 43,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1055358",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1055358",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1055358, name: NM_000492.4(CFTR):c.941G>C (p.Gly314Ala)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.941G>C (p.Gly314Ala)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 177,
+  "ts": "2026-10-05T16:30:29.432314Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-44",
+   "display_index": 44,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1060053",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1060053",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1060053, name: NM_000492.4(CFTR):c.1685T>C (p.Val562Ala)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.1685T>C (p.Val562Ala)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 178,
+  "ts": "2026-10-05T16:30:29.432322Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-45",
+   "display_index": 45,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1064446",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1064446",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1064446, name: NM_000492.4(CFTR):c.1409T>A (p.Val470Glu)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.1409T>A (p.Val470Glu)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 179,
+  "ts": "2026-10-05T16:30:29.432329Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-46",
+   "display_index": 46,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1064636",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1064636",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1064636, name: NM_000492.4(CFTR):c.878T>C (p.Leu293Pro)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.878T>C (p.Leu293Pro)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 180,
+  "ts": "2026-10-05T16:30:29.432337Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-47",
+   "display_index": 47,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1065566",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1065566",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1065566, name: NM_000492.4(CFTR):c.327T>G (p.Tyr109Ter)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_000492.4(CFTR):c.327T>G (p.Tyr109Ter)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 181,
+  "ts": "2026-10-05T16:30:29.432344Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-48",
+   "display_index": 48,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1065569",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1065569",
+   "layer": "layer_1_graph",
+   "field": "curie",
+   "claim_text": "SequenceVariant record ClinVar:1065569",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "hedged",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 182,
+  "ts": "2026-10-05T16:30:29.432352Z",
+  "payload": {
+   "citation_id": "cq-51df19d3c945-49",
+   "display_index": 49,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1065570",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1065570",
+   "layer": "layer_1_graph",
+   "field": "curie",
+   "claim_text": "SequenceVariant record ClinVar:1065570",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "hedged",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 183,
+  "ts": "2026-10-05T16:30:29.432360Z",
+  "payload": {
+   "citation_id": "ne-c27386d28fee-50",
+   "display_index": 50,
+   "source": "clinvar",
+   "source_id": "VCV004992204",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4992204/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_000492.4(CFTR):c.4243-5C>G",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 184,
+  "ts": "2026-10-05T16:30:29.432368Z",
+  "payload": {
+   "citation_id": "ne-5568e6cc80bb-51",
+   "display_index": 51,
+   "source": "gene",
+   "source_id": "1080",
+   "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080/",
+   "layer": "layer_2_api",
+   "field": "symbol",
+   "claim_text": "gene symbol: CFTR",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 185,
+  "ts": "2026-10-05T16:30:29.432376Z",
+  "payload": {
+   "citation_id": "ne-5e11f23b9bc0-52",
+   "display_index": 52,
+   "source": "pubmed",
+   "source_id": "28340353",
+   "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "pubmed title: Molecular Structure of the Human CFTR Ion Channel",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 186,
+  "ts": "2026-10-05T16:30:29.432384Z",
+  "payload": {
+   "citation_id": "ne-1ff5a67682c8-53",
+   "display_index": 53,
+   "source": "clinvar",
+   "source_id": "1705265",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_000492.4(CFTR):c.1209+1988_1392+2067inv",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 187,
+  "ts": "2026-10-05T16:30:29.432392Z",
+  "payload": {
+   "citation_id": "ne-770ee2e881c6-54",
+   "display_index": 54,
+   "source": "omim",
+   "source_id": "602421",
+   "source_url": "https://omim.org/entry/602421",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 188,
+  "ts": "2026-10-05T16:30:29.432400Z",
+  "payload": {
+   "citation_id": "ct-31b4d77a9804-56",
+   "display_index": 55,
+   "source": "clinicaltrials.gov",
+   "source_id": "NCT00179439",
+   "source_url": "https://clinicaltrials.gov/study/NCT00179439",
+   "layer": "layer_3_enrichment",
+   "field": "name",
+   "claim_text": "Clinical trial name: NPDT Evaluation in Children With CFTR and (PSC)",
+   "evidence_kind": "external_annotation",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 189,
+  "ts": "2026-10-05T16:30:29.432410Z",
+  "payload": {
+   "citation_id": "ne-c27386d28fee-59",
+   "display_index": 56,
+   "source": "clinvar",
+   "source_id": "VCV004992853",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4992853/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_000492.4(CFTR):c.4177G>T (p.Ala1393Ser)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 190,
+  "ts": "2026-10-05T16:30:29.432418Z",
+  "payload": {
+   "citation_id": "ne-5e11f23b9bc0-60",
+   "display_index": 57,
+   "source": "pubmed",
+   "source_id": "35011616",
+   "source_url": "https://pubmed.ncbi.nlm.nih.gov/35011616/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "pubmed title: Bicarbonate Transport in Cystic Fibrosis and Pancreatitis",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 191,
+  "ts": "2026-10-05T16:30:29.432425Z",
+  "payload": {
+   "citation_id": "ne-1ff5a67682c8-61",
+   "display_index": 58,
+   "source": "clinvar",
+   "source_id": "1705266",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_000492.4(CFTR):c.1392+2072_1392+2074del",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 192,
+  "ts": "2026-10-05T16:30:29.432433Z",
+  "payload": {
+   "citation_id": "ct-31b4d77a9804-63",
+   "display_index": 59,
+   "source": "clinicaltrials.gov",
+   "source_id": "NCT00865904",
+   "source_url": "https://clinicaltrials.gov/study/NCT00865904",
+   "layer": "layer_3_enrichment",
+   "field": "name",
+   "claim_text": "Clinical trial name: Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation",
+   "evidence_kind": "external_annotation",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 193,
+  "ts": "2026-10-05T16:30:29.432441Z",
+  "payload": {
+   "citation_id": "ne-c27386d28fee-66",
+   "display_index": 60,
+   "source": "clinvar",
+   "source_id": "VCV004993576",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4993576/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_000492.4(CFTR):c.3757T>C (p.Leu1253=)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 194,
+  "ts": "2026-10-05T16:30:29.432448Z",
+  "payload": {
+   "citation_id": "ne-5e11f23b9bc0-67",
+   "display_index": 61,
+   "source": "pubmed",
+   "source_id": "36220763",
+   "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "pubmed title: ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 195,
+  "ts": "2026-10-05T16:30:29.432455Z",
+  "payload": {
+   "citation_id": "ne-1ff5a67682c8-68",
+   "display_index": 62,
+   "source": "clinvar",
+   "source_id": "1705980",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 196,
+  "ts": "2026-10-05T16:30:29.432463Z",
+  "payload": {
+   "citation_id": "ct-31b4d77a9804-69",
+   "display_index": 63,
+   "source": "clinicaltrials.gov",
+   "source_id": "NCT01078740",
+   "source_url": "https://clinicaltrials.gov/study/NCT01078740",
+   "layer": "layer_3_enrichment",
+   "field": "name",
+   "claim_text": "Clinical trial name: Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects",
+   "evidence_kind": "external_annotation",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 197,
+  "ts": "2026-10-05T16:30:29.432471Z",
+  "payload": {
+   "citation_id": "ne-c27386d28fee-72",
+   "display_index": 64,
+   "source": "clinvar",
+   "source_id": "VCV004994638",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4994638/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_000492.4(CFTR):c.3469-319A>T",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 198,
+  "ts": "2026-10-05T16:30:29.432479Z",
+  "payload": {
+   "citation_id": "ne-5e11f23b9bc0-73",
+   "display_index": 65,
+   "source": "pubmed",
+   "source_id": "36264792",
+   "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "pubmed title: Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 199,
+  "ts": "2026-10-05T16:30:29.432486Z",
+  "payload": {
+   "citation_id": "ne-1ff5a67682c8-74",
+   "display_index": 66,
+   "source": "clinvar",
+   "source_id": "1705981",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 200,
+  "ts": "2026-10-05T16:30:29.432493Z",
+  "payload": {
+   "citation_id": "ct-31b4d77a9804-75",
+   "display_index": 67,
+   "source": "clinicaltrials.gov",
+   "source_id": "NCT01132482",
+   "source_url": "https://clinicaltrials.gov/study/NCT01132482",
+   "layer": "layer_3_enrichment",
+   "field": "name",
+   "claim_text": "Clinical trial name: Effects of Sildenafil on CFTR-dependent Ion Transport Activity",
+   "evidence_kind": "external_annotation",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 201,
+  "ts": "2026-10-05T16:30:29.432500Z",
+  "payload": {
+   "citation_id": "ne-c27386d28fee-78",
+   "display_index": 68,
+   "source": "clinvar",
+   "source_id": "VCV004995184",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4995184/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_000492.4(CFTR):c.1584+43C>T",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 202,
+  "ts": "2026-10-05T16:30:29.432508Z",
+  "payload": {
+   "citation_id": "ne-5e11f23b9bc0-79",
+   "display_index": 69,
+   "source": "pubmed",
+   "source_id": "38388235",
+   "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "pubmed title: In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 203,
+  "ts": "2026-10-05T16:30:29.432515Z",
+  "payload": {
+   "citation_id": "ne-1ff5a67682c8-80",
+   "display_index": 70,
+   "source": "clinvar",
+   "source_id": "1706438",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 204,
+  "ts": "2026-10-05T16:30:29.432523Z",
+  "payload": {
+   "citation_id": "ct-31b4d77a9804-81",
+   "display_index": 71,
+   "source": "clinicaltrials.gov",
+   "source_id": "NCT01348204",
+   "source_url": "https://clinicaltrials.gov/study/NCT01348204",
+   "layer": "layer_3_enrichment",
+   "field": "name",
+   "claim_text": "Clinical trial name: Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators",
+   "evidence_kind": "external_annotation",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 205,
+  "ts": "2026-10-05T16:30:29.432540Z",
+  "payload": {
+   "outcome": "flag",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-1",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 206,
+  "ts": "2026-10-05T16:30:29.432555Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-2",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 207,
+  "ts": "2026-10-05T16:30:29.432564Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-3",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 208,
+  "ts": "2026-10-05T16:30:29.432571Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-4",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 209,
+  "ts": "2026-10-05T16:30:29.432580Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-5",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 210,
+  "ts": "2026-10-05T16:30:29.432587Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-6",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 211,
+  "ts": "2026-10-05T16:30:29.432594Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-7",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 212,
+  "ts": "2026-10-05T16:30:29.432602Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-8",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 213,
+  "ts": "2026-10-05T16:30:29.432609Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-9",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 214,
+  "ts": "2026-10-05T16:30:29.432617Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-10",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 215,
+  "ts": "2026-10-05T16:30:29.432625Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-11",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 216,
+  "ts": "2026-10-05T16:30:29.432632Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-12",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 217,
+  "ts": "2026-10-05T16:30:29.432640Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-13",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 218,
+  "ts": "2026-10-05T16:30:29.432647Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-14",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 219,
+  "ts": "2026-10-05T16:30:29.432654Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-15",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 220,
+  "ts": "2026-10-05T16:30:29.432662Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-16",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 221,
+  "ts": "2026-10-05T16:30:29.432670Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-17",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 222,
+  "ts": "2026-10-05T16:30:29.432678Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-18",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 223,
+  "ts": "2026-10-05T16:30:29.432685Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-19",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 224,
+  "ts": "2026-10-05T16:30:29.432692Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-20",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 225,
+  "ts": "2026-10-05T16:30:29.432699Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-21",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 226,
+  "ts": "2026-10-05T16:30:29.432707Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-22",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 227,
+  "ts": "2026-10-05T16:30:29.432714Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-23",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 228,
+  "ts": "2026-10-05T16:30:29.432721Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-24",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 229,
+  "ts": "2026-10-05T16:30:29.432729Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-25",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 230,
+  "ts": "2026-10-05T16:30:29.432737Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-26",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 231,
+  "ts": "2026-10-05T16:30:29.432745Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-27",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 232,
+  "ts": "2026-10-05T16:30:29.432752Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-28",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 233,
+  "ts": "2026-10-05T16:30:29.432760Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-29",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 234,
+  "ts": "2026-10-05T16:30:29.432767Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-30",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 235,
+  "ts": "2026-10-05T16:30:29.432774Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-31",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 236,
+  "ts": "2026-10-05T16:30:29.432782Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-32",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 237,
+  "ts": "2026-10-05T16:30:29.432790Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-33",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 238,
+  "ts": "2026-10-05T16:30:29.432798Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-34",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 239,
+  "ts": "2026-10-05T16:30:29.432805Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-35",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 240,
+  "ts": "2026-10-05T16:30:29.432812Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-36",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 241,
+  "ts": "2026-10-05T16:30:29.432820Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-37",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 242,
+  "ts": "2026-10-05T16:30:29.432828Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-38",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 243,
+  "ts": "2026-10-05T16:30:29.432836Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-39",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 244,
+  "ts": "2026-10-05T16:30:29.432844Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-40",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 245,
+  "ts": "2026-10-05T16:30:29.432851Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-41",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 246,
+  "ts": "2026-10-05T16:30:29.432930Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-42",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 247,
+  "ts": "2026-10-05T16:30:29.432938Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-43",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 248,
+  "ts": "2026-10-05T16:30:29.432946Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-44",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 249,
+  "ts": "2026-10-05T16:30:29.432954Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-45",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 250,
+  "ts": "2026-10-05T16:30:29.432962Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-46",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 251,
+  "ts": "2026-10-05T16:30:29.432970Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-47",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 252,
+  "ts": "2026-10-05T16:30:29.432978Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-48",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 253,
+  "ts": "2026-10-05T16:30:29.432985Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-51df19d3c945-49",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 254,
+  "ts": "2026-10-05T16:30:29.432993Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-c27386d28fee-50",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 255,
+  "ts": "2026-10-05T16:30:29.433000Z",
+  "payload": {
+   "outcome": "flag",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-5568e6cc80bb-51",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 256,
+  "ts": "2026-10-05T16:30:29.433008Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-5e11f23b9bc0-52",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 257,
+  "ts": "2026-10-05T16:30:29.433015Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-1ff5a67682c8-53",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 258,
+  "ts": "2026-10-05T16:30:29.433024Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-770ee2e881c6-54",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 259,
+  "ts": "2026-10-05T16:30:29.433032Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ct-31b4d77a9804-56",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 260,
+  "ts": "2026-10-05T16:30:29.433039Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-c27386d28fee-59",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 261,
+  "ts": "2026-10-05T16:30:29.433047Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-5e11f23b9bc0-60",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 262,
+  "ts": "2026-10-05T16:30:29.433054Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-1ff5a67682c8-61",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 263,
+  "ts": "2026-10-05T16:30:29.433062Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ct-31b4d77a9804-63",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 264,
+  "ts": "2026-10-05T16:30:29.433069Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-c27386d28fee-66",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 265,
+  "ts": "2026-10-05T16:30:29.433076Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-5e11f23b9bc0-67",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 266,
+  "ts": "2026-10-05T16:30:29.433084Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-1ff5a67682c8-68",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 267,
+  "ts": "2026-10-05T16:30:29.433091Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ct-31b4d77a9804-69",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 268,
+  "ts": "2026-10-05T16:30:29.433099Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-c27386d28fee-72",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 269,
+  "ts": "2026-10-05T16:30:29.433107Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-5e11f23b9bc0-73",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 270,
+  "ts": "2026-10-05T16:30:29.433115Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-1ff5a67682c8-74",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 271,
+  "ts": "2026-10-05T16:30:29.433126Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ct-31b4d77a9804-75",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 272,
+  "ts": "2026-10-05T16:30:29.433138Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-c27386d28fee-78",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 273,
+  "ts": "2026-10-05T16:30:29.433150Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-5e11f23b9bc0-79",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 274,
+  "ts": "2026-10-05T16:30:29.433161Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-1ff5a67682c8-80",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 275,
+  "ts": "2026-10-05T16:30:29.433173Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ct-31b4d77a9804-81",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 276,
+  "ts": "2026-10-05T16:30:29.433195Z",
+  "payload": {
+   "outcome": "ask",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": null,
+   "scope": "answer",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "done",
+  "version": "v1",
+  "trace_id": "7794ed5a-939e-471b-a758-42c5299f291e",
+  "seq": 278,
+  "ts": "2026-10-05T16:30:29.433336Z",
+  "payload": {
+   "total_cost_usd": 0.0,
+   "total_tool_calls": 12,
+   "elapsed_ms": 17259,
+   "trust_outcome": "ask",
+   "trust_line": "Based on 71 sources, not yet confirmed",
+   "layer_calls_used": 17,
+   "next_step": null,
+   "next_step_query": null,
+   "decisions": [
+    {
+     "name": "guardrail.injection",
+     "options": [
+      "injection",
+      "not_injection"
+     ],
+     "chosen": "not_injection",
+     "decided_by": "jev",
+     "jev_choice": "not_injection",
+     "jev_confidence": 0.99,
+     "guard_choice": "not_injection",
+     "agreed": true,
+     "fallback_reason": null,
+     "jev_latency_ms": 116
+    },
+    {
+     "name": "think.recent_years",
+     "options": [
+      "recent_unbounded",
+      "not_applicable"
+     ],
+     "chosen": "not_applicable",
+     "decided_by": "jev",
+     "jev_choice": "not_applicable",
+     "jev_confidence": 1.0,
+     "guard_choice": null,
+     "agreed": null,
+     "fallback_reason": null,
+     "jev_latency_ms": 133
+    },
+    {
+     "name": "plan.literature",
+     "options": [
+      "wants_literature",
+      "not_literature"
+     ],
+     "chosen": "not_literature",
+     "decided_by": "jev",
+     "jev_choice": "not_literature",
+     "jev_confidence": 1.0,
+     "guard_choice": null,
+     "agreed": null,
+     "fallback_reason": null,
+     "jev_latency_ms": 138
+    },
+    {
+     "name": "think.asks_features",
+     "options": [
+      "asks_features",
+      "not_applicable"
+     ],
+     "chosen": "not_applicable",
+     "decided_by": "jev",
+     "jev_choice": "not_applicable",
+     "jev_confidence": 1.0,
+     "guard_choice": null,
+     "agreed": null,
+     "fallback_reason": null,
+     "jev_latency_ms": 166
+    }
+   ]
+  }
+ }
+]

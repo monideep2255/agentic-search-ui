@@ -66,6 +66,8 @@ The adversary is the unscripted half. It uses the running system in hostile ways
 
 This is the maker-cannot-sign-off split of `self-eval-loop.md` applied to verification itself: the finder is never the closer.
 
+What the lead does with a finding left open after the fix round, the owner's rule of 2026-10-05: it becomes a card on the owner's board, `testing/UI_fix_plan.md`, only if a person using the product would notice it. Anything else is fixed in that round or stays in the phase ledger or the card's report folder, and engineering work worth keeping goes to `testing/Future.md`.
+
 ## The review loop has a budget
 
 The review loop, not the build, is where phases lost their day. Build phase 2.1 took five rounds and build phase 4.2 took six, and in both, every round found its worst defect inside the previous round's fix. Rising scrutiny did not lower the recurrence rate. The two-round cap added on 2026-08-18 then held in only 4 of the 13 phases reviewed after it, because a third round could be authorised, and 17 extra rounds followed; build phase 5.0 ran seven on one control.

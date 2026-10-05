@@ -1,0 +1,9 @@
+Offline check, develop 9a13e983, 2026-10-05: each GENE_FAMILIES prefix set run through the shipped predicate
+esbl ('blaCTX-M',) matches ['blaCTX-M-15']
+carbapenemase ('blaKPC', 'blaNDM', 'blaOXA-48', 'blaVIM', 'blaIMP') matches ['blaKPC-2', 'blaNDM-1', 'blaOXA-48', 'blaVIM-1', 'blaIMP-4']
+colistin ('mcr-',) matches []
+methicillin ('mecA', 'mecC') matches ['mecA', 'mecC']
+vancomycin ('vanA', 'vanB') matches ['vanA', 'vanB']
+mcr-1.1 vs mcr- : False | mcr-1.1 vs mcr : True | mcrB vs mcr : False
+'What is known about Salmonella isolate SAMN02147118 in Pathogen Detection?' -> ('Salmonella', (), True)
+'Show me the ones from 2023' -> None

@@ -1,0 +1,13 @@
+{
+ "name": "mody_a",
+ "q": "What genes are associated with MODY?",
+ "depth": "plain_language",
+ "seconds": 3.7,
+ "trust_outcome": null,
+ "trust_line": null,
+ "tokens": [],
+ "citations": [],
+ "types": [
+  "error"
+ ]
+}
