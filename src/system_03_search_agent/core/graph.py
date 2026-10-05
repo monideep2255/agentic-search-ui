@@ -11593,23 +11593,32 @@ def _answer_tokens(
         for entries in feature_blocks.values():
             feature_block(entries)
 
-    def only_isolate_records(sentences: tuple[str, ...]) -> bool:
+    def is_isolate_sentence(sentence: str) -> bool:
         # Owner decision D11 (2026-10-05): the one exception to titles-only
-        # Plain language. A list made only of isolate records takes the
-        # Researcher table, because an isolate's genes are the answer. Keyed
-        # on the records' own type, never on the question's words.
-        types = []
-        for sentence in sentences:
-            ids = marker_ids(sentence)
-            finding = finding_by_citation_id.get(ids[0]) if ids else None
-            if finding is not None:
-                types.append(finding.entity_type)
-        return bool(types) and all(t == ISOLATE_ENTITY_TYPE for t in types)
+        # Plain language. An isolate record takes the Researcher table,
+        # because an isolate's genes are the answer. Keyed on the record's
+        # own type, never on the question's words.
+        ids = marker_ids(sentence)
+        finding = finding_by_citation_id.get(ids[0]) if ids else None
+        return finding is not None and finding.entity_type == ISOLATE_ENTITY_TYPE
 
     def listing(sentences: tuple[str, ...]) -> None:
-        if plain and not only_isolate_records(sentences):
-            plain_listing(sentences)
+        if not plain:
+            grouped_listing(sentences)
             return
+        # Card 94 (2026-10-05): isolates and an organism record in one
+        # answer. The isolates keep their genes table; every other record
+        # keeps the titles-only list, in its own group after the table.
+        isolates = tuple(s for s in sentences if is_isolate_sentence(s))
+        others = tuple(s for s in sentences if not is_isolate_sentence(s))
+        if isolates:
+            grouped_listing(isolates)
+            if others:
+                paragraph_break()
+        if others:
+            plain_listing(others)
+
+    def grouped_listing(sentences: tuple[str, ...]) -> None:
         sentences, feature_blocks = split_feature_sentences(sentences)
         # Grouped by the plain NOUN of the record type, not the raw type:
         # the graph writes "Gene" and `ncbi_efetch` writes "gene", and
