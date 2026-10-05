@@ -11,7 +11,7 @@
 ## The change
 
 - A person who types `recent-onset diabetes treatment` named a subject and what they wanted, and was asked back. A bare subject is still asked back.
-- File `src/system_03_search_agent/core/graph.py`, the `_ASK_BACK` criteria. The `ask_back` criterion now reads "a subject on its own, with no word saying what to find out about it". The `proceed` criterion now says a subject followed by a word naming the wanted kind of information is a request, with therapy options added to the examples. The owner approved naming therapy options on 2026-10-05.
+- File `src/system_03_search_agent/core/graph.py`, the `_ASK_BACK` criteria. The `ask_back` criterion now reads "a subject on its own, with no word saying what to find out about it". The `proceed` criterion now says a subject followed by a word naming the wanted kind of information is a request, with therapy options added to the examples. The old example "variants" is kept (the first commit dropped it by mistake; the lead caught it, and a second commit restores it). The owner approved naming therapy options on 2026-10-05.
 - No test question and no disease or gene name is in the spec. The instructions line is unchanged.
 - Queries 76 and 84 in the test document needed no edit: neither contradicts the owner's decision.
 
@@ -34,16 +34,33 @@ Each run calls the classifier (Jev, as `CLASSIFIER_PROVIDER=jev` does) with the 
 - The classifier follows the example words in the criteria and does not move on a general description alone. That is why the owner allowed one therapy example.
 - v2 was run 5 times on each of the seven queries: 35 of 35 correct.
 
+### Final wording (v2 plus variants), 5 runs each
+
+| Query | Want | Result |
+|---|---|---|
+| recent-onset diabetes treatment | proceed | 5 of 5 |
+| GERD | ask back | 5 of 5 |
+| BRCA1 | ask back | 5 of 5 |
+| Marfan | ask back | 5 of 5 |
+| reflux disease | ask back | 5 of 5 |
+| papers on statins since 2022 | proceed | 5 of 5 |
+| Any trials for GERD? | proceed | 5 of 5 |
+| BRCA1 variants | proceed | 5 of 5 |
+| CFTR variants | proceed | 5 of 5 |
+| TP53 papers | proceed | 5 of 5 |
+
+50 of 50 correct.
+
 ## Tests
 
-- `test_ask_back_spec_says_a_subject_plus_a_wanted_kind_is_a_request` in `tests/system_03_search_agent/core/test_graph.py`. It failed on the old spec text (run with the source change stashed) and passes on the new one.
+- `test_ask_back_spec_says_a_subject_plus_a_wanted_kind_is_a_request` in `tests/system_03_search_agent/core/test_graph.py`. It also asserts "variants" stays in the proceed examples. It fails on the original develop text (no "therapy options") and on the first commit's text (no "variants"), and passes on the final text.
 - It pins the spec text only. It cannot say how the classifier picks.
 
 ## Gates
 
 - Gate 2 (import order): pass.
 - Gate 3 (ruff over the whole repository): pass, all checks passed.
-- Gate 4 (unit suite): 6803 passed, 143 skipped, 24 deselected, 1 xfailed, in 827 s.
+- Gate 4 (unit suite): first commit: 6803 passed, 143 skipped, 24 deselected, 1 xfailed. Second commit: 6802 passed and 1 failed, a timing test (`test_a_batch_is_cut_at_the_callers_shorter_bound`, 2.07 s against a 0.6 s bound) that the loaded machine slowed. It passes alone (1 passed). It does not touch this change.
 
 ## Not covered
 

@@ -7028,6 +7028,7 @@ def test_ask_back_spec_says_a_subject_plus_a_wanted_kind_is_a_request() -> None:
     ask_back = spec.criteria["ask_back"]
 
     assert "therapy options" in proceed
+    assert "variants" in proceed, "the old example must not be dropped"
     assert "followed by a word that names the wanted kind of information" in proceed
     assert "is a request, not a bare subject" in proceed
     assert "no word saying what to find out" in ask_back

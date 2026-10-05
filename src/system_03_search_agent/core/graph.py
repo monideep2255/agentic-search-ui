@@ -973,9 +973,9 @@ _ASK_BACK: Final = _DecisionSpec(
         "proceed": (
             "It says what to find out, either as a question or as a subject "
             "followed by a word that names the wanted kind of information, for "
-            "example a definition, papers, trials, symptoms, causes or therapy "
-            "options. A subject that is followed by such a word is a request, not "
-            "a bare subject."
+            "example a definition, papers, trials, variants, symptoms, causes or "
+            "therapy options. A subject that is followed by such a word is a "
+            "request, not a bare subject."
         ),
     },
 )
