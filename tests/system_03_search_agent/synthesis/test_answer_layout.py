@@ -642,3 +642,30 @@ def test_12_9_a_plain_label_is_a_title_and_never_a_code() -> None:
     assert plain_record_label(gene, {"name": "BRCA1 and 53BP1 in repair"}, "NCBIGene:672") == (
         "BRCA1 and 53BP1 in repair"
     )
+
+
+# ---------------------------------------------------------------------------
+# Card 95 (2026-10-05): a token carries at most 20 marker ids, so a lead
+# sentence writing 35 markers showed 21 to 35 as raw bracketed text. Red on
+# the old code: the sentence carried 35 markers.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("depth", ["researcher", "plain"])
+def test_the_lead_sentence_never_writes_more_markers_than_a_token_can_carry(depth: str) -> None:
+    import re
+
+    from system_03_search_agent.synthesis.answer_layout import (
+        MAX_SUMMARY_MARKERS,
+        answer_summary_sentence,
+    )
+
+    findings = [_fold_finding(n, "SequenceVariant", f"ClinVar:{n}", f"NM_{n}") for n in range(1, 36)]
+    slots = {f.citation_id: f.ref_index for f in findings}
+    sentence = answer_summary_sentence(
+        findings, slots, "BRCA1", None, lambda f: None, audience_depth=depth
+    )
+    assert sentence is not None
+    markers = [int(n) for n in re.findall(r"\[(\d+)\]", sentence)]
+    assert 0 < len(markers) <= MAX_SUMMARY_MARKERS == 20, sentence
+    assert "35" in sentence, "the count still tells the truth about all records"

@@ -489,8 +489,10 @@ export function ArchitectureScreen({ onNavigateToAbout }: ArchitectureScreenProp
             Plan decides which of them a question gets, from what Think found in it: PubTator3 and
             ClinicalTrials.gov for a gene named by its symbol or, when no gene was found, for a
             disease, and LitVar2 for up to two rs variant ids. Not every question gets them. A gene
-            named only by an identifier, a question about bacterial isolates, and a question with no
-            gene that a classifier reads as asking for papers are each searched another way.
+            named only by an identifier, a question about bacterial isolates, a question with no
+            gene that a classifier reads as asking for papers, a disease whose MedGen name cannot be
+            looked up, and a disease named by an identifier from another vocabulary are each
+            searched another way, and for the last two that is the graph search alone.
           </StopText>
           <Box sx={{ mt: 0.75 }}>
             <LayerCard layer={LAYERS[2]} />

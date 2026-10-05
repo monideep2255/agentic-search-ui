@@ -528,12 +528,14 @@ from system_03_search_agent.harness.jev_client import (
 from system_03_search_agent.harness.tiers import Tier, resolve_jev_model
 from system_03_search_agent.synthesis.answer_layout import (
     IDENTIFIER_COLUMN_LABEL,
+    ISOLATE_ENTITY_TYPE,
     MAX_HEADINGS,
     PLAIN_SOURCES_HEADING,
     TABLE_COLUMNS,
     TABLE_HEADINGS,
     GroundingInput,
     answer_summary_sentence,
+    collected_placeholder,
     condition_ids_for_row,
     drop_record_restatements,
     emphasis_for,
@@ -9461,6 +9463,20 @@ def _build_incomplete_answer_note(
     return f"Note: {count} further {label}s were found for this question and are {closing}"
 
 
+def _build_cap_list_note() -> str:
+    """Tell the reader the question hit its limit and the list is what was found.
+
+    Card 46 (2026-10-05). The limit path used to say "the answer below
+    reflects a partial result" over an empty page. It now lists the records
+    gathered before the limit, so the note says exactly that. Same shape as
+    the other notes: one sentence, opening "Note:", no interior period.
+    """
+    return (
+        "Note: this question reached its resource limit before it finished, "
+        "so this answer lists the records gathered so far"
+    )
+
+
 def _build_structured_fallback_note() -> str:
     """Tell the reader this answer is a list of records, not a summary.
 
@@ -9475,8 +9491,8 @@ def _build_structured_fallback_note() -> str:
     splits on those and counts an unmarked continuation as an uncited claim.
     """
     return (
-        "Note: the written summary of these records could not be verified "
-        "against them, so this answer lists the records found instead"
+        "Note: no written summary could be checked against the records, "
+        "so the records found are listed below with their sources"
     )
 
 
@@ -11577,8 +11593,21 @@ def _answer_tokens(
         for entries in feature_blocks.values():
             feature_block(entries)
 
+    def only_isolate_records(sentences: tuple[str, ...]) -> bool:
+        # Owner decision D11 (2026-10-05): the one exception to titles-only
+        # Plain language. A list made only of isolate records takes the
+        # Researcher table, because an isolate's genes are the answer. Keyed
+        # on the records' own type, never on the question's words.
+        types = []
+        for sentence in sentences:
+            ids = marker_ids(sentence)
+            finding = finding_by_citation_id.get(ids[0]) if ids else None
+            if finding is not None:
+                types.append(finding.entity_type)
+        return bool(types) and all(t == ISOLATE_ENTITY_TYPE for t in types)
+
     def listing(sentences: tuple[str, ...]) -> None:
-        if plain:
+        if plain and not only_isolate_records(sentences):
             plain_listing(sentences)
             return
         sentences, feature_blocks = split_feature_sentences(sentences)
@@ -11686,7 +11715,9 @@ def _answer_tokens(
                         cells.append(second or "")
                     if extra_label is not None:
                         cells.append(
-                            extra[1] if extra is not None and extra[0] == extra_label else ""
+                            extra[1]
+                            if extra is not None and extra[0] == extra_label
+                            else collected_placeholder(extra_label, row_fields)
                         )
                 # One row per record: two claims about the same record (its
                 # title and its symbol) are one row, not two identical ones.
@@ -11834,12 +11865,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         )
         return sink.result()
 
-    if state.get("cap_exceeded", False):
-        # Routed straight here from an earlier node's per-query cap hit;
-        # ship the partial result per Section 19.1, never a blank failure.
-        return _partial_result_for_cap(
-            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
-        )
+    # Routed here from an earlier node's per-query cap hit. Card 46: the
+    # partial result is no longer a note over nothing. Write skips its own
+    # model call and lists what was gathered through the structured
+    # fallback below, with a citation each. When nothing was gathered, or
+    # nothing grounds, `_partial_result_for_cap` still ships (Section
+    # 19.1), never a blank failure.
+    cap_hit = bool(state.get("cap_exceeded", False))
 
     clarification_needed = state.get("clarification_needed")
     if clarification_needed:
@@ -12168,8 +12200,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     write_budget_s = budget_for_step("write", query_class)
     write_started_at = time.monotonic()
 
+    if cap_hit and not prompt_findings:
+        return _partial_result_for_cap(
+            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+        )
+
     try:
-        synth_text = await _dispatch_tier_call(
+        synth_text = "" if cap_hit else await _dispatch_tier_call(
             harness,
             trace_id,
             "synth",
@@ -12353,6 +12390,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         repair_budget_s = write_budget_s - (time.monotonic() - write_started_at)
         if (
             omitted_findings
+            and not cap_hit
             and repair_budget_s >= _WRITE_REPAIR_MIN_BUDGET_S
             and not _code_built_lines_will_cite(
                 omitted_findings,
@@ -12434,7 +12472,19 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 # omissions, and it implies the claim set is non-empty, so
                 # both of the old conditions are subsumed rather than
                 # accumulated alongside it.
-                if reported_after > reported_before:
+                #
+                # Card 88 (2026-10-05): a repair that keeps EVERY record the
+                # first answer reported (a superset, possibly equal) and shows
+                # more grounded sentences is also kept. Measured locally on
+                # the GERD question: a first draft with one surviving sentence
+                # beat a repair with three on the same abstract, so the reader
+                # got one sentence. What F-4.5-J-13 protects still holds: no
+                # reported record can be dropped, and every sentence either
+                # way passed the same grounding pass.
+                more_on_the_same_records = reported_after >= reported_before and len(
+                    repaired_grounding.sentences
+                ) > len(grounding.sentences)
+                if reported_after > reported_before or more_on_the_same_records:
                     synth_text = repaired_text
                     grounding = repaired_grounding
                     model_layout = repaired_layout
@@ -12479,6 +12529,11 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 {claim.finding.citation_id for claim in grounding.claims},
                 synth_findings,
             )
+    if cap_hit and not structured_fallback_used:
+        # Nothing gathered grounds, so there is no list to show.
+        return _partial_result_for_cap(
+            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+        )
 
     # UI fix set 10, item 10.1, second cut (2026-09-13). THE FINDINGS TAIL.
     #
@@ -12633,7 +12688,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
 
     structured_fallback_note: str | None = None
     if structured_fallback_used and trust_outcome != "refuse":
-        structured_fallback_note = _build_structured_fallback_note()
+        structured_fallback_note = (
+            _build_cap_list_note() if cap_hit else _build_structured_fallback_note()
+        )
 
     # F-3.4-A-01: a completeness check, a different question from
     # everything Section 8.3 above just computed. Every claim above may
