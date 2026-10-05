@@ -233,6 +233,9 @@ export const MCP_STDIO_CONFIG = `{
   }
 }`;
 
+/** One piece of a card's text: a paragraph, or a command set in a code box. */
+export type CardSegment = string | { code: string; label: string };
+
 /** The command line card's words, in the order a reader needs them: what
  *  the install needs before it runs, how to get back into the environment
  *  later, then each command.
@@ -248,14 +251,15 @@ export const MCP_STDIO_CONFIG = `{
  *  also reads the graph directly with credentials only the operator holds,
  *  so an outside reader could never run it; the card says how a KGX file
  *  is had today instead. */
-export const CLI_CARD_BODY =
-  "Two console commands rather than HTTP routes. The install works on macOS and Linux and needs git and Python 3.11: its first line runs python3.11 by name, so if python3.11 --version fails, install Python 3.11 first, or put the name of a newer Python, such as python3.12, in that line. " +
-  "Its first two lines make and enter a virtual environment, since many systems refuse a pip install outside one. In a new terminal, enter it again with . s3-env/bin/activate from the same folder before s3 login or s3 ask. " +
-  "s3 asks a question and prints the answer, human-readable by default and JSON with --json. " +
-  "s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent: it is not typed into a terminal, where it only waits for input, but started by the agent from the configuration below, pasted into the agent's MCP settings. " +
-  "An agent app does not read your shell's PATH, so replace /path/to/s3-env/bin/s3 with the full path that command -v s3 prints inside the virtual environment, after . s3-env/bin/activate. " +
-  "s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops. " +
-  "s3-kgx-export is not in that install and has no download: it reads the knowledge graph directly with credentials only the operator holds, so today a KGX file comes from the operator, who runs it for the seed CURIEs you name.";
+export const CLI_CARD_SEGMENTS: CardSegment[] = [
+  "Two console commands rather than HTTP routes. The install works on macOS and Linux and needs git and Python 3.11: its first line runs python3.11 by name, so if python3.11 --version fails, install Python 3.11 first, or put the name of a newer Python, such as python3.12, in that line.",
+  { code: INSTALL_EXAMPLE, label: "Install command for s3" },
+  "Its first two lines make and enter a virtual environment, since many systems refuse a pip install outside one. In a new terminal, enter it again with . s3-env/bin/activate from the same folder before s3 login or s3 ask. s3 asks a question and prints the answer, human-readable by default and JSON with --json.",
+  { code: CLI_EXAMPLE, label: "Sign in and ask with s3" },
+  "s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent: it is not typed into a terminal, where it only waits for input, but started by the agent from the configuration below, pasted into the agent's MCP settings. An agent app does not read your shell's PATH, so replace /path/to/s3-env/bin/s3 with the full path that command -v s3 prints inside the virtual environment, after . s3-env/bin/activate.",
+  { code: MCP_STDIO_CONFIG, label: "Agent configuration for s3 mcp" },
+  "s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops. s3-kgx-export is not in that install and has no download: it reads the knowledge graph directly with credentials only the operator holds, so today a KGX file comes from the operator, who runs it for the seed CURIEs you name.",
+];
 
 /** The event stream frame, transcribed from `adapters/web_sse/app.py`'s own
  *  emitter (`{"id": seq, "event": type, "data": envelope_json}`) and
@@ -397,7 +401,15 @@ interface CardLink {
  * outlined, which is the reference's own "Copy curl" beside "API Docs"
  * hierarchy applied to a card whose secondary action is also a copy.
  */
-function CardActionRow({ copies, links }: { copies?: CardCopy[]; links?: CardLink[] }) {
+function CardActionRow({
+  copies,
+  links,
+  showsCode = false,
+}: {
+  copies?: CardCopy[];
+  links?: CardLink[];
+  showsCode?: boolean;
+}) {
   const [state, setState] = useState<{ testId: string; status: CopyStatus } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -476,7 +488,9 @@ function CardActionRow({ copies, links }: { copies?: CardCopy[]; links?: CardLin
         >
           {state.status === "copied"
             ? "Copied to clipboard."
-            : "Could not copy automatically. Select the example and copy it by hand."}
+            : showsCode
+              ? "Could not copy automatically. Select the command shown above and copy it by hand."
+              : "Could not copy automatically. Allow clipboard access for this page, then try again."}
         </Box>
       ) : null}
     </Box>
@@ -496,6 +510,7 @@ function IntegrationCard({
   icon,
   title,
   body,
+  segments,
   code,
   codeLabel,
   copies,
@@ -503,12 +518,18 @@ function IntegrationCard({
 }: {
   icon: React.ReactNode;
   title: string;
-  body: string;
+  body?: string;
+  segments?: CardSegment[];
   code?: string;
   codeLabel?: string;
   copies?: CardCopy[];
   links?: CardLink[];
 }) {
+  const blocks: CardSegment[] = [
+    ...(segments ?? (body ? [body] : [])),
+    ...(code ? [{ code, label: codeLabel ?? `${title} example` }] : []),
+  ];
+  const showsCode = blocks.some((b) => typeof b !== "string");
   return (
     <Box
       sx={{
@@ -525,42 +546,50 @@ function IntegrationCard({
       <Typography variant="h3" component="h2" sx={{ mb: 1 }}>
         {title}
       </Typography>
-      <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
-        {body}
-      </Typography>
-      {code ? (
-        <Box
-          component="pre"
-          // A pre with overflow-x: auto is a scrollable region, and a keyboard
-          // user cannot scroll it without being able to focus it. axe flags
-          // this as scrollable-region-focusable; the fix is a tab stop plus a
-          // name, so the region is both reachable and announced.
-          tabIndex={0}
-          role="region"
-          aria-label={codeLabel ?? `${title} example`}
-          sx={{
-            ...mono,
-            fontSize: 11.5,
-            m: 0,
-            mt: 1.5,
-            p: 1.25,
-            // Scrolled rather than wrapped, which is the opposite of what this
-            // page did when five cards each carried a code box. Two cards
-            // show code now, the MCP config and the agent config for `s3 mcp`
-            // (F-8.10-J10), each a small JSON object whose lines are short
-            // enough to read at 390px; a wrapped brace-per-line config reads
-            // as broken, while a scroll container keeps the shape and still
-            // cannot bleed the page sideways.
-            overflowX: "auto",
-            bgcolor: designTokens.surfaceSunk,
-            border: `1px solid ${designTokens.line}`,
-            borderRadius: 0.5,
-          }}
-        >
-          {code}
-        </Box>
-      ) : null}
-      <CardActionRow copies={copies} links={links} />
+      {blocks.map((block, index) =>
+        typeof block === "string" ? (
+          <Typography
+            key={index}
+            variant="body2"
+            sx={{ color: designTokens.inkMuted, mt: index === 0 ? 0 : 1.25 }}
+          >
+            {block}
+          </Typography>
+        ) : (
+          <Box
+            component="pre"
+            // A pre with overflow-x: auto is a scrollable region, and a keyboard
+            // user cannot scroll it without being able to focus it. axe flags
+            // this as scrollable-region-focusable; the fix is a tab stop plus a
+            // name, so the region is both reachable and announced.
+            tabIndex={0}
+            role="region"
+            aria-label={block.label}
+            sx={{
+              ...mono,
+              fontSize: 11.5,
+              m: 0,
+              mt: 1.25,
+              mb: 1.25,
+              p: 1.25,
+              // Scrolled rather than wrapped, which is the opposite of what this
+              // page did when five cards each carried a code box. The MCP
+              // card and the command line card show code now (card 79), and
+              // the agent config for `s3 mcp` (F-8.10-J10) is a small JSON object whose lines are short
+              // enough to read at 390px; a wrapped brace-per-line config reads
+              // as broken, while a scroll container keeps the shape and still
+              // cannot bleed the page sideways.
+              overflowX: "auto",
+              bgcolor: designTokens.surfaceSunk,
+              border: `1px solid ${designTokens.line}`,
+              borderRadius: 0.5,
+            }}
+          >
+            {block.code}
+          </Box>
+        ),
+      )}
+      <CardActionRow copies={copies} links={links} showsCode={showsCode} />
     </Box>
   );
 }
@@ -750,9 +779,7 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<TerminalIcon />}
           title="Command line tools"
-          body={CLI_CARD_BODY}
-          code={MCP_STDIO_CONFIG}
-          codeLabel="Agent configuration for s3 mcp"
+          segments={CLI_CARD_SEGMENTS}
           copies={[
             {
               label: "Copy install command",
@@ -974,7 +1001,7 @@ const JOURNEY_LAYERS: { n: 1 | 2 | 3; name: string; tools: string; body: string 
     n: 1,
     name: "Knowledge graph",
     tools: "cypher_query",
-    body: "115M nodes and 693M edges merged from five NCBI databases. One query returns the stored links from BRCA1 to its diseases, while the live layers are searched at the same time.",
+    body: "115M nodes and 693M edges merged from five NCBI databases. One query returns the stored links from BRCA1 to its diseases, while most of the live searches run at the same time and four of the thirteen calls follow in a second round.",
   },
   {
     n: 2,
@@ -1251,6 +1278,33 @@ export function AboutScreen({
       title="How an answer is built"
       lede="Every question crosses up to three data layers. The colour on a citation tells you which layer it came from, and therefore how fresh it is and how it was established."
     >
+      <Box sx={{ ...GRID, mb: 4 }} data-testid="about-layer-cards">
+        {layers.map((layer) => (
+          <Box
+            key={layer.n}
+            sx={{
+              bgcolor: designTokens.surface,
+              border: `1px solid ${designTokens.line}`,
+              borderRadius: 1,
+              p: 2.5,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 1.25 }}>
+              <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: layer.colour, flex: "none" }} />
+              <Typography variant="h4" component="h2">
+                {layer.name}
+              </Typography>
+              <Box component="span" sx={{ ...mono, ml: "auto", fontSize: 11, fontWeight: 700, color: layer.colour }}>
+                L{layer.n}
+              </Box>
+            </Box>
+            <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
+              {layer.body}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+
       <Typography variant="h2" component="h2" sx={{ mb: 1.5 }}>
         What happens to your question
       </Typography>
@@ -1378,7 +1432,7 @@ export function AboutScreen({
                       documents for the same pair, "reading the LABEL in ink
                       while the border, the wash and the check mark keep
                       carrying the green", so it copies a decision rather than
-                      inventing one. The layer cards further down this page
+                      inventing one. The layer cards above the walk
                       keep the coloured mark because their ground is `surface`,
                       where the same pair passes.
                     */}
@@ -1497,33 +1551,6 @@ export function AboutScreen({
         )}{" "}
         and ask "{JOURNEY_QUESTION}".
       </Typography>
-
-      <Box sx={GRID}>
-        {layers.map((layer) => (
-          <Box
-            key={layer.n}
-            sx={{
-              bgcolor: designTokens.surface,
-              border: `1px solid ${designTokens.line}`,
-              borderRadius: 1,
-              p: 2.5,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 1.25 }}>
-              <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: layer.colour, flex: "none" }} />
-              <Typography variant="h4" component="h2">
-                {layer.name}
-              </Typography>
-              <Box component="span" sx={{ ...mono, ml: "auto", fontSize: 11, fontWeight: 700, color: layer.colour }}>
-                L{layer.n}
-              </Box>
-            </Box>
-            <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
-              {layer.body}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
 
       <Typography variant="h2" component="h2" sx={{ mt: 5, mb: 1.5 }}>
         Cite or refuse

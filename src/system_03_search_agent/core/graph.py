@@ -6434,6 +6434,7 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # memory-bound antecedent, and a remembered gene must not be able to
     # stop a new question about papers reaching the papers.
     topic_term: str | None = None
+    disease_lookup_failed = False
     if isinstance(planned, _PlannedToolCall) and state.get("coordinate_window") is None:
         gene_resolved = _first_gene_curie(target_curies) is not None
         asks_for_literature = False
@@ -6674,6 +6675,9 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             else None
         )
         disease_text = await _disease_search_text(disease_curie)
+        # Card 77: a disease was resolved but its name could not be read back,
+        # so the literature and trials searches were never planned. Say so.
+        disease_lookup_failed = disease_curie is not None and not disease_text
 
         layer_calls = _build_layer_tool_calls(
             query.text, gene_symbol, _rsids_in_text(query.text), disease_text
@@ -6829,6 +6833,7 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         # answer to what has been published.
         topic_search_term=topic_term or "",
         **({"paper_link_plan": paper_link_plan} if paper_link_plan is not None else {}),
+        disease_lookup_failed=disease_lookup_failed,
     )
 
 
@@ -9235,6 +9240,23 @@ def _isolate_count_note(state: GraphState) -> str | None:
     return None
 
 
+def _isolate_disclosure_note(state: GraphState) -> str | None:
+    """Card 94, group B: what the isolate search covered and what it left out.
+
+    The sentence `isolate_search.disclosure` built for the Think narrative,
+    put under the answer too, where a person reads it: the organism, the
+    gene prefixes a family search used, and each family's own "not searched"
+    reason. None for every other question.
+    """
+    question = state.get("isolate_question")
+    if question is None or question.organism is None:
+        return None
+    text = isolate_search.disclosure(question).strip()
+    if not text:
+        return None
+    return text[0].upper() + text[1:].rstrip(".") + "."
+
+
 def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
     """F-3.4-A-01: state which named entities this answer does NOT cover,
     the same "name the scale, not just that a cut happened" discipline
@@ -9463,6 +9485,70 @@ _DOWN_SOURCE_WORDS: Final[dict[str, tuple[str, str]]] = {
 }
 
 
+#: Card 91: the kind of source a failed call asked, as a person names it,
+#: for the tools that are not an NCBI database search. A tool not listed is
+#: still disclosed, without a name.
+_FAILED_TOOL_WORDS: Final[dict[str, str]] = {
+    "cypher_query": "the knowledge graph",
+    "ncbi_dbsnp": "dbSNP",
+    "pubtator_annotate": "PubTator",
+    "litvar2_lookup": "LitVar2",
+    "pathogen_detection": "Pathogen Detection",
+    "clinicaltrials_search": "ClinicalTrials.gov",
+}
+
+
+def _failed_search_label(item: dict[str, str]) -> str | None:
+    """The source a failed call asked, in a person's words, or None when unknown.
+
+    Decided from the typed `tool` and `source` keys only, never from the
+    `reason` text, so nothing a service wrote reaches the note.
+    """
+    if item.get("tool") == "ncbi_efetch":
+        source = item.get("source") or ""
+        words = _DOWN_SOURCE_WORDS.get(source)
+        if words is not None:
+            return words[0]
+        return "NCBI records"
+    return _FAILED_TOOL_WORDS.get(item.get("tool") or "")
+
+
+def _build_unfinished_search_note(failed_searches: list[dict[str, str]]) -> str:
+    """Card 91: the note for a lost background call that is not an outage.
+
+    It names which kind of source was not searched and, when every failed
+    call carries the same typed kind, the plain reason: NCBI busy (ask again
+    in a minute) or too slow (ask again). With nothing typed to say, it is
+    the original sentence, `FAILED_SEARCH_NOTE`, unchanged.
+    """
+    labels: list[str] = []
+    for item in failed_searches:
+        label = _failed_search_label(item)
+        if label is not None and label not in labels:
+            labels.append(label)
+    kinds = {item.get("kind") or "other" for item in failed_searches}
+    if not labels and kinds <= {"other"}:
+        return FAILED_SEARCH_NOTE
+    why = ""
+    advice = "Ask again to retry."
+    if kinds == {"rate_limited"}:
+        why = " because NCBI was busy"
+        advice = "Ask again in a minute."
+    elif kinds == {"timed_out"}:
+        why = " because it took too long"
+    if not labels:
+        return (
+            f"One of the background searches did not finish{why}, so this answer "
+            f"may be missing sources. {advice}"
+        )
+    where = labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + " and " + labels[-1]
+    missing = "it" if len(labels) == 1 else "them"
+    return (
+        f"The background search of {where} did not finish{why}, so this answer "
+        f"may be missing sources from {missing}. {advice}"
+    )
+
+
 def _build_failed_search_note(failed_searches: list[dict[str, str]]) -> str:
     """The note under an answer that lost a background call (card 63).
 
@@ -9491,7 +9577,7 @@ def _build_failed_search_note(failed_searches: list[dict[str, str]]) -> str:
     """
     down = [item for item in failed_searches if item.get("kind") == "service_down"]
     if not down:
-        return FAILED_SEARCH_NOTE
+        return _build_unfinished_search_note(failed_searches)
 
     named: list[tuple[str, str]] = []
     unnamed_down = False
@@ -9654,6 +9740,20 @@ def _build_incomplete_answer_note(
     return f"Note: {count} further {label}s were found for this question and are {closing}"
 
 
+def _build_cap_list_note() -> str:
+    """Tell the reader the question hit its limit and the list is what was found.
+
+    Card 46 (2026-10-05). The limit path used to say "the answer below
+    reflects a partial result" over an empty page. It now lists the records
+    gathered before the limit, so the note says exactly that. Same shape as
+    the other notes: one sentence, opening "Note:", no interior period.
+    """
+    return (
+        "Note: this question reached its resource limit before it finished, "
+        "so this answer lists the records gathered so far"
+    )
+
+
 def _build_structured_fallback_note() -> str:
     """Tell the reader this answer is a list of records, not a summary.
 
@@ -9668,8 +9768,8 @@ def _build_structured_fallback_note() -> str:
     splits on those and counts an unmarked continuation as an uncited claim.
     """
     return (
-        "Note: the written summary of these records could not be verified "
-        "against them, so this answer lists the records found instead"
+        "Note: no written summary could be checked against the records, "
+        "so the records found are listed below with their sources"
     )
 
 
@@ -11404,6 +11504,24 @@ def _narrative_chunks(
 #: set 9 brief. Emitted as a `note` token after every Plain language answer and
 #: never after a Researcher one. A note, never a claim, so it carries no marker
 #: and no surface counts it toward citation coverage.
+_DISEASE_LOOKUP_FAILED_NOTE = (
+    "I could not look up this condition's name, so I did not search the "
+    "literature or clinical trials for it. Ask again to retry."
+)
+
+
+def _disease_lookup_failed_note(state: GraphState) -> str | None:
+    """Card 77: say so when a resolved disease's literature and trials were not searched.
+
+    `plan` sets the flag when the disease was resolved but the MedGen name
+    lookup failed, which plans the one graph call only. Without this the
+    answer reads as "no trials found" when none were looked for.
+    """
+    if state.get("disease_lookup_failed"):
+        return _DISEASE_LOOKUP_FAILED_NOTE
+    return None
+
+
 _MEDICAL_ADVICE_NOTE = "This is a research summary, not medical advice."
 
 
@@ -11748,6 +11866,7 @@ def _answer_tokens(
         # both walk the same `sentences`.
         sentences, feature_blocks = split_feature_sentences(sentences)
         heading(PLAIN_SOURCES_HEADING)
+        listed_records: set[tuple[str, tuple[str, ...]]] = set()
         for sentence in sentences:
             ids = marker_ids(sentence)
             finding = finding_by_citation_id.get(ids[0]) if ids else None
@@ -11757,6 +11876,12 @@ def _answer_tokens(
             label = plain_record_label(
                 finding, _row_fields_for(finding, findings), identifier_for(finding)
             )
+            # One row per record: two claims about the same record (its title
+            # and its symbol) are one row, not two identical ones.
+            record_key = ((finding.source_url or finding.citation_id).strip(), (label,))
+            if record_key in listed_records:
+                continue
+            listed_records.add(record_key)
             sentence_token(sentence, kind="list_item", cells=[label])
         # Beneath the one list, so the list itself stays one list: each
         # disease's features under a heading that names the disease.
@@ -11869,6 +11994,7 @@ def _answer_tokens(
                 )
             else:
                 heading(records_heading)
+            listed_records: set[tuple[str, tuple[str, ...]]] = set()
             for (sentence, finding), row_fields, second, identifier, extra in zip(
                 entries, row_fields_by_entry, second_cells, identifiers, extras, strict=True
             ):
@@ -11876,20 +12002,27 @@ def _answer_tokens(
                     sentence_token(sentence)
                     continue
                 label = record_label(finding, row_fields)
+                cells = [label]
+                if as_table:
+                    if has_identifier:
+                        cells.append(identifier)
+                    if mapped:
+                        cells.append(second or "")
+                    if extra_label is not None:
+                        cells.append(
+                            extra[1]
+                            if extra is not None and extra[0] == extra_label
+                            else collected_placeholder(extra_label, row_fields)
+                        )
+                # One row per record: two claims about the same record (its
+                # title and its symbol) are one row, not two identical ones.
+                record_key = ((finding.source_url or finding.citation_id).strip(), tuple(cells))
+                if record_key in listed_records:
+                    continue
+                listed_records.add(record_key)
                 if not as_table:
                     sentence_token(sentence, kind="list_item", cells=[label])
                     continue
-                cells = [label]
-                if has_identifier:
-                    cells.append(identifier)
-                if mapped:
-                    cells.append(second or "")
-                if extra_label is not None:
-                    cells.append(
-                        extra[1]
-                        if extra is not None and extra[0] == extra_label
-                        else collected_placeholder(extra_label, row_fields)
-                    )
                 linked = (
                     [
                         disease_citation_by_curie[curie]
@@ -12027,12 +12160,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         )
         return sink.result()
 
-    if state.get("cap_exceeded", False):
-        # Routed straight here from an earlier node's per-query cap hit;
-        # ship the partial result per Section 19.1, never a blank failure.
-        return _partial_result_for_cap(
-            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
-        )
+    # Routed here from an earlier node's per-query cap hit. Card 46: the
+    # partial result is no longer a note over nothing. Write skips its own
+    # model call and lists what was gathered through the structured
+    # fallback below, with a citation each. When nothing was gathered, or
+    # nothing grounds, `_partial_result_for_cap` still ships (Section
+    # 19.1), never a blank failure.
+    cap_hit = bool(state.get("cap_exceeded", False))
 
     clarification_needed = state.get("clarification_needed")
     if clarification_needed:
@@ -12361,8 +12495,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     write_budget_s = budget_for_step("write", query_class)
     write_started_at = time.monotonic()
 
+    if cap_hit and not prompt_findings:
+        return _partial_result_for_cap(
+            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+        )
+
     try:
-        synth_text = await _dispatch_tier_call(
+        synth_text = "" if cap_hit else await _dispatch_tier_call(
             harness,
             trace_id,
             "synth",
@@ -12550,6 +12689,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         repair_budget_s = write_budget_s - (time.monotonic() - write_started_at)
         if (
             omitted_findings
+            and not cap_hit
             and repair_budget_s >= _WRITE_REPAIR_MIN_BUDGET_S
             and not _code_built_lines_will_cite(
                 omitted_findings,
@@ -12688,6 +12828,11 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 {claim.finding.citation_id for claim in grounding.claims},
                 synth_findings,
             )
+    if cap_hit and not structured_fallback_used:
+        # Nothing gathered grounds, so there is no list to show.
+        return _partial_result_for_cap(
+            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+        )
 
     # UI fix set 10, item 10.1, second cut (2026-09-13). THE FINDINGS TAIL.
     #
@@ -12842,7 +12987,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
 
     structured_fallback_note: str | None = None
     if structured_fallback_used and trust_outcome != "refuse":
-        structured_fallback_note = _build_structured_fallback_note()
+        structured_fallback_note = (
+            _build_cap_list_note() if cap_hit else _build_structured_fallback_note()
+        )
 
     # F-3.4-A-01: a completeness check, a different question from
     # everything Section 8.3 above just computed. Every claim above may
@@ -13149,6 +13296,8 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 truncation_note,
                 _isolate_count_note(state),
                 *_paper_link_notes(state),
+                _isolate_disclosure_note(state),
+                _disease_lookup_failed_note(state),
                 structured_fallback_note,
                 partial_answer_note,
                 incomplete_answer_note,

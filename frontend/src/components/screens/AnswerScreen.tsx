@@ -433,7 +433,9 @@ export const LAYER_GROUP_LABEL: Record<Layer, string> = {
  * Notes the answer still CARRIES but the web UI does not SHOW.
  *
  * Product-owner decision, 2026-09-21: "the Notes section is super confusing.
- * remove it", naming these two exactly. They asked for them deleted
+ * remove it", naming two notes. On 2026-10-05 (D1) the owner reversed it for
+ * the no-written-summary note: a list with no reason reads as a defect, so
+ * that note is shown. Only the further-records note stays hidden. They asked for them deleted
  * outright and that is what this does on screen.
  *
  * HIDDEN HERE RATHER THAN REMOVED IN THE BACKEND, and the reason is worth
@@ -454,7 +456,6 @@ export const LAYER_GROUP_LABEL: Record<Layer, string> = {
  * disease record").
  */
 export const HIDDEN_NOTE_PATTERNS: RegExp[] = [
-  /^Note: the written summary of these records could not be verified/,
   // "Note: 5 further pubmed records were found ...", and its singular
   // "Note: one further disease record was found ...". Written as one
   // pattern because the count and the record type both vary, and a prefix

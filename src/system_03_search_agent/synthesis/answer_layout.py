@@ -921,6 +921,13 @@ def drop_record_restatements(
 # beyond it the sentence carries the count and the list carries the names.
 MAX_SUMMARY_NAMES = 6
 
+# A token carries at most 20 `marker_ids` (`TokenPayload.marker_ids`), so a
+# lead sentence that wrote more than 20 `[N]` markers showed the rest as raw
+# bracketed text on screen. The lead line therefore writes at most this many
+# markers; the records past it stay counted in the sentence and are listed
+# and cited, one row each, in the record tables below.
+MAX_SUMMARY_MARKERS = 20
+
 
 def summary_label(finding: SynthFinding, row: dict[str, Any] | None) -> str:
     """The name the summary sentence prints for one answer finding, from
@@ -1043,6 +1050,9 @@ def answer_summary_sentence(
             and f.name_resolved
             and not is_placeholder_condition_title(f.field_value)
         ][:MAX_SUMMARY_NAMES]
+    # Room for the named linked diseases' markers too, so the whole sentence
+    # stays within one token's marker limit.
+    markers = markers[: max(MAX_SUMMARY_MARKERS - len(named_diseases), 0)]
 
     if is_plain_language(audience_depth):
         # Grouped by the everyday noun, so the graph's "Gene" and a live

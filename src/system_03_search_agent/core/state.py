@@ -261,3 +261,6 @@ class GraphState(TypedDict, total=False):
     # nothing, and the synthesis directive that keeps the answer to what
     # has been published rather than a verdict.
     topic_search_term: str
+    # Card 77: set by `plan` when a disease resolved but its name lookup
+    # failed, so no literature or trials search was planned; `write` says so.
+    disease_lookup_failed: bool

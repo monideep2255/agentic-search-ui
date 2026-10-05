@@ -2054,3 +2054,43 @@ class TestLink:
         )
         assert output.status == "error"
         assert "connection failed" in output.error
+
+
+class TestRepairMojibake:
+    """Test the mojibake repair helper."""
+
+    def test_repairs_double_encoded_utf8_with_c3(self) -> None:
+        """Test that mojibake with U+00C3 (Ã) is repaired.
+
+        NCBI sends "Muir-TorrÃ© syndrome" where UTF-8 bytes for "é" (c3 a9)
+        are interpreted as latin-1 characters (Ã ©) and re-encoded as UTF-8
+        (c3 83 c2 a9). This test constructs the mojibake string and verifies
+        the repair.
+        """
+        mojibake = "Muir-Torr" + chr(0xc3) + chr(0xa9) + " syndrome"
+        assert mojibake == "Muir-TorrÃ© syndrome"
+        result = ncbi_eutils_actions._repair_mojibake(mojibake)
+        assert result == "Muir-Torré syndrome"
+
+    def test_leaves_correct_utf8_unchanged(self) -> None:
+        """Test that correct UTF-8 with accented characters is unchanged."""
+        correct = "Muir-Torré syndrome"
+        result = ncbi_eutils_actions._repair_mojibake(correct)
+        assert result == correct
+
+    def test_leaves_plain_ascii_unchanged(self) -> None:
+        """Test that plain ASCII text is left unchanged."""
+        ascii_text = "Simple text without accents"
+        result = ncbi_eutils_actions._repair_mojibake(ascii_text)
+        assert result == ascii_text
+
+    def test_leaves_unrepairable_mojibake_unchanged(self) -> None:
+        """Test that mojibake that cannot be repaired is left unchanged.
+
+        A string with U+00C3 (Ã) that is not valid double-encoded UTF-8
+        should pass through unchanged since the latin-1 encode or UTF-8
+        decode will fail.
+        """
+        unrepairable = "Ã alone"
+        result = ncbi_eutils_actions._repair_mojibake(unrepairable)
+        assert result == unrepairable
