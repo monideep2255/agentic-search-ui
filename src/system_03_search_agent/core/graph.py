@@ -505,7 +505,7 @@ from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.data.session import session_scope
 from system_03_search_agent.guardrail import classifier, forbidden, prefilter
 from system_03_search_agent.guardrail.verdict import GuardVerdict, refused
-from system_03_search_agent.harness import call_budget, cost_control
+from system_03_search_agent.harness import call_budget, call_log, cost_control
 from system_03_search_agent.harness.cache import REGISTERED_TOOL_SCHEMAS, build_stable_prefix
 from system_03_search_agent.harness.coordinator_worker import (
     Finding,
@@ -1554,6 +1554,12 @@ def _classifier_retry_wait_s(exc: HarnessCallError, remaining_s: float) -> float
 _INJECTION_STATE_MAX_CHARS: Final[int] = 4000
 
 
+def _log_jev_injection_call(trace_id: str, started: float, outcome: str) -> None:
+    call_log.log_model_call(
+        point=_INJECTION.point, trace_id=trace_id, kind="jev", started=started, outcome=outcome
+    )
+
+
 async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> JevResult | str:
     """Jev's own pick for `guardrail.injection`, or the reason it made none.
 
@@ -1577,6 +1583,7 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
         cost_control.check_per_query_cap(harness, trace_id, "guard")
     except cost_control.QueryCapExceededError:
         return "cost_cap"
+    started = time.monotonic()
     try:
         result = await asyncio.wait_for(
             call_jev(
@@ -1598,11 +1605,15 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
         # ceiling otherwise (F-8.6-V01, V03, RA01, RJ05).
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)
+        _log_jev_injection_call(trace_id, started, call_log.jev_outcome(exc.reason))
         return exc.reason
     except TimeoutError:
+        _log_jev_injection_call(trace_id, started, call_log.TIMEOUT)
         return "timeout"
     except Exception:  # noqa: BLE001 - a broken Jev call leaves the classifier's verdict standing
+        _log_jev_injection_call(trace_id, started, call_log.ERROR)
         return "unexpected_error"
+    _log_jev_injection_call(trace_id, started, call_log.OK)
     harness.track_cost(trace_id, "guard", result.cost_usd)
     return result
 
@@ -1888,6 +1899,7 @@ async def _guardrail_after_prefilter(
         attempt_budget_s = (
             remaining_s * _CLASSIFIER_FIRST_ATTEMPT_SHARE if attempt == 1 else remaining_s
         )
+        call_started = time.monotonic()
         try:
             response = await _dispatch_tier_call(
                 harness,
@@ -1903,6 +1915,16 @@ async def _guardrail_after_prefilter(
         except cost_control.QueryCapExceededError:
             return {"cap_exceeded": True}
         except HarnessCallError as exc:
+            # Card 72: one line per call, for the data the guardrail's design
+            # decision needs. Logging only; nothing below depends on it.
+            call_log.log_model_call(
+                point="guardrail.classify",
+                trace_id=trace_id,
+                kind="guard",
+                started=call_started,
+                outcome=call_log.outcome_for_error(exc),
+                attempt=attempt,
+            )
             if attempt == 2 or exc.error_class != "transient":
                 return {"step_error": _step_error_kwargs("guardrail", exc)}
             # Re-land follow-up, R-05: the second attempt waits first, unless
@@ -1933,8 +1955,26 @@ async def _guardrail_after_prefilter(
         try:
             classification = classifier.parse_classification(response.content)
             classifier_verdict = classifier.verdict_for(classification)
+            call_log.log_model_call(
+                point="guardrail.classify",
+                trace_id=trace_id,
+                kind="guard",
+                started=call_started,
+                outcome=call_log.OK,
+                attempt=attempt,
+                provider=call_log.provider_of(response),
+            )
             break
         except classifier.ClassificationUnavailableError as exc:
+            call_log.log_model_call(
+                point="guardrail.classify",
+                trace_id=trace_id,
+                kind="guard",
+                started=call_started,
+                outcome=call_log.UNUSABLE_REPLY,
+                attempt=attempt,
+                provider=call_log.provider_of(response),
+            )
             content = response.content if isinstance(response.content, str) else ""
             logger.warning(
                 "guard classification unusable (attempt %d of 2, trace %s): "
