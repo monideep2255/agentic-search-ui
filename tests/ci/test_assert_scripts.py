@@ -398,6 +398,14 @@ class TestLicenseNotices:
         self._write_notices(tmp_path, packages)
         assert license_notices.main(["prog", str(tmp_path)]) == 1
 
+    def test_the_placeholder_fails_for_any_package_not_only_the_required_three(self, tmp_path):
+        """Card 86: clsx shipped the placeholder and CI stayed green."""
+        self._write_valid_js(tmp_path)
+        packages = dict(self._VALID_PACKAGES)
+        packages["clsx"] = "no license file found"
+        self._write_notices(tmp_path, packages)
+        assert license_notices.main(["prog", str(tmp_path)]) == 1
+
     def test_an_unrelated_package_missing_its_notice_does_not_fail_the_gate(self, tmp_path):
         """Only the three named packages are required.
 

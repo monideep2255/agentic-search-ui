@@ -37,7 +37,8 @@ Usage:
 Exit codes:
     0  the built JavaScript still carries a react/react-dom source notice, AND
        dist/THIRD_PARTY_NOTICES.txt exists with a non-empty license entry for
-       react, react-dom, and @mui/material
+       react, react-dom, and @mui/material, and no entry for any package carries
+       the "no license file found" placeholder
     1  either half of that is missing
 
 Depends on:
@@ -72,11 +73,11 @@ _MARKER = "@license React"
 _REQUIRED_NOTICE_PACKAGES = ("react", "react-dom", "@mui/material")
 
 # frontend/vite.config.ts's thirdPartyNoticesPlugin writes this literal
-# placeholder for a package with no LICENSE, LICENSE.md, or LICENCE file.
-# React, react-dom, and @mui/material all ship a real license file in
-# practice, so seeing this placeholder for one of them is itself a failure,
-# not merely an empty string: it means the exact package the card names by
-# name has no usable license text, whatever the reason.
+# placeholder for a package with no license file. Seeing it for ANY package
+# is a failure (card 86): MIT requires the text to travel with every copy,
+# and clsx once shipped the placeholder on Linux because its file is named
+# `license` in lowercase. A new dependency with no license file fails here
+# instead of shipping a placeholder.
 _NO_LICENSE_FOUND_PLACEHOLDER = "no license file found"
 
 _SECTION_DELIMITER_RE = re.compile(r"^={80}$", re.MULTILINE)
@@ -180,10 +181,16 @@ def main(argv: list[str]) -> int:
                     )
                     continue
                 _version, license_text = entries[name]
-                if not license_text or license_text == _NO_LICENSE_FOUND_PLACEHOLDER:
+                if not license_text:
                     failures.append(
                         f"{notices_path}'s entry for {name!r} has no usable license text "
                         f"(found {license_text!r})."
+                    )
+            for name, (_version, license_text) in entries.items():
+                if license_text == _NO_LICENSE_FOUND_PLACEHOLDER:
+                    failures.append(
+                        f"{notices_path}'s entry for {name!r} carries the "
+                        f"{_NO_LICENSE_FOUND_PLACEHOLDER!r} placeholder instead of license text."
                     )
 
     if failures:
