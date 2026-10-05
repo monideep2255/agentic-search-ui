@@ -978,3 +978,31 @@ async def test_card94_plain_language_other_records_stay_titles_only(monkeypatch)
     result = await graph_module.write_node(_state("plain_language"))
     assert _tables(_tokens(result)) == []
     assert [t["kind"] for t in _rows(result)] == ["list_item"] * 3
+
+
+_ORGANISM_ROW = {
+    "node_or_edge_type": "Organism",
+    "curie": "NCBITaxon:562",
+    "fields": {"name": "Escherichia coli"},
+    "source_url": "https://www.ncbi.nlm.nih.gov/taxonomy/562",
+    "graph_snapshot_version": "v1",
+}
+
+
+@pytest.mark.asyncio
+async def test_card94_plain_language_isolates_with_an_organism_keep_the_table(
+    monkeypatch,
+) -> None:
+    """Query 33's shape: isolates plus the organism's own record. The isolates
+    keep their genes table; the organism is listed apart, titles only. RED
+    before: one organism record sent the whole list to titles-only."""
+    _install(monkeypatch, _no_prose)
+    rows = [*_ISOLATE_ROWS, _ORGANISM_ROW]
+    result = await graph_module.write_node(_state("plain_language", rows=rows))
+    ((header, table_rows),) = _tables(_tokens(result))
+    assert header[0] == "Isolate" and "AMR genes" in header, header
+    assert len(table_rows) == 2
+    assert "blaCTX-M-15, acrF1" in [c for row in table_rows for c in row["cells"]]
+    items = [t for t in _tokens(result) if t["kind"] == "list_item"]
+    assert len(items) == 1 and "Escherichia coli" in items[0]["cells"][0]
+    assert items[0]["marker_ids"]
