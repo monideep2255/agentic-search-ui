@@ -11555,6 +11555,7 @@ def _answer_tokens(
         # both walk the same `sentences`.
         sentences, feature_blocks = split_feature_sentences(sentences)
         heading(PLAIN_SOURCES_HEADING)
+        listed_records: set[tuple[str, tuple[str, ...]]] = set()
         for sentence in sentences:
             ids = marker_ids(sentence)
             finding = finding_by_citation_id.get(ids[0]) if ids else None
@@ -11564,6 +11565,12 @@ def _answer_tokens(
             label = plain_record_label(
                 finding, _row_fields_for(finding, findings), identifier_for(finding)
             )
+            # One row per record: two claims about the same record (its title
+            # and its symbol) are one row, not two identical ones.
+            record_key = ((finding.source_url or finding.citation_id).strip(), (label,))
+            if record_key in listed_records:
+                continue
+            listed_records.add(record_key)
             sentence_token(sentence, kind="list_item", cells=[label])
         # Beneath the one list, so the list itself stays one list: each
         # disease's features under a heading that names the disease.
@@ -11663,6 +11670,7 @@ def _answer_tokens(
                 )
             else:
                 heading(records_heading)
+            listed_records: set[tuple[str, tuple[str, ...]]] = set()
             for (sentence, finding), row_fields, second, identifier, extra in zip(
                 entries, row_fields_by_entry, second_cells, identifiers, extras, strict=True
             ):
@@ -11670,16 +11678,25 @@ def _answer_tokens(
                     sentence_token(sentence)
                     continue
                 label = record_label(finding, row_fields)
+                cells = [label]
+                if as_table:
+                    if has_identifier:
+                        cells.append(identifier)
+                    if mapped:
+                        cells.append(second or "")
+                    if extra_label is not None:
+                        cells.append(
+                            extra[1] if extra is not None and extra[0] == extra_label else ""
+                        )
+                # One row per record: two claims about the same record (its
+                # title and its symbol) are one row, not two identical ones.
+                record_key = ((finding.source_url or finding.citation_id).strip(), tuple(cells))
+                if record_key in listed_records:
+                    continue
+                listed_records.add(record_key)
                 if not as_table:
                     sentence_token(sentence, kind="list_item", cells=[label])
                     continue
-                cells = [label]
-                if has_identifier:
-                    cells.append(identifier)
-                if mapped:
-                    cells.append(second or "")
-                if extra_label is not None:
-                    cells.append(extra[1] if extra is not None and extra[0] == extra_label else "")
                 linked = (
                     [
                         disease_citation_by_curie[curie]

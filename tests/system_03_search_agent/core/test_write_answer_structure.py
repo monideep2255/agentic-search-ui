@@ -840,3 +840,56 @@ async def test_12_9_the_firewall_depth_changes_the_display_never_the_evidence(
     )
     # The same verdict on the same evidence.
     assert _done(plain)["trust_outcome"] == _done(researcher)["trust_outcome"]
+
+
+def test_one_record_cited_by_two_claims_is_one_row() -> None:
+    """The same OMIM record carried a title claim and a symbol claim, and the
+    table listed "DNA MISMATCH REPAIR PROTEIN MLH1; MLH1" twice with the same
+    citation. Rows are unique by record."""
+    from system_03_search_agent.contracts.events import CitationPayload
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    url = "https://omim.org/entry/120436"
+    finding = SynthFinding(
+        ref_index=1,
+        citation_id="ne-omim-1",
+        layer="layer_2_api",
+        tool="ncbi_efetch",
+        field="title",
+        field_value="DNA MISMATCH REPAIR PROTEIN MLH1; MLH1",
+        source_url=url,
+        entity_type="omim",
+    )
+    citation = CitationPayload(
+        citation_id="ne-omim-1",
+        display_index=1,
+        source="omim",
+        source_id="120436",
+        source_url=url,
+        layer="layer_2_api",
+        field="title",
+        claim_text="DNA MISMATCH REPAIR PROTEIN MLH1",
+        evidence_kind="primary_assertion",
+        assertion_confidence="asserted",
+        license="public_domain_us_gov",
+    )
+    for depth in ("researcher", "plain_language"):
+        tokens = graph_module._answer_tokens(
+            audience_depth=depth,
+            question="q",
+            model_grounding=None,
+            model_layout=None,  # type: ignore[arg-type]
+            fallback_sentences=(
+                "DNA MISMATCH REPAIR PROTEIN MLH1 [1]. ",
+                "MLH1 [1]. ",
+            ),
+            tail_sentences=(),
+            tail_is_listing=False,
+            citations=[citation],
+            synth_findings=[finding],
+            findings=[],
+            mentions=[],
+            notes=[],
+        )
+        rows = [t for t in tokens if t.kind in ("table_row", "list_item")]
+        assert len(rows) == 1, (depth, [t.cells for t in rows])
