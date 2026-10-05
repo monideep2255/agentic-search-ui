@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-09-29.
+Last updated: 2026-10-05.
 
 ## Table of contents
 
@@ -50,6 +50,24 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+NEW ON 5 OCTOBER, on the practice site. The team ran the owner's written test questions against it at the end of the day, and nine of ten passed:
+
+- A question about GERD now gets a written answer in its own sentences instead of a bare list. The checker that decides whether a sentence is safe to show now reads the whole sentence of the record a quote sits in, and the writer is asked to quote whole sentences.
+- When a record is cited twice, each sentence shows its own quote rather than the same one both times.
+- A question about the Mediterranean now answers with the disease it means, Familial Mediterranean fever, in both tries.
+- A question about bacterial isolates in plain language now shows the table of isolates with the resistance genes each carries. It also says which gene families were searched, and shows an organism's own record beside the isolates when there is one.
+- A search for isolates carrying the colistin resistance gene finds them, where it used to report none.
+- A stretch of chromosome now lists the structural variant records for that exact window.
+- Ask about one research paper and the answer now uses a checked search of our own database. Its linked data, such as sequences, project records, sequencing runs and assemblies, is found from NCBI's live links.
+- Organisms are now recognised through NCBI's own taxonomy, with routes to sequencing runs and assemblies. This passed on a practice machine but failed on the practice site, so see the next section.
+- A short request such as "recent-onset diabetes treatment" is answered. A bare subject on its own is still asked back.
+- A search that fails now says which search failed and why, and says when clinical trials were not searched. When no written summary survives the check, one plain line says why, and a question that hit its cap lists what it gathered.
+- A long first sentence no longer shows raw bracket numbers, an empty reply from the gatekeeper asks you to try again, and a record is no longer listed twice.
+- "Muir-Torré syndrome" is spelled correctly. NCBI's own record carries broken characters, and the system repairs them as they arrive.
+- The Integrations page shows the commands to copy, the About page shows its three layer cards first, and two sentences on those pages were corrected.
+- The licence text for every open-source library now ships with the web app.
+- The team can now see, in the logs, how long each gatekeeper call took and which outside host answered. This is what the next gatekeeper design will be built from.
 
 NEW ON 29 SEPTEMBER, on the practice site, waiting for its answer check and the product owner's retest:
 
@@ -200,7 +218,16 @@ All six live-government-API connections the plan called for are now built. That 
 
 ## What does not work yet
 
-THE HONEST HEADLINE AS OF 29 SEPTEMBER, in one sentence: answers still open with a stock line of counts and take about seventeen seconds before their first word, and about three searches in a hundred fail with "a temporary error" because the gatekeeper's model does not answer in time.
+THE HONEST HEADLINE AS OF 5 OCTOBER, in one sentence: a question about a virus or bacterium can still be answered about the wrong thing, answers can still take 20 to 35 seconds, and the system sometimes shows a slightly broader claim than its source.
+
+What the day found, in plain words:
+
+- The coronavirus question still fails on the practice site. It passed on a practice machine and then failed live, answering about the disease SARS instead of the virus SARS-CoV-2. Why is the next thing to find out.
+- The sentence checker approves some rewordings that drop a qualifier, for example "young children" shown as "children". Measuring how often comes before any fix.
+- Two larger pieces of work are held, on purpose. The stronger writer, which would put a first sentence that answers and show records within seconds, waits on topping up the model account. The gatekeeper redesign waits on a fuller day of call logs. In today's small sample, one of the gatekeeper's models decided in about a quarter of a second at most, while the on-topic check took from about one second to over seven, depending on which outside host answered.
+- A second development agent now works the screens and wording, in its own copies of the code, while the lead keeps the answer path and the merging.
+
+THE HONEST HEADLINE AS OF 29 SEPTEMBER, kept for the record, in one sentence: answers still open with a stock line of counts and take about seventeen seconds before their first word, and about three searches in a hundred fail with "a temporary error" because the gatekeeper's model does not answer in time.
 
 What happened on 29 September, in plain words:
 
@@ -387,6 +414,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| A day of fixing what the owner's checks found, and a clean-up of the to-do board | Twenty-one changes merged. People now get a written GERD answer, a Mediterranean question that names the disease, isolate answers with their resistance genes, chromosome windows with structural variant records, and a paper's linked data. Notes now say what was searched and why something failed. The to-do board was cut down, with four dead items removed and ten moved to the future list. The day ended with nine of ten test questions passing; the coronavirus question still answers about the wrong thing. The stronger writer and the gatekeeper redesign are held, and a second development agent now works the screens and wording | 5 October |
 | A secret check before anything is published | Before any change is published to either public project, a check now reads every piece of it for passwords, keys and private details, and stops the publish if it finds a secret | 30 September |
 | Crash reasons in the log, the gatekeeper held back, and the waiting checks cleared | A search that crashes now leaves a written reason. Two changes to the gatekeeper were stopped because reviews found they could let the wrong question through. Every check waiting for the owner was run at once: 39 accepted, 9 sent back | 29 September, evening |
 | Checking the saved-answers change, and two parked pieces reviewed | The saved-answers change passed the owner's written checks; its fifty-question check came in at 98 of 150, three short, for reasons outside the change, and the owner kept it. A first-try install from the Integrations page and truthful pages about how the system works went through two review rounds and a fix round and wait for the owner to accept them | 29 September |
@@ -706,14 +734,17 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. Fix the nine features that failed the owner's checks on 29 September, one at a time, starting with what people meet most: bacterial sample answers that leave out their resistance genes, and a GERD answer with no written summary. Or, if the owner prefers, pick up the parked work that makes answers answer sooner.
-2. The product owner retests what went live: reopening a "not yet confirmed" answer, Stop that works until the answer appears, the list of open-source libraries the site is built on, and asking from a terminal or an AI assistant.
-3. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
-4. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting for the owner's yes.
-5. Finish and merge the overnight work that is built but not yet on the practice site: the plain-language and researcher switch on the answer itself, counts that say what they count, a calmer trust line, and narrowing bacterial sample searches by place and year.
-6. Build the step where the system checks its own results and tries once more when they do not answer the question.
-7. Tell the reader when the system wrote its own search rather than using a checked one.
-8. Build the connections between facts the product owner chose on 25 September: facts cited as paths through the graph, such as other genes that turn up in the same papers, with no vector search. Background: connecting facts across several steps now has a measured document rather than an opinion. It counts how many of the fifty test questions actually need it (five, and all five follow one route that is already built), and says plainly that two of the three technologies usually proposed for this have nothing here to justify them.
+1. Find out why the coronavirus question still fails on the practice site after passing on a practice machine, so a question about a virus or bacterium stops being answered about the wrong thing.
+2. Build the stronger writer, once the model account is topped up: a first sentence that answers the question, and records on screen within seconds.
+3. Agree the gatekeeper's design, using a fuller day of its call logs, before anything about it is built.
+4. The product owner retests what went live on 5 October, and the remaining older items waiting in the retest column.
+5. Measure how often the sentence checker lets a dropped qualifier through, then decide the fix.
+6. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
+7. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting for the owner's yes.
+8. Finish and merge the overnight work that is built but not yet on the practice site: the plain-language and researcher switch on the answer itself, counts that say what they count, a calmer trust line, and narrowing bacterial sample searches by place and year.
+9. Build the step where the system checks its own results and tries once more when they do not answer the question.
+10. Tell the reader when the system wrote its own search rather than using a checked one.
+11. Build the connections between facts the product owner chose on 25 September: facts cited as paths through the graph, such as other genes that turn up in the same papers, with no vector search. Background: connecting facts across several steps now has a measured document rather than an opinion. It counts how many of the fifty test questions actually need it (five, and all five follow one route that is already built), and says plainly that two of the three technologies usually proposed for this have nothing here to justify them.
 
 Done since this list was last written, overnight on 23 September, while nobody was watching:
 
@@ -815,7 +846,10 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
-| Nine features failed the owner's checks on 29 September, among them bacterial sample answers that leave out the resistance genes in the default setting, a GERD answer with no written summary, and a chromosome-range answer with no structural-variant records | Back on the list of work to do, each to be diagnosed first |
+| ~~Nine features failed the owner's checks on 29 September: bacterial sample answers without resistance genes, a GERD answer with no written summary, a chromosome-range answer with no structural-variant records, and others~~ | Fixed by 5 October and live on the practice site: the GERD answer, the isolate resistance genes, the chromosome records and the Mediterranean question passed the end-of-day checks. Waiting on the owner's retest |
+| A question about a virus or bacterium can be answered about the wrong thing. The coronavirus question passed on a practice machine, then answered about the disease SARS on the practice site | Next to fix, starting with finding why it differs live |
+| The sentence checker approves some rewordings that drop a qualifier, such as "young children" shown as "children", so the system sometimes shows a slightly broader claim than its source | After the owner's chosen measurement of how often it happens |
+| The gatekeeper's on-topic check takes from about one second to over seven depending on which outside host answers | Waits on a fuller day of call logs, then a design agreed with the owner first |
 | About three searches in a hundred fail with "a temporary error" because the gatekeeper's model did not answer in time, twice in a row | Two fixes were tried on 29 September and both stopped, because each could let through a question the gatekeeper should refuse. It comes back only as a design agreed with the owner first |
 | ~~When a search crashes, nothing records why, so the cause cannot be traced afterwards~~ | Fixed on 29 September: the reason is now written to the log; a smaller follow-up would put the search's reference on every line of it |
 | A saved answer, reopened, does not look exactly like the answer you read: a table shows all its rows at once, a note appears that was not there before, and the sources list is missing | On the list of work to do, found on 29 September |

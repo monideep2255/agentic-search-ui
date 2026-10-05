@@ -1,0 +1,87 @@
+QUESTION: recent-onset diabetes treatment
+LANDED=answer SECONDS=19.8
+
+recent-onset diabetes treatment
+New search
+
+✓ Answered17.7s · 8 tools · 18 sources from 2 layers
+
+Show work ▾
+
+I found 1 condition related to diabetes.⁠2
+
+A separate article describes type 3c, or pancreatogenic, diabetes as a form caused by damage to the pancreas from other pancreatic disorders, one that is often mistaken for type 2 diabetes but differs in cause, treatment, and outlook.⁠1
+
+WHERE THIS ANSWER COMES FROM
+Diabetes	⁠2
+Diabetes, Pancreatogenic Diabetes, and Pancreatic Cancer.	⁠3
+Diabetes	⁠4
+Diabetes Mellitus	⁠5
+PPAR-COMBO With Sulfonylurea	⁠6
+Addressing diabetes distress in clinical care: a practical guide.	⁠7
+Diabetes Mellitus Type 1	⁠8
+Renal Mechanism of Action/Splay vs. TmG	⁠9
+Renal Mechanism of Action/Splay vs. TmG	⁠9
+From Pre-Diabetes to Diabetes: Diagnosis, Treatments and Translational Research.	⁠10
+Showing 1–10 of 18
+‹ Previous
+Page 1 of 2
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+17
+Based on 17 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+BUTTONS:
+New search
+Show work ▾
+2
+1
+2
+3
+4
+5
+6
+7
+8
+9
+9
+10
+‹ Previous
+Next ›
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+
+LINKS:
+ -> https://pubmed.ncbi.nlm.nih.gov/36219100/
+ -> https://www.ncbi.nlm.nih.gov/medgen/C1320657
+ -> https://pubmed.ncbi.nlm.nih.gov/28507210/
+ -> https://www.ncbi.nlm.nih.gov/medgen/729293
+ -> https://pubmed.ncbi.nlm.nih.gov/30985025/
+ -> https://pubmed.ncbi.nlm.nih.gov/31470636/
+ -> https://pubmed.ncbi.nlm.nih.gov/36894549/
+ -> https://www.ncbi.nlm.nih.gov/mesh/D003920
+ -> https://clinicaltrials.gov/study/NCT00162175
+ -> https://www.ncbi.nlm.nih.gov/mesh/D003922
+ -> https://clinicaltrials.gov/study/NCT00726505
+ -> https://www.ncbi.nlm.nih.gov/mesh/D003924
+ -> https://clinicaltrials.gov/study/NCT01213277
+ -> https://www.ncbi.nlm.nih.gov/mesh/D016640
+ -> https://clinicaltrials.gov/study/NCT03155594
+ -> https://www.ncbi.nlm.nih.gov/mesh/D048909
+ -> https://clinicaltrials.gov/study/NCT03159546

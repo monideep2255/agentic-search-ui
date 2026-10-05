@@ -1,0 +1,5 @@
+wall clock from ask to captured: 6.0s
+answer wait after pick or ask: n/as
+mode pressed: Researcher
+clarifying options: ["What is GERD?","What genetic factors are linked to GERD?","Are there clinical trials for GERD treatments?","What does recent research say about GERD?"]
+pick not found: typical symptoms and risk factors

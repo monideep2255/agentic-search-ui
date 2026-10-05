@@ -1,0 +1,161 @@
+QUESTION: What genes and ClinVar records are under chr7:117,480,025-117,668,665 on GRCh38?
+MODE: researcher
+
+--- ANSWER TEXT ---
+What genes and ClinVar records are under chr7:117,480,025-117,668,665 on GRCh38?
+New search
+
+? Answered18.3s · 15 tools · 71 sources from 3 layers
+
+Show work ▾
+
+Found 1 gene record and 43 sequence variant records for CFTR, CFTR-AS1, CFTR-AS2, LOC111674463, LOC111674464, LOC113664106, LOC113664107, LOC113219471, LOC113219472 and LOC111674473[21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44].⁠1–20
+
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+CF transmembrane conductance regulator	NCBIGene:1080	⁠1
+CFTR	NCBIGene:1080	⁠47
+SEQUENCE VARIANT RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr)	ClinVar:1000823	⁠2
+NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala)	ClinVar:1002760	⁠3
+NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser)	ClinVar:1003660	⁠4
+NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu)	ClinVar:1007213	⁠5
+NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala)	ClinVar:1009171	⁠6
+NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn)	ClinVar:1009391	⁠7
+NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys)	ClinVar:1009463	⁠8
+NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro)	ClinVar:1010196	⁠9
+NM_000492.4(CFTR):c.3064G>A (p.Val1022Met)	ClinVar:1011536	⁠10
+NM_000492.4(CFTR):c.744-9G>T	ClinVar:1012571	⁠11
+Showing 1–10 of 43
+‹ Previous
+Page 1 of 5
+Next ›
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_000492.4(CFTR):c.4243-5C>G	VCV004992204	⁠45
+NM_000492.4(CFTR):c.1209+1988_1392+2067inv	VCV001705265	⁠49
+NM_000492.4(CFTR):c.4177G>T (p.Ala1393Ser)	VCV004992853	⁠52
+NM_000492.4(CFTR):c.1392+2072_1392+2074del	VCV001705266	⁠55
+NM_000492.4(CFTR):c.3757T>C (p.Leu1253=)	VCV004993576	⁠57
+NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA	VCV001705980	⁠60
+NM_000492.4(CFTR):c.3469-319A>T	VCV004994638	⁠62
+NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT	VCV001705981	⁠65
+NM_000492.4(CFTR):c.1584+43C>T	VCV004995184	⁠67
+NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del	VCV001706438	⁠70
+DBVAR RECORDS FOUND
+copy number variation overlapping CFTR, CFTR-AS1 (chr7:117504278-117652897, GRCh38.p12)	⁠46
+copy number variation overlapping CFTR, CFTR-AS1 (chr7:117509031-117665547, GRCh38.p12)	⁠53
+copy number variation overlapping CFTR-AS1, CFTR (chr7:117480105-117649956, GRCh38.p12)	⁠58
+copy number variation overlapping CFTR, CFTR-AS1 (chr7:117531115-117590352, GRCh38.p12)	⁠63
+copy number variation overlapping CFTR, CFTR-AS1 (chr7:117540347-117602825, GRCh38.p12)	⁠68
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Molecular Structure of the Human CFTR Ion Channel.	PMID:28340353	⁠48
+ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction.	PMID:36207272	⁠54
+ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria.	PMID:36220763	⁠59
+Molecular structures reveal synergistic rescue of Δ508 CFTR by Trikafta modulators.	PMID:36264792	⁠64
+In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis.	PMID:38388235	⁠69
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR; CFTR	omim 602421	⁠50
+CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR; CFTR	omim 602421	⁠50
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+NPDT Evaluation in Children With CFTR and (PSC)	NCT00179439	COMPLETED	⁠51
+Study of VX-809 in Cystic Fibrosis Subjects With the ∆F508-CFTR Gene Mutation	NCT00865904	COMPLETED	⁠56
+Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects	NCT01078740	COMPLETED	⁠61
+Effects of Sildenafil on CFTR-dependent Ion Transport Activity	NCT01132482	COMPLETED	⁠66
+Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators	NCT01348204	COMPLETED	⁠71
+NOTES
+Note: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query
+Note: this answer does not address the following entities named in the question: CFTR-AS1, CFTR-AS2, LOC111674463, LOC111674464, LOC113664106, LOC113664107, LOC113219471, LOC113219472, LOC111674473. Ask about them individually for a complete answer.
+▶
+SOURCES
+71
+Based on 71 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- ANSWER META ---
+? Answered18.3s · 15 tools · 71 sources from 3 layers
+
+--- LINKS (70) ---
+ -> https://www.ncbi.nlm.nih.gov/gene/1080
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1000823
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1002760
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1003660
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1007213
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009171
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009391
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009463
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1010196
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1011536
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1012571
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1012572
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1018653
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1018890
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1024644
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1027585
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1027591
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1029874
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1029875
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1029876
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1035472
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1036122
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1037205
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1037208
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1038310
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1038737
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1039311
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1040997
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1042311
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1043026
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1043097
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1043398
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1044113
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1044502
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1046296
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1048778
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1051107
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1052121
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1052165
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1053721
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1053748
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1054952
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1055358
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1060053
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4992204/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7559356/
+ -> https://www.ncbi.nlm.nih.gov/gene/1080/
+ -> https://pubmed.ncbi.nlm.nih.gov/28340353/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4992853/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7559404/
+ -> https://pubmed.ncbi.nlm.nih.gov/36207272/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4993576/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7559422/
+ -> https://pubmed.ncbi.nlm.nih.gov/36220763/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4994638/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7776915/
+ -> https://pubmed.ncbi.nlm.nih.gov/36264792/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4995184/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7776916/
+ -> https://pubmed.ncbi.nlm.nih.gov/38388235/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/
+ -> https://clinicaltrials.gov/study/NCT00179439
+ -> https://clinicaltrials.gov/study/NCT00865904
+ -> https://clinicaltrials.gov/study/NCT01078740
+ -> https://clinicaltrials.gov/study/NCT01132482
+ -> https://clinicaltrials.gov/study/NCT01348204

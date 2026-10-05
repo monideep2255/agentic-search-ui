@@ -1,0 +1,33 @@
+QUESTION: recent-onset diabetes treatment
+LANDED=answer SECONDS=4.9
+
+recent-onset diabetes treatment
+New search
+
+3.1s · 0 tools · 0 sources
+
+Show work ▾
+One more detail needed
+What would you like to know about recent-onset diabetes treatment?
+https://www.ncbi.nlm.nih.gov/search/all/?term=recent-onset%20diabetes%20treatment
+
+ASK ANOTHER QUESTION
+
+Ask
+What does recent biomedical literature say about treatments for recent-onset diabetes?
+Are there clinical trials testing interventions for recent-onset diabetes?
+Which conditions or diseases are associated with recent-onset diabetes?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+BUTTONS:
+New search
+Show work ▾
+Ask
+What does recent biomedical literature say about treatments for recent-onset diabetes?
+Are there clinical trials testing interventions for recent-onset diabetes?
+Which conditions or diseases are associated with recent-onset diabetes?
+
+LINKS:
+https://www.ncbi.nlm.nih.gov/search/all/?term=recent-onset%20diabetes%20treatment -> https://www.ncbi.nlm.nih.gov/search/all/?term=recent-onset%20diabetes%20treatment

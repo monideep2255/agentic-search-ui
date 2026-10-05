@@ -1,0 +1,152 @@
+QUESTION: What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+MODE: researcher
+
+--- ANSWER TEXT ---
+What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+New search
+
+? Answered15.2s · 15 tools · 62 sources from 3 layers
+
+Show work ▾
+
+Found 1 gene record and 34 sequence variant records for BRCA1, RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216 and LOC111589215[21][22][23][24][25][26][27][28][29][30][31][32][33][34][35].⁠1–20
+
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+BRCA1 DNA repair associated	NCBIGene:672	⁠1
+BRCA1	NCBIGene:672	⁠38
+SEQUENCE VARIANT RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)	ClinVar:1000183	⁠2
+NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)	ClinVar:1000551	⁠3
+NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)	ClinVar:1001081	⁠4
+NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)	ClinVar:1002154	⁠5
+NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)	ClinVar:1002750	⁠6
+NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)	ClinVar:1003072	⁠7
+NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)	ClinVar:1003150	⁠8
+NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)	ClinVar:1004428	⁠9
+NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)	ClinVar:1004775	⁠10
+NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val)	ClinVar:1004786	⁠11
+Showing 1–10 of 34
+‹ Previous
+Page 1 of 4
+Next ›
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_007294.4(BRCA1):c.4358-2753A>T	VCV004935316	⁠36
+NM_007294.4(BRCA1):c.5243_5277+2788del	VCV000267740	⁠40
+NM_007294.4(BRCA1):c.3900_3904del (p.Cys1300_Glu1302delinsTer)	VCV004935318	⁠43
+NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG	VCV000267741	⁠46
+NM_007294.4(BRCA1):c.2485T>C (p.Phe829Leu)	VCV004935321	⁠48
+NG_005905.2:g.(147057_150288)_(160933_166866)del	VCV000373892	⁠51
+NM_007294.4(BRCA1):c.2313G>C (p.Leu771Phe)	VCV004935322	⁠53
+GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3	VCV004823850	⁠56
+NM_007294.4(BRCA1):c.2128A>C (p.Thr710Pro)	VCV004935323	⁠58
+NM_007294.4(BRCA1):c.2145C>G (p.Thr715=)	VCV004848411	⁠61
+DBVAR RECORDS FOUND
+insertion overlapping BRCA1 (chr17:43099831-43099831, GRCh38.p12)	⁠37
+insertion overlapping BRCA1 (chr17:43094800-43094800, GRCh38.p12)	⁠44
+copy number variation overlapping NBR2, BRCA1 (chr17:43120665-43127881, GRCh38)	⁠49
+copy number variation overlapping BRCA1 (chr17:43083782-43096453, GRCh38.p12)	⁠54
+copy number variation overlapping BRCA1 (chr17:43057051-43076615, GRCh38.p12)	⁠59
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing.	PMID:28976962	⁠39
+BRCA1: An Endocrine and Metabolic Regulator.	PMID:35432218	⁠45
+Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.	PMID:36914836	⁠50
+Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection.	PMID:39261728	⁠55
+Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors.	PMID:39265497	⁠60
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	omim 113705	⁠41
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	omim 113705	⁠41
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer	NCT00590109	COMPLETED	⁠42
+BRCA1 Haploinsufficiency and Gene Expression	NCT00597987	COMPLETED	⁠47
+Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma	NCT00617656	TERMINATED	⁠52
+Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation	NCT00673335	COMPLETED	⁠57
+Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations	NCT00700778	TERMINATED	⁠62
+NOTES
+Note: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query
+Note: this answer does not address the following entities named in the question: RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216, LOC111589215. Ask about them individually for a complete answer.
+▶
+SOURCES
+62
+Based on 62 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- ANSWER META ---
+? Answered15.2s · 15 tools · 62 sources from 3 layers
+
+--- LINKS (61) ---
+ -> https://www.ncbi.nlm.nih.gov/gene/672
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1000183
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1000551
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1001081
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1002154
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1002750
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1003072
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1003150
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1004428
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1004775
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1004786
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1005082
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1005528
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1005598
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1005841
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1005942
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1005980
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1007698
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1007721
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1008789
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009121
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009204
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009272
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009310
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009406
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009551
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1010063
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1010509
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1010603
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1010631
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1010734
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1011036
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1012155
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1012156
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1012905
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4935316/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7897034/
+ -> https://www.ncbi.nlm.nih.gov/gene/672/
+ -> https://pubmed.ncbi.nlm.nih.gov/28976962/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4935318/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7897183/
+ -> https://pubmed.ncbi.nlm.nih.gov/35432218/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4935321/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7905344/
+ -> https://pubmed.ncbi.nlm.nih.gov/36914836/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4935322/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7905530/
+ -> https://pubmed.ncbi.nlm.nih.gov/39261728/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4935323/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7906304/
+ -> https://pubmed.ncbi.nlm.nih.gov/39265497/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/
+ -> https://clinicaltrials.gov/study/NCT00590109
+ -> https://clinicaltrials.gov/study/NCT00597987
+ -> https://clinicaltrials.gov/study/NCT00617656
+ -> https://clinicaltrials.gov/study/NCT00673335
+ -> https://clinicaltrials.gov/study/NCT00700778

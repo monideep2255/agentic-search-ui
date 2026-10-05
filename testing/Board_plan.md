@@ -6,6 +6,7 @@ The test every step is ranked against, in the owner's words: a person types a qu
 
 ## Table of contents
 
+- [Progress](#progress)
 - [The answer in numbers](#the-answer-in-numbers)
 - [Cards that close or change without a build](#cards-that-close-or-change-without-a-build)
 - [The root causes](#the-root-causes)
@@ -14,6 +15,14 @@ The test every step is ranked against, in the owner's words: a person types a qu
 - [How each change is checked](#how-each-change-is-checked)
 - [Decisions for the owner](#decisions-for-the-owner)
 - [Keeping the list from growing back](#keeping-the-list-from-growing-back)
+
+## Progress
+
+Newest first.
+
+- 2026-10-05, final test run: 9 of 10 passed on develop; card 56 (SARS-CoV-2) failed live although it passed locally, so it is back in To do for a diagnosis (`testing/Developer/reports/2026-10-05_final_test_queries/results.md`).
+- 2026-10-05, late: a second development agent, Factory, takes the screen and wording lane: cards 43, 44, 18, 23, 24, 25, 47 and the rest of 61, each in its own worktree on a `factory/` branch. The lead keeps the answer path, this plan, the board and the merge queue (`DECISIONS.md`, 2026-10-05).
+- 2026-10-05, evening: waves 0 and 1 and most of wave 2 are live on develop, plus wave 3's first steps, in pull requests #155 to #175 (21 merged). In Retest: cards 46, 74, 79, 80, 86 to 89, 91, 92, the part of card 94 for the colistin search, the Plain language table and the searched-families note, 95 to 97, and the page sentences of 85. Card 13 is proposed for closing. New card 99 (dropped qualifiers) waits on a measurement. Phase 8.7 waits on an OpenRouter top-up (about $38.50 left against its $60). The guardrail design (cards 84 and 72) waits on a fuller day of guard-call logs. D9 is decided: organisms resolve through NCBI Taxonomy, no semantic search.
 
 ## The answer in numbers
 

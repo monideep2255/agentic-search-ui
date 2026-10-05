@@ -124,7 +124,7 @@ The authoritative build order is `requirements/Technical_specification.md` Secti
 - What it depends on
 - A dependency graph
 
-Read that section, not a summary. The four-week table that used to live here is superseded.
+Read that section, not a summary. The four-week table that used to live here is superseded. The order of the open board cards (waves, root causes, dependencies) is `testing/Board_plan.md`, written 2026-10-05.
 
 Shape of the sequence:
 

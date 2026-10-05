@@ -1,0 +1,98 @@
+QUESTION: Compare what is known about MLH1 and MSH2 in colorectal cancer risk.
+MODE: researcher
+
+--- ANSWER TEXT ---
+Compare what is known about MLH1 and MSH2 in colorectal cancer risk.
+New search
+
+? Answered19.0s · 13 tools · 25 sources from 3 layers
+
+Show work ▾
+
+Found 2 gene records and 5 disease records for MLH1, MSH2 and colorectal cancer.⁠2–8
+
+This gene was identified as a locus frequently mutated in hereditary nonpolyposis colon cancer.⁠1
+
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+mutL homolog 1	NCBIGene:4292	⁠2
+mutS homolog 2	NCBIGene:4436	⁠6
+MLH1	NCBIGene:4292	⁠9
+DISEASE RECORDS FOUND
+DISEASE	IDENTIFIER	
+Muir-TorrÃ© syndrome	MedGen:C1321489	⁠3
+Colorectal cancer, hereditary nonpolyposis, type 2	MedGen:C1333991	⁠4
+Mismatch repair cancer syndrome 1	MedGen:C5399763	⁠5
+Lynch syndrome 1	MedGen:C2936783	⁠7
+Mismatch repair cancer syndrome 2	MedGen:C5436806	⁠8
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays.	PMID:17510385	⁠10
+Methylation Tolerance-Based Functional Assay to Assess Variants of Unknown Significance in the MLH1 and MSH2 Genes and Identify Patients With Lynch Syndrome.	PMID:30998989	⁠14
+AI-generated MLH1 small binder improves prime editing efficiency.	PMID:40769155	⁠17
+DNA mismatch repair mediated by Mlh1-Pms1 endonuclease-catalyzed mispair excision.	PMID:41439704	⁠20
+Disruption of protein-protein interaction hotspots in the C-terminal domain of MLH1 confers mismatch repair deficiency.	PMID:41480639	⁠23
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_000249.4(MLH1):c.545+1271_677+737delinsCA	VCV000242650	⁠11
+NM_000249.4(MLH1):c.453+625_545+920delinsT	VCV000242651	⁠15
+NM_000249.4(MLH1):c.1418A>T (p.His473Leu)	VCV004686835	⁠18
+NM_000249.4(MLH1):c.884+5T>A	VCV004852684	⁠21
+NM_000249.4(MLH1):c.1039-1013G>A	VCV004856878	⁠24
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+DNA MISMATCH REPAIR PROTEIN MLH1; MLH1	omim 120436	⁠12
+DNA MISMATCH REPAIR PROTEIN MLH1; MLH1	omim 120436	⁠12
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer	NCT00261456	ACTIVE_NOT_RECRUITING	⁠13
+Study of MK-3475 in Patients With Microsatellite Unstable (MSI) Tumors (Cohorts A, B and C)	NCT01876511	COMPLETED	⁠16
+Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations	NCT02760849	ACTIVE_NOT_RECRUITING	⁠19
+Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible)	NCT02993068	SUSPENDED	⁠22
+Durvalumab and Tremelimumab in Treating Patients With Microsatellite Stable Metastatic Colorectal Cancer to the Liver	NCT03005002	COMPLETED	⁠25
+NOTES
+Note: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer.
+▶
+SOURCES
+24
+Based on 24 sources, not yet confirmed
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- ANSWER META ---
+? Answered19.0s · 13 tools · 25 sources from 3 layers
+
+--- LINKS (23) ---
+ -> https://www.ncbi.nlm.nih.gov/gene/4436
+ -> https://www.ncbi.nlm.nih.gov/gene/4292
+ -> https://www.ncbi.nlm.nih.gov/medgen/C1321489
+ -> https://www.ncbi.nlm.nih.gov/medgen/C1333991
+ -> https://www.ncbi.nlm.nih.gov/medgen/C5399763
+ -> https://www.ncbi.nlm.nih.gov/medgen/C2936783
+ -> https://www.ncbi.nlm.nih.gov/medgen/C5436806
+ -> https://www.ncbi.nlm.nih.gov/gene/4292/
+ -> https://pubmed.ncbi.nlm.nih.gov/17510385/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/242650/
+ -> https://pubmed.ncbi.nlm.nih.gov/30998989/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/242651/
+ -> https://pubmed.ncbi.nlm.nih.gov/40769155/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4686835/
+ -> https://pubmed.ncbi.nlm.nih.gov/41439704/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4852684/
+ -> https://pubmed.ncbi.nlm.nih.gov/41480639/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4856878/
+ -> https://clinicaltrials.gov/study/NCT00261456
+ -> https://clinicaltrials.gov/study/NCT01876511
+ -> https://clinicaltrials.gov/study/NCT02760849
+ -> https://clinicaltrials.gov/study/NCT02993068
+ -> https://clinicaltrials.gov/study/NCT03005002

@@ -1,0 +1,59 @@
+QUESTION: papers on statins since 2022
+LANDED=answer SECONDS=15.9
+
+papers on statins since 2022
+New search
+
+✓ Answered13.8s · 3 tools · 6 sources from 1 layer
+
+Show work ▾
+
+I found 5 published papers on this topic.⁠2–6
+
+In the area of depression, a review reports that small trials found statins added to common antidepressants improved symptoms, but that statins alone did not appear to protect against depression.⁠1
+
+WHERE THIS ANSWER COMES FROM
+Statins stimulate atherosclerosis and heart failure: pharmacological mechanisms.	⁠2
+Statins and the Brain: More than Lipid Lowering Agents?	⁠3
+Statins in the treatment of depression: Hype or hope?	⁠4
+Statins in hereditary myopathies: to give or not to give.	⁠5
+Ticagrelor and Statins: Dangerous Liaisons?	⁠6
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+5
+Based on 5 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+BUTTONS:
+New search
+Show work ▾
+2–6
+1
+2
+3
+4
+5
+6
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+
+LINKS:
+ -> https://pubmed.ncbi.nlm.nih.gov/32652185/
+ -> https://pubmed.ncbi.nlm.nih.gov/25655639/
+ -> https://pubmed.ncbi.nlm.nih.gov/28676012/
+ -> https://pubmed.ncbi.nlm.nih.gov/38889624/
+ -> https://pubmed.ncbi.nlm.nih.gov/39348077/
