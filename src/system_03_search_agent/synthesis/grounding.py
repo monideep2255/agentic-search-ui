@@ -1156,6 +1156,18 @@ def run_grounding_pass(
         url = (labelled.source_url or "").strip()
         if url and labelled.field in LABEL_FIELDS:
             labels_by_url[url] = f"{labels_by_url.get(url, '')} {labelled.field_value}".strip()
+    # Card 88 (2026-10-05): the short forms each record defines in its own
+    # retrieved text, keyed by page, so a sentence may name a record by its
+    # own abbreviation (`defined_short_forms`). Used by the switch rule only,
+    # never to license words in `synthesis_is_supported_by`.
+    text_by_url: dict[str, list[str]] = {}
+    for finding in synth_findings:
+        url = (finding.source_url or "").strip()
+        if url:
+            text_by_url.setdefault(url, []).append(finding.field_value)
+    short_forms_by_url = {
+        url: defined_short_forms(" ".join(values)) for url, values in text_by_url.items()
+    }
 
     surviving_sentences: list[str] = []
     surviving_origins: list[int] = []
@@ -1437,10 +1449,25 @@ def run_grounding_pass(
             probe = "".join(part for part, _ in kept_parts)
             this_refs = {ref for _, ref in kept_parts if ref is not None}
             reworded = any(claim.evidence_quote for claim in pending_claims)
-            this_labels = " ".join(
-                labels_by_url.get((by_ref[ref].source_url or "").strip(), "")
-                for ref in this_refs
-                if ref in by_ref
+            # Judged record by record, so a short form one record defines is
+            # read against that record's own title and never another's.
+            this_urls = {
+                (by_ref[ref].source_url or "").strip() for ref in this_refs if ref in by_ref
+            }
+            # Card 17 (2026-10-05, first written as card 25 in a2255cc5): the
+            # title text of every record this sentence does NOT cite, so a
+            # word they all carry cannot say which record it switched to.
+            other_labels = " ".join(
+                label for url, label in labels_by_url.items() if url and url not in this_urls
+            )
+            names_a_record = any(
+                _names_its_record(
+                    probe,
+                    labels_by_url.get(url, ""),
+                    short_forms_by_url.get(url),
+                    other_labels,
+                )
+                for url in this_urls
             )
             if (
                 _is_unbalanced_fragment(probe)
@@ -1451,7 +1478,7 @@ def run_grounding_pass(
                 or (
                     reworded
                     and not (this_refs & previous_refs)
-                    and not _names_its_record(probe, this_labels)
+                    and not names_a_record
                 )
             ):
                 stripped += len(pending_claims)
@@ -1599,8 +1626,83 @@ def _opens_on_record_fragment(
     return _starts_inside_record_sentence(claim.claim_text, claim.finding.field_value)
 
 
-def _names_its_record(sentence: str, labels: str) -> bool:
-    """Whether a sentence shares a content word with its own records' titles.
+# Card 88 (2026-10-05). A short form written in brackets right after the
+# words it abbreviates, "Gastroesophageal reflux disease (GERD)". One word
+# that opens on a letter; whether it really abbreviates the words before it
+# is decided by `_abbreviated_long_form`, not by this pattern.
+_BRACKETED_SHORT_FORM = re.compile(r"\(\s*([A-Za-z][A-Za-z0-9-]{1,9})\s*\)")
+# A long form never reaches back past the clause it sits in.
+_LONG_FORM_BOUNDARY = re.compile(r"[.;:!?()\[\]]")
+
+
+def _abbreviated_long_form(short: str, before: str) -> str | None:
+    """The words at the end of `before` that `short` abbreviates, or None.
+
+    The published Schwartz and Hearst (2003) rule for abbreviation
+    definitions, read from the right: every letter and digit of the short
+    form must appear in order in the long form, the first one at the start
+    of a word. "GERD" walks back through "disease", "reflux" and
+    "gastroesophageal" to the "G" that opens the phrase. A bracketed word
+    whose letters the words before it do not spell, such as a place or a
+    reference, is not a definition.
+    """
+    short_index = len(short) - 1
+    long_index = len(before) - 1
+    while short_index >= 0:
+        character = short[short_index].lower()
+        if not character.isalnum():
+            short_index -= 1
+            continue
+        while long_index >= 0 and (
+            before[long_index].lower() != character
+            or (short_index == 0 and long_index > 0 and before[long_index - 1].isalnum())
+        ):
+            long_index -= 1
+        if long_index < 0:
+            return None
+        long_index -= 1
+        short_index -= 1
+    long_form = before[long_index + 1 :].strip()
+    if len(long_form) <= len(short) or short.lower() in long_form.lower().split():
+        return None
+    return long_form
+
+
+def defined_short_forms(text: str) -> dict[str, str]:
+    """Each short form a record's own text defines, mapped to the words it stands for.
+
+    Card 88 (2026-10-05): papers titled "Gastroesophageal Reflux Disease."
+    open their abstract with "Gastroesophageal reflux disease (GERD)", and
+    the answer calls the disease "GERD", as the question did. Read only from
+    the record's retrieved text, so a record that never defines a short form
+    gives it no meaning. A short form must be mostly capitals ("GERD",
+    "G6PD", "mRNA"), so a bracketed ordinary word is never read as one, and
+    its long form is limited to the Schwartz and Hearst window of
+    min(letters + 5, letters * 2) words.
+    """
+    forms: dict[str, str] = {}
+    for match in _BRACKETED_SHORT_FORM.finditer(text):
+        short = match.group(1)
+        upper = sum(character.isupper() for character in short)
+        lower = sum(character.islower() for character in short)
+        if upper < lower or short in forms:
+            continue
+        clause = _LONG_FORM_BOUNDARY.split(text[: match.start()])[-1]
+        words = clause.split()
+        window = " ".join(words[-min(len(short) + 5, len(short) * 2) :])
+        long_form = _abbreviated_long_form(short, window)
+        if long_form is not None:
+            forms[short] = long_form
+    return forms
+
+
+def _names_its_record(
+    sentence: str,
+    labels: str,
+    short_forms: dict[str, str] | None = None,
+    other_labels: str = "",
+) -> bool:
+    """Whether a sentence names its own record, and only its own record.
 
     Measured live 2026-09-23: after a sentence about Familial Mediterranean
     fever, "This condition can cause ... neonatal hyperbilirubinemia, acute
@@ -1611,10 +1713,42 @@ def _names_its_record(sentence: str, labels: str) -> bool:
     not cite must name something from those records' own titles, which are
     retrieved data, never a list. A record with no title or name cannot show
     what it is about, so such a switch does not stand.
+
+    Card 17 (2026-10-05, ported from card 25 in a2255cc5): a shared title
+    word is not enough on its own. Measured live: after a Tay-Sachs
+    sentence, "No patient carried more than one of these mutations" cited a
+    BRCA paper whose title says "patients", and "patient" was accepted. A
+    title word only counts when `other_labels`, the title text of every
+    record the sentence does not cite, does not also carry it: a word every
+    title shares distinguishes none of them. Structural, never a stop-word
+    list (the product owner ruled one out).
+
+    Card 88 (2026-10-05): the record's own defined terms are its names too.
+    `short_forms` are the abbreviations the record's own text defines
+    (`defined_short_forms`). A sentence that writes one exactly as the record
+    did, or spells out its whole long form, names the record, provided the
+    long form shares a word with that record's title: "GERD" names a paper
+    titled "Gastroesophageal Reflux Disease." whose abstract defines it,
+    even when five other papers carry the same title, since the licence
+    comes from this record's own text and not from a title word the others
+    share. A short form for something off the title names nothing, and a
+    short form only another record defines never reaches this one.
     """
     if not labels.strip():
         return False
-    return bool(_stemmed(content_tokens(sentence)) & _stemmed(content_tokens(labels)))
+    title = _stemmed(content_tokens(labels))
+    said = _stemmed(content_tokens(sentence))
+    if (said & title) - _stemmed(content_tokens(other_labels)):
+        return True
+    for short, long_form in (short_forms or {}).items():
+        long_stems = _stemmed(content_tokens(long_form))
+        if not long_stems & title:
+            continue
+        if long_stems <= said or re.search(
+            rf"(?<![A-Za-z0-9]){re.escape(short)}(?![A-Za-z0-9])", sentence
+        ):
+            return True
+    return False
 
 
 def _capitalise_opening(sentence: str) -> str:

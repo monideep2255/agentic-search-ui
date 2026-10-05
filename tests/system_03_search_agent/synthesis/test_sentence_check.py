@@ -366,6 +366,247 @@ def test_naming_the_other_record_instead_of_referring_back_stays() -> None:
     assert len(result.sentences) == 2, result.sentences
 
 
+# Card 88 (2026-10-05): a record may be named by a short form its own text
+# defines. Measured locally: papers titled "Gastroesophageal Reflux Disease."
+# whose abstracts open "Gastroesophageal reflux disease (GERD)", and every
+# approved opening sentence saying "GERD" was dropped by the switch rule.
+REFLUX_TITLE_TEXT = "Gastroesophageal Reflux Disease."
+REFLUX_DEFINES = (
+    "Gastroesophageal reflux disease (GERD) is a condition in which stomach contents "
+    "flow back into the esophagus. Typical symptoms are heartburn and regurgitation."
+)
+REFLUX_NEVER_DEFINES = (
+    "Reflux disease is a condition in which stomach contents flow back into the "
+    "esophagus. Typical symptoms are heartburn and regurgitation."
+)
+REFLUX_SENTENCE = (
+    "GERD is when what is in the stomach comes back up into the food pipe "
+    '[21: "a condition in which stomach contents flow back into the esophagus"].'
+)
+
+
+def _reflux_findings(abstract: str, title: str = REFLUX_TITLE_TEXT) -> list[SynthFinding]:
+    body = SynthFinding(
+        ref_index=21,
+        citation_id="c-21",
+        layer="layer_2_ncbi_api",
+        tool="ncbi_efetch",
+        field="abstract",
+        field_value=abstract,
+        source_url="https://pubmed.ncbi.nlm.nih.gov/21/",
+        entity_type="Publication",
+        curie="pubmed:21",
+    )
+    heading = replace_finding(body, ref_index=22, citation_id="c-22", field="title", field_value=title)
+    return [body, heading]
+
+
+def _approve_all_in(narrative: str, findings: list[SynthFinding], question: str = "") -> object:
+    sink: list[SynthesisCandidate] = []
+    run_grounding_pass(narrative, findings, question=question, candidate_sink=sink)
+    return run_grounding_pass(
+        narrative, findings, question=question,
+        verified_syntheses=frozenset(c.key for c in sink),
+    )
+
+
+def test_a_short_form_is_read_only_where_the_text_defines_it() -> None:
+    from system_03_search_agent.synthesis.grounding import defined_short_forms
+
+    assert defined_short_forms(REFLUX_DEFINES) == {"GERD": "Gastroesophageal reflux disease"}
+    assert defined_short_forms(REFLUX_NEVER_DEFINES) == {}
+    # A bracketed word the words before it do not spell is not a definition,
+    # and neither is an ordinary capitalised word.
+    assert defined_short_forms("Patients were seen in Ankara and Istanbul (Turkey).") == {}
+    assert defined_short_forms("Cases rose sharply (TBD) last year.") == {}
+
+
+def test_an_opening_sentence_names_its_record_by_the_short_form_the_record_defines() -> None:
+    result = _approve_all_in(REFLUX_SENTENCE, _reflux_findings(REFLUX_DEFINES))
+    assert len(result.sentences) == 1, result.sentences
+    assert result.sentences[0].startswith("GERD is when")
+
+
+def test_the_short_form_rule_can_fail(monkeypatch) -> None:
+    """Mutation proof: with no short forms read (the old code), the sentence is dropped."""
+    from system_03_search_agent.synthesis import grounding
+
+    monkeypatch.setattr(grounding, "defined_short_forms", lambda _text: {})
+    assert _approve_all_in(REFLUX_SENTENCE, _reflux_findings(REFLUX_DEFINES)).sentences == ()
+
+
+def test_a_short_form_the_record_never_defines_does_not_name_it() -> None:
+    result = _approve_all_in(REFLUX_SENTENCE, _reflux_findings(REFLUX_NEVER_DEFINES))
+    assert result.sentences == (), result.sentences
+
+
+def test_a_short_form_another_record_defines_does_not_name_this_one() -> None:
+    """The definition must come from the CITED record's own text."""
+    defines = _reflux_findings(REFLUX_DEFINES)
+    other = [
+        replace_finding(f, source_url="https://pubmed.ncbi.nlm.nih.gov/31/", ref_index=f.ref_index + 10,
+                        citation_id=f"{f.citation_id}-o", curie="pubmed:31")
+        for f in defines
+    ]
+    result = _approve_all_in(REFLUX_SENTENCE, _reflux_findings(REFLUX_NEVER_DEFINES) + other)
+    assert result.sentences == (), result.sentences
+
+
+def test_the_never_defines_check_can_fail(monkeypatch) -> None:
+    """Mutation proof: a reader that ignores the record's text lets the switch through."""
+    from system_03_search_agent.synthesis import grounding
+
+    monkeypatch.setattr(
+        grounding, "defined_short_forms", lambda _text: {"GERD": "Gastroesophageal reflux disease"}
+    )
+    assert len(_approve_all_in(REFLUX_SENTENCE, _reflux_findings(REFLUX_NEVER_DEFINES)).sentences) == 1
+
+
+def test_a_short_form_for_something_off_the_title_does_not_name_the_record() -> None:
+    """The long form must share a word with the record's own title."""
+    findings = _reflux_findings(REFLUX_DEFINES, title="Proton pump inhibitors in adults.")
+    assert _approve_all_in(REFLUX_SENTENCE, findings).sentences == ()
+
+
+NUMBERED_SENTENCE = (
+    "GERD affects 20 percent of adults, who get heartburn "
+    '[21: "Typical symptoms are heartburn and regurgitation"].'
+)
+
+
+def test_a_number_not_in_the_quote_still_fails_with_a_defined_short_form() -> None:
+    findings = _reflux_findings(REFLUX_DEFINES)
+    sink: list[SynthesisCandidate] = []
+    run_grounding_pass(NUMBERED_SENTENCE, findings, question="", candidate_sink=sink)
+    assert sink == [], "a number outside the quote must never reach the model"
+    assert _approve_all_in(NUMBERED_SENTENCE, findings).sentences == ()
+
+
+def test_the_number_check_can_fail(monkeypatch) -> None:
+    """Mutation proof: without the exact checks, the invented number ships."""
+    from system_03_search_agent.synthesis import grounding
+
+    monkeypatch.setattr(grounding, "exact_synthesis_checks_pass", lambda *a, **k: True)
+    assert len(_approve_all_in(NUMBERED_SENTENCE, _reflux_findings(REFLUX_DEFINES)).sentences) == 1
+
+
+# Card 17 (2026-10-05, first written as card 25 in a2255cc5): a generic title
+# word shared with other records must not name a record switch.
+TAY_SACHS = SynthFinding(
+    ref_index=30,
+    citation_id="c-30",
+    layer="layer_2_ncbi_api",
+    tool="ncbi_efetch",
+    field="abstract",
+    field_value="Tay-Sachs disease results from mutations in the HEXA gene.",
+    source_url="https://pubmed.ncbi.nlm.nih.gov/30/",
+    entity_type="Publication",
+    curie="pubmed:30",
+)
+# "patients" is in BOTH titles on purpose: that makes it generic, not either
+# record's own name. Neither title carries "mutation".
+TAY_SACHS_TITLE = replace_finding(
+    TAY_SACHS, ref_index=31, citation_id="c-31", field="title",
+    field_value="Tay-Sachs disease diagnosis in patients",
+)
+BRCA = SynthFinding(
+    ref_index=32,
+    citation_id="c-32",
+    layer="layer_2_ncbi_api",
+    tool="ncbi_efetch",
+    field="abstract",
+    field_value="No patient carried more than one of these mutations in the cohort.",
+    source_url="https://pubmed.ncbi.nlm.nih.gov/32/",
+    entity_type="Publication",
+    curie="pubmed:32",
+)
+BRCA_TITLE = replace_finding(
+    BRCA, ref_index=33, citation_id="c-33", field="title",
+    field_value="Breast cancer risk assessment in patients",
+)
+TAY_SACHS_FIRST = "Tay-Sachs disease results from mutations in the HEXA gene [30]. "
+TAY_SACHS_FINDINGS = [TAY_SACHS, TAY_SACHS_TITLE, BRCA, BRCA_TITLE]
+
+
+def test_a_generic_shared_word_does_not_name_the_switch() -> None:
+    """Measured live: "No patient carried ..." cited a BRCA paper after a
+    Tay-Sachs sentence, and "patient" from the BRCA title was accepted."""
+    wrong = TAY_SACHS_FIRST + (
+        "No patient had more than one of these mutations "
+        '[32: "No patient carried more than one of these mutations in the cohort"].'
+    )
+    result = _approve_all_in(wrong, TAY_SACHS_FINDINGS, question=QUESTION)
+    assert len(result.sentences) == 1, result.sentences
+    assert "Tay-Sachs" in result.sentences[0]
+
+
+def test_a_distinguishing_word_still_names_the_switch() -> None:
+    named = TAY_SACHS_FIRST + (
+        "No breast cancer patient had more than one of these mutations "
+        '[32: "No patient carried more than one of these mutations in the cohort"].'
+    )
+    result = _approve_all_in(named, TAY_SACHS_FINDINGS, question=QUESTION)
+    assert len(result.sentences) == 2, result.sentences
+
+
+def _same_title_papers() -> list[SynthFinding]:
+    """Two papers with one title, as on the GERD question: only the first
+    defines the short form in its own text."""
+    first = _reflux_findings(REFLUX_DEFINES)
+    second = [
+        replace_finding(f, source_url="https://pubmed.ncbi.nlm.nih.gov/41/", ref_index=f.ref_index + 20,
+                        citation_id=f"{f.citation_id}-b", curie="pubmed:41")
+        for f in _reflux_findings(REFLUX_NEVER_DEFINES)
+    ]
+    return first + second
+
+
+def test_a_defined_short_form_names_its_record_when_every_title_is_the_same() -> None:
+    """The title words are shared with the other paper, so they name neither;
+    the short form this paper's own text defines still names it."""
+    result = _approve_all_in(REFLUX_SENTENCE, _same_title_papers())
+    assert len(result.sentences) == 1, result.sentences
+
+
+def test_a_shared_title_does_not_carry_one_papers_short_form_to_another() -> None:
+    """Paper 41 has the same title but never defines GERD: a GERD sentence
+    resting on it is not attributed to it by way of paper 21's definition."""
+    on_other = (
+        "GERD is when what is in the stomach comes back up into the food pipe "
+        '[41: "a condition in which stomach contents flow back into the esophagus"].'
+    )
+    assert _approve_all_in(on_other, _same_title_papers()).sentences == ()
+
+
+def test_title_words_every_paper_shares_do_not_name_the_switch() -> None:
+    """Card 17 on the GERD shape: "reflux disease" is in both titles, so
+    after a sentence on paper 21 it cannot say the next one moved to 41."""
+    switch = REFLUX_SENTENCE + (
+        " In reflux disease, heartburn is a usual sign "
+        '[41: "Typical symptoms are heartburn and regurgitation"].'
+    )
+    result = _approve_all_in(switch, _same_title_papers())
+    assert len(result.sentences) == 1, result.sentences
+    assert result.sentences[0].startswith("GERD is when")
+
+
+def test_the_generic_word_rule_can_fail(monkeypatch) -> None:
+    """Mutation proof: with other records' titles ignored (the pre-card-17
+    rule), the shared-word switch ships."""
+    from system_03_search_agent.synthesis import grounding
+
+    real = grounding._names_its_record
+    monkeypatch.setattr(
+        grounding, "_names_its_record",
+        lambda sentence, labels, short_forms=None, other_labels="": real(sentence, labels, short_forms),
+    )
+    switch = REFLUX_SENTENCE + (
+        " In reflux disease, heartburn is a usual sign "
+        '[41: "Typical symptoms are heartburn and regurgitation"].'
+    )
+    assert len(_approve_all_in(switch, _same_title_papers()).sentences) == 2
+
+
 def test_the_opening_sentence_counts_a_paper_cited_twice_once() -> None:
     """Measured live 2026-09-23: "Found 10 pubmed records" above a list of 5,
     once the prose could cite a paper's abstract as well as its title."""

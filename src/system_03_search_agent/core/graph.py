@@ -9827,6 +9827,29 @@ def _node_or_edge_type_by_citation_id(
     return out
 
 
+#: `CitationPayload.claim_text`'s own bound.
+_CLAIM_TEXT_MAX = 1000
+
+
+def _joined_checked_words(entries: list[str]) -> str:
+    """One citation's checked record words, each whole, within the field's bound.
+
+    Card 57: a record cited by several sentences shows the words behind every
+    one of them. An entry that would not fit whole is left out rather than
+    cut mid-number; only a first entry longer than the bound is cut, as the
+    single-claim case always was.
+    """
+    joined = ""
+    for entry in entries:
+        candidate = f"{joined} {entry}" if joined else entry
+        if len(candidate) > _CLAIM_TEXT_MAX:
+            if not joined:
+                return entry[:_CLAIM_TEXT_MAX]
+            continue
+        joined = candidate
+    return joined
+
+
 def _citations_from_grounded_claims(
     grounding: GroundingResult,
     findings: list[Finding],
@@ -9869,21 +9892,29 @@ def _citations_from_grounded_claims(
         claim.finding.citation_id: claim.finding.value_is_suspect
         for claim in grounding.claims
     }
-    claim_text_by_citation_id: dict[str, str] = {}
+    checked_words_by_citation_id: dict[str, list[str]] = {}
     finding_by_citation_id: dict[str, SynthFinding] = {}
     for claim in grounding.claims:
         citation_id = claim.finding.citation_id
+        # Every claim with one citation_id carries the same finding, so the
+        # first is as good as any here.
         finding_by_citation_id.setdefault(citation_id, claim.finding)
-        # A finding cited by two clauses keeps the first clause as its
-        # claim_text; both clauses were independently grounded against the
-        # same field value, so either is true, and picking deterministically
-        # beats concatenating into a claim no single sentence made.
-        claim_text_by_citation_id.setdefault(citation_id, claim.claim_text)
+        # Card 57 (2026-10-05): the record words EACH claim was checked
+        # against, in reading order. A copied claim was checked as its own
+        # text; a reworded one against its quote. This replaced "the first
+        # clause wins", which showed "The encoded protein participates in
+        # transcription ..." under "about 40% of inherited breast cancers
+        # [7]" because both sentences cited one summary: the second
+        # sentence's support, numbers and all, was never shown.
+        checked = claim.evidence_quote or claim.claim_text
+        words = checked_words_by_citation_id.setdefault(citation_id, [])
+        if checked not in words:
+            words.append(checked)
 
     citations: list[CitationPayload] = []
     for citation_id, display_index in sorted(display_slots.items(), key=lambda kv: kv[1]):
         synth_finding = finding_by_citation_id[citation_id]
-        claim_text = claim_text_by_citation_id[citation_id][:1000]
+        claim_text = _joined_checked_words(checked_words_by_citation_id[citation_id])
 
         if synth_finding.tool == "ncbi_efetch":
             # F-3.4-T05-04: None means this one claim could not be built
