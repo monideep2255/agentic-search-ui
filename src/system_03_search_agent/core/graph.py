@@ -9461,6 +9461,20 @@ def _build_incomplete_answer_note(
     return f"Note: {count} further {label}s were found for this question and are {closing}"
 
 
+def _build_cap_list_note() -> str:
+    """Tell the reader the question hit its limit and the list is what was found.
+
+    Card 46 (2026-10-05). The limit path used to say "the answer below
+    reflects a partial result" over an empty page. It now lists the records
+    gathered before the limit, so the note says exactly that. Same shape as
+    the other notes: one sentence, opening "Note:", no interior period.
+    """
+    return (
+        "Note: this question reached its resource limit before it finished, "
+        "so this answer lists the records gathered so far"
+    )
+
+
 def _build_structured_fallback_note() -> str:
     """Tell the reader this answer is a list of records, not a summary.
 
@@ -9475,8 +9489,8 @@ def _build_structured_fallback_note() -> str:
     splits on those and counts an unmarked continuation as an uncited claim.
     """
     return (
-        "Note: the written summary of these records could not be verified "
-        "against them, so this answer lists the records found instead"
+        "Note: no written summary could be checked against the records, "
+        "so the records found are listed below with their sources"
     )
 
 
@@ -11817,12 +11831,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         )
         return sink.result()
 
-    if state.get("cap_exceeded", False):
-        # Routed straight here from an earlier node's per-query cap hit;
-        # ship the partial result per Section 19.1, never a blank failure.
-        return _partial_result_for_cap(
-            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
-        )
+    # Routed here from an earlier node's per-query cap hit. Card 46: the
+    # partial result is no longer a note over nothing. Write skips its own
+    # model call and lists what was gathered through the structured
+    # fallback below, with a citation each. When nothing was gathered, or
+    # nothing grounds, `_partial_result_for_cap` still ships (Section
+    # 19.1), never a blank failure.
+    cap_hit = bool(state.get("cap_exceeded", False))
 
     clarification_needed = state.get("clarification_needed")
     if clarification_needed:
@@ -12151,8 +12166,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     write_budget_s = budget_for_step("write", query_class)
     write_started_at = time.monotonic()
 
+    if cap_hit and not prompt_findings:
+        return _partial_result_for_cap(
+            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+        )
+
     try:
-        synth_text = await _dispatch_tier_call(
+        synth_text = "" if cap_hit else await _dispatch_tier_call(
             harness,
             trace_id,
             "synth",
@@ -12336,6 +12356,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         repair_budget_s = write_budget_s - (time.monotonic() - write_started_at)
         if (
             omitted_findings
+            and not cap_hit
             and repair_budget_s >= _WRITE_REPAIR_MIN_BUDGET_S
             and not _code_built_lines_will_cite(
                 omitted_findings,
@@ -12462,6 +12483,11 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 {claim.finding.citation_id for claim in grounding.claims},
                 synth_findings,
             )
+    if cap_hit and not structured_fallback_used:
+        # Nothing gathered grounds, so there is no list to show.
+        return _partial_result_for_cap(
+            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+        )
 
     # UI fix set 10, item 10.1, second cut (2026-09-13). THE FINDINGS TAIL.
     #
@@ -12616,7 +12642,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
 
     structured_fallback_note: str | None = None
     if structured_fallback_used and trust_outcome != "refuse":
-        structured_fallback_note = _build_structured_fallback_note()
+        structured_fallback_note = (
+            _build_cap_list_note() if cap_hit else _build_structured_fallback_note()
+        )
 
     # F-3.4-A-01: a completeness check, a different question from
     # everything Section 8.3 above just computed. Every claim above may

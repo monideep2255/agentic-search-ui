@@ -888,8 +888,8 @@ async def test_the_fallback_note_and_the_incomplete_note_do_not_contradict(
 ) -> None:
     """Product-owner defect (2026-09-20): a live answer showed
 
-        Note: the written summary of these records could not be verified
-        against them, so this answer lists the records found instead
+        Note: no written summary could be checked against the records,
+        so the records found are listed below with their sources
         Note: 5 further pubmed records were found for this question and
         are not covered in the summary above
 
@@ -1436,3 +1436,59 @@ async def test_the_done_events_elapsed_time_covers_the_writing_step(
 
     done = next(event for event in result["events"] if event.type == "done")
     assert done.payload["elapsed_ms"] >= 300, done.payload["elapsed_ms"]
+
+
+@pytest.mark.asyncio
+async def test_the_fallback_note_is_one_plain_line_with_no_blame(synth_pair) -> None:
+    """Owner decision D1 (2026-10-05): when no written sentence survives, the
+    reader is told in plain words and the records are listed with sources."""
+    synth_pair(first=set(), repaired=set())
+    result = await graph_module.write_node(_write_state())
+    note = graph_module._build_structured_fallback_note()
+    assert note == (
+        "Note: no written summary could be checked against the records, "
+        "so the records found are listed below with their sources"
+    )
+    assert note in _narrative(result["events"])
+
+
+@pytest.mark.asyncio
+async def test_a_limit_hit_run_lists_what_was_gathered_with_citations(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 46: the note said "the answer below reflects a partial result"
+    over an empty page. A run that hit its limit after Act now lists the
+    findings gathered, one citation each, through the structured fallback,
+    makes no writing call, and says plainly why the list is what it is.
+
+    RED before the change: `write_node` returned only the limit note and a
+    `done`, with no citation event."""
+    mock = AsyncMock(side_effect=AssertionError("no model call after the limit"))
+    monkeypatch.setattr(harness_module.litellm, "acompletion", mock)
+    state = _write_state()
+    state["cap_exceeded"] = True
+    result = await graph_module.write_node(state)
+    events = result["events"]
+
+    assert mock.await_count == 0
+    citations = _events_of(events, "citation")
+    assert {c.payload["source_url"] for c in citations} == {row["source_url"] for row in _ROWS}
+    narrative = _narrative(events)
+    for row in _ROWS:
+        assert row["fields"]["name"] in narrative, narrative
+    assert graph_module._build_cap_list_note() in narrative
+    assert "written summary" not in narrative
+    done = _events_of(events, "done")[0].payload
+    assert done["trust_outcome"] == "ask", done
+
+
+@pytest.mark.asyncio
+async def test_a_limit_hit_run_with_nothing_gathered_keeps_the_limit_note() -> None:
+    state = _write_state()
+    state["cap_exceeded"] = True
+    state["findings"] = []
+    state["findings_count"] = 0
+    result = await graph_module.write_node(state)
+    events = result["events"]
+    assert not _events_of(events, "citation")
+    assert _events_of(events, "done")[0].payload["trust_outcome"] == "flag"
