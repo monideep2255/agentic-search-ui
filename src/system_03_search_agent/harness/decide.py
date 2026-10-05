@@ -69,7 +69,7 @@ from dataclasses import dataclass
 from typing import Final
 
 from system_03_search_agent.contracts.events import DecisionRecord
-from system_03_search_agent.harness import cost_control
+from system_03_search_agent.harness import call_log, cost_control
 from system_03_search_agent.harness.cost_control import QueryCapExceededError
 from system_03_search_agent.harness.harness import Harness, HarnessCallError, Message
 from system_03_search_agent.harness.jev_client import (
@@ -225,6 +225,7 @@ def _parse_guard_choice(raw: str, options: Sequence[str]) -> str | None:
 async def _run_guard_pick(
     harness: Harness,
     trace_id: str,
+    point: str,
     state: str,
     options: Sequence[str],
     instructions: str | None = None,
@@ -245,13 +246,30 @@ async def _run_guard_pick(
     except QueryCapExceededError:
         return None
     messages = _build_guard_messages(state, options, instructions, criteria)
+    started = time.monotonic()
     try:
         response = await harness.enforce_timeout(
             "guardrail", harness.call_tier("guard", messages), _GUARD_BUDGET_S
         )
-    except HarnessCallError:
+    except HarnessCallError as exc:
+        call_log.log_model_call(
+            point=point,
+            trace_id=trace_id,
+            kind="guard",
+            started=started,
+            outcome=call_log.outcome_for_error(exc),
+        )
         return None
-    return _parse_guard_choice(response.content, options)
+    choice = _parse_guard_choice(response.content, options)
+    call_log.log_model_call(
+        point=point,
+        trace_id=trace_id,
+        kind="guard",
+        started=started,
+        outcome=call_log.OK if choice is not None else call_log.UNUSABLE_REPLY,
+        provider=call_log.provider_of(response),
+    )
+    return choice
 
 
 async def _run_jev_pick(
@@ -322,6 +340,12 @@ def jev_decides() -> bool:
     return os.environ.get("CLASSIFIER_PROVIDER", "guard").strip().lower() == "jev"
 
 
+def _log_jev_call(trace_id: str, point: str, started: float, outcome: str) -> None:
+    call_log.log_model_call(
+        point=point, trace_id=trace_id, kind="jev", started=started, outcome=outcome
+    )
+
+
 async def _jev_attempt(
     harness: Harness,
     trace_id: str,
@@ -342,26 +366,33 @@ async def _jev_attempt(
     except for cancellation: a caller that cancels the decision stops Jev's
     call with it, since `asyncio.wait_for` cancels what it waits on.
     """
+    started = time.monotonic()
     try:
-        return await asyncio.wait_for(
+        result = await asyncio.wait_for(
             _run_jev_pick(
                 harness, trace_id, point, state, options, model, api_key, instructions, criteria
             ),
             timeout=_JEV_WAIT_S,
         )
     except JevCallError as exc:
+        _log_jev_call(trace_id, point, started, call_log.jev_outcome(exc.reason))
         return exc.reason
     except QueryCapExceededError:
         return "cost_cap"
     except TimeoutError:
+        _log_jev_call(trace_id, point, started, call_log.TIMEOUT)
         return "timeout"
     except Exception:  # noqa: BLE001 - a broken Jev call falls back, it never breaks the decision
+        _log_jev_call(trace_id, point, started, call_log.ERROR)
         return "unexpected_error"
+    _log_jev_call(trace_id, point, started, call_log.OK)
+    return result
 
 
 async def _guard_fallback_pick(
     harness: Harness,
     trace_id: str,
+    point: str,
     state: str,
     options: Sequence[str],
     instructions: str | None,
@@ -377,7 +408,7 @@ async def _guard_fallback_pick(
     """
     try:
         return await asyncio.wait_for(
-            _run_guard_pick(harness, trace_id, state, options, instructions, criteria),
+            _run_guard_pick(harness, trace_id, point, state, options, instructions, criteria),
             timeout=_GUARD_FALLBACK_WAIT_S,
         )
     except TimeoutError:
@@ -453,7 +484,7 @@ async def decide(
 
     if not jev_decides():
         guard_choice = await _run_guard_pick(
-            harness, trace_id, bounded_state, options, instructions, criteria
+            harness, trace_id, point, bounded_state, options, instructions, criteria
         )
         return DecisionRecord(
             name=point,
@@ -480,7 +511,7 @@ async def decide(
         jev,
     )
     guard_choice = await _guard_fallback_pick(
-        harness, trace_id, bounded_state, options, instructions, criteria
+        harness, trace_id, point, bounded_state, options, instructions, criteria
     )
     return _jev_mode_record(point, options, jev, guard_choice, fallback_default)
 
@@ -628,7 +659,7 @@ async def compare_models(
     async def _timed_guard_pick() -> tuple[str | None, int]:
         started = time.monotonic()
         choice = await _guard_fallback_pick(
-            harness, trace_id, bounded_state, options, instructions, criteria
+            harness, trace_id, point, bounded_state, options, instructions, criteria
         )
         return choice, int((time.monotonic() - started) * 1000)
 
