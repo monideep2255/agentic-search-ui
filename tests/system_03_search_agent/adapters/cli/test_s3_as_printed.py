@@ -1101,6 +1101,8 @@ class TestTopLevelHelp:
         text = " ".join(out.getvalue().split())
         assert "the full path that command -v s3 prints" in text
         assert "PATH" in text
+        # Card 79: the description is a sentence and ends with a full stop.
+        assert "shell's PATH." in text
 
     def test_help_never_reads_the_credential_file(
         self, credential_file, monkeypatch: pytest.MonkeyPatch
