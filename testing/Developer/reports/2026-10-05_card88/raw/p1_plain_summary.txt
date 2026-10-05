@@ -1,0 +1,6 @@
+p1_plain_bare: depth=plain_language outcome=ask elapsed=32.6s token_kinds={'claim': 1, 'paragraph_break': 3, 'heading': 1, 'list_item': 12, 'note': 2}
+   CLAIM: I found 5 published papers, 1 condition, 1 literature index entry and 5 clinical trials related to GERD [1][2][3][4][5][6][7][8][9][10][11][12]. 
+   options: []
+p1_plain_pick: depth=plain_language outcome=answer elapsed=26.1s token_kinds={'claim': 2, 'paragraph_break': 3, 'heading': 1, 'list_item': 12, 'note': 1}
+   CLAIM: I found 5 published papers, 1 condition, 1 literature index entry and 5 clinical trials related to GERD [2][3][4][5][6][7][8][9][10][11][12][13]. 
+   CLAIM: These reflux symptoms are among the most common complaints that patients bring to their primary care doctors [1]. 

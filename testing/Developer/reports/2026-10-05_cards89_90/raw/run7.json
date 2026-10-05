@@ -1,0 +1,803 @@
+{
+ "run": 7,
+ "seconds": 12.0,
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 0,
+   "ts": "2026-10-05T16:31:33.586693Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 2,
+   "ts": "2026-10-05T16:31:34.359205Z",
+   "payload": {
+    "narrative": "The query asks about beneficial variants in a broad population group, which is open-ended and does not specify a single database or record.",
+    "query_class": "exploratory",
+    "resolved_entities": [],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 4,
+   "ts": "2026-10-05T16:31:34.362128Z",
+   "payload": {
+    "narrative": "no gene, variant or disease was named, so searching the published literature for: variants, people, mediterranean, descent",
+    "tool_calls": [
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-6919d6bb70a6",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-6554c06573f3",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-87f0f660f77d",
+      "layer": "layer_3_enrichment",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 6,
+   "ts": "2026-10-05T16:31:34.363170Z",
+   "payload": {
+    "call_id": "ne-6919d6bb70a6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 7,
+   "ts": "2026-10-05T16:31:34.363204Z",
+   "payload": {
+    "call_id": "ne-6554c06573f3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 8,
+   "ts": "2026-10-05T16:31:34.363215Z",
+   "payload": {
+    "call_id": "pa-87f0f660f77d",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 9,
+   "ts": "2026-10-05T16:31:34.710207Z",
+   "payload": {
+    "call_id": "ne-6919d6bb70a6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 10,
+   "ts": "2026-10-05T16:31:35.045846Z",
+   "payload": {
+    "call_id": "pa-87f0f660f77d",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 11,
+   "ts": "2026-10-05T16:31:35.051266Z",
+   "payload": {
+    "call_id": "ne-6554c06573f3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 12,
+   "ts": "2026-10-05T16:31:35.052646Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 13,
+   "ts": "2026-10-05T16:31:43.134445Z",
+   "payload": {
+    "text": "I found 5 published papers on this topic [3][4][5][6][7]. ",
+    "marker_ids": [
+     "ne-6554c06573f3-1",
+     "ne-6554c06573f3-2",
+     "ne-6554c06573f3-3",
+     "ne-6554c06573f3-4",
+     "ne-6554c06573f3-5"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 14,
+   "ts": "2026-10-05T16:31:43.134511Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 15,
+   "ts": "2026-10-05T16:31:43.134521Z",
+   "payload": {
+    "text": "Different gene changes cause different levels of enzyme deficiency, with classes assigned to various degrees of deficiency and disease manifestation [1]. ",
+    "marker_ids": [
+     "ne-6554c06573f3-6"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 16,
+   "ts": "2026-10-05T16:31:43.134529Z",
+   "payload": {
+    "text": "Breakdown of red blood cells is triggered by things like infections, certain drugs, or fava beans, and treatment focuses on avoiding those triggers [1]. ",
+    "marker_ids": [
+     "ne-6554c06573f3-6"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 17,
+   "ts": "2026-10-05T16:31:43.134536Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 18,
+   "ts": "2026-10-05T16:31:43.134543Z",
+   "payload": {
+    "text": "The most common combination of two variants was R202Q together with M694V [2]. ",
+    "marker_ids": [
+     "ne-6554c06573f3-10"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 19,
+   "ts": "2026-10-05T16:31:43.134550Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 20,
+   "ts": "2026-10-05T16:31:43.134557Z",
+   "payload": {
+    "text": "Where this answer comes from\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 21,
+   "ts": "2026-10-05T16:31:43.134563Z",
+   "payload": {
+    "text": "Pubmed title: Diagnosis and management of G6PD deficiency [3]. ",
+    "marker_ids": [
+     "ne-6554c06573f3-1"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Diagnosis and management of G6PD deficiency."
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 22,
+   "ts": "2026-10-05T16:31:43.134571Z",
+   "payload": {
+    "text": "Pubmed title: High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population [4]. ",
+    "marker_ids": [
+     "ne-6554c06573f3-2"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population."
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 23,
+   "ts": "2026-10-05T16:31:43.134578Z",
+   "payload": {
+    "text": "Pubmed title: Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Consortium [5]. ",
+    "marker_ids": [
+     "ne-6554c06573f3-3"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Consortium."
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 24,
+   "ts": "2026-10-05T16:31:43.134587Z",
+   "payload": {
+    "text": "Pubmed title: Hemoglobin \u03b2-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas [6]. ",
+    "marker_ids": [
+     "ne-6554c06573f3-4"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Hemoglobin \u03b2-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas."
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 25,
+   "ts": "2026-10-05T16:31:43.134594Z",
+   "payload": {
+    "text": "Pubmed title: Molecular analyses of MEFV gene mutation variants in Turkish population [7]. ",
+    "marker_ids": [
+     "ne-6554c06573f3-5"
+    ],
+    "kind": "list_item",
+    "cells": [
+     "Molecular analyses of MEFV gene mutation variants in Turkish population."
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 26,
+   "ts": "2026-10-05T16:31:43.134602Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 27,
+   "ts": "2026-10-05T16:31:43.134609Z",
+   "payload": {
+    "text": "This is a research summary, not medical advice.",
+    "marker_ids": [],
+    "kind": "note",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 28,
+   "ts": "2026-10-05T16:31:43.134619Z",
+   "payload": {
+    "citation_id": "ne-6554c06573f3-6",
+    "display_index": 1,
+    "source": "pubmed",
+    "source_id": "16225031",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/16225031/",
+    "layer": "layer_2_api",
+    "field": "abstract",
+    "claim_text": "Different gene changes cause different levels of enzyme deficiency, with classes assigned to various degrees of deficiency and disease manifestation",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 29,
+   "ts": "2026-10-05T16:31:43.134639Z",
+   "payload": {
+    "citation_id": "ne-6554c06573f3-10",
+    "display_index": 2,
+    "source": "pubmed",
+    "source_id": "39042260",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39042260/",
+    "layer": "layer_2_api",
+    "field": "abstract",
+    "claim_text": "The most common combination of two variants was R202Q together with M694V",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 30,
+   "ts": "2026-10-05T16:31:43.134648Z",
+   "payload": {
+    "citation_id": "ne-6554c06573f3-1",
+    "display_index": 3,
+    "source": "pubmed",
+    "source_id": "16225031",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/16225031/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Diagnosis and management of G6PD deficiency",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 31,
+   "ts": "2026-10-05T16:31:43.134656Z",
+   "payload": {
+    "citation_id": "ne-6554c06573f3-2",
+    "display_index": 4,
+    "source": "pubmed",
+    "source_id": "34582790",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34582790/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 32,
+   "ts": "2026-10-05T16:31:43.134663Z",
+   "payload": {
+    "citation_id": "ne-6554c06573f3-3",
+    "display_index": 5,
+    "source": "pubmed",
+    "source_id": "35098403",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35098403/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Consortium",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 33,
+   "ts": "2026-10-05T16:31:43.134671Z",
+   "payload": {
+    "citation_id": "ne-6554c06573f3-4",
+    "display_index": 6,
+    "source": "pubmed",
+    "source_id": "37782073",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37782073/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Hemoglobin \u03b2-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 34,
+   "ts": "2026-10-05T16:31:43.134679Z",
+   "payload": {
+    "citation_id": "ne-6554c06573f3-5",
+    "display_index": 7,
+    "source": "pubmed",
+    "source_id": "39042260",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39042260/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Molecular analyses of MEFV gene mutation variants in Turkish population",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 35,
+   "ts": "2026-10-05T16:31:43.134697Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-6554c06573f3-6",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 36,
+   "ts": "2026-10-05T16:31:43.134713Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-6554c06573f3-10",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 37,
+   "ts": "2026-10-05T16:31:43.134722Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-6554c06573f3-1",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 38,
+   "ts": "2026-10-05T16:31:43.134730Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-6554c06573f3-2",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 39,
+   "ts": "2026-10-05T16:31:43.134738Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-6554c06573f3-3",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 40,
+   "ts": "2026-10-05T16:31:43.134745Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-6554c06573f3-4",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 41,
+   "ts": "2026-10-05T16:31:43.134753Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-6554c06573f3-5",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 42,
+   "ts": "2026-10-05T16:31:43.134765Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "429b6324-2890-439c-a04a-1fc31d7765b5",
+   "seq": 44,
+   "ts": "2026-10-05T16:31:43.134840Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 11802,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 5 sources",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 142
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 152
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.97,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 145
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.99,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 279
+     }
+    ]
+   }
+  }
+ ]
+}

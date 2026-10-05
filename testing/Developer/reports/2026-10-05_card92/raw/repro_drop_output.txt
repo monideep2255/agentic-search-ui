@@ -1,0 +1,12 @@
+clinvar rows built: 5
+   4935316 | field keys: ['title', 'germline_classification'] | citable: 'title' 'NM_007294.4(BRCA1):c.4358-2753A>T'
+   4935318 | field keys: ['title', 'germline_classification'] | citable: 'title' 'NM_007294.4(BRCA1):c.3900_3904del (p.Cys1300_Glu1
+   4935321 | field keys: ['title', 'germline_classification'] | citable: 'title' 'NM_007294.4(BRCA1):c.2485T>C (p.Phe829Leu)'
+   4935322 | field keys: ['title', 'germline_classification'] | citable: 'title' 'NM_007294.4(BRCA1):c.2313G>C (p.Leu771Phe)'
+   4935323 | field keys: ['title', 'germline_classification'] | citable: 'title' 'NM_007294.4(BRCA1):c.2128A>C (p.Thr710Pro)'
+dbvar rows built: 5
+   nsv7897034 | field keys: ['variant_type', 'gene_name'] | citable: '' ''
+   nsv7897183 | field keys: ['variant_type', 'gene_name'] | citable: '' ''
+   nsv7905344 | field keys: ['variant_type', 'gene_name'] | citable: '' ''
+   nsv7905530 | field keys: ['variant_type', 'gene_name'] | citable: '' ''
+   nsv7906304 | field keys: ['variant_type', 'gene_name'] | citable: '' ''

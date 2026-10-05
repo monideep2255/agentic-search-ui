@@ -1,0 +1,188 @@
+{
+ "name": "brca1_dis",
+ "q": "Which diseases are associated with BRCA1?",
+ "depth": "researcher",
+ "seconds": 26.7,
+ "trust_outcome": "ask",
+ "trust_line": "Based on 22 sources, not yet confirmed",
+ "tokens": [
+  "Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4]. ",
+  "\n\n",
+  "BRCA1 is associated with four diseases: familial cancer of breast [1], familial breast-ovarian cancer susceptibility 1 [2], pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. ",
+  "The gene symbol is BRCA1 [5], and the gene name is BRCA1 [6]. ",
+  "\n\n",
+  "Gene Function and Summary\n\n",
+  "The encoded protein participates in transcription, DNA repair of double-stranded breaks, and recombination [7]. ",
+  "Mutations in this gene are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers [7]. ",
+  "\n\n",
+  "Disease records found\n\n",
+  "",
+  "Disease name: Familial cancer of breast [1]. ",
+  "Disease name: Familial breast-ovarian cancer susceptibility 1 [2]. ",
+  "Disease name: Pancreatic cancer susceptibility 4 [3]. ",
+  "Disease name: Fanconi anemia complementation group S [4]. ",
+  "\n\n",
+  "Gene records found\n\n",
+  "",
+  "Gene symbol: BRCA1 [5]. ",
+  "Gene name: BRCA1 [6]. ",
+  "\n\n",
+  "Pubmed records found\n\n",
+  "",
+  "Pubmed title: Brca1 and differentiation [8]. ",
+  "Pubmed title: BRCA1: An Endocrine and Metabolic Regulator [12]. ",
+  "Pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [15]. ",
+  "Pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [18]. ",
+  "Pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [21]. ",
+  "\n\n",
+  "Clinvar records found\n\n",
+  "",
+  "Clinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [9]. ",
+  "Clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [13]. ",
+  "Clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [16]. ",
+  "Clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [19]. ",
+  "Clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [22]. ",
+  "\n\n",
+  "Omim records found\n\n",
+  "",
+  "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN [10]. ",
+  "BRCA1 [10]. ",
+  "\n\n",
+  "Clinical trial records found\n\n",
+  "",
+  "Clinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [11]. ",
+  "Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [14]. ",
+  "Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [17]. ",
+  "Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [20]. ",
+  "Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [23]. "
+ ],
+ "citations": [
+  [
+   1,
+   "MedGen:C0346153",
+   "BRCA1 is associated with four diseases: familial cancer of breast"
+  ],
+  [
+   2,
+   "MedGen:C2676676",
+   "familial breast-ovarian cancer susceptibility 1"
+  ],
+  [
+   3,
+   "MedGen:C3280442",
+   "pancreatic cancer susceptibility 4"
+  ],
+  [
+   4,
+   "MedGen:C4554406",
+   "Fanconi anemia complementation group S"
+  ],
+  [
+   5,
+   "672",
+   "The gene symbol is BRCA1"
+  ],
+  [
+   6,
+   "672",
+   "the gene name is BRCA1"
+  ],
+  [
+   7,
+   "672",
+   "The encoded protein participates in transcription, DNA repair of double-stranded breaks, and recombination"
+  ],
+  [
+   8,
+   "12464350",
+   "pubmed title: Brca1 and differentiation"
+  ],
+  [
+   9,
+   "267740",
+   "clinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del"
+  ],
+  [
+   10,
+   "113705",
+   "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN"
+  ],
+  [
+   11,
+   "NCT00590109",
+   "Clinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer"
+  ],
+  [
+   12,
+   "35432218",
+   "pubmed title: BRCA1: An Endocrine and Metabolic Regulator"
+  ],
+  [
+   13,
+   "267741",
+   "clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG"
+  ],
+  [
+   14,
+   "NCT00597987",
+   "Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression"
+  ],
+  [
+   15,
+   "36914836",
+   "pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis"
+  ],
+  [
+   16,
+   "373892",
+   "clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del"
+  ],
+  [
+   17,
+   "NCT00617656",
+   "Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma"
+  ],
+  [
+   18,
+   "39261728",
+   "pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection"
+  ],
+  [
+   19,
+   "4823850",
+   "clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3"
+  ],
+  [
+   20,
+   "NCT00673335",
+   "Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation"
+  ],
+  [
+   21,
+   "39265497",
+   "pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors"
+  ],
+  [
+   22,
+   "4848411",
+   "clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=)"
+  ],
+  [
+   23,
+   "NCT00700778",
+   "Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations"
+  ]
+ ],
+ "types": [
+  "citation",
+  "done",
+  "guard",
+  "plan",
+  "step",
+  "think",
+  "token",
+  "tool_result",
+  "tool_start",
+  "trust_signal"
+ ]
+}

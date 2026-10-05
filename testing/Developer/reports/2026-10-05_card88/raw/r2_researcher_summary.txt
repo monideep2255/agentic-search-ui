@@ -1,0 +1,5 @@
+r2_researcher_bare: depth=researcher outcome=refuse elapsed=3.6s token_kinds={'none': 1}
+   CLAIM: What would you like to know about GERD?
+   options: ['What is GERD?', 'Which genes are associated with GERD susceptibility?', 'Are there clinical trials for GERD treatments?', 'What does recent research say about GERD management?']
+r2_researcher_pick: depth=researcher outcome=ask elapsed=13.0s token_kinds={'claim': 1, 'paragraph_break': 5, 'heading': 4, 'table_header': 4, 'table_row': 12, 'note': 1}
+   CLAIM: Found 5 pubmed records, 1 medgen record, 1 literature entity record and 5 clinical trial records for GERD [1][2][3][4][5][6][7][8][9][10][11][12]. 

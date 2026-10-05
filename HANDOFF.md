@@ -2,7 +2,7 @@
 
 The current state a fresh session needs, and nothing else. `/phase-checkpoint` rewrites it in place at every session end and keeps it to about 4 KB. Earlier versions, and the setup steps for a new laptop, are in `docs/build/Handoff_history.md`.
 
-Last updated: 2026-10-04.
+Last updated: 2026-10-05.
 
 ## Table of contents
 
@@ -14,9 +14,9 @@ Last updated: 2026-10-04.
 ## What is live
 
 - Develop's product code: card 73's merge, #139 at ca85a03d. `git log --merges --first-parent develop` lists what came before.
-- Golden run floor for the next answer-path change: 101 of 150 (`DECISIONS.md`, 2026-09-29). Card 63's accepted run answered 98.
+- The gate for a change is the test queries document, run by agent runners; the golden run is an alarm only (`DECISIONS.md`, 2026-10-05).
 - Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`. Both Railway services redeploy on every push to `develop`.
-- Production: `v0.2.0`, tag `cde4f59`, released 2026-09-20. Nothing since is on it. Card 65 fixes the release fix's open findings first.
+- Production: `v0.2.0`, tag `cde4f59`, released 2026-09-20. Nothing since is on it. The changelog fix, `testing/Future.md` row 53 (formerly board card 65), lands first.
 - `/ship` runs the public-repository leak scan before every push. Open items: `testing/Developer/reports/2026-09-29_ship_leak_scan/verifier.md`.
 - The lead merges into develop with `gh pr merge --merge --admin --delete-branch` once checks pass (`DECISIONS.md`, 2026-09-29).
 - Test sign-ins are fresh accounts made on develop, kept only in the lead's scratch folder (`LEARNINGS.md`, 2026-09-29).
@@ -36,7 +36,7 @@ Parked branches, all on GitHub. Pick one up with `git worktree add .claude/workt
 
 ## The one next action
 
-The owner picks the next piece from the top of To do: cards 86 to 94, each needing a diagnosis first. Phase 8.7 stays parked. One piece at a time, carried to done (`DECISIONS.md`, 2026-09-29).
+Build from `testing/Board_plan.md`, wave by wave. Wave 0, cards 88, 89, 57 and 17, is on `fix/card88-89-answers-survive` in `.claude/worktrees/card88-89`; wave 1's six small builds start in parallel. Decisions D5 to D21 in the plan carry the lead's recommendation and are taken unless the owner objects.
 
 How to start a session: read this file, then `git status --short` and `git worktree list` (expect `develop` alone locally), then the board's Retest and To do columns. At the end, run `/phase-checkpoint`, then `/ship`. A new laptop starts with the setup steps in `docs/build/Handoff_history.md`.
 
