@@ -967,14 +967,15 @@ _ASK_BACK: Final = _DecisionSpec(
     ),
     criteria={
         "ask_back": (
-            "It only names a subject, a bare noun or short phrase with no request "
-            "in it, so a search would have to guess which of several things the "
-            "person wants."
+            "It only names a subject: a thing, condition or topic on its own, with "
+            "no word saying what to find out about it."
         ),
         "proceed": (
-            "It asks something or names the kind of answer wanted, such as a "
-            "definition, papers, trials, variants, symptoms or a cause, including "
-            "any message phrased as a question."
+            "It says what to find out, either as a question or as a subject "
+            "followed by a word that names the wanted kind of information, for "
+            "example a definition, papers, trials, symptoms, causes or therapy "
+            "options. A subject that is followed by such a word is a request, not "
+            "a bare subject."
         ),
     },
 )
