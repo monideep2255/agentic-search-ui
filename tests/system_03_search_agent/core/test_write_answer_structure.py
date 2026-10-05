@@ -750,7 +750,7 @@ async def test_12_9_with_no_model_prose_the_two_depths_still_differ(monkeypatch)
         # prose on the page is the code-built opening sentence.
         notes = [t["text"] for t in _tokens(result) if t["kind"] == "note"]
         assert any(
-            note.startswith("Note: the written summary of these records could not be verified")
+            note.startswith("Note: no written summary could be checked against the records")
             for note in notes
         ), notes
         assert [t["kind"] for t in _tokens(result)].count("claim") == 1

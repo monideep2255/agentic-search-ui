@@ -77,7 +77,8 @@ const SYSTEM_NOTE_PREFIXES = [
   // (`TokenPayload.kind === "note"`), which is the classification this list
   // could never be. These stay for a producer that sends no `kind`.
   "Note: one further",
-  "Note: the written summary of these records could not be verified",
+  "Note: no written summary could be checked against the records",
+  "Note: this question reached its resource limit before it finished",
   "This is a research summary, not medical advice",
 ];
 
