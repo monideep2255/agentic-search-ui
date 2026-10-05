@@ -34,10 +34,12 @@ from system_03_search_agent.harness.harness import Harness, HarnessCallError
 from system_03_search_agent.synthesis import sentence_check as sentence_check_module
 from system_03_search_agent.synthesis.findings import SynthFinding
 from system_03_search_agent.synthesis.grounding import (
+    MAX_WIDENED_QUOTE_CHARS,
     SynthesisCandidate,
     extract_evidence_quotes,
     run_grounding_pass,
     synthesis_key,
+    widen_to_record_sentences,
 )
 from system_03_search_agent.synthesis.sentence_check import (
     MAX_CANDIDATES,
@@ -1209,3 +1211,127 @@ async def test_the_write_step_in_jev_mode_still_fails_closed(monkeypatch) -> Non
         budget_s=30.0,
     )
     assert not result.grounded, "a yes approves nothing, and code alone rejects the rewording"
+
+
+# ------------------------------- card 89: the model reads whole record sentences
+#
+# The owner's decision of 2026-10-05 (DECISIONS.md; design in
+# testing/Developer/reports/2026-10-05_sentence_check/design.md, option 1).
+# Measured: 36 of 47 rejections were sentences faithful to the record whose
+# extra words sat outside the short span the writer quoted. The model now
+# reads each quote widened to the whole record sentence(s) it sits in. The
+# exact checks still run on the writer's own quote, and the key keeps it.
+
+REFLUX_ABSTRACT = (
+    "Gastroesophageal reflux disease is common in adults. In 20 percent of cases it "
+    "results from the reflux of stomach contents into the esophagus, which does not "
+    "always cause heartburn. Proton pump inhibitors are the most effective treatment."
+)
+REFLUX_FIRST, REFLUX_SECOND, REFLUX_THIRD = (
+    "Gastroesophageal reflux disease is common in adults.",
+    (
+        "In 20 percent of cases it results from the reflux of stomach contents into the "
+        "esophagus, which does not always cause heartburn."
+    ),
+    "Proton pump inhibitors are the most effective treatment.",
+)
+REFLUX = replace_finding(
+    PAPER, ref_index=1, citation_id="c-r1", field_value=REFLUX_ABSTRACT,
+    source_url="https://pubmed.ncbi.nlm.nih.gov/21/", curie="pubmed:21",
+)
+REFLUX_TITLE = replace_finding(
+    PAPER_TITLE, ref_index=2, citation_id="c-r2", field_value="Reflux of stomach contents in adults",
+    source_url="https://pubmed.ncbi.nlm.nih.gov/21/", curie="pubmed:21",
+)
+MID_SENTENCE = (
+    "Stomach contents flow back up into the food pipe "
+    '[1: "the reflux of stomach contents into the esophagus"].'
+)
+
+
+def _reflux_candidates(narrative: str) -> list[SynthesisCandidate]:
+    sink: list[SynthesisCandidate] = []
+    run_grounding_pass(narrative, [REFLUX, REFLUX_TITLE], question=QUESTION, candidate_sink=sink)
+    return sink
+
+
+def test_the_record_sentences_are_what_the_test_says() -> None:
+    assert f"{REFLUX_FIRST} {REFLUX_SECOND} {REFLUX_THIRD}" == REFLUX_ABSTRACT
+
+
+def test_a_mid_sentence_quote_is_widened_to_its_whole_record_sentence() -> None:
+    sink = _reflux_candidates(MID_SENTENCE)
+    assert len(sink) == 1, sink
+    assert sink[0].quotes == (REFLUX_SECOND,)
+    state, _ = sentence_check_module.build_jev_state(sink)
+    assert json.dumps(REFLUX_SECOND) in state, "the model reads the whole record sentence"
+
+
+def test_a_quote_crossing_two_record_sentences_is_widened_to_both() -> None:
+    sink = _reflux_candidates(
+        'Reflux disease is frequent in grown-ups [1: "common in adults. In 20 percent"].'
+    )
+    assert len(sink) == 1, sink
+    assert sink[0].quotes == (f"{REFLUX_FIRST} {REFLUX_SECOND}",)
+
+
+def test_a_quote_that_is_already_a_whole_sentence_is_unchanged() -> None:
+    sink = _reflux_candidates(f'Acid-blocking pills work best for it [1: "{REFLUX_THIRD}"].')
+    assert len(sink) == 1, sink
+    assert sink[0].quotes == (REFLUX_THIRD,)
+    assert widen_to_record_sentences(REFLUX_THIRD, REFLUX_ABSTRACT) == REFLUX_THIRD
+
+
+def test_the_exact_checks_still_run_on_the_writers_own_quote() -> None:
+    # Negation: the widened sentence says "does not", the writer's quote and
+    # sentence do not. Checked on the writer's quote, the sentence is a
+    # candidate; had the check read the widened sentence, it would not be.
+    sink = _reflux_candidates(MID_SENTENCE)
+    assert len(sink) == 1 and "does not" in sink[0].quotes[0]
+    # The key is the writer's own words, and it is what the second pass accepts.
+    assert sink[0].key == synthesis_key(
+        "Stomach contents flow back up into the food pipe",
+        ["the reflux of stomach contents into the esophagus"],
+    )
+    result = run_grounding_pass(
+        MID_SENTENCE, [REFLUX, REFLUX_TITLE], question=QUESTION,
+        verified_syntheses=frozenset({sink[0].key}),
+    )
+    assert result.claims and result.claims[0].evidence_quote == (
+        "the reflux of stomach contents into the esophagus"
+    )
+    # Numbers: 20 is in the widened sentence but not in the writer's quote, so
+    # the sentence never reaches the model.
+    assert _reflux_candidates(
+        "Stomach contents flow back up into the food pipe in 20 percent of people "
+        '[1: "the reflux of stomach contents into the esophagus"].'
+    ) == []
+    # The quote must still be in the record word for word.
+    assert _reflux_candidates(
+        'Stomach contents flow back up [1: "the reflux of stomach acid into the esophagus"].'
+    ) == []
+
+
+def test_two_quotes_in_one_record_sentence_are_shown_once() -> None:
+    sink = _reflux_candidates(
+        "Stomach contents flow back up into the food pipe "
+        '[1: "the reflux of stomach contents"][1: "contents into the esophagus, which"].'
+    )
+    assert len(sink) == 1, sink
+    assert sink[0].quotes == (REFLUX_SECOND,)
+    assert len(sink[0].key[1]) == 2, "the key keeps both of the writer's quotes"
+
+
+def test_a_run_of_record_sentences_too_long_to_show_keeps_the_writers_quote() -> None:
+    long_sentence = "Reflux " + "and more words " * 60 + "ends here."
+    record = f"First sentence here. {long_sentence} Last one."
+    assert widen_to_record_sentences("and more words and more words", record) == (
+        "and more words and more words"
+    )
+    assert widen_to_record_sentences("words not in the record at all", record) == (
+        "words not in the record at all"
+    )
+
+
+def test_a_widened_quote_is_never_cut_short_in_the_check() -> None:
+    assert MAX_WIDENED_QUOTE_CHARS == sentence_check_module.MAX_QUOTE_CHARS

@@ -886,18 +886,22 @@ sentence. Write the value as plain text, never inside quotation marks.
 paper's conclusions: do not copy it out. SYNTHESISE it. Write the sentence \
 in your own plain words to answer the question, and put the record's exact \
 supporting words inside the marker, like this: \
-Washing hands cuts the spread of chest infections [4: "hand hygiene \
-reduced respiratory infection transmission"]. The words inside the quotes \
+Washing hands cuts the spread of chest infections [4: "Hand hygiene \
+reduced respiratory infection transmission."]. The words inside the quotes \
 must be copied character for \
-character from finding 4, a short contiguous span of about five to thirty \
-words, never the whole finding. Your sentence may use plain, everyday \
-words in place of the paper's terms, but it must say NOTHING MORE than the \
-quoted words: no extra fact, cause, population, comparison or certainty. \
-Every number must be in the quote. If the quote says no or not, your \
-sentence must too, and a sentence must never turn a negative finding into \
-a positive one: quote the narrower span that says exactly what you state. \
-A sentence may carry two quotes, [4: "first span"][4: "second span"], when \
-it draws on both. Code checks the quote is really in the finding and a \
+character from finding 4. Quote the whole sentence of the finding that \
+your sentence rests on, from its first word to its full stop, never the \
+whole finding. When your sentence draws on two or more sentences of the \
+finding, quote each one whole in its own marker, one quote per sentence: \
+[4: "First sentence."][4: "Second sentence."]. Your sentence may use \
+plain, everyday words in place of the paper's terms, but it must say \
+NOTHING MORE than the quoted words: no extra fact, cause, population, \
+comparison or certainty. Every number must be in the quote. If the quote \
+says no or not, your sentence must too, and a sentence must never turn a \
+negative finding into a positive one: when a sentence of the finding says \
+no or not about something your sentence does not state, or runs past \
+about sixty words, quote only the part that says exactly what you state. \
+Code checks the quote is really in the finding and a \
 second reviewer checks the sentence says no more than it; a sentence that \
 fails either is deleted.
 4. Use only the identifiers the question and the findings give you. Never \
