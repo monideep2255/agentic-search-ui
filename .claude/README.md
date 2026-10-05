@@ -10,7 +10,7 @@ The indexes that used to sit in `CLAUDE.md`:
 
 They moved here on 2026-10-04 (`DECISIONS.md`, 2026-10-04) because `CLAUDE.md` loads into every turn and these tables are needed only when looking something up. Claude Code already lists each skill and sub-agent by its own description, so nothing is lost at session start. `docs-sync` keeps this file current.
 
-Last updated: 2026-10-04.
+Last updated: 2026-10-05.
 
 ## Table of contents
 

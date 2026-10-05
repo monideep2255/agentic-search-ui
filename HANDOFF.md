@@ -17,12 +17,13 @@ Last updated: 2026-10-05.
 - Production: `v0.2.0`, tag `cde4f592`, released 2026-09-20. Nothing since is on it. The changelog fix, `testing/Future.md` row 53, lands before the next release.
 - The gate for a change is the test queries document, run by agent runners on develop; the golden run is an alarm only (`DECISIONS.md`, 2026-10-05).
 - The build order is `testing/Board_plan.md`: root causes, waves, the owner's decisions. Its Progress list says where the waves stand.
-- Two development agents: this lead (answer path, the board, the plan, the one merge queue) and Factory (screens and wording, cards 43, 44, 18, 23, 24, 25, 47 and the rest of 61, on `factory/` branches). Merge one pull request at a time; several at once starve CI of runners (`LEARNINGS.md`, 2026-10-05).
+- One development agent is active, this lead. Factory's trial was paused on 2026-10-05: its lane (cards 43, 44, 18, 23, 24, 25, 47 and the rest of 61) is provisional and pending until the owner gives renewed instructions, and its trial worktree and branch were removed with no work in them. Do no Factory setup until then. Merge one pull request at a time; several at once starve CI of runners (`LEARNINGS.md`, 2026-10-05).
 - Parked on GitHub: `feat/8.7-s1` to `s3` and `phase/8.7-answers-sooner` (phase 8.7, resume plan in `testing/Developer/reports/2026-10-05_phase_8.7_resume/plan.md`); `fix/card72-r10-guardrail` and `fix/card84-r10-sound-parts` (guardrail, returns as an agreed design).
 
 ## What awaits the product owner
 
 - Retests: the board's Retest column, newest first, each card naming its test query.
+- Whether and how Factory resumes, and with what guidance; its eight cards stay pending until then.
 - A top-up of the OpenRouter account before phase 8.7 (about $38.50 left against its approved $60; develop's live answers draw on it too).
 - Decisions D5 to D21 in `testing/Board_plan.md` are taken as recommended unless the owner objects.
 - A note to NCBI about the broken encoding in MedGen's Muir-Torré syndrome record, drafted by the lead for the owner to send.
@@ -32,7 +33,7 @@ Last updated: 2026-10-05.
 
 Diagnose why the SARS-CoV-2 question still answers about the disease SARS on develop though card 56's fix passed locally (card 56 at the top of To do; evidence `testing/Developer/reports/2026-10-05_final_test_queries/results.md`). Then card 99's measurement, then phase 8.7 once the account is topped up.
 
-How to start a session: read this file, then `git status --short` and `git worktree list` (expect the main checkout on `develop`, plus any Factory worktrees, which are not ours to touch), then `git ls-remote --heads origin 'factory/*'` and `gh pr list` for Factory's work (move its cards on the board as they start and land), then the board's Retest and To do columns. At the end, run `/phase-checkpoint`, then `/ship`.
+How to start a session: read this file, then `git status --short` and `git worktree list` (expect the main checkout on `develop` alone), then the board's Retest and To do columns. At the end, run `/phase-checkpoint`, then `/ship`.
 
 ## Where the facts live
 
