@@ -1862,7 +1862,7 @@ FACTS: tuple[Fact, ...] = (
             w(ARCH, ARCH_TSX, seven_tools(tools=r"(Seven)"), COUNT),
         ),
         downstream=(
-            *everywhere(INSTRUCTION_FILES, r"PLANNED, (\w+) tools\.", COUNT),
+            *everywhere(INSTRUCTION_FILES, r"PLANNED, (\w+) tools: [a-z0-9_, ]+\.(?=\s+Build)", COUNT),
             w(DOC, ARCH_DIAGRAM, r"## The \w+ data layers and the (\w+) tools", COUNT),
             w(
                 DOC,
@@ -1898,7 +1898,7 @@ FACTS: tuple[Fact, ...] = (
         downstream=(
             *everywhere(
                 INSTRUCTION_FILES,
-                r"PLANNED, \w+ tools\. ([a-z0-9_, ]+)\.(?=\s+Build)",
+                r"PLANNED, \w+ tools: ([a-z0-9_, ]+)\.(?=\s+Build)",
                 SET,
                 word_set,
             ),
