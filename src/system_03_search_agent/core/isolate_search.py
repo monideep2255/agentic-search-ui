@@ -245,9 +245,10 @@ def record_question(organism: Organism) -> str:
     """
     label = organism.label
     return (
-        f"Which kind of {label} record do you want? For example {label} isolates "
-        "in Pathogen Detection that carry a resistance gene family, such as ESBL "
-        "or carbapenemase genes."
+        f"Which kind of {label} record do you want? For example {label} genome "
+        f"assemblies, {label} SRA sequencing runs, or {label} isolates in "
+        "Pathogen Detection that carry a resistance gene family, such as ESBL or "
+        "carbapenemase genes."
     )
 
 _MAX_PREFIXES: Final[int] = 10

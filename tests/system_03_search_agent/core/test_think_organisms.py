@@ -22,10 +22,16 @@ Each arm was run against the old code and went red there:
   the question asked back is `CLARIFICATION_QUESTION`, the gene question
   (red).
 
+- `test_an_organism_span_resolves_to_its_taxonomy_record_with_a_citation`
+  and the arms after it: the old code has no organism resolver, no
+  `record_type`, and no organism route in Plan (red).
+
 Populate checks, so no arm passes on an empty result: the same question
 with no organism span still yields "SARS"; a span Taxonomy rejects
 ("MODY", the 2-of-20 GCK runs) still yields its token; a question with no
-organism still gets the gene question.
+organism still gets the gene question; a name Taxonomy files under two taxa,
+or two organisms, resolves nothing; a gene question with the same record
+type and organism plans the graph call first, exactly as before.
 """
 
 from __future__ import annotations
@@ -35,6 +41,7 @@ from typing import Any
 
 import pytest
 
+from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import Query
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import harness as harness_module
@@ -45,7 +52,12 @@ ASSEMBLY_QUESTION = "Which Mycobacterium tuberculosis genome assemblies exist, a
 REFERRING_GENE_QUESTION = "What diseases is it linked to?"
 
 #: NCBI Taxonomy, as recorded live in the diagnosis's `raw/ncbi_lookups.json`.
-TAXONOMY = {"sars-cov-2": ["2697049"], "mycobacterium tuberculosis": ["1773"]}
+TAXONOMY = {
+    "sars-cov-2": ["2697049"],
+    "mycobacterium tuberculosis": ["1773"],
+    "human": ["9606"],
+    "mouse": ["10090", "10088"],
+}
 #: MedGen, the three records "SARS" bound live on 2026-10-05.
 SARS_UIDS = ["1001", "1002", "1003"]
 MEDGEN_TITLES = {
@@ -117,14 +129,16 @@ def _install_model(
     monkeypatch.setenv("SYNTH_MODEL", "test-provider/synth-model")
 
 
-def _state(text: str) -> dict[str, Any]:
-    return {
+def _state(text: str, **extra: Any) -> dict[str, Any]:
+    state: dict[str, Any] = {
         "query": Query(text=text, session_id="s-org", trace_id="t-org", user_id=None),
         "harness": harness_module.Harness(trace_id="t-org"),
         "seq": 0,
         "findings": [],
         "findings_count": 0,
     }
+    state.update(extra)
+    return state
 
 
 # ---------------------------------------------------------------------------
@@ -204,3 +218,183 @@ def test_the_organism_question_quotes_only_name_characters() -> None:
     assert "<" not in asked and ">" not in asked
     assert "Mus musculus" in asked
     assert len(asked) < 500
+
+
+# ---------------------------------------------------------------------------
+# An organism resolves through NCBI Taxonomy, with its citation
+# ---------------------------------------------------------------------------
+
+
+def _organism(text: str) -> graph_module._ThinkExtractedEntity:
+    return graph_module._ThinkExtractedEntity(text=text, entity_type="organism")
+
+
+@pytest.mark.asyncio
+async def test_an_organism_span_resolves_to_its_taxonomy_record_with_a_citation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    searched = _install_ncbi(monkeypatch)
+    organism = await graph_module.resolve_organism([_organism("SARS-CoV-2")])
+    assert organism is not None
+    assert (organism.mention, organism.taxid, organism.curie) == (
+        "SARS-CoV-2",
+        "2697049",
+        "NCBITaxon:2697049",
+    )
+    assert organism.source_url == "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=2697049"
+    assert searched == [("taxonomy", "SARS-CoV-2[All Names]")]
+    # The gene path's check reads the same answer: one search, not two.
+    assert await graph_module._organism_is_known("SARS-CoV-2") is True
+    assert len(searched) == 1, searched
+
+
+@pytest.mark.asyncio
+async def test_no_basis_to_pick_one_organism_resolves_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_ncbi(monkeypatch)
+    # A name NCBI files under two taxa.
+    assert await graph_module.resolve_organism([_organism("mouse")]) is None
+    # Two organisms NCBI knows: a cross-species question, never a guess.
+    assert await graph_module.resolve_organism([_organism("SARS-CoV-2"), _organism("human")]) is None
+    # A name NCBI does not know, and no organism at all.
+    assert await graph_module.resolve_organism([_organism("MODY")]) is None
+    assert await graph_module.resolve_organism([]) is None
+    # Populate check: a span NCBI rejects beside one it knows still resolves the one.
+    both = await graph_module.resolve_organism([_organism("MODY"), _organism("human")])
+    assert both is not None and both.taxid == "9606"
+
+
+@pytest.mark.asyncio
+async def test_a_failed_taxonomy_lookup_resolves_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _fail(params: Any) -> Any:
+        raise RuntimeError("transport down")
+
+    monkeypatch.setattr(ncbi_eutils_actions, "search", _fail)
+    graph_module._ORGANISM_KNOWN_CACHE.clear()
+    assert await graph_module.resolve_organism([_organism("SARS-CoV-2")]) is None
+    assert graph_module._ORGANISM_KNOWN_CACHE == {}, "a failure is never remembered"
+
+
+# ---------------------------------------------------------------------------
+# Think hands Plan the organism and the record kind
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_think_resolves_the_organism_for_a_record_question(monkeypatch: pytest.MonkeyPatch) -> None:
+    searched = _install_ncbi(monkeypatch)
+    _install_model(monkeypatch, [("SARS-CoV-2", "organism")], record_type="sra")
+    result = await graph_module.think_node(_state(SRA_QUESTION))
+    assert [(e.text, e.curie) for e in result["resolved_entities"]] == [("SARS-CoV-2", "NCBITaxon:2697049")]
+    records = result["organism_records"]
+    assert records.organism.taxid == "2697049" and records.record_type == "sra"
+    assert result.get("clarification_needed") is None
+    assert not any(db == "medgen" for db, _ in searched), searched
+    think = next(e for e in result["events"] if e.type == "think")
+    assert "NCBI Taxonomy 2697049" in think.payload["narrative"]
+    assert "not applied" in think.payload["narrative"]
+
+
+@pytest.mark.asyncio
+async def test_with_no_record_type_the_organism_question_is_asked_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Populate check for the arm above: the classifier's record type, not
+    the organism alone, is what routes the question."""
+    _install_ncbi(monkeypatch)
+    _install_model(monkeypatch, [("Mycobacterium tuberculosis", "organism")], record_type="none")
+    result = await graph_module.think_node(_state(ASSEMBLY_QUESTION))
+    assert "organism_records" not in result
+    assert result["resolved_entities"] == []
+    assert "which kind of record about Mycobacterium tuberculosis" in result["clarification_needed"]
+
+
+@pytest.mark.parametrize("record_type", ["none", "sra"])
+@pytest.mark.asyncio
+async def test_a_gene_question_is_unchanged(monkeypatch: pytest.MonkeyPatch, record_type: str) -> None:
+    """A gene that resolves keeps the question a gene question, whatever
+    organism and record type the classifier read: no organism anchor, and
+    the graph call is planned first, exactly as before this card."""
+    _install_ncbi(monkeypatch)
+
+    async def _gene(symbol: str, *, taxon: str = "human") -> str | None:
+        return "NCBIGene:672" if symbol == "BRCA1" else None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _gene)
+    fields = {"record_type": record_type} if record_type != "none" else {}
+    _install_model(monkeypatch, [("BRCA1", "gene"), ("human", "organism")], **fields)
+    result = await graph_module.think_node(_state("Which SRA runs study BRCA1 in human?"))
+    assert [e.curie for e in result["resolved_entities"]] == ["NCBIGene:672"]
+    assert "organism_records" not in result
+    plan = await graph_module.plan_node(
+        _state(
+            "Which SRA runs study BRCA1 in human?",
+            resolved_entities=result["resolved_entities"],
+            query_class="single_hop",
+        )
+    )
+    assert isinstance(plan["tool_calls"][0], graph_module._PlannedToolCall)
+    assert not any(getattr(c, "purpose", "") == "sra_search" for c in plan["tool_calls"])
+
+
+# ---------------------------------------------------------------------------
+# Plan routes the organism to its records
+# ---------------------------------------------------------------------------
+
+
+async def _plan_for(question: str, mention: str, taxid: str, record_type: str) -> dict[str, Any]:
+    organism = graph_module.ResolvedOrganism(mention=mention, taxid=taxid)
+    state = _state(
+        question,
+        resolved_entities=[EventResolvedEntity(text=mention, curie=organism.curie, confidence=1.0)],
+        query_class="exploratory",
+        organism_records=graph_module._OrganismRecords(organism=organism, record_type=record_type),
+    )
+    return await graph_module.plan_node(state)
+
+
+@pytest.mark.asyncio
+async def test_an_organism_and_sra_runs_plan_the_sra_search(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
+    result = await _plan_for(SRA_QUESTION, "SARS-CoV-2", "2697049", "sra")
+    calls = result["tool_calls"]
+    search = calls[0]
+    assert isinstance(search, graph_module._PlannedNcbiEfetchToolCall)
+    assert search.purpose == "sra_search"
+    assert search.ncbi_efetch_input.root.db == "sra"
+    assert search.ncbi_efetch_input.root.term == "txid2697049[Organism:exp]"
+    taxonomy = calls[1]
+    assert taxonomy.purpose == "taxonomy_summary" and taxonomy.ncbi_efetch_input.root.ids == ["2697049"]
+    follow_ups = [c for c in calls if isinstance(c, graph_module._PlannedFollowUpCall)]
+    assert [(f.source_purpose, f.purpose) for f in follow_ups] == [("sra_search", "sra_summary")]
+    assert not any(isinstance(c, graph_module._PlannedToolCall) for c in calls), "no graph call"
+    plan = next(e for e in result["events"] if e.type == "plan")
+    assert "SARS-CoV-2" in plan.payload["narrative"] and "2697049" in plan.payload["narrative"]
+    assert [r["curie"] for r in plan.payload["resolved_entities"]] == ["NCBITaxon:2697049"]
+
+
+@pytest.mark.asyncio
+async def test_an_organism_and_assemblies_plan_the_assembly_search(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
+    result = await _plan_for(ASSEMBLY_QUESTION, "Mycobacterium tuberculosis", "1773", "assembly")
+    calls = result["tool_calls"]
+    assert calls[0].purpose == "assembly_search"
+    assert calls[0].ncbi_efetch_input.root.db == "assembly"
+    assert calls[0].ncbi_efetch_input.root.term == "txid1773[Organism:exp]"
+    follow_ups = [c for c in calls if isinstance(c, graph_module._PlannedFollowUpCall)]
+    assert [(f.source_purpose, f.purpose) for f in follow_ups] == [("assembly_search", "assembly_summary")]
+    assert not any(getattr(c, "purpose", "") == "sra_search" for c in calls)
+    assert not any(isinstance(c, graph_module._PlannedToolCall) for c in calls), "no graph call"
+
+
+def test_the_follow_ups_fetch_the_ids_the_search_returned() -> None:
+    for source, purpose, db in (("sra_search", "sra_summary", "sra"), ("assembly_search", "assembly_summary", "assembly")):
+        follow_up = graph_module._PlannedFollowUpCall(
+            tool_call=graph_module.ToolCall(tool="ncbi_efetch", call_id="ne-abc", layer="layer_2_api"),
+            purpose=purpose,
+            source_purpose=source,
+        )
+        concrete = graph_module._follow_up_planned_call(follow_up, ["5", "40", "300", "40"])
+        assert concrete is not None and concrete.purpose == purpose
+        assert concrete.ncbi_efetch_input.root.db == db
+        assert concrete.ncbi_efetch_input.root.ids == ["300", "40", "5"]
+        assert concrete.tool_call.call_id == "ne-abc"

@@ -85,6 +85,12 @@ Field lifecycle:
             call, and `write` puts the count and the cut under the answer.
             Absent otherwise, and absent when the shape asks which organism
             or which gene instead of searching.
+        organism_records: set by `think` when the question's subject is an
+            organism NCBI Taxonomy confirmed and the classifier read that it
+            asks for the organism's SRA records or genome assemblies, with
+            nothing else resolved (card 56, 2026-10-05); `plan` plans the
+            organism's record search and its Taxonomy summary from it and no
+            graph call. Absent otherwise.
         topic_search_term: set by `plan` when the question named no gene,
             variant or disease, so the published literature was searched
             for its own words instead of the graph (fix-plan item 12.7,
@@ -227,6 +233,11 @@ class GraphState(TypedDict, total=False):
     # no graph call, and `write` states the count under the answer. Absent
     # otherwise, and absent when the shape still needs a clarification.
     isolate_question: Any
+    # Card 56 (2026-10-05): set by `think` for an organism-anchored record
+    # question (`core.graph._OrganismRecords`: the Taxonomy-confirmed
+    # organism and the record kind); `plan` plans the organism's SRA or
+    # assembly search and its Taxonomy record from it, no graph call.
+    organism_records: Any
     # UI fix set 8 (2026-09-13): set by `act`, the typed output of each
     # dispatched ncbi_dbsnp, pubtator_annotate, litvar2_lookup or
     # clinicaltrials_search call, keyed by call_id, for the same reason
