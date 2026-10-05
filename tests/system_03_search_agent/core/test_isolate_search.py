@@ -151,16 +151,22 @@ def test_an_unknown_organism_with_a_resistance_word_asks_which_organism() -> Non
     assert question is not None and question.organism is None
     assert question.clarification == module.ORGANISM_QUESTION
     amr = module.parse_isolate_question("Which E. coli isolates have AMR genes?")
-    assert amr is not None and amr.clarification == module.GENE_QUESTION
+    assert amr is not None and amr.organism is not None
+    assert amr.clarification == module.record_question(amr.organism)
     # Populate check: the same sentence with no resistance word is not the shape.
     assert module.parse_isolate_question("Which tomato isolates in Pathogen Detection carry genes?") is None
 
 
-def test_an_organism_with_no_gene_asks_which_gene() -> None:
+def test_an_organism_with_no_gene_asks_which_kind_of_record() -> None:
+    """Card 56 (2026-10-05): an organism with no gene is asked which kind of
+    record about it is wanted, in the organism's own name, and never asked
+    which resistance gene the isolates should carry."""
     question = module.parse_isolate_question("Which E. coli isolates are in Pathogen Detection?")
     assert question is not None and question.organism is not None
     assert question.prefixes == ()
-    assert question.clarification == module.GENE_QUESTION
+    assert question.clarification == module.record_question(question.organism)
+    assert question.clarification.startswith("Which kind of Escherichia coli record do you want?")
+    assert "Which resistance gene" not in question.clarification
 
 
 def test_an_explicit_allele_is_kept_as_typed_beside_the_family() -> None:

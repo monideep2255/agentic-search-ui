@@ -201,9 +201,16 @@ FetchDb = Literal[
 #: The same call over all 26 of G-019's UIDs at once returned all 26
 #: records. `mesh` is deliberately NOT added to `FetchDb`: that path has not
 #: been live-verified and nothing needs it.
+#:
+#: `nuccore` is the fifteenth summary value, additive, card 74 (2026-10-05): a
+#: question about one paper's linked sequence data cites each GenBank or
+#: RefSeq record to its own page. Live-verified the same day: ESummary on
+#: `db=nuccore&id=2449300375` returns `title`, `accessionversion`, `organism`,
+#: `moltype` and `slen`, and the record page `/nuccore/2449300375` answers
+#: HTTP 200. It is not a `SearchDb` or `FetchDb` value: nothing needs either.
 SummaryDb = Literal[
     "pubmed", "gene", "clinvar", "dbvar", "omim", "medgen", "gtr", "sra",
-    "bioproject", "biosample", "assembly", "gds", "taxonomy", "mesh",
+    "bioproject", "biosample", "assembly", "gds", "taxonomy", "mesh", "nuccore",
 ]
 
 
