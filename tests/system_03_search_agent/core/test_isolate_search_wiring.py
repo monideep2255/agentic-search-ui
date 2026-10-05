@@ -10,7 +10,7 @@ No network anywhere.
 Coverage statement, per `goal-contracts`: Think with the golden question (the
 organism on the state as NCBITaxon:562, the disclosure in the narrative, the
 model's spans not confirmed, no clarification), with an organism and no gene
-(the gene question, nothing on the state), with a gene and no organism (the
+(the which-kind-of-record question, nothing on the state), with a gene and no organism (the
 organism question), and with a plain gene question (untouched, the populate
 check); Plan with an isolate question (the isolate search at index 0, the
 Taxonomy summary at index 1, no graph call, the plan event naming the
@@ -143,10 +143,15 @@ async def test_the_golden_question_resolves_the_organism_and_confirms_none_of_th
 
 
 @pytest.mark.asyncio
-async def test_an_organism_with_no_gene_is_asked_which_gene(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_an_organism_with_no_gene_is_asked_which_kind_of_record(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Card 56: the organism is the person's subject, so the question asked
+    back is which kind of record about it, never which resistance gene."""
     _install_model(monkeypatch)
     result = await graph_module.think_node(_state(NO_GENE_QUESTION))
-    assert result.get("clarification_needed") == isolate_search.GENE_QUESTION
+    asked = result.get("clarification_needed")
+    assert asked == isolate_search.record_question(isolate_search.ORGANISMS[0])
+    assert asked.startswith("Which kind of Escherichia coli record do you want?")
+    assert "Which resistance gene" not in asked
     assert "isolate_question" not in result
 
 

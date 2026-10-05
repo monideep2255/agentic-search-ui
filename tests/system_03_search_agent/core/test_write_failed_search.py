@@ -154,7 +154,9 @@ async def test_an_answer_that_lost_a_search_says_so_and_is_not_yet_confirmed(mon
     result = await graph_module.write_node(state)
     tokens = _tokens(result)
     notes = [t["text"] for t in tokens if t["kind"] == "note"]
-    assert FAILED_SEARCH_NOTE in notes, notes
+    # Card 91: the note names the kind of source that was not searched.
+    assert graph_module._build_failed_search_note([_TIMED_OUT]) in notes, notes
+    assert any("knowledge graph" in note for note in notes), notes
     assert any(t["kind"] == "claim" for t in tokens), "the answer itself still stands"
     done = _events_of(result, "done")[-1]
     assert done["trust_outcome"] in ("ask", "flag"), done
@@ -226,7 +228,9 @@ async def test_a_failure_asking_again_can_help_keeps_the_original_note(
     state["failed_searches"] = [{**_PUBMED_DOWN, "kind": kind}]
     result = await graph_module.write_node(state)
     notes = _note_texts(result)
-    assert FAILED_SEARCH_NOTE in notes, notes
+    # Card 91: not the outage wording, and now naming PubMed as the source.
+    assert graph_module._build_failed_search_note([state["failed_searches"][0]]) in notes, notes
+    assert any("PubMed" in note and "did not finish" in note for note in notes), notes
     assert _PUBMED_DOWN_NOTE not in notes, notes
 
 
@@ -260,8 +264,10 @@ def test_an_outage_on_a_database_the_note_cannot_name_is_still_disclosed() -> No
 def test_a_failed_search_recorded_before_card_63_keeps_the_original_note() -> None:
     """A mapping with no `kind` key, the shape every earlier caller and test
     builds, is read as `other`: the original note, never a false outage."""
-    assert graph_module._build_failed_search_note([_TIMED_OUT]) == FAILED_SEARCH_NOTE
-    assert graph_module._build_failed_search_note([_NO_ENTITY]) == FAILED_SEARCH_NOTE
+    untyped = {"reason": "call did not complete"}
+    assert graph_module._build_failed_search_note([untyped]) == FAILED_SEARCH_NOTE
+    # Card 91: a call that names its tool now says which kind of source.
+    assert "knowledge graph" in graph_module._build_failed_search_note([_TIMED_OUT])
 
 
 # ---------------------------------------------------------------------------

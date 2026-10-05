@@ -125,8 +125,12 @@ def _state(depth: str, rows=None) -> dict[str, object]:
         layer="layer_1_graph",
         source="structured_pass_through",
         structured_fields={
-            "status": "ok", "row_count": len(rows), "total_available": len(rows),
-            "truncated": False, "rows": rows, "error": None,
+            "status": "ok",
+            "row_count": len(rows),
+            "total_available": len(rows),
+            "truncated": False,
+            "rows": rows,
+            "error": None,
         },
         extracted_entities=None,
         normalized_ids=None,
@@ -245,7 +249,9 @@ async def test_plain_language_lists_its_records_in_code_and_ends_on_the_note(mon
     asserting the Researcher heading "Disease records found" here too. Rule
     2 gives Plain language ONE list under the product owner's own heading,
     "Where this answer comes from", titles only."""
-    _install(monkeypatch, lambda lines: f"{lines[1]} [1].\n\n## Disease associations\n{lines[2]} [2].")
+    _install(
+        monkeypatch, lambda lines: f"{lines[1]} [1].\n\n## Disease associations\n{lines[2]} [2]."
+    )
     tokens = _tokens(await graph_module.write_node(_state("plain_language")))
     headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
     assert "Disease associations" not in headings, headings
@@ -254,7 +260,10 @@ async def test_plain_language_lists_its_records_in_code_and_ends_on_the_note(mon
     assert not any(t["text"].startswith("Note: the records below") for t in tokens)
     assert tokens[-1] == {
         "text": "This is a research summary, not medical advice.",
-        "marker_ids": [], "kind": "note", "cells": None, "emphasis": None,
+        "marker_ids": [],
+        "kind": "note",
+        "cells": None,
+        "emphasis": None,
     }
 
 
@@ -291,7 +300,11 @@ async def test_the_source_set_is_the_same_in_both_modes(monkeypatch) -> None:
 async def test_a_listing_marker_reuses_the_number_the_prose_gave_it(monkeypatch) -> None:
     _install(monkeypatch, lambda lines: f"{lines[2]} [2].")
     result = await graph_module.write_node(_state("researcher"))
-    citations = {e.payload["citation_id"]: e.payload["display_index"] for e in result["events"] if e.type == "citation"}
+    citations = {
+        e.payload["citation_id"]: e.payload["display_index"]
+        for e in result["events"]
+        if e.type == "citation"
+    }
     for token in _tokens(result):
         numbers = [int(n) for n in re.findall(r"\[(\d+)\]", token["text"])]
         assert [citations[m] for m in token["marker_ids"]] == numbers, token
@@ -398,7 +411,9 @@ async def test_variant_records_become_a_variant_to_disease_table(monkeypatch) ->
     ], disease_rows
     assert "not provided" not in " ".join(cell for t in disease_rows for cell in t["cells"])
     notes = [t["text"] for t in tokens if t["kind"] == "note"]
-    assert any(n.startswith("2 variant links to ClinVar placeholder conditions") for n in notes), notes
+    assert any(n.startswith("2 variant links to ClinVar placeholder conditions") for n in notes), (
+        notes
+    )
     first = next(t["text"] for t in tokens if t["kind"] == "claim")
     assert first.startswith("Found 2 sequence variant records for BRCA1"), first
     assert "linked to 1 disease: Maturity-onset diabetes of the young [" in first, first
@@ -418,12 +433,15 @@ async def test_the_done_event_carries_one_trust_line(monkeypatch) -> None:
     # Not on the trust signal: the MCP surface projects that model whole under
     # a pinned key allowlist (`adapters/mcp/test_phase_4_1_premise.py`).
     answer = [
-        e.payload for e in result["events"]
+        e.payload
+        for e in result["events"]
         if e.type == "trust_signal" and e.payload.get("scope") == "answer"
     ]
     assert answer and "summary" not in answer[0], answer
     claim_signals = [
-        e for e in result["events"] if e.type == "trust_signal" and e.payload.get("scope") == "claim"
+        e
+        for e in result["events"]
+        if e.type == "trust_signal" and e.payload.get("scope") == "claim"
     ]
     assert claim_signals, "per-claim signals must stay on the wire"
 
@@ -456,7 +474,9 @@ async def test_a_listing_cell_reads_the_variant_name_when_the_pick_was_the_url(m
         f"populate-check: the upstream pick must be the URL for this row, got {field_name!r}"
     )
     _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
-    tokens = _tokens(await graph_module.write_node(_state("researcher", rows=_INTRONIC_VARIANT_ROWS)))
+    tokens = _tokens(
+        await graph_module.write_node(_state("researcher", rows=_INTRONIC_VARIANT_ROWS))
+    )
     cells = [t["cells"] for t in tokens if t["kind"] in ("list_item", "table_row") and t["cells"]]
     assert cells, "populate-check: no list or table row was emitted"
     for cell in cells:
@@ -483,9 +503,9 @@ async def test_the_structured_fallback_lists_records_in_every_depth(monkeypatch)
     assert "list_item" in kinds, kinds
     headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
     assert headings == ["Where this answer comes from"], headings
-    assert not any(
-        t["kind"] == "claim" and t["text"].startswith("Disease name") for t in tokens
-    ), [t["text"] for t in tokens if t["kind"] == "claim"]
+    assert not any(t["kind"] == "claim" and t["text"].startswith("Disease name") for t in tokens), [
+        t["text"] for t in tokens if t["kind"] == "claim"
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -577,16 +597,24 @@ def _papers_finding(call_id: str, *, abstracts: bool = False):
         for pmid, title in _PAPERS
     ]
     output = NcbiEfetchOutput(
-        status="ok", action="fetch", records=records, record_count=len(records),
-        total_available=len(records), truncated=False,
+        status="ok",
+        action="fetch",
+        records=records,
+        record_count=len(records),
+        total_available=len(records),
+        truncated=False,
     )
     finding = Finding(
-        call_id=call_id, tool="ncbi_efetch", layer="layer_2_api",
+        call_id=call_id,
+        tool="ncbi_efetch",
+        layer="layer_2_api",
         source="structured_pass_through",
         structured_fields=graph_module._ncbi_efetch_output_to_structured_fields(
             output, "pubmed_abstracts"
         ),
-        extracted_entities=None, normalized_ids=None, evidence_summary=None,
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
     )
     return finding, output
 
@@ -621,13 +649,21 @@ def _mixed_state(depth: str) -> dict[str, object]:
 
     state = _state(depth)
     trials = Finding(
-        call_id="ct-mixed", tool="clinicaltrials_search", layer="layer_3_enrichment",
+        call_id="ct-mixed",
+        tool="clinicaltrials_search",
+        layer="layer_3_enrichment",
         source="structured_pass_through",
         structured_fields={
-            "status": "ok", "row_count": 2, "total_available": 2, "truncated": False,
-            "rows": _STATUS_TRIAL_ROWS, "error": None,
+            "status": "ok",
+            "row_count": 2,
+            "total_available": 2,
+            "truncated": False,
+            "rows": _STATUS_TRIAL_ROWS,
+            "error": None,
         },
-        extracted_entities=None, normalized_ids=None, evidence_summary=None,
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
     )
     papers, output = _papers_finding("ne-mixed")
     state["findings"] = [*state["findings"], trials, papers]  # type: ignore[misc]
@@ -690,7 +726,9 @@ async def test_12_9_a_disease_question_opens_and_lists_for_its_reader(monkeypatc
     assert headings == ["Where this answer comes from"], headings
     assert not any(t["kind"] in ("table_header", "table_row") for t in plain_tokens)
     assert [t["cells"] for t in _rows(plain)] == [
-        ["disease name number 1"], ["disease name number 2"], ["disease name number 3"]
+        ["disease name number 1"],
+        ["disease name number 2"],
+        ["disease name number 3"],
     ]
 
     # Rule 2, researcher: the identifier column names each row's own record,
@@ -708,7 +746,9 @@ async def test_12_9_a_disease_question_opens_and_lists_for_its_reader(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_12_9_a_papers_question_gives_plain_titles_and_a_researcher_pmids(monkeypatch) -> None:
+async def test_12_9_a_papers_question_gives_plain_titles_and_a_researcher_pmids(
+    monkeypatch,
+) -> None:
     """The product owner's own example, a topic question answered from
     PubMed, with each paper cited through the real Layer 2 builder.
 
@@ -750,7 +790,7 @@ async def test_12_9_with_no_model_prose_the_two_depths_still_differ(monkeypatch)
         # prose on the page is the code-built opening sentence.
         notes = [t["text"] for t in _tokens(result) if t["kind"] == "note"]
         assert any(
-            note.startswith("Note: the written summary of these records could not be verified")
+            note.startswith("Note: no written summary could be checked against the records")
             for note in notes
         ), notes
         assert [t["kind"] for t in _tokens(result)].count("claim") == 1
@@ -770,7 +810,9 @@ _FIREWALL_CASES = {
     "the structured fallback": (_state, _no_prose, False),
     "live PubMed papers": (_papers_state, _restating, False),
     "papers whose abstracts the prose quotes": (
-        _papers_with_abstracts_state, _quoting_abstracts, False
+        _papers_with_abstracts_state,
+        _quoting_abstracts,
+        False,
     ),
     "graph, trial and paper records together": (_mixed_state, _restating, False),
 }
@@ -842,6 +884,59 @@ async def test_12_9_the_firewall_depth_changes_the_display_never_the_evidence(
     assert _done(plain)["trust_outcome"] == _done(researcher)["trust_outcome"]
 
 
+def test_one_record_cited_by_two_claims_is_one_row() -> None:
+    """The same OMIM record carried a title claim and a symbol claim, and the
+    table listed "DNA MISMATCH REPAIR PROTEIN MLH1; MLH1" twice with the same
+    citation. Rows are unique by record."""
+    from system_03_search_agent.contracts.events import CitationPayload
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    url = "https://omim.org/entry/120436"
+    finding = SynthFinding(
+        ref_index=1,
+        citation_id="ne-omim-1",
+        layer="layer_2_api",
+        tool="ncbi_efetch",
+        field="title",
+        field_value="DNA MISMATCH REPAIR PROTEIN MLH1; MLH1",
+        source_url=url,
+        entity_type="omim",
+    )
+    citation = CitationPayload(
+        citation_id="ne-omim-1",
+        display_index=1,
+        source="omim",
+        source_id="120436",
+        source_url=url,
+        layer="layer_2_api",
+        field="title",
+        claim_text="DNA MISMATCH REPAIR PROTEIN MLH1",
+        evidence_kind="primary_assertion",
+        assertion_confidence="asserted",
+        license="public_domain_us_gov",
+    )
+    for depth in ("researcher", "plain_language"):
+        tokens = graph_module._answer_tokens(
+            audience_depth=depth,
+            question="q",
+            model_grounding=None,
+            model_layout=None,  # type: ignore[arg-type]
+            fallback_sentences=(
+                "DNA MISMATCH REPAIR PROTEIN MLH1 [1]. ",
+                "MLH1 [1]. ",
+            ),
+            tail_sentences=(),
+            tail_is_listing=False,
+            citations=[citation],
+            synth_findings=[finding],
+            findings=[],
+            mentions=[],
+            notes=[],
+        )
+        rows = [t for t in tokens if t.kind in ("table_row", "list_item")]
+        assert len(rows) == 1, (depth, [t.cells for t in rows])
+
+
 _ISOLATE_ROWS = [
     {
         "node_or_edge_type": "Pathogen Detection isolate",
@@ -883,3 +978,31 @@ async def test_card94_plain_language_other_records_stay_titles_only(monkeypatch)
     result = await graph_module.write_node(_state("plain_language"))
     assert _tables(_tokens(result)) == []
     assert [t["kind"] for t in _rows(result)] == ["list_item"] * 3
+
+
+_ORGANISM_ROW = {
+    "node_or_edge_type": "Organism",
+    "curie": "NCBITaxon:562",
+    "fields": {"name": "Escherichia coli"},
+    "source_url": "https://www.ncbi.nlm.nih.gov/taxonomy/562",
+    "graph_snapshot_version": "v1",
+}
+
+
+@pytest.mark.asyncio
+async def test_card94_plain_language_isolates_with_an_organism_keep_the_table(
+    monkeypatch,
+) -> None:
+    """Query 33's shape: isolates plus the organism's own record. The isolates
+    keep their genes table; the organism is listed apart, titles only. RED
+    before: one organism record sent the whole list to titles-only."""
+    _install(monkeypatch, _no_prose)
+    rows = [*_ISOLATE_ROWS, _ORGANISM_ROW]
+    result = await graph_module.write_node(_state("plain_language", rows=rows))
+    ((header, table_rows),) = _tables(_tokens(result))
+    assert header[0] == "Isolate" and "AMR genes" in header, header
+    assert len(table_rows) == 2
+    assert "blaCTX-M-15, acrF1" in [c for row in table_rows for c in row["cells"]]
+    items = [t for t in _tokens(result) if t["kind"] == "list_item"]
+    assert len(items) == 1 and "Escherichia coli" in items[0]["cells"][0]
+    assert items[0]["marker_ids"]

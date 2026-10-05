@@ -356,7 +356,7 @@ def build_messages(query_text: str) -> list[dict[str, str]]:
     ]
 
 
-def parse_classification(content: str) -> InjectionClassification:
+def parse_classification(content: str | None) -> InjectionClassification:
     """Deterministic accept-or-raise on the model's text.
 
     Never a fuzzy parse and never a partial read: `production-standards`
@@ -365,8 +365,12 @@ def parse_classification(content: str) -> InjectionClassification:
 
     Tolerates exactly one cosmetic deviation, a surrounding markdown code
     fence, because models add one routinely and it changes no field value.
-    Everything else raises.
+    Everything else raises. A reply with no content at all (`None`, as a
+    model returns when it ends on a tool call or a filter) is as unusable as
+    malformed text and raises the same way.
     """
+    if not isinstance(content, str):
+        raise ClassificationUnavailableError("the guard tier returned no content")
     stripped = content.strip()
     if stripped.startswith("```"):
         lines = [

@@ -701,7 +701,7 @@ async def test_the_fallback_arm_goes_red_when_the_extractor_is_emptied(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Mutation: with no candidates the GCK question resolves nothing."""
-    monkeypatch.setattr(graph_module, "_gene_shaped_fallback_candidates", lambda text, exact: [])
+    monkeypatch.setattr(graph_module, "_gene_shaped_fallback_candidates", lambda text, exact, organisms=(): [])
     _ModelSpy(monkeypatch, [])
     asked = _install_lookup(monkeypatch)
     _install_tools(monkeypatch)

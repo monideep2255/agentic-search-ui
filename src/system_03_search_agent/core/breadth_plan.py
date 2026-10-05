@@ -52,6 +52,15 @@ not hold until PubMed answers:
   GEO expression datasets studying TP53 in human tumour samples") answered
   with no dataset at all until then. The term shape was verified live the
   same day against ESearch's own `querytranslation`.
+- `plan_organism_records(taxid, record_type)`: the calls a question earns
+  when its subject is an organism NCBI Taxonomy confirmed and it asks for
+  that organism's SRA runs or genome assemblies (card 56, 2026-10-05): an
+  ESearch on `txid<taxid>[Organism:exp]` in `sra` or `assembly`, then the
+  organism's own Taxonomy ESummary, so the organism is cited to NCBI.
+  `plan_sra_follow_up(ids)` and `plan_assembly_follow_up(ids)` are the
+  ESummary calls on the ids the search returned. The term shape was
+  verified live the same day against ESearch's own `querytranslation`
+  (`testing/Developer/reports/2026-10-05_card56/raw/ncbi_lookups.json`).
 
 Sorting: every id list is sorted numerically, highest first, before it is
 capped. ESearch returns PubMed ids in date-added order rather than id
@@ -116,6 +125,16 @@ GDS_RESULT_CAP: Final[int] = 5
 # One concept id resolves to one MedGen record, so this cap is a bound on a
 # malformed response rather than a choice about how much to show.
 MEDGEN_RESULT_CAP: Final[int] = 5
+# Card 56 (2026-10-05): the records an organism's SRA or assembly search
+# fetches. Ten, the cap `core.accession.MAX_LINKED_PER_DB` already uses for
+# the same two record kinds; NCBI holds millions of SRA records for some
+# organisms, so this is the sample, never the whole set.
+ORGANISM_RECORDS_CAP: Final[int] = 10
+#: The record kinds an organism-anchored search reaches, each the Entrez
+#: database it searches. The keys are the values Think's classifier may
+#: give for `record_type`; nothing else plans a search.
+ORGANISM_RECORD_DBS: Final[Mapping[str, str]] = {"sra": "sra", "assembly": "assembly"}
+_TAXID_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[1-9][0-9]{0,9}$", re.ASCII)
 
 # Bounds on the two free-text inputs. A gene symbol is at most 30
 # characters (`NcbiEfetchDatasetReportInput.symbol` uses the same bound) and
@@ -978,3 +997,60 @@ def plan_gene_summary(gene_curie: str | None) -> tuple[PlannedCall, ...]:
     if not uid.isdigit() or int(uid) <= 0:
         return ()
     return (_summary_call("gene_summary", "gene", [uid]),)
+
+
+def plan_organism_records(taxid: str | None, record_type: str | None) -> tuple[PlannedCall, ...]:
+    """The calls an organism-anchored record question plans, in order.
+
+    Card 56 (2026-10-05). Index 0 is the ESearch for the organism's records,
+    `txid<taxid>[Organism:exp]` in the database `record_type` names, so that
+    under the Section 21.3 ceiling it is never the call admission skips; its
+    ESummary follow-up is declared by `core/graph.py`'s follow-up table.
+    `[Organism:exp]` includes the taxon's descendants, so a species finds
+    the records filed under its strains too. Index 1 is the organism's own
+    Taxonomy ESummary, which is what the answer cites the organism to, the
+    same call an isolate question plans.
+
+    An empty tuple when the taxid is not a positive Taxonomy id or the
+    record type is not one `ORGANISM_RECORD_DBS` names: the planner's
+    signal to plan nothing rather than an error.
+    """
+    if not isinstance(taxid, str) or _TAXID_PATTERN.match(taxid.strip()) is None:
+        return ()
+    db = ORGANISM_RECORD_DBS.get(record_type or "")
+    if db is None:
+        return ()
+    taxid = taxid.strip()
+    return (
+        _search_call(f"{db}_search", db, f"txid{taxid}[Organism:exp]", ORGANISM_RECORDS_CAP),
+        PlannedCall(
+            tool=_NCBI_EFETCH,
+            layer=_LAYER_2,
+            prefix="ef",
+            purpose="taxonomy_summary",
+            tool_input=NcbiEfetchInput.model_validate(
+                {"action": "summary", "db": "taxonomy", "ids": [taxid]}
+            ),
+        ),
+    )
+
+
+def plan_sra_follow_up(ids: Iterable[Any]) -> tuple[PlannedCall, ...]:
+    """SRA ESummary on the sorted, capped uids an organism's SRA search
+    returned. The `sra_summary` purpose is the one an accession question
+    already plans, so its rows are shaped the same way (the run accessions
+    read out of the `runs` field)."""
+    selected = select_ids(ids, ORGANISM_RECORDS_CAP)
+    if not selected:
+        return ()
+    return (_summary_call("sra_summary", "sra", selected),)
+
+
+def plan_assembly_follow_up(ids: Iterable[Any]) -> tuple[PlannedCall, ...]:
+    """Assembly ESummary on the sorted, capped uids an organism's assembly
+    search returned, under the `assembly_summary` purpose an accession
+    question already plans."""
+    selected = select_ids(ids, ORGANISM_RECORDS_CAP)
+    if not selected:
+        return ()
+    return (_summary_call("assembly_summary", "assembly", selected),)

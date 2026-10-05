@@ -618,7 +618,7 @@ async def test_p2_survives_an_empty_extraction_through_the_fallback_and_goes_red
         gate.test_p2_the_flagship_resolves_its_subject_from_raw_text,
         (),
         lambda: monkeypatch.setattr(
-            graph_module, "_gene_shaped_fallback_candidates", lambda text, exact: []
+            graph_module, "_gene_shaped_fallback_candidates", lambda text, exact, organisms=(): []
         ),
         "P2 / fallback extractor emptied",
     )
