@@ -193,7 +193,9 @@ def build_fallback_link(query_term: str) -> str:
 
 
 def refusal_message_for(
-    failed_searches: list[dict[str, str]] | None, topic_term: str | None = None
+    failed_searches: list[dict[str, str]] | None,
+    topic_term: str | None = None,
+    none_linked: str | None = None,
 ) -> str:
     """The refusal sentence that is true of what the act step recorded.
 
@@ -217,6 +219,10 @@ def refusal_message_for(
     still outranks it, because "nothing was published" and "the search did
     not finish" are different facts and only one of them is this path's to
     report.
+
+    `none_linked` (card 74) is the plain sentence for a question about one
+    paper's linked data records when every link search ran and NCBI lists none.
+    A failed search still outranks it, for the same reason.
     """
     items = list(failed_searches or [])
     reasons = [str(item.get("reason") or "") for item in items]
@@ -226,6 +232,8 @@ def refusal_message_for(
         return SEARCH_DOWN_MESSAGE
     if reasons:
         return FAILED_SEARCH_MESSAGE
+    if none_linked:
+        return none_linked
     if topic_term:
         return topic_not_found_message(topic_term)
     return REFUSE_MESSAGE

@@ -227,6 +227,12 @@ class GraphState(TypedDict, total=False):
     # no graph call, and `write` states the count under the answer. Absent
     # otherwise, and absent when the shape still needs a clarification.
     isolate_question: Any
+    # Card 74 (2026-10-05): set by `plan` when the question anchors on one
+    # PubMed paper and asks for the data records NCBI links to it
+    # (`core.graph._PaperLinkPlan`: the PMID and the explicit ELink target
+    # databases). `write` reads it to say plainly which kinds NCBI links no
+    # record of. Absent for every other question.
+    paper_link_plan: Any
     # UI fix set 8 (2026-09-13): set by `act`, the typed output of each
     # dispatched ncbi_dbsnp, pubtator_annotate, litvar2_lookup or
     # clinicaltrials_search call, keyed by call_id, for the same reason
