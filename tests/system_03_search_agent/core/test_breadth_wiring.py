@@ -1445,3 +1445,71 @@ async def test_a_dataset_question_reaches_the_answer_with_geo_series_cited(
     plain_events = await _events(_GENE_QUESTION, session_id="s-plain")
     assert not [i for i in plain_spy.efetch_inputs if i.get("db") == "gds"], plain_spy.efetch_inputs
     assert not [s for s in _sources(plain_events) if "/gds/" in s]
+
+
+#: One realistic record per breadth purpose, as the tool that fills it builds
+#: one. A purpose missing here fails `test_every_breadth_purpose_has_a_record`.
+_REALISTIC_BREADTH_RECORDS: dict[str, tuple[str, dict[str, Any], str | None]] = {
+    "pubmed_abstracts": ("pubmed", {"title": "BRCA1 and breast cancer risk."}, None),
+    "clinvar_summary": (
+        "clinvar",
+        {"title": "NM_007294.4(BRCA1):c.5266dup (p.Gln1756fs)", "genes": [{"symbol": "BRCA1"}]},
+        None,
+    ),
+    "omim_summary": ("omim", {"title": "GLUCOKINASE; GCK", "locus": "7p13"}, "GCK"),
+    "gds_summary": ("gds", {"title": "Expression profiling of TP53 knockouts"}, None),
+    "clinvar_overlap": (
+        "clinvar",
+        {"title": "NM_007294.4(BRCA1):c.5266dup", "gene_symbol": ["BRCA1"], "chr_start": 1},
+        None,
+    ),
+    "dbvar_overlap": (
+        "dbvar",
+        {
+            "chr": "17", "chr_start": 43115725, "chr_end": 43125364, "assembly": "GRCh38",
+            "variant_type": ["copy number variation"], "gene_name": ["BRCA1", "NBR2"],
+        },
+        None,
+    ),
+    "bioproject_summary": ("bioproject", {"project_title": "Salmonella surveillance"}, None),
+    "biosample_summary": ("biosample", {"title": "Salmonella enterica isolate"}, None),
+    "sra_summary": ("sra", {"runs": '<Run acc="SRR9496657" total_spots="118"/>'}, None),
+    "assembly_summary": ("assembly", {"assemblyname": "ASM584v2"}, None),
+    "taxonomy_summary": ("taxonomy", {"scientificname": "Escherichia coli"}, None),
+    "medgen_summary": (
+        "medgen", {"title": "Cystic fibrosis", "definition": {"value": "A genetic disorder."}}, None,
+    ),
+}
+
+
+def test_every_breadth_purpose_has_a_record() -> None:
+    assert set(_REALISTIC_BREADTH_RECORDS) == set(graph_module._BREADTH_FIELDS_BY_PURPOSE)
+
+
+@pytest.mark.parametrize("purpose", sorted(_REALISTIC_BREADTH_RECORDS))
+def test_every_breadth_purpose_turns_a_realistic_record_into_a_finding(purpose: str) -> None:
+    """Card 92: a first field that was a list dropped every dbVar row without
+    a word. One realistic record per purpose must reach a citable value."""
+    from system_03_search_agent.synthesis.findings import _citable_value_for_row
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    db, fields, gene = _REALISTIC_BREADTH_RECORDS[purpose]
+    output = NcbiEfetchOutput(
+        status="ok", action="summary", record_count=1, total_available=1, truncated=False,
+        records=[
+            NcbiEfetchRecord(
+                id="1", db=db, fields=fields,
+                source_url=f"https://www.ncbi.nlm.nih.gov/{db}/1/",
+            )
+        ],
+    )
+    shaped = graph_module._ncbi_efetch_output_to_structured_fields(output, purpose, gene)
+    assert shaped["rows"], purpose
+    name, value, _suspect, curie_fallback = _citable_value_for_row(
+        shaped["rows"][0], graph_module._pick_representative_field,
+        apply_vocabulary_artifact_check=False,
+    )
+    assert name and value and not curie_fallback, (purpose, shaped["rows"][0])

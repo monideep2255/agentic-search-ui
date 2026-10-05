@@ -189,7 +189,7 @@ def test_carbapenemase_and_colistin_families_carry_their_prefixes() -> None:
     carb = module.parse_isolate_question("Klebsiella isolates carrying carbapenemase genes")
     assert carb is not None and carb.prefixes == ("blaKPC", "blaNDM", "blaOXA-48", "blaVIM", "blaIMP")
     mcr = module.parse_isolate_question("E. coli isolates with colistin resistance")
-    assert mcr is not None and mcr.prefixes == ("mcr-",)
+    assert mcr is not None and mcr.prefixes == ("mcr",)
 
 
 def test_a_sentence_comma_never_joins_a_gene_token() -> None:
@@ -258,3 +258,43 @@ def test_count_sentence_is_exact_when_the_scan_finished_and_at_least_when_it_did
     shown: int, total: int, complete: bool, expected: str
 ) -> None:
     assert module.count_sentence("Escherichia coli", shown, total, complete) == expected
+
+
+#: One or more real AMRFinderPlus gene names for each prefix of each family,
+#: as the Pathogen Detection `AMR_genotypes` column spells them.
+_REAL_GENE_NAMES: dict[str, dict[str, tuple[str, ...]]] = {
+    "esbl": {"blaCTX-M": ("blaCTX-M-15", "blaCTX-M-27")},
+    "carbapenemase": {
+        "blaKPC": ("blaKPC-2", "blaKPC-3"),
+        "blaNDM": ("blaNDM-1", "blaNDM-5"),
+        "blaOXA-48": ("blaOXA-48", "blaOXA-48-like"),
+        "blaVIM": ("blaVIM-1",),
+        "blaIMP": ("blaIMP-4",),
+    },
+    "colistin": {"mcr": ("mcr-1.1", "mcr-9.1", "mcr-3.2")},
+    "methicillin": {"mecA": ("mecA",), "mecC": ("mecC",)},
+    "vancomycin": {"vanA": ("vanA",), "vanB": ("vanB",)},
+}
+
+
+def test_every_gene_family_has_real_gene_names_to_test_against() -> None:
+    assert {family.key for family in module.GENE_FAMILIES} == set(_REAL_GENE_NAMES)
+    for family in module.GENE_FAMILIES:
+        assert set(family.prefixes) == set(_REAL_GENE_NAMES[family.key]), family.key
+
+
+@pytest.mark.parametrize("family", module.GENE_FAMILIES, ids=lambda f: f.key)
+def test_every_family_prefix_matches_its_real_genes_in_the_tools_matcher(
+    family: module.GeneFamily,
+) -> None:
+    """Card 94: the colistin prefix `mcr-` matched no real gene, because the
+    matcher needs a non-alphanumeric character after a prefix, so the answer
+    said 0 isolates. Each prefix runs through the tool's own matcher here."""
+    from system_03_search_agent.tools.pathogen_detection import _amr_prefix_predicate
+
+    for prefix in family.prefixes:
+        predicate = _amr_prefix_predicate((prefix,))
+        for gene in _REAL_GENE_NAMES[family.key][prefix]:
+            row = {"AMR_genotypes": f'"aph(3\'\')-Ib,{gene},sul2"'}
+            assert predicate(row), f"{family.key}: prefix {prefix!r} does not match {gene!r}"
+        assert not predicate({"AMR_genotypes": '"aph(3\'\')-Ib,sul2"'}), prefix

@@ -172,7 +172,7 @@ GENE_FAMILIES: Final[tuple[GeneFamily, ...]] = (
         "colistin",
         "mobile colistin resistance (mcr) genes",
         (r"colistin", r"\bmcr\b"),
-        ("mcr-",),
+        ("mcr",),
     ),
     GeneFamily(
         "methicillin",
