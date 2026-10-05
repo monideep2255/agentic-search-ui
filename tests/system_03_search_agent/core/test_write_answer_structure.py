@@ -840,3 +840,46 @@ async def test_12_9_the_firewall_depth_changes_the_display_never_the_evidence(
     )
     # The same verdict on the same evidence.
     assert _done(plain)["trust_outcome"] == _done(researcher)["trust_outcome"]
+
+
+_ISOLATE_ROWS = [
+    {
+        "node_or_edge_type": "Pathogen Detection isolate",
+        "curie": f"BioSample:SAMN0000000{index}",
+        "fields": {
+            "name": f"strain-{index}",
+            "amr_genotypes": f"blaCTX-M-15, acrF{index}",
+            **({"collection_date": "2023-04-01"} if index == 1 else {}),
+        },
+        "source_url": f"https://www.ncbi.nlm.nih.gov/pathogens/isolates/#SAMN0000000{index}",
+        "graph_snapshot_version": "v1",
+    }
+    for index in range(1, 3)
+]
+
+
+@pytest.mark.asyncio
+async def test_card94_plain_language_isolates_show_the_genes_table(monkeypatch) -> None:
+    """Owner decision D11 (2026-10-05): Plain language shows the isolate
+    table with each isolate's genes. RED before: a one-cell list, no genes."""
+    _install(monkeypatch, _no_prose)
+    result = await graph_module.write_node(_state("plain_language", rows=_ISOLATE_ROWS))
+    ((header, rows),) = _tables(_tokens(result))
+    assert header[0] == "Isolate" and "AMR genes" in header, header
+    gene_cells = [cell for row in rows for cell in row["cells"]]
+    assert "blaCTX-M-15, acrF1" in gene_cells and "blaCTX-M-15, acrF2" in gene_cells
+    headings = [t["text"].strip() for t in _tokens(result) if t["kind"] == "heading"]
+    assert "Isolates and their AMR genes" in headings, headings
+    # A row with no collection date says so instead of showing a blank cell.
+    column = header.index("Collected")
+    assert [row["cells"][column] for row in rows] == ["2023", "Not recorded"]
+    assert all(row["marker_ids"] for row in rows)
+
+
+@pytest.mark.asyncio
+async def test_card94_plain_language_other_records_stay_titles_only(monkeypatch) -> None:
+    """Every other record type keeps the titles-only Plain listing."""
+    _install(monkeypatch, _no_prose)
+    result = await graph_module.write_node(_state("plain_language"))
+    assert _tables(_tokens(result)) == []
+    assert [t["kind"] for t in _rows(result)] == ["list_item"] * 3

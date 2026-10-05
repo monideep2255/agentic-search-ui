@@ -528,12 +528,14 @@ from system_03_search_agent.harness.jev_client import (
 from system_03_search_agent.harness.tiers import Tier, resolve_jev_model
 from system_03_search_agent.synthesis.answer_layout import (
     IDENTIFIER_COLUMN_LABEL,
+    ISOLATE_ENTITY_TYPE,
     MAX_HEADINGS,
     PLAIN_SOURCES_HEADING,
     TABLE_COLUMNS,
     TABLE_HEADINGS,
     GroundingInput,
     answer_summary_sentence,
+    collected_placeholder,
     condition_ids_for_row,
     drop_record_restatements,
     emphasis_for,
@@ -11570,8 +11572,21 @@ def _answer_tokens(
         for entries in feature_blocks.values():
             feature_block(entries)
 
+    def only_isolate_records(sentences: tuple[str, ...]) -> bool:
+        # Owner decision D11 (2026-10-05): the one exception to titles-only
+        # Plain language. A list made only of isolate records takes the
+        # Researcher table, because an isolate's genes are the answer. Keyed
+        # on the records' own type, never on the question's words.
+        types = []
+        for sentence in sentences:
+            ids = marker_ids(sentence)
+            finding = finding_by_citation_id.get(ids[0]) if ids else None
+            if finding is not None:
+                types.append(finding.entity_type)
+        return bool(types) and all(t == ISOLATE_ENTITY_TYPE for t in types)
+
     def listing(sentences: tuple[str, ...]) -> None:
-        if plain:
+        if plain and not only_isolate_records(sentences):
             plain_listing(sentences)
             return
         sentences, feature_blocks = split_feature_sentences(sentences)
@@ -11679,7 +11694,11 @@ def _answer_tokens(
                 if mapped:
                     cells.append(second or "")
                 if extra_label is not None:
-                    cells.append(extra[1] if extra is not None and extra[0] == extra_label else "")
+                    cells.append(
+                        extra[1]
+                        if extra is not None and extra[0] == extra_label
+                        else collected_placeholder(extra_label, row_fields)
+                    )
                 linked = (
                     [
                         disease_citation_by_curie[curie]
