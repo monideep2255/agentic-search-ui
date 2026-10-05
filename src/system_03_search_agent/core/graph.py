@@ -492,6 +492,7 @@ from system_03_search_agent.core import (
     clarify,
     coordinate_window,
     isolate_search,
+    paper_links,
 )
 from system_03_search_agent.core.next_step import (
     build_next_step_query,
@@ -1030,6 +1031,55 @@ _LITERATURE: Final = _DecisionSpec(
             "It asks for a fact, a definition, a gene, variant or disease record, "
             "or clinical trials, or generally what is known about a gene, variant "
             "or condition, without asking for papers or research."
+        ),
+    },
+)
+
+#: Card 74 (2026-10-05), golden G-006. Asked only when the question names exactly
+#: one PubMed paper and no gene: does it want the data records NCBI links to that
+#: paper, and which kind? The knowledge graph holds no edge from a paper to any
+#: such record, so a yes plans live ELink calls (`core.paper_links`). A classifier
+#: decides, never a word list: "sequence data", "the genomes", "deposited reads"
+#: and "what did they submit" are one request in four wordings.
+_PAPER_LINKS: Final = _DecisionSpec(
+    point="plan.paper_links",
+    options=(
+        "sequences",
+        "projects",
+        "samples",
+        "reads",
+        "expression",
+        "assemblies",
+        "all_data",
+        "not_linked_data",
+    ),
+    fail_open="not_linked_data",
+    instructions=(
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine. It names one published paper. Decide whether it asks for the data "
+        "records that NCBI links to that paper, and which kind."
+    ),
+    criteria={
+        "sequences": (
+            "It asks for the paper's sequence data in general: sequences, nucleotide "
+            "or genome sequence records, or sequencing data, without naming a "
+            "narrower record type."
+        ),
+        "projects": "It asks for the BioProjects linked to the paper.",
+        "samples": "It asks for the BioSamples linked to the paper.",
+        "reads": "It asks for the sequencing runs or reads (SRA) linked to the paper.",
+        "expression": (
+            "It asks for the gene expression datasets or GEO series linked to the paper."
+        ),
+        "assemblies": "It asks for the genome assemblies linked to the paper.",
+        "all_data": (
+            "It asks for all the data, datasets or records linked to or deposited "
+            "with the paper, without naming one kind."
+        ),
+        "not_linked_data": (
+            "Anything else. It asks about the paper's content, its terms, its "
+            "authors, what it found, a gene or a disease, or something other than "
+            "records linked to it."
         ),
     },
 )
@@ -4963,6 +5013,15 @@ _BREADTH_FOLLOW_UPS: Final[dict[str, tuple[tuple[str, str, str, str], ...]]] = {
     # `breadth_plan.wants_dataset_search` says the question asks for
     # expression datasets, which live in GEO and nowhere the graph reaches.
     "gds_search": (("ncbi_efetch", "layer_2_api", "ne", "gds_summary"),),
+    # Card 74 (2026-10-05): one PubMed paper's linked records. Each ELink from
+    # `pubmed` to a target database feeds that database's ESummary, so every
+    # linked record is cited to its own NCBI page. See `core.paper_links`.
+    "paper_link_nuccore": (("ncbi_efetch", "layer_2_api", "ne", "nuccore_summary"),),
+    "paper_link_bioproject": (("ncbi_efetch", "layer_2_api", "ne", "bioproject_summary"),),
+    "paper_link_biosample": (("ncbi_efetch", "layer_2_api", "ne", "biosample_summary"),),
+    "paper_link_sra": (("ncbi_efetch", "layer_2_api", "ne", "sra_summary"),),
+    "paper_link_gds": (("ncbi_efetch", "layer_2_api", "ne", "gds_summary"),),
+    "paper_link_assembly": (("ncbi_efetch", "layer_2_api", "ne", "assembly_summary"),),
     # Fix-plan item 12.1 (2026-09-23): the disease's own MedGen record, the
     # live-record leg of a disease-anchored question's breadth. Planned
     # only when no gene resolved, so a gene question's call list is
@@ -6423,6 +6482,46 @@ async def _select_planned_tool_call(
     )
 
 
+@dataclass(frozen=True)
+class _PaperLinkPlan:
+    """Card 74: the one PubMed paper a question anchors on and the explicit ELink
+    target databases its linked-records request means, in `core.paper_links` order."""
+
+    pmid: str
+    targets: tuple[str, ...]
+
+
+async def _paper_link_plan(
+    harness: Harness,
+    trace_id: str,
+    text: str,
+    target_curies: list[str],
+    deadline: float,
+    *,
+    eligible: bool,
+) -> _PaperLinkPlan | None:
+    """The paper-links plan for a question, or None for every other question.
+
+    Asked only when the question resolved exactly one PubMed paper and no gene,
+    so a gene question never pays for the decision and plans what it always
+    planned. The classifier (`plan.paper_links`) decides whether the question
+    wants linked data records and which kind; no usable pick reads as not
+    wanting them, which keeps the plan the question had before this existed.
+    """
+    if not eligible or _first_gene_curie(target_curies) is not None:
+        return None
+    pmid = paper_links.single_pmid(target_curies)
+    if pmid is None:
+        return None
+    task = asyncio.create_task(_decide_point(harness, trace_id, _PAPER_LINKS, text))
+    record = await _await_within_step(
+        task, deadline, None, point=_PAPER_LINKS.point, trace_id=trace_id
+    )
+    choice = _usable_choice(record)
+    targets = paper_links.targets_for(choice) if choice else ()
+    return _PaperLinkPlan(pmid=pmid, targets=targets) if targets else None
+
+
 async def plan_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
@@ -6548,8 +6647,27 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # organism's SRA or assembly search and its Taxonomy record, and no
     # graph call, since the graph holds no runs and no assemblies.
     organism_records: _OrganismRecords | None = state.get("organism_records")
+    # Card 74 (2026-10-05): one PubMed paper and a request for the data
+    # records NCBI links to it. The graph holds no such edge, so the plan is
+    # ELink calls and no graph call, like the paths above.
+    paper_link_plan = await _paper_link_plan(
+        harness,
+        trace_id,
+        query.text,
+        target_curies,
+        step_deadline,
+        eligible=(
+            state.get("coordinate_window") is None
+            and accession_plan is None
+            and isolate_question is None
+            and organism_records is None
+        ),
+    )
     planned = None if (
-        accession_plan is not None or isolate_question is not None or organism_records is not None
+        accession_plan is not None
+        or isolate_question is not None
+        or organism_records is not None
+        or paper_link_plan is not None
     ) else await _select_planned_tool_call(
         query.text, query_class, target_curies, unresolved_symbols, _memory_curies(state)
     )
@@ -6597,6 +6715,7 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # memory-bound antecedent, and a remembered gene must not be able to
     # stop a new question about papers reaching the papers.
     topic_term: str | None = None
+    disease_lookup_failed = False
     if isinstance(planned, _PlannedToolCall) and state.get("coordinate_window") is None:
         gene_resolved = _first_gene_curie(target_curies) is not None
         asks_for_literature = False
@@ -6689,6 +6808,24 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
                 narrative=(
                     f"searching live NCBI records for {accession_plan.record.label()}: "
                     + ", ".join(dict.fromkeys(p.purpose for p in planned_tool_calls))
+                )[:500],
+                tool_calls=[p.tool_call for p in planned_tool_calls],
+            )
+        elif paper_link_plan is not None:
+            link_calls = [
+                _planned_from_breadth(call)
+                for call in paper_links.link_calls(paper_link_plan.pmid, paper_link_plan.targets)
+            ]
+            planned_tool_calls = [
+                *link_calls,
+                *_follow_up_calls_for(link_calls, gene_symbol=None),
+            ]
+            lead_name = persona_for_session(session_id=query.session_id, user_id=query.user_id)
+            planned_tool_calls = _assign_helpers(planned_tool_calls, lead_name=lead_name)
+            plan_payload = PlanPayload(
+                narrative=(
+                    f"searching NCBI for the records linked to PMID {paper_link_plan.pmid} in "
+                    + ", ".join(paper_link_plan.targets)
                 )[:500],
                 tool_calls=[p.tool_call for p in planned_tool_calls],
             )
@@ -6842,6 +6979,9 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             else None
         )
         disease_text = await _disease_search_text(disease_curie)
+        # Card 77: a disease was resolved but its name could not be read back,
+        # so the literature and trials searches were never planned. Say so.
+        disease_lookup_failed = disease_curie is not None and not disease_text
 
         layer_calls = _build_layer_tool_calls(
             query.text, gene_symbol, _rsids_in_text(query.text), disease_text
@@ -6996,6 +7136,8 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         # what was searched, and the synthesis directive that keeps the
         # answer to what has been published.
         topic_search_term=topic_term or "",
+        **({"paper_link_plan": paper_link_plan} if paper_link_plan is not None else {}),
+        disease_lookup_failed=disease_lookup_failed,
     )
 
 
@@ -7263,6 +7405,8 @@ _BREADTH_FIELDS_BY_PURPOSE: Final[dict[str, tuple[str, ...]]] = {
         "project_title", "project_acc", "project_data_type", "organism_name", "registration_date",
     ),
     "biosample_summary": ("title", "accession", "organism", "publicationdate"),
+    # Card 74 (2026-10-05): a GenBank or RefSeq record linked to one paper.
+    "nuccore_summary": ("title", "accessionversion", "organism", "moltype", "slen"),
     "sra_summary": ("runs", "createdate"),
     "assembly_summary": (
         "assemblyname", "assemblyaccession", "assemblystatus", "organism", "submissiondate",
@@ -7962,7 +8106,7 @@ async def _execute_planned_call(
                 summary=(
                     f"search error: {_failure_kind_words(ncbi_efetch_output.failure_kind)}"
                     if search_failed
-                    else f"search: {len(ids)} id(s)"
+                    else f"{ncbi_efetch_output.action}: {len(ids)} id(s)"
                 ),
                 result_count=len(ids),
                 truncated=ncbi_efetch_output.truncated,
@@ -8193,11 +8337,16 @@ async def _execute_planned_call(
 
 
 def _search_ids(output: NcbiEfetchOutput) -> list[str]:
-    """The ids an `ncbi_efetch` search result carries, as strings, or []."""
+    """The ids an `ncbi_efetch` search or link result carries, as strings, or []."""
     if output.status != "ok":
         return []
     ids: list[str] = []
     for record in output.records:
+        if output.action == "link":
+            # Card 74: an ELink result carries each linked id as the record's own id.
+            if record.id:
+                ids.append(str(record.id))
+            continue
         listed = record.fields.get("idlist")
         if isinstance(listed, list):
             ids.extend(str(value) for value in listed)
@@ -8218,7 +8367,10 @@ def _follow_up_planned_call(
     `gene_symbol` onto the concrete call, because `ids` alone cannot tell
     Act which gene the question asked about and the OMIM result has to be
     checked against it before any of it becomes a row."""
-    if follow_up.source_purpose == "pubmed_search":
+    link_target = paper_links.target_of_purpose(follow_up.source_purpose)
+    if link_target is not None:
+        planned = paper_links.plan_summary_follow_up(link_target, ids)
+    elif follow_up.source_purpose == "pubmed_search":
         planned = breadth_plan.plan_literature_follow_up(ids)
     elif follow_up.source_purpose == "clinvar_search":
         planned = breadth_plan.plan_clinvar_follow_up(ids)
@@ -9322,6 +9474,52 @@ def _unaddressed_target_entities(
     ]
 
 
+def _paper_link_results(state: GraphState) -> list[tuple[str, NcbiEfetchOutput]]:
+    """Card 74: each link search of a paper's linked-records plan, as
+    `(target database, typed output)`, for the searches that ended with an output.
+    Empty for every other question."""
+    if state.get("paper_link_plan") is None:
+        return []
+    raw_outputs: dict[str, NcbiEfetchOutput] = state.get("layer2_raw_outputs") or {}
+    results: list[tuple[str, NcbiEfetchOutput]] = []
+    for planned in state.get("tool_calls") or []:
+        target = paper_links.target_of_purpose(getattr(planned, "purpose", ""))
+        output = raw_outputs.get(planned.tool_call.call_id) if target is not None else None
+        if target is not None and output is not None:
+            results.append((target, output))
+    return results
+
+
+def _paper_link_none_message(state: GraphState) -> str | None:
+    """Card 74: the plain "NCBI lists no linked records" sentence, only when
+    every link search of the plan ran and NCBI listed nothing. A search that
+    failed or never ran makes no such claim."""
+    plan = state.get("paper_link_plan")
+    if plan is None:
+        return None
+    results = _paper_link_results(state)
+    if len(results) != len(plan.targets) or any(out.status != "empty" for _, out in results):
+        return None
+    return paper_links.none_linked_message(plan.pmid, plan.targets)
+
+
+def _paper_link_notes(state: GraphState) -> list[str]:
+    """Card 74: under an answer that lists some linked records, the kinds NCBI
+    lists none of, and how many NCBI lists where more than are shown."""
+    plan = state.get("paper_link_plan")
+    notes: list[str] = []
+    for target, out in _paper_link_results(state):
+        if out.status == "empty":
+            notes.append(paper_links.empty_target_note(plan.pmid, target))
+        elif out.status == "ok":
+            count = paper_links.count_note(
+                plan.pmid, target, out.total_available or out.record_count
+            )
+            if count is not None:
+                notes.append(count)
+    return notes
+
+
 def _isolate_count_note(state: GraphState) -> str | None:
     """The isolate search's own count sentence, or None for every other question.
 
@@ -9348,6 +9546,23 @@ def _isolate_count_note(state: GraphState) -> str | None:
             complete=output.scan_complete is not False,
         )
     return None
+
+
+def _isolate_disclosure_note(state: GraphState) -> str | None:
+    """Card 94, group B: what the isolate search covered and what it left out.
+
+    The sentence `isolate_search.disclosure` built for the Think narrative,
+    put under the answer too, where a person reads it: the organism, the
+    gene prefixes a family search used, and each family's own "not searched"
+    reason. None for every other question.
+    """
+    question = state.get("isolate_question")
+    if question is None or question.organism is None:
+        return None
+    text = isolate_search.disclosure(question).strip()
+    if not text:
+        return None
+    return text[0].upper() + text[1:].rstrip(".") + "."
 
 
 def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
@@ -9578,6 +9793,70 @@ _DOWN_SOURCE_WORDS: Final[dict[str, tuple[str, str]]] = {
 }
 
 
+#: Card 91: the kind of source a failed call asked, as a person names it,
+#: for the tools that are not an NCBI database search. A tool not listed is
+#: still disclosed, without a name.
+_FAILED_TOOL_WORDS: Final[dict[str, str]] = {
+    "cypher_query": "the knowledge graph",
+    "ncbi_dbsnp": "dbSNP",
+    "pubtator_annotate": "PubTator",
+    "litvar2_lookup": "LitVar2",
+    "pathogen_detection": "Pathogen Detection",
+    "clinicaltrials_search": "ClinicalTrials.gov",
+}
+
+
+def _failed_search_label(item: dict[str, str]) -> str | None:
+    """The source a failed call asked, in a person's words, or None when unknown.
+
+    Decided from the typed `tool` and `source` keys only, never from the
+    `reason` text, so nothing a service wrote reaches the note.
+    """
+    if item.get("tool") == "ncbi_efetch":
+        source = item.get("source") or ""
+        words = _DOWN_SOURCE_WORDS.get(source)
+        if words is not None:
+            return words[0]
+        return "NCBI records"
+    return _FAILED_TOOL_WORDS.get(item.get("tool") or "")
+
+
+def _build_unfinished_search_note(failed_searches: list[dict[str, str]]) -> str:
+    """Card 91: the note for a lost background call that is not an outage.
+
+    It names which kind of source was not searched and, when every failed
+    call carries the same typed kind, the plain reason: NCBI busy (ask again
+    in a minute) or too slow (ask again). With nothing typed to say, it is
+    the original sentence, `FAILED_SEARCH_NOTE`, unchanged.
+    """
+    labels: list[str] = []
+    for item in failed_searches:
+        label = _failed_search_label(item)
+        if label is not None and label not in labels:
+            labels.append(label)
+    kinds = {item.get("kind") or "other" for item in failed_searches}
+    if not labels and kinds <= {"other"}:
+        return FAILED_SEARCH_NOTE
+    why = ""
+    advice = "Ask again to retry."
+    if kinds == {"rate_limited"}:
+        why = " because NCBI was busy"
+        advice = "Ask again in a minute."
+    elif kinds == {"timed_out"}:
+        why = " because it took too long"
+    if not labels:
+        return (
+            f"One of the background searches did not finish{why}, so this answer "
+            f"may be missing sources. {advice}"
+        )
+    where = labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + " and " + labels[-1]
+    missing = "it" if len(labels) == 1 else "them"
+    return (
+        f"The background search of {where} did not finish{why}, so this answer "
+        f"may be missing sources from {missing}. {advice}"
+    )
+
+
 def _build_failed_search_note(failed_searches: list[dict[str, str]]) -> str:
     """The note under an answer that lost a background call (card 63).
 
@@ -9606,7 +9885,7 @@ def _build_failed_search_note(failed_searches: list[dict[str, str]]) -> str:
     """
     down = [item for item in failed_searches if item.get("kind") == "service_down"]
     if not down:
-        return FAILED_SEARCH_NOTE
+        return _build_unfinished_search_note(failed_searches)
 
     named: list[tuple[str, str]] = []
     unnamed_down = False
@@ -9769,6 +10048,20 @@ def _build_incomplete_answer_note(
     return f"Note: {count} further {label}s were found for this question and are {closing}"
 
 
+def _build_cap_list_note() -> str:
+    """Tell the reader the question hit its limit and the list is what was found.
+
+    Card 46 (2026-10-05). The limit path used to say "the answer below
+    reflects a partial result" over an empty page. It now lists the records
+    gathered before the limit, so the note says exactly that. Same shape as
+    the other notes: one sentence, opening "Note:", no interior period.
+    """
+    return (
+        "Note: this question reached its resource limit before it finished, "
+        "so this answer lists the records gathered so far"
+    )
+
+
 def _build_structured_fallback_note() -> str:
     """Tell the reader this answer is a list of records, not a summary.
 
@@ -9783,8 +10076,8 @@ def _build_structured_fallback_note() -> str:
     splits on those and counts an unmarked continuation as an uncited claim.
     """
     return (
-        "Note: the written summary of these records could not be verified "
-        "against them, so this answer lists the records found instead"
+        "Note: no written summary could be checked against the records, "
+        "so the records found are listed below with their sources"
     )
 
 
@@ -11519,6 +11812,24 @@ def _narrative_chunks(
 #: set 9 brief. Emitted as a `note` token after every Plain language answer and
 #: never after a Researcher one. A note, never a claim, so it carries no marker
 #: and no surface counts it toward citation coverage.
+_DISEASE_LOOKUP_FAILED_NOTE = (
+    "I could not look up this condition's name, so I did not search the "
+    "literature or clinical trials for it. Ask again to retry."
+)
+
+
+def _disease_lookup_failed_note(state: GraphState) -> str | None:
+    """Card 77: say so when a resolved disease's literature and trials were not searched.
+
+    `plan` sets the flag when the disease was resolved but the MedGen name
+    lookup failed, which plans the one graph call only. Without this the
+    answer reads as "no trials found" when none were looked for.
+    """
+    if state.get("disease_lookup_failed"):
+        return _DISEASE_LOOKUP_FAILED_NOTE
+    return None
+
+
 _MEDICAL_ADVICE_NOTE = "This is a research summary, not medical advice."
 
 
@@ -11863,6 +12174,7 @@ def _answer_tokens(
         # both walk the same `sentences`.
         sentences, feature_blocks = split_feature_sentences(sentences)
         heading(PLAIN_SOURCES_HEADING)
+        listed_records: set[tuple[str, tuple[str, ...]]] = set()
         for sentence in sentences:
             ids = marker_ids(sentence)
             finding = finding_by_citation_id.get(ids[0]) if ids else None
@@ -11872,6 +12184,12 @@ def _answer_tokens(
             label = plain_record_label(
                 finding, _row_fields_for(finding, findings), identifier_for(finding)
             )
+            # One row per record: two claims about the same record (its title
+            # and its symbol) are one row, not two identical ones.
+            record_key = ((finding.source_url or finding.citation_id).strip(), (label,))
+            if record_key in listed_records:
+                continue
+            listed_records.add(record_key)
             sentence_token(sentence, kind="list_item", cells=[label])
         # Beneath the one list, so the list itself stays one list: each
         # disease's features under a heading that names the disease.
@@ -11984,6 +12302,7 @@ def _answer_tokens(
                 )
             else:
                 heading(records_heading)
+            listed_records: set[tuple[str, tuple[str, ...]]] = set()
             for (sentence, finding), row_fields, second, identifier, extra in zip(
                 entries, row_fields_by_entry, second_cells, identifiers, extras, strict=True
             ):
@@ -11991,20 +12310,27 @@ def _answer_tokens(
                     sentence_token(sentence)
                     continue
                 label = record_label(finding, row_fields)
+                cells = [label]
+                if as_table:
+                    if has_identifier:
+                        cells.append(identifier)
+                    if mapped:
+                        cells.append(second or "")
+                    if extra_label is not None:
+                        cells.append(
+                            extra[1]
+                            if extra is not None and extra[0] == extra_label
+                            else collected_placeholder(extra_label, row_fields)
+                        )
+                # One row per record: two claims about the same record (its
+                # title and its symbol) are one row, not two identical ones.
+                record_key = ((finding.source_url or finding.citation_id).strip(), tuple(cells))
+                if record_key in listed_records:
+                    continue
+                listed_records.add(record_key)
                 if not as_table:
                     sentence_token(sentence, kind="list_item", cells=[label])
                     continue
-                cells = [label]
-                if has_identifier:
-                    cells.append(identifier)
-                if mapped:
-                    cells.append(second or "")
-                if extra_label is not None:
-                    cells.append(
-                        extra[1]
-                        if extra is not None and extra[0] == extra_label
-                        else collected_placeholder(extra_label, row_fields)
-                    )
                 linked = (
                     [
                         disease_citation_by_curie[curie]
@@ -12142,12 +12468,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         )
         return sink.result()
 
-    if state.get("cap_exceeded", False):
-        # Routed straight here from an earlier node's per-query cap hit;
-        # ship the partial result per Section 19.1, never a blank failure.
-        return _partial_result_for_cap(
-            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
-        )
+    # Routed here from an earlier node's per-query cap hit. Card 46: the
+    # partial result is no longer a note over nothing. Write skips its own
+    # model call and lists what was gathered through the structured
+    # fallback below, with a citation each. When nothing was gathered, or
+    # nothing grounds, `_partial_result_for_cap` still ships (Section
+    # 19.1), never a blank failure.
+    cap_hit = bool(state.get("cap_exceeded", False))
 
     clarification_needed = state.get("clarification_needed")
     if clarification_needed:
@@ -12476,8 +12803,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     write_budget_s = budget_for_step("write", query_class)
     write_started_at = time.monotonic()
 
+    if cap_hit and not prompt_findings:
+        return _partial_result_for_cap(
+            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+        )
+
     try:
-        synth_text = await _dispatch_tier_call(
+        synth_text = "" if cap_hit else await _dispatch_tier_call(
             harness,
             trace_id,
             "synth",
@@ -12541,7 +12873,11 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     # and widening the change would alter two shipped behaviours nobody
     # measured today. Recorded in the item 12.7 report as an open finding
     # rather than closed quietly here.
-    if tool_outcome == "no_tool" and state.get("topic_search_term"):
+    if tool_outcome == "no_tool" and (
+        state.get("topic_search_term") or state.get("paper_link_plan") is not None
+    ):
+        # Card 74: the same hole, for a paper's linked-records question whose
+        # every link search came back empty. It is a true "none", said plainly.
         tool_outcome = "empty"
 
     # UI fix set 9 (2026-09-13). The reply is read into paragraphs and
@@ -12661,6 +12997,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         repair_budget_s = write_budget_s - (time.monotonic() - write_started_at)
         if (
             omitted_findings
+            and not cap_hit
             and repair_budget_s >= _WRITE_REPAIR_MIN_BUDGET_S
             and not _code_built_lines_will_cite(
                 omitted_findings,
@@ -12799,6 +13136,11 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 {claim.finding.citation_id for claim in grounding.claims},
                 synth_findings,
             )
+    if cap_hit and not structured_fallback_used:
+        # Nothing gathered grounds, so there is no list to show.
+        return _partial_result_for_cap(
+            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+        )
 
     # UI fix set 10, item 10.1, second cut (2026-09-13). THE FINDINGS TAIL.
     #
@@ -12953,7 +13295,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
 
     structured_fallback_note: str | None = None
     if structured_fallback_used and trust_outcome != "refuse":
-        structured_fallback_note = _build_structured_fallback_note()
+        structured_fallback_note = (
+            _build_cap_list_note() if cap_hit else _build_structured_fallback_note()
+        )
 
     # F-3.4-A-01: a completeness check, a different question from
     # everything Section 8.3 above just computed. Every claim above may
@@ -13219,7 +13563,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         # Item 12.7: on the topic path the refusal says what it searched
         # and found nothing, instead of asking the reader to name a gene.
         refusal_message = refusal_message_for(
-            state.get("failed_searches", []), state.get("topic_search_term") or None
+            state.get("failed_searches", []),
+            state.get("topic_search_term") or None,
+            _paper_link_none_message(state),
         )
         sink.emit(
             "token",
@@ -13257,6 +13603,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             for note in (
                 truncation_note,
                 _isolate_count_note(state),
+                *_paper_link_notes(state),
+                _isolate_disclosure_note(state),
+                _disease_lookup_failed_note(state),
                 structured_fallback_note,
                 partial_answer_note,
                 incomplete_answer_note,

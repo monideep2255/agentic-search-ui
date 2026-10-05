@@ -363,7 +363,10 @@ def test_the_mixed_variants_template_binds_the_gene_and_the_disease() -> None:
         ("Count the records for BRCA1", [BRCA1], "aggregate"),
         ("Tell me about breast cancer", [BREAST_CANCER], "single_hop"),
         ("Tell me about breast cancer", [BREAST_CANCER], "multi_hop"),
-        ("Tell me about PMID:11237011", [PMID], "multi_hop"),
+        # A count about one Article keeps the model path (card 15, D5).
+        ("How many records does PMID:11237011 link to?", [PMID], "multi_hop"),
+        ("Count what PMID:11237011 links to", [PMID], "aggregate"),
+        ("Tell me about PMID:11237011 and PMID:11237012", [PMID, "PMID:11237012"], "multi_hop"),
         (
             ("Which diseases are associated with BRCA1 and BRCA2 variants, and which "
              "papers mention them?"),
@@ -395,6 +398,40 @@ def test_ambiguous_or_unknown_shapes_fall_back_to_the_model(
     intent: str, entities: list[str], query_class: str
 ) -> None:
     assert _select(intent, entities, query_class) is None
+
+
+@pytest.mark.parametrize("query_class", ["single_hop", "multi_hop", "aggregate"])
+def test_one_article_with_no_hop_word_takes_the_linked_records_template(
+    query_class: str,
+) -> None:
+    # Card 15 (D5), golden G-006: this used to reach the model-written path.
+    template = _select(
+        "For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies "
+        "are linked to it?",
+        [PMID],
+        query_class,
+    )
+    assert template is not None
+    assert template.name == "article_links_one"
+    assert "$e_PMID_11237011" in template.cypher
+    assert "has_mesh_annotation" in template.cypher and "cited_in" in template.cypher
+    # `mentioned_in` from the Article end timed out live; it is not walked.
+    assert "mentioned_in" not in template.cypher
+    assert template.cypher.count("ORDER BY") == 3
+
+
+def test_article_linked_records_template_passes_the_validator() -> None:
+    template = _select("What is linked to PMID 11237011?", [PMID], "multi_hop")
+    assert template is not None
+    result = validate_cypher(template.cypher, 100)
+    assert result.ok, f"{result.reason} {result.message}"
+    assert (result.normalized_cypher or "").count("LIMIT") == 3
+
+
+def test_article_mesh_question_keeps_its_own_hop() -> None:
+    template = _select("What MeSH terms are assigned to PMID 11237011?", [PMID], "multi_hop")
+    assert template is not None
+    assert template.name == "article_mesh_one"
 
 
 def test_no_bindings_means_no_template() -> None:

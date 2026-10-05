@@ -9,17 +9,27 @@
  * note or the medical-advice line would remove disclosure nobody asked to
  * remove, and it would do so silently.
  */
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { isHiddenNote } from "./components/screens/AnswerScreen";
+import AnswerScreen, { isHiddenNote } from "./components/screens/AnswerScreen";
 
 describe("the notes the web UI hides", () => {
-  it("hides the verification note the product owner named", () => {
+  it("shows the no-written-summary note (owner decision D1, 2026-10-05)", () => {
+    expect(
+      isHiddenNote(
+        "Note: no written summary could be checked against the records, so the records found are listed below with their sources",
+      ),
+    ).toBe(false);
+    // The earlier wording of the same note stays visible too.
     expect(
       isHiddenNote(
         "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
       ),
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      isHiddenNote("Note: this question reached its resource limit before it finished, so this answer lists the records gathered so far"),
+    ).toBe(false);
   });
 
   it("hides the further-records note for any count, not just the singular", () => {
@@ -48,5 +58,21 @@ describe("the notes the web UI hides", () => {
 
   it("is not defeated by leading whitespace", () => {
     expect(isHiddenNote("   Note: 5 further pubmed records were found")).toBe(true);
+  });
+});
+
+describe("the no-written-summary note reaches the screen", () => {
+  it("renders the one plain line among the answer's notes", () => {
+    const note =
+      "Note: no written summary could be checked against the records, so the records found are listed below with their sources";
+    render(
+      <AnswerScreen
+        question="Which genes cause MODY?"
+        claims={[{ text: "GCK[1]", layer: 1, citations: [1] }]}
+        sources={[]}
+        systemNotes={[note]}
+      />,
+    );
+    expect(screen.getByText(note)).toBeInTheDocument();
   });
 });

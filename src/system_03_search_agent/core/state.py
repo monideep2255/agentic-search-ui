@@ -238,6 +238,12 @@ class GraphState(TypedDict, total=False):
     # organism and the record kind); `plan` plans the organism's SRA or
     # assembly search and its Taxonomy record from it, no graph call.
     organism_records: Any
+    # Card 74 (2026-10-05): set by `plan` when the question anchors on one
+    # PubMed paper and asks for the data records NCBI links to it
+    # (`core.graph._PaperLinkPlan`: the PMID and the explicit ELink target
+    # databases). `write` reads it to say plainly which kinds NCBI links no
+    # record of. Absent for every other question.
+    paper_link_plan: Any
     # UI fix set 8 (2026-09-13): set by `act`, the typed output of each
     # dispatched ncbi_dbsnp, pubtator_annotate, litvar2_lookup or
     # clinicaltrials_search call, keyed by call_id, for the same reason
@@ -266,3 +272,6 @@ class GraphState(TypedDict, total=False):
     # nothing, and the synthesis directive that keeps the answer to what
     # has been published rather than a verdict.
     topic_search_term: str
+    # Card 77: set by `plan` when a disease resolved but its name lookup
+    # failed, so no literature or trials search was planned; `write` says so.
+    disease_lookup_failed: bool
