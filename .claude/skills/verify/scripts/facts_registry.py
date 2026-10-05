@@ -896,9 +896,15 @@ def layer3_other_ways(repo: Repo) -> Truth:
     - isolates: an isolate question takes its own branch.
     - papers: with no gene, the plan step reaches the literature decision,
       which asks the classifier, and a question read as wanting papers
-      takes the topic branch instead."""
+      takes the topic branch instead.
+    - disease_lookup: a disease whose MedGen name lookup fails has no
+      search text, so it plans the graph call alone (F-53-V01).
+    - disease_identifier: only a MedGen-shaped disease identifier is read
+      for a search text, so any other vocabulary plans the graph call alone."""
     plan, _, chain = _layer3_call_site(repo)
     plan_src = _source(repo, plan)
+    search_text = _graph_function(repo, "_disease_search_text")
+    first_curie = _graph_function(repo, "_first_disease_curie")
     graph = call_graph(repo)
     plan_key = f"{GRAPH_MODULE}:{_step_function(repo, 'plan')}"
     literature = f"{GRAPH_MODULE}:_literature_choice"
@@ -909,6 +915,9 @@ def layer3_other_ways(repo: Repo) -> Truth:
             "isolates": "elif isolate_question is not None" in plan_src
             and any(isinstance(n, ast.If) for n in chain),
             "papers": papers and "topic_term" in plan_src,
+            "disease_lookup": "if not disease_curie" in _source(repo, search_text)
+            and "return None" in _source(repo, search_text),
+            "disease_identifier": "startswith('MedGen:')" in _source(repo, first_curie),
         },
         GRAPH_PY,
         plan.lineno,
@@ -1474,8 +1483,10 @@ def l3_stop_triggers(cap: str = ANY_W) -> str:
 
 
 L3_OTHER_WAYS = sent(
-    "A gene named only by an identifier, a question about bacterial isolates, and a question "
-    "with no gene that a classifier reads as asking for papers are each searched another way."
+    "A gene named only by an identifier, a question about bacterial isolates, a question with no "
+    "gene that a classifier reads as asking for papers, a disease whose MedGen name cannot be "
+    "looked up, and a disease named by an identifier from another vocabulary are each searched "
+    "another way, and for the last two that is the graph search alone."
 )
 
 
@@ -2194,7 +2205,8 @@ FACTS: tuple[Fact, ...] = (
     Fact(
         "layers.l3_other_ways",
         "which questions plan no layer 3 call: a gene named by an identifier, an isolate "
-        "question, and a no-gene question the literature classifier reads as asking for papers",
+        "question, a no-gene question the literature classifier reads as asking for papers, and "
+        "a disease with no MedGen name or with another vocabulary's identifier",
         Computed(
             GRAPH_PY,
             layer3_other_ways,
@@ -2206,7 +2218,13 @@ FACTS: tuple[Fact, ...] = (
                 ARCH_TSX,
                 L3_OTHER_WAYS,
                 MAPPING,
-                lambda m: {"identifier": True, "isolates": True, "papers": True},
+                lambda m: {
+                    "identifier": True,
+                    "isolates": True,
+                    "papers": True,
+                    "disease_lookup": True,
+                    "disease_identifier": True,
+                },
             ),
         ),
     ),
@@ -3064,8 +3082,9 @@ FACTS: tuple[Fact, ...] = (
                 ABOUT,
                 INFO,
                 sent(
-                    "One query returns the stored links from BRCA1 to its diseases, while the live "
-                    "layers are searched «w».",
+                    "One query returns the stored links from BRCA1 to its diseases, while most of "
+                    "the live searches run «w» and four of the thirteen calls follow in a second "
+                    "round.",
                     w=either("at the same time", "afterwards"),
                 ),
                 BOOL,

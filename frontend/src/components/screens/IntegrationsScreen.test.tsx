@@ -173,6 +173,25 @@ describe("the integrations page, rebuilt from the reference layout", () => {
     );
   });
 
+  it("shows its commands in code boxes, in the order a reader runs them, not as prose", () => {
+    // Card 79: the install command was copied but never shown, and the
+    // card was one 300-word paragraph. Mutation that turns this red: drop a
+    // code box, or put the install after the sign-in example.
+    render(<IntegrationsScreen />);
+
+    const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement as HTMLElement;
+    const install = within(card).getByRole("region", { name: /Install command for s3/i });
+    const ask = within(card).getByRole("region", { name: /Sign in and ask with s3/i });
+    const config = within(card).getByRole("region", { name: /Agent configuration for s3 mcp/i });
+    expect(install.textContent).toContain("python3.11 -m venv s3-env");
+    expect(ask.textContent).toContain('s3 ask "diseases linked to BRCA1"');
+    expect(install.compareDocumentPosition(ask) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(ask.compareDocumentPosition(config) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    for (const paragraph of card.querySelectorAll("p")) {
+      expect((paragraph.textContent ?? "").split(/\s+/).length, "a paragraph runs on").toBeLessThan(90);
+    }
+  });
+
   it("says what the install needs, before the commands: git, Python 3.11, macOS or Linux", () => {
     // Card 62, PR-8.10-04: macOS's own Python 3.9 failed with "No matching
     // distribution found for setuptools==83.0.0", and Homebrew's Python
@@ -362,9 +381,28 @@ describe("the integrations page, rebuilt from the reference layout", () => {
       const user = setupWithClipboard(undefined);
       render(<IntegrationsScreen />);
 
+      await user.click(cards().getByTestId("integration-copy-install"));
+
+      // Card 79: the message points at the command the card shows, and that
+      // command is on the page. Mutation that turns this red: say "the
+      // example" again, or show no install command.
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "Select the command shown above and copy it by hand.",
+      );
+      const card = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
+      const shown = within(card as HTMLElement).getByRole("region", { name: /Install command for s3/i });
+      expect(shown.textContent).toContain("pip install");
+    });
+
+    it("does not point at a command a card does not show", async () => {
+      const user = setupWithClipboard(undefined);
+      render(<IntegrationsScreen />);
+
       await user.click(cards().getByTestId("integration-copy-rest"));
 
-      expect(await screen.findByRole("status")).toHaveTextContent(/copy it by hand/i);
+      const status = await screen.findByRole("status");
+      expect(status).toHaveTextContent(/Could not copy automatically/);
+      expect(status).not.toHaveTextContent(/shown above|by hand/);
     });
   });
 });
