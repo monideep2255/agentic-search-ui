@@ -300,8 +300,10 @@ def _classify_as(monkeypatch: pytest.MonkeyPatch, query_class: str) -> None:
     longer exercises cypher_query's generated-Cypher path and its two
     plan-tier generation calls. The arms that pin that path classify the
     same question as `aggregate`, where the model path is still the
-    deliberate behaviour (a count is something a record cannot give; see
-    the 2026-09-22 consistency run, G-034).
+    deliberate behaviour for a question asking for a count (a count is
+    something a record cannot give; see the 2026-09-22 consistency run,
+    G-034; since 2026-10-05 an `aggregate` gene question with no count
+    request takes the record too).
     """
     import sys
 
@@ -676,7 +678,7 @@ async def test_plan_calls_the_plan_tier_model_three_times_on_the_model_path(
     internal generate_cypher attempts after Think's own call, three
     plan-tier calls in all."""
     _classify_as(monkeypatch, "aggregate")
-    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    query = _valid_query(text=_GENE_COUNT_QUERY_TEXT)
     await _run_graph(query, _valid_context())
     plan_tier_calls = [
         call
@@ -803,7 +805,7 @@ async def test_exactly_one_of_five_model_path_calls_carries_the_stable_prefix(
     still exactly one, Write's, carrying the stable prefix, since the two
     generate_cypher calls never do (F-06)."""
     _classify_as(monkeypatch, "aggregate")
-    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    query = _valid_query(text=_GENE_COUNT_QUERY_TEXT)
     await _run_graph(query, _valid_context())
     loop_calls = _loop_calls(_mock_litellm)
     assert len(loop_calls) == 5
@@ -860,7 +862,7 @@ async def test_five_model_calls_fire_when_a_tool_runs_on_the_model_path(
     Counted without the classifier seam's decision calls (build phase 8.2).
     """
     _classify_as(monkeypatch, "aggregate")
-    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    query = _valid_query(text=_GENE_COUNT_QUERY_TEXT)
     await _run_graph(query, _valid_context())
     assert len(_loop_calls(_mock_litellm)) == 5
 
@@ -2983,6 +2985,10 @@ async def test_act_node_calls_coordinator_worker_execute_with_empty_lists_for_a_
 # ---------------------------------------------------------------------------
 
 _GRAPH_ANSWERABLE_QUERY_TEXT = "What gene is associated with BRCA1?"
+# A Gene count request with no shape: the one `aggregate` question that still
+# takes the model path (2026-10-05, card 91; a count is something a record
+# cannot give).
+_GENE_COUNT_QUERY_TEXT = "How many records does BRCA1 have?"
 
 
 @pytest.mark.asyncio
