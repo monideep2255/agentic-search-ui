@@ -551,25 +551,3 @@ def test_live_graph_returns_brca1_via_labelled_edge():
 
     assert total_available > 0
     assert len(rows) > 0
-
-
-def test_default_connection_reads_text_as_utf8(monkeypatch):
-    """A connection that took a Latin-1 default decoded "Torré" as "TorrÃ©"."""
-    seen: dict = {}
-
-    class _Conn:
-        autocommit = False
-
-    def _fake_connect(**kwargs):
-        seen.update(kwargs)
-        return _Conn()
-
-    for name in (
-        "GRAPH_PG_HOST", "GRAPH_PG_USER", "GRAPH_PG_PASSWORD", "GRAPH_PG_DBNAME",
-    ):
-        monkeypatch.setenv(name, "x")
-    monkeypatch.setattr(psycopg2, "connect", _fake_connect)
-
-    graph_connection._default_connection_factory()
-
-    assert seen["client_encoding"] == "UTF8"

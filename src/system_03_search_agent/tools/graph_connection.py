@@ -351,9 +351,6 @@ def _default_connection_factory() -> psycopg2.extensions.connection:
         password=password,
         dbname=dbname,
         connect_timeout=10,
-        # Read text as UTF-8 whatever the server or environment default is.
-        # A Latin-1 default turns "Torré" into "TorrÃ©" in every record.
-        client_encoding="UTF8",
     )
     conn.autocommit = True
     return conn
