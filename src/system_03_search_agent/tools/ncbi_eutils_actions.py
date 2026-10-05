@@ -506,6 +506,8 @@ _RECORD_URL_TEMPLATES: Final[dict[str, str]] = {
     "gds": "https://www.ncbi.nlm.nih.gov/gds/{id}",
     "taxonomy": "https://www.ncbi.nlm.nih.gov/taxonomy/{id}",
     "mesh": "https://www.ncbi.nlm.nih.gov/mesh/{id}",
+    # Card 74 (2026-10-05): verified live, HTTP 200 for a sequence uid.
+    "nuccore": "https://www.ncbi.nlm.nih.gov/nuccore/{id}",
     # UI fix set 11 (search breadth, 2026-09-14). A PMC uid from ESearch or
     # ELink is the bare number; the record page prefixes it with `PMC`.
     # Live-verified the same day: this exact shape answers HTTP 301 to
@@ -958,6 +960,9 @@ _SUMMARY_FIELDS_BY_DB: Final[dict[str, tuple[str, ...]]] = {
     # response carries, so they are allowlisted and lean entirely on
     # `_cap_value` for their bound.
     "sra": ("expxml", "runs", "createdate", "updatedate"),
+    # Card 74 (2026-10-05): live-read from `esummary.fcgi?db=nuccore`; the
+    # record's title leads, then its accession and the facts a reader scans.
+    "nuccore": ("title", "accessionversion", "organism", "moltype", "slen"),
 }
 
 

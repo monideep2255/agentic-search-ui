@@ -1476,6 +1476,9 @@ _REALISTIC_BREADTH_RECORDS: dict[str, tuple[str, dict[str, Any], str | None]] = 
     ),
     "bioproject_summary": ("bioproject", {"project_title": "Salmonella surveillance"}, None),
     "biosample_summary": ("biosample", {"title": "Salmonella enterica isolate"}, None),
+    "nuccore_summary": (
+        "nuccore", {"title": "Homo sapiens KIR2DL5B mRNA", "accessionversion": "NM_001018081.2"}, None,
+    ),
     "sra_summary": ("sra", {"runs": '<Run acc="SRR9496657" total_spots="118"/>'}, None),
     "assembly_summary": ("assembly", {"assemblyname": "ASM584v2"}, None),
     "taxonomy_summary": ("taxonomy", {"scientificname": "Escherichia coli"}, None),
