@@ -5492,6 +5492,59 @@ def test_citations_from_grounded_claims_leaves_both_none_when_absent(
     assert citations[0].entity_name is None
 
 
+def test_a_record_cited_by_two_sentences_shows_the_words_behind_each() -> None:
+    """Card 57 (F-8.10-A11): "about 40% of inherited breast cancers [7]"
+    showed citation 7 as "The encoded protein participates in transcription",
+    the sentence before it, because the first clause won. Each sentence's
+    checked words must be on the citation it binds to: the copied sentence's
+    own text, and the reworded sentence's quote, numbers included."""
+    from system_03_search_agent.synthesis.findings import SynthFinding
+    from system_03_search_agent.synthesis.grounding import GroundedClaim, GroundingResult
+
+    source_url = "https://www.ncbi.nlm.nih.gov/gene/672"
+    summary = SynthFinding(
+        ref_index=1, citation_id="cq-1-1", layer="layer_1_graph", tool="cypher_query",
+        field="summary",
+        field_value=(
+            "The encoded protein participates in transcription, DNA repair of "
+            "double-stranded breaks, and recombination. Mutations in this gene are "
+            "responsible for approximately 40% of inherited breast cancers."
+        ),
+        source_url=source_url, curie="NCBIGene:672", entity_type="Gene",
+    )
+    first = "The encoded protein participates in transcription"
+    quote = "responsible for approximately 40% of inherited breast cancers"
+    grounding = GroundingResult(
+        narrative=f"{first} [1]. Changes in this gene cause about 40% of inherited breast cancers [1].",
+        claims=[
+            GroundedClaim(claim_text=first, finding=summary),
+            GroundedClaim(
+                claim_text="Changes in this gene cause about 40% of inherited breast cancers",
+                finding=summary, evidence_quote=quote,
+            ),
+        ],
+        stripped_count=0,
+        refused=False,
+    )
+    findings = [
+        _layer1_finding_with_row(call_id="cq-1", source_url=source_url, fields={"summary": "x"})
+    ]
+
+    citations = graph_module._citations_from_grounded_claims(grounding, findings)
+
+    assert len(citations) == 1
+    assert first in citations[0].claim_text
+    assert quote in citations[0].claim_text
+    assert "40%" in citations[0].claim_text
+
+
+def test_joined_checked_words_keep_each_entry_whole_within_the_bound() -> None:
+    long_entry = "a" * 990
+    assert graph_module._joined_checked_words([long_entry, "about 40% of cases"]) == long_entry
+    assert graph_module._joined_checked_words(["one", "two"]) == "one two"
+    assert len(graph_module._joined_checked_words(["b" * 1200])) == 1000
+
+
 def test_field_class_for_layer1_field_matches_real_graph_data_today() -> None:
     """F-3.4-T06-01's own finding, enforced as a regression test: as of
     the live probe this finding is based on (2026-08-09, 200-row samples

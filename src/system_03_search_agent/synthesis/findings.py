@@ -1549,6 +1549,10 @@ _DEPTH_DIRECTIVES: dict[str, str] = {
         "a sentence without one is deleted. No headings, no lists, no "
         "tables."
     ),
+    # Card 88 (2026-10-05): the rule 3a clause plain language carries. Without
+    # it the model read "ends with the marker" as a bare [18], so a reworded
+    # sentence reached the grounding pass with no quote, never became a
+    # sentence-check candidate, and was stripped; only copied sentences lived.
     "researcher": (
         "AUDIENCE DEPTH: researcher. Write for a working researcher, about "
         "200 words, in standard biomedical vocabulary. Open with one short "
@@ -1557,8 +1561,11 @@ _DEPTH_DIRECTIVES: dict[str, str] = {
         "topic words written as '## Topic', followed by one paragraph of two "
         "to four sentences. Separate paragraphs with a blank line. Every "
         "sentence ends with the marker of the finding it rests on, because a "
-        "sentence without one is deleted. Do not restate the records one by "
-        "one and do not write lists or tables: the records found are listed "
+        "sentence without one is deleted. A sentence that puts an abstract, "
+        "summary or description in your own words carries the exact "
+        "supporting words inside the marker, as rule 3a says. Do not restate "
+        "the records one by one and do not write lists or tables: the records "
+        "found are listed "
         "below your answer by the system, so write about what they show."
     ),
     "deep_technical": (

@@ -543,3 +543,21 @@ def test_the_two_depths_ask_for_materially_different_shapes() -> None:
     assert "No headings, no lists, no tables." in plain, (
         f"populate-check: plain language must forbid headings: {plain!r}"
     )
+
+
+def test_researcher_asks_for_the_quote_a_reworded_sentence_rests_on() -> None:
+    """Card 88 (2026-10-05): the Researcher line said only "ends with the
+    marker", the model wrote a bare [18] after every reworded sentence, and
+    with no quote none of them reached the sentence check, so all were
+    stripped and the person saw only "Found 5 pubmed records". Rule 3a's
+    clause, as plain language carries it, sends them to the check."""
+    researcher = findings_module._DEPTH_DIRECTIVES["researcher"]
+
+    assert "exact supporting words inside the marker" in researcher, (
+        f"populate-check: the quote-anchored instruction is missing, and "
+        f"without it a reworded sentence is stripped by the gate: {researcher!r}"
+    )
+    assert "as rule 3a says" in researcher, researcher
+    assert "ends with the marker of the finding it rests on" in researcher, (
+        f"populate-check: cite-or-refuse is not stated: {researcher!r}"
+    )
