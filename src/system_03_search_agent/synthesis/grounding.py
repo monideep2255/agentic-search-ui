@@ -778,11 +778,62 @@ class SynthesisCandidate:
     sentence says what its quotes say is the one question code cannot answer
     (a synonym and an invention look the same to it), so it goes to the
     guard-tier model. `key` is what the second grounding pass looks up.
+
+    Card 89 (2026-10-05): `quotes` is what the model reads, each of the
+    writer's quotes widened to its whole record sentence(s)
+    (`widen_to_record_sentences`). `key` is built from the writer's own
+    quotes, the ones every exact check ran on.
     """
 
     key: tuple[str, tuple[str, ...]]
     sentence: str
     quotes: tuple[str, ...]
+
+
+# Card 89 (DECISIONS.md, 2026-10-05): where one record sentence ends and the
+# next begins, for widening a quote before the model check reads it. A full
+# stop, question or exclamation mark, then space, then a capital, a quotation
+# mark or an opening bracket: the boundary the design measured offline
+# (`testing/Developer/reports/2026-10-05_sentence_check/design.md`).
+_RECORD_SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+(?=[A-Z\"(])")
+
+#: The longest widened quote the model check is shown. It equals
+#: `sentence_check.MAX_QUOTE_CHARS`, the most of one quote a check item
+#: carries, so a widened quote is never cut short; a run of record sentences
+#: longer than this is not used and the model reads the writer's own words.
+MAX_WIDENED_QUOTE_CHARS = 600
+
+
+def widen_to_record_sentences(
+    quote: str, record: str, max_chars: int = MAX_WIDENED_QUOTE_CHARS
+) -> str:
+    """The shortest run of whole record sentences that contains `quote`.
+
+    Card 89, the owner's decision of 2026-10-05 (option 1 of
+    `testing/Developer/reports/2026-10-05_sentence_check/design.md`). The
+    writer quotes a short span, then writes a sentence that also covers the
+    rest of the record sentence the span sits in; asked about the span alone,
+    the model check is right to reject it, and 36 of 47 measured rejections
+    were exactly that. So the model reads the whole record sentence, or the
+    two or more a quote crosses, as exact record text sliced from `record`.
+
+    Only what the model check READS changes. The exact checks (quote in the
+    record, numbers, negation) have already run on the writer's own quote,
+    and a candidate's key stays built from it. The quote is found the way
+    `_quote_is_valid` finds it, in `_quote_form`. A quote not found, or a run
+    longer than `max_chars`, comes back unchanged.
+    """
+    target = _quote_form(quote)
+    if not target or not record:
+        return quote
+    starts = [0] + [match.end() for match in _RECORD_SENTENCE_BOUNDARY.finditer(record)]
+    ends = [match.start() for match in _RECORD_SENTENCE_BOUNDARY.finditer(record)] + [len(record)]
+    for width in range(1, len(starts) + 1):
+        for first in range(len(starts) - width + 1):
+            span = record[starts[first] : ends[first + width - 1]].strip()
+            if target in _quote_form(span):
+                return span if len(span) <= max_chars else quote
+    return quote
 
 
 def synthesis_key(claim_text: str, quotes: list[str] | tuple[str, ...]) -> tuple[str, tuple[str, ...]]:
@@ -1333,12 +1384,16 @@ def run_grounding_pass(
                 if verified_syntheses is not None and key in verified_syntheses:
                     synthesized = True
                 elif candidate_sink is not None:
-                    candidate_sink.append(
-                        SynthesisCandidate(
-                            key=key,
-                            sentence=claim_text,
-                            quotes=tuple(pair_quote for pair_quote, _ in pairs),
+                    # Card 89: the model reads each quote widened to its whole
+                    # record sentence(s); the key keeps the writer's words.
+                    widened = tuple(
+                        dict.fromkeys(
+                            widen_to_record_sentences(pair_quote, cited.field_value)
+                            for pair_quote, cited in pairs
                         )
+                    )
+                    candidate_sink.append(
+                        SynthesisCandidate(key=key, sentence=claim_text, quotes=widened)
                     )
             if synthesized and quote is None:
                 # Carried by the quotes on the markers after it; the claim
