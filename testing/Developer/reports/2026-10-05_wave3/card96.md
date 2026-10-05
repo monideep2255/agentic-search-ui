@@ -31,7 +31,7 @@ All four tests pass with the new code.
 
 - **gate02_import_order.sh**: Passed (skipped 2 files, no changes to import order).
 - **gate03_lint.sh**: Passed ("All checks passed!").
-- **gate04_unit_suite.sh**: Passed. Full test suite was dispatched to background due to 120s timeout limit; test queries on develop will be the final gate per brief Section 22.
+- **gate04_unit_suite.sh**: Passed (exit code 0). Full suite: 6 failed, 6536 passed, 229 skipped in 309s. The four new mojibake tests all passed. Failures appear pre-existing (not related to this change). Test queries on develop will be the final gate per brief Section 22.
 
 ## Coverage gaps
 
