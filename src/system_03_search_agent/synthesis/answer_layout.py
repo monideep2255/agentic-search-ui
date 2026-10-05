@@ -291,6 +291,8 @@ def emphasis_for(text: str, terms: list[str]) -> list[str]:
 # variant row as `clinvar_condition_ids` (and onto each gene row of the
 # disease-genes shape as `medgen_condition_ids`). The second cell shows the
 # MedGen titles those CURIEs resolve to, read live, never the CURIE.
+ISOLATE_ENTITY_TYPE = "Pathogen Detection isolate"
+
 TABLE_COLUMNS: dict[str, tuple[str, str, str]] = {
     "SequenceVariant": ("clinvar_condition_ids", "Variant", "Associated disease(s)"),
     "Gene": ("medgen_condition_ids", "Gene", "Associated disease"),
@@ -300,7 +302,7 @@ TABLE_COLUMNS: dict[str, tuple[str, str, str]] = {
     # The isolate search (G-035, 2026-09-22): the person asked which
     # isolates carry the genes, so each row shows its AMR genotype list,
     # read verbatim from the record, beside the isolate's name.
-    "Pathogen Detection isolate": ("amr_genotypes", "Isolate", "AMR genes"),
+    ISOLATE_ENTITY_TYPE: ("amr_genotypes", "Isolate", "AMR genes"),
 }
 
 # The code-built heading over a mapping table, per anchor type, in place of
@@ -542,6 +544,16 @@ def record_status_or_year(
         if match:
             return (label, match.group(1))
     return None
+
+
+def collected_placeholder(label: str, row_fields: dict[str, Any] | None) -> str:
+    """The cell for a "Collected" column on a row with no collection date:
+    "Not recorded", so a blank never looks like a broken cell. Any other
+    column, or a row that does carry a date field, stays empty."""
+    if label != "Collected":
+        return ""
+    value = row_fields.get("collection_date") if isinstance(row_fields, dict) else None
+    return "" if isinstance(value, str) and value.strip() else "Not recorded"
 
 
 def condition_ids_for_row(entity_type: str, row_fields: dict[str, Any] | None) -> list[str]:
