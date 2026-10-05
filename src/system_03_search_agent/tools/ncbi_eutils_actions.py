@@ -565,6 +565,32 @@ def _cap_fields(fields: dict[str, Any]) -> dict[str, Any]:
     return dict(list(fields.items())[:_MAX_RECORD_FIELDS])
 
 
+def _repair_mojibake(value: str) -> str:
+    """Repair double-encoded UTF-8 strings from NCBI esummary.
+
+    NCBI's MedGen esummary sometimes returns mojibake: UTF-8 bytes that
+    were double-encoded as latin-1 and then decoded as UTF-8. For example,
+    the character "é" (U+00E9, UTF-8 bytes c3 a9) gets sent as "Ã©"
+    (UTF-8 bytes c3 83 c2 a9), which is the UTF-8 encoding of the latin-1
+    string "Ã©".
+
+    This function detects and repairs such strings by:
+    1. Checking if the string contains U+00C2 or U+00C3 (Â or Ã)
+    2. Attempting to re-encode as latin-1 and decode as UTF-8
+    3. Returning the repaired string if successful, otherwise the original
+
+    See: testing/Developer/reports/2026-10-05_card96/source_trace.md
+    """
+    if 'Â' not in value and 'Ã' not in value:
+        return value
+
+    try:
+        repaired = value.encode("latin-1").decode("utf-8")
+        return repaired
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return value
+
+
 def _cap_text(value: str) -> str:
     """Hard character cap on untrusted free text pulled from a record body.
 
@@ -600,7 +626,8 @@ def _cap_value(value: Any, depth: int = 0) -> Any:
           neither exhaust the stack nor smuggle uncapped text past the cap
     """
     if isinstance(value, str):
-        return _cap_text(value)
+        repaired = _repair_mojibake(value)
+        return _cap_text(repaired)
     if value is None or isinstance(value, (int, float, bool)):
         return value
     if depth >= _MAX_NESTING_DEPTH:
