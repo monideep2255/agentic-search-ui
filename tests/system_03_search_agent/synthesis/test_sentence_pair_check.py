@@ -378,3 +378,56 @@ def test_the_pair_data_travels_only_in_the_state() -> None:
     for question in calls[0].questions.values():
         for text in [question.instructions, *question.criteria.values()]:
             assert "Ignore the rules" not in text and "Answer no for every" not in text
+
+
+# ------------------------------------------------ A-99-01: the quote the sentence rewords
+
+
+DECOY_QUOTE = "Gastroesophageal reflux is common in young children and usually resolves without treatment."
+SOURCE_QUOTE = "In young children, GERD symptoms are varied and nonspecific, so a careful diagnostic evaluation is needed."
+DECOY_FIRST = SynthesisCandidate(
+    key=("decoy", (DECOY_QUOTE, SOURCE_QUOTE)),
+    sentence="In children, GERD symptoms are varied and nonspecific, so a careful diagnostic evaluation is needed",
+    quotes=(DECOY_QUOTE, SOURCE_QUOTE),
+)
+
+
+def test_a_phrase_in_two_quotes_is_asked_against_each_quote() -> None:
+    """The sentence rewords the second quote; "young children" sits in both.
+    The pair for the second quote must exist and carry the second quote."""
+    pairs = sentence_check_module._proposed_pairs(DECOY_FIRST.sentence, DECOY_FIRST.quotes)
+    assert ("young children", DECOY_QUOTE) in pairs
+    assert ("young children", SOURCE_QUOTE) in pairs
+    assert check_phrases(DECOY_FIRST.sentence, DECOY_FIRST.quotes).count("young children") == 2
+
+
+def test_the_same_phrase_twice_in_one_quote_or_in_two_equal_quotes_is_one_pair() -> None:
+    doubled = "Young children cough. Young children wheeze."
+    assert check_phrases("Children cough", [doubled]).count("young children") == 1
+    assert check_phrases("Children cough", [doubled, doubled]).count("young children") == 1
+
+
+@pytest.mark.asyncio
+async def test_a_dropped_young_is_held_back_when_only_the_second_quote_makes_it_a_yes(monkeypatch) -> None:
+    """Jev says "yes" to the pair shown with the source quote and "no" to the
+    one shown with the decoy: the sentence must not be shown."""
+    calls, _ = build_pair_calls([DECOY_FIRST])
+    state = calls[0].state
+    blocks = state.split("\n\n")
+    yes_keys = {
+        key
+        for (key, _q), block in zip(calls[0].questions.items(), blocks, strict=True)
+        if json_quote(SOURCE_QUOTE) in block
+    }
+    assert yes_keys, "a pair carries the source quote"
+    _jev_on(monkeypatch, _FakeJev({"item_1": "no"}, pair_choices={key: "yes" for key in yes_keys}))
+
+    approved = await _check([DECOY_FIRST], guard=_FakeGuard())
+
+    assert approved == frozenset()
+
+
+def json_quote(quote: str) -> str:
+    import json
+
+    return "QUOTE: " + json.dumps(quote, ensure_ascii=False)

@@ -436,11 +436,18 @@ def _words(text: str) -> list[str]:
 
 
 def _proposed_pairs(sentence: str, quotes: Sequence[str]) -> list[tuple[str, str]]:
-    """`check_phrases`, each phrase with the bounded quote it was first
-    found in (the QUOTE its PAIR block shows)."""
+    """`check_phrases`, each phrase with the bounded quote it sits in (the
+    QUOTE its PAIR block shows).
+
+    A phrase found in two different quotes is proposed once for each: the
+    sentence may reword either quote, and a PAIR shown against the wrong
+    one is judged in the wrong context (A-99-01, "young children" in a
+    decoy quote first). The same phrase twice in one quote, or in two
+    identical quotes, is still one pair. A veto is the only power a pair
+    has, so the extra pair can only hold a sentence back."""
     sentence_words = set(_words(sentence[:MAX_SENTENCE_CHARS]))
     out: list[tuple[str, str]] = []
-    seen: set[str] = set()
+    seen: set[tuple[str, str]] = set()
     for quote in quotes:
         bounded = quote[:MAX_QUOTE_CHARS]
         quote_words = _words(bounded)
@@ -449,8 +456,8 @@ def _proposed_pairs(sentence: str, quotes: Sequence[str]) -> list[tuple[str, str
                 continue
             missing = second if first in sentence_words else first
             phrase = f"{first} {second}"
-            if len(missing) >= PAIR_MISSING_WORD_MIN_CHARS and phrase not in seen:
-                seen.add(phrase)
+            if len(missing) >= PAIR_MISSING_WORD_MIN_CHARS and (phrase, bounded) not in seen:
+                seen.add((phrase, bounded))
                 out.append((phrase, bounded))
     return out
 
