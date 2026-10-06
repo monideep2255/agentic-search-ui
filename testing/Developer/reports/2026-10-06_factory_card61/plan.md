@@ -5,6 +5,7 @@ The installed client must still work with today's production server. All probes 
 ## Table of contents
 
 - [Finding plan](#finding-plan)
+- [Review refinement](#review-refinement)
 - [Compatibility and boundaries](#compatibility-and-boundaries)
 - [Questions](#questions)
 
@@ -22,6 +23,19 @@ The installed client must still work with today's production server. All probes 
 | V08 | Reproduces: both `PastSearch` and `ReopenedAnswerOutput` schemas publish `asked_at` as a date-time string without `maxLength`. | `adapters/mcp/server.py`: bound both datetime output fields without changing their serialized value. | `test_parity_tools.py`: both generated schema properties have the limit and still serialize a normal timestamp. |
 | V09 | Reproduces: `_shape_of` returns `None` for a JSON-RPC request with `"params": null`; the MCP SDK can parse it. Marked unsure; leave unbuilt. | `adapters/cli/mcp_bridge.py`: no change until production-server compatibility is decided. | Proposed interoperability test for null parameters, pending the product owner's decision. |
 | V10 | Already handled by card 62: `MCP_STDIO_CONFIG` names a full virtual-environment executable path. | None, outside this card's lane. | Existing `tells the reader to put the full path to s3` test. |
+
+## Review refinement
+
+The lead's judge and adversary found four blocking gaps in the first implementation. Each follow-up below went red before its fix and green after it.
+
+| Finding | Refined behavior | Test |
+|---|---|---|
+| V01 | Keep a fresh deadline after slot acquisition, but cap the wait for a slot separately at one minute. A timed-out queued request gets a busy error without reaching the server. | 24 requests through eight slots: the third wave gets one busy reply per request before it can be forwarded. |
+| V04 | Distinguish a mode-0600 file in a 0777 or 0770 credential folder from an insecure file. A folder without owner access and a directory at the credential-file path also get their own path-free remedies. | Temporary folders at 0777, 0770 and 000, plus a directory in place of the credential file. |
+| V05 | An interrupted JSON run says the person stopped it, not that its stream or network failed. | Signal interruption during an in-flight JSON run; the genuine JSON renderer reports `interrupted` and exit 130. |
+| V07 | An unreadable HTTP 200 renewal may follow server-side token rotation. Never recommend retrying a spent refresh token: tell the person to run `s3 login` on stdout and stderr. | Real malformed gzip response on the renewal endpoint; exactly one refresh call and no forwarded MCP request. |
+
+Smaller review checks: V02 now rejects isolated variation selectors, combining marks, Hangul fillers and NUL. V04's unreadable-file JSON remedy now agrees with stderr. All changes keep the production-server wire contract intact.
 
 ## Compatibility and boundaries
 

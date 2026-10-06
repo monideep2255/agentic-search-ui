@@ -658,7 +658,11 @@ def _load_credentials_or_report(
         # `_render_credentials_error`'s own docstring for why.
         if on_failure is not None:
             kind = (
-                "credentials_insecure"
+                "credential_folder_insecure"
+                if isinstance(exc, credentials_module.InsecureCredentialsDirectoryError)
+                else "credential_path_directory"
+                if isinstance(exc, credentials_module.CredentialsPathIsDirectoryError)
+                else "credentials_insecure"
                 if isinstance(exc, credentials_module.InsecureCredentialsError)
                 else "credentials_invalid"
             )
@@ -667,7 +671,7 @@ def _load_credentials_or_report(
         return None
     except OSError as exc:
         if on_failure is not None:
-            on_failure("credentials_invalid")
+            on_failure("credentials_unreadable")
         # type(exc).__name__ only, never str(exc): an OSError's message
         # can carry a full filesystem path, and this module's own
         # constraint is no raw exception text in user-facing output,
@@ -1056,6 +1060,18 @@ async def _run_ask(
 
     creds = _load_credentials_or_report(report, on_failure=note_credential_failure)
     if creds is None:
+        if credential_failure == "credential_folder_insecure":
+            message = (
+                "s3: the credential folder is not private or accessible to your account. "
+                "Run chmod 700 on your credential folder, then try again."
+            )
+            return failed_before_the_stream(1, "credentials_insecure", message, safe_message=message)
+        if credential_failure == "credential_path_directory":
+            message = (
+                "s3: a directory occupies the credential file location. "
+                "Move the directory aside, then run 's3 login'."
+            )
+            return failed_before_the_stream(1, "credentials_invalid", message, safe_message=message)
         if credential_failure == "credentials_insecure":
             message = (
                 "s3: the credential file is not private. Run chmod 600 on your "
@@ -1064,6 +1080,12 @@ async def _run_ask(
             return failed_before_the_stream(1, credential_failure, message, safe_message=message)
         if credential_failure == "credentials_invalid":
             message = "s3: the credential file cannot be used. Run 's3 login' to replace it."
+            return failed_before_the_stream(1, credential_failure, message, safe_message=message)
+        if credential_failure == "credentials_unreadable":
+            message = (
+                "s3: stored credentials could not be read; check that the file "
+                "exists and is readable, then try again."
+            )
             return failed_before_the_stream(1, credential_failure, message, safe_message=message)
         return failed_before_the_stream(1, "sign_in_needed", "s3: not signed in; run 's3 login' first")
 
@@ -1156,6 +1178,11 @@ async def _run_ask(
             renderer.finish()
             return outcome
         if outcome == EXIT_INTERRUPTED:
+            if as_json:
+                renderer.record_failure(  # type: ignore[union-attr]
+                    "interrupted",
+                    "s3: you stopped this search. Start a new search if you still need an answer.",
+                )
             # F-4.2-V4-02, MAJOR: an interrupted run reaches a terminal
             # state with no `done`/fatal `error`/guard event ever
             # delivered to `renderer`, the exact undetermined-state shape

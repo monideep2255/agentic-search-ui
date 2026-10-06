@@ -1641,9 +1641,11 @@ async def reopen_past_answer(
 
 
 def _has_feedback_text(text: str | None) -> bool:
-    """Whitespace and invisible Unicode format characters are not feedback."""
+    """Ignore isolated marks, controls and Hangul fillers, not real letters or emoji."""
     return any(
-        not char.isspace() and unicodedata.category(char) != "Cf"
+        not char.isspace()
+        and unicodedata.category(char)[0] not in {"C", "M"}
+        and unicodedata.normalize("NFKC", char) not in {"\u115f", "\u1160"}
         for char in text or ""
     )
 

@@ -468,6 +468,62 @@ class TestAskJsonFailsAsJson:
         assert "chmod 600" in document["error"]["message"]
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("mode", [0o777, 0o770, 0o000])
+    async def test_insecure_or_unreadable_credential_folder_names_the_folder_remedy(
+        self, credential_file: Path, mode: int
+    ) -> None:
+        _signed_in()
+        folder = credential_file.parent
+        os.chmod(folder, mode)
+        try:
+            exit_code, out, err, seen = await _s3(["ask", "--json", "q"], [])
+        finally:
+            os.chmod(folder, 0o700)
+
+        assert exit_code == 1
+        assert seen == []
+        document = json.loads(out)
+        assert "chmod 700" in document["error"]["message"]
+        assert "credential folder" in document["error"]["message"]
+        assert "chmod 600" not in document["error"]["message"]
+        assert str(folder) not in out
+        assert "chmod 700" in err
+
+    @pytest.mark.asyncio
+    async def test_directory_at_credential_path_requires_moving_it_aside(
+        self, credential_file: Path
+    ) -> None:
+        credential_file.mkdir()
+        exit_code, out, err, seen = await _s3(["ask", "--json", "q"], [])
+
+        assert exit_code == 1
+        assert seen == []
+        document = json.loads(out)
+        assert "move" in document["error"]["message"].lower()
+        assert "directory" in document["error"]["message"]
+        assert str(credential_file) not in out
+        assert "Move it aside" in err
+
+    @pytest.mark.asyncio
+    async def test_unreadable_credential_file_gives_the_same_remedy_in_json_and_stderr(
+        self, credential_file: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def unreadable() -> credentials.Credentials:
+            raise PermissionError("credential path must stay out of JSON")
+
+        monkeypatch.setattr(credentials, "load", unreadable)
+        exit_code, out, err, seen = await _s3(["ask", "--json", "q"], [])
+
+        assert exit_code == 1
+        assert seen == []
+        document = json.loads(out)
+        assert document["error"]["error_class"] == "credentials_unreadable"
+        remedy = "check that the file exists and is readable"
+        assert remedy in document["error"]["message"]
+        assert remedy in err
+        assert str(credential_file) not in out
+
+    @pytest.mark.asyncio
     async def test_corrupt_credentials_keep_the_path_off_json_stdout(self, credential_file: Path) -> None:
         _signed_in()
         credential_file.write_text("{", encoding="utf-8")
