@@ -926,6 +926,8 @@ class TestFeedbackIsYoursAlone:
             {"run_id": run_id},
             {"run_id": run_id, "comment": "   ", "flagged_reason": ""},
             {"run_id": run_id, "citation_flags": []},
+            {"run_id": run_id, "comment": "\u200b"},
+            {"run_id": run_id, "flagged_reason": "\u200b\u200c"},
         ):
             message = await _call_expecting_error(a_headers, "send_answer_feedback", empty)
             assert message == server_module._NOTHING_TO_RECORD_MESSAGE, empty

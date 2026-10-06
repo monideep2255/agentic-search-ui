@@ -114,6 +114,7 @@ import asyncio
 import logging
 import os
 import re
+import unicodedata
 import uuid
 from collections.abc import Callable
 from datetime import datetime
@@ -1639,6 +1640,14 @@ async def reopen_past_answer(
     )
 
 
+def _has_feedback_text(text: str | None) -> bool:
+    """Whitespace and invisible Unicode format characters are not feedback."""
+    return any(
+        not char.isspace() and unicodedata.category(char) != "Cf"
+        for char in text or ""
+    )
+
+
 @server.tool(
     description=(
         "Tell the team what you thought of one answer: a thumbs up or down, a "
@@ -1703,8 +1712,8 @@ async def send_answer_feedback(
     # F-8.10-A08). Blank text is nothing too. The REST route is unchanged.
     if (
         rating is None
-        and not (comment and comment.strip())
-        and not (flagged_reason and flagged_reason.strip())
+        and not _has_feedback_text(comment)
+        and not _has_feedback_text(flagged_reason)
         and not citation_flags
     ):
         raise MCPError(code=INVALID_PARAMS, message=_NOTHING_TO_RECORD_MESSAGE)
