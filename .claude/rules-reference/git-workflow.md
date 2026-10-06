@@ -119,7 +119,7 @@ What stays unchanged, called out explicitly because a reader might expect it to 
 
 - Branch naming (`phase/N.M-short-description`, above) is untouched. The Conventional Commits spec says nothing about branch names.
 - Sentence-case description text, no emoji, one logical change per commit: unchanged.
-- NEVER add Co-Authored-By lines to commit messages. No co-author trailers of any kind. Unchanged: the spec never requires any footer to exist, including a co-author trailer.
+- NEVER add Co-Authored-By lines to commit messages. No co-author trailers of any kind. One exception, the owner's of 2026-10-06: commits Factory authors may carry its own `Co-authored-by: factory-droid[bot]` trailer. Every other commit carries none. Unchanged: the spec never requires any footer to exist, including a co-author trailer.
 - Never `git push --force`. Never amend a published commit. Never `git add -A` blindly. Stage specific files. All three unchanged.
 
 ### Gitignored paths

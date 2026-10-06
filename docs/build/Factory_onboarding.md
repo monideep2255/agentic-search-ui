@@ -14,6 +14,7 @@ You do not need to read any other document to start. The rules you must follow a
 - [The pull request](#the-pull-request)
 - [Card 43: a long variant name on a phone](#card-43-a-long-variant-name-on-a-phone)
 - [Card 44: two controls below the contrast minimum](#card-44-two-controls-below-the-contrast-minimum)
+- [Card 43b: the citation number stays with the name](#card-43b-the-citation-number-stays-with-the-name)
 - [Card 47: the design prototype's old home page](#card-47-the-design-prototypes-old-home-page)
 - [Card 61: command line and MCP bridge edge cases](#card-61-command-line-and-mcp-bridge-edge-cases)
 - [Not yours now](#not-yours-now)
@@ -50,7 +51,7 @@ Two values decide every close call:
 
 ## How you work here
 
-One card at a time, in the order of this file: 43, 44, 47, 61. Once a card's pull request is open you may start the next card, but never have more than two pull requests open, and answer review comments on an open one before new work.
+One card at a time, in this order: 43b (a follow-up to card 43, below), then 47, then 61. Cards 43 and 44 are merged. Once a card's pull request is open you may start the next card, but never have more than two pull requests open, and answer review comments on an open one before new work.
 
 Once per machine, before your first Playwright run: `cd frontend && npx playwright install chromium`. It downloads the browser the pinned `@playwright/test` expects and changes no file in the repository.
 
@@ -70,7 +71,7 @@ For each card:
 5. Run every check in [Checks before you push](#checks-before-you-push) that applies.
 6. Write the card's report, `testing/Developer/reports/<date>_factory_card<N>/report.md`, where the date is the day you work: what the person sees now, the files changed, each test and the one-property break that turned it red, the check results, screenshots at 1280 and 390 pixels named `<screen>_<width>.png`, and what you did not cover.
 7. Commit, push your branch, open the pull request ([The pull request](#the-pull-request)), and tell the product owner it is ready.
-8. The lead reviews and merges, one pull request at a time, because several at once starve CI. Review requests arrive as pull request review comments: fix them on the same branch and push again.
+8. The lead reviews and merges, one pull request at a time, because several at once starve CI. The lead's reviewer runs your tests itself and removes each part of your fix one at a time: a part whose removal turns no test red comes back to you as a requested change, so give every part its own failing test. Review requests arrive as pull request review comments: fix them on the same branch and push again.
 9. After the merge, from the main checkout's root: `git worktree remove ../asu-factory-<N>`, then `git fetch --prune origin` and `git branch -d factory/card<N>-<short-description>`. If `-d` refuses, tell the product owner; never `-D`.
 
 Dial 1 below means a layout, wording or design-file change: your build and checks, the lead's review and merge, the product owner's retest. Dial 2 means runnable behaviour: the lead also runs a judge and an adversary review on your pull request, and you fix what they find in one round.
@@ -118,7 +119,7 @@ If something slips, remove it from the working tree and tell the product owner a
 ### Git
 
 - Conventional Commits: `<type>(<scope>): <Description in sentence case>`, for example `fix(web-ui): Wrap a long variant name on a phone instead of scrolling sideways`. Types: feat, fix, docs, chore, refactor, test, ci, security. One logical change per commit. No emoji.
-- Never add a `Co-authored-by` line, or any other trailer, to a commit or a pull request. This repository forbids them. If your tooling adds one by default, remove it before you commit.
+- Your commits may carry your own `Co-authored-by: factory-droid[bot]` trailer: the product owner approved that for your commits only on 2026-10-06. Add no other trailer, and none to a pull request body.
 - Stage files by name. Never `git add -A` or `git add .`.
 - Never `git push --force`, never amend a pushed commit, never `--no-verify`. The two git hooks block local paths in commits and messages; when one blocks you, fix the content.
 - Never push to `develop` or `production`. Never merge a pull request.
@@ -305,6 +306,19 @@ Done when:
 - A new end-to-end spec opens the home screen at 390 and at 1280, hovers the button (`await page.getByTestId("take-the-tour").hover()`), then runs an axe scan the way `accessibility.spec.ts` does (`new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])`), scoped with `.include('[data-testid="take-the-tour"]')`, and asserts no `color-contrast` violation. Use `test.use({ contextOptions: { reducedMotion: "reduce" } })` as `accessibility.spec.ts` does (line 62), because the screen's fade makes axe misread contrast. It fails without your fix.
 - The marker half is closed with evidence, or asked as a question.
 - Build, unit tests, your spec and `accessibility.spec.ts` pass.
+
+## Card 43b: the citation number stays with the name
+
+Dial 1. Branch `factory/card43b-marker-stays-with-name`. A follow-up to card 43, found by the lead's check of the deployed app after #181 merged. The full request is the newest comment on #181 (`gh pr view 181 --comments`).
+
+What the person sees today: when a variant name fits its line but the name plus its citation number does not, `overflow-wrap: anywhere` breaks between them, so the number sits alone on the next line and looks like a stray digit. Live on develop: citation 5 under `NM_007294.4(BRCA1):c.5243_5277+2788del` in the answer to "What does BRCA1 do?" at 390 pixels. It brings back the lone marker a word joiner fixed on 2026-09-14 (`CitationMarkers.tsx` lines 532 to 545).
+
+Done when:
+
+- In `frontend/src/components/screens/AnswerScreen.tsx`, the phone record row span (around line 1302) keeps the citation marker on the same line as the name's last characters, for example a no-wrap span around the trailing characters and `citationChips(...)`; never `word-break: break-all` on the whole row.
+- The sentence (`PROSE_SX`, around line 214) is checked for the same case and fixed the same way if it shows there.
+- `frontend/e2e/long-variant-name.spec.ts` gains a row named `NM_007294.4(BRCA1):c.5243_5277+2788del` with its marker and asserts at 390 that the marker's top is above the bottom of the name's last line. It fails on develop today; the report shows it red without your fix and green with it. The existing assertions stay.
+- Screenshots are written only when an environment variable such as `FACTORY_SHOTS=1` is set, in this spec and in `tour-button-contrast.spec.ts`, so CI never rewrites committed images.
 
 ## Card 47: the design prototype's old home page
 
