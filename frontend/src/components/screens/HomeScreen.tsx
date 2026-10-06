@@ -438,7 +438,7 @@ export function HomeScreen({
         {onTakeTour ? (
           // Product-owner feedback 2026-09-13: "Take the tour" must stand out
           // rather than hide in the footer strip. An outlined pill in the
-          // link colour, centred under the seed chips, with a small compass
+          // blue, centred under the seed chips, with a small compass
           // mark: it reads as an action, not as small print, and stays out
           // of the way of the search box above it. Built from the seed chip
           // pill and the design system's outlined button; no new colour.
@@ -455,9 +455,9 @@ export function HomeScreen({
                 font: "inherit",
                 fontSize: 13.5,
                 fontWeight: 700,
-                color: designTokens.link,
+                color: designTokens.blue,
                 bgcolor: designTokens.surface,
-                border: `2px solid ${designTokens.link}`,
+                border: `2px solid ${designTokens.blue}`,
                 borderRadius: 999,
                 px: 2,
                 py: 0.85,
