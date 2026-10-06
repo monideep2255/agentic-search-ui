@@ -165,15 +165,30 @@ def build_sentence_check_messages(
     ]
 
 
+#: Characters `str.splitlines()` treats as a line end that `json.dumps(...,
+#: ensure_ascii=False)` leaves as they are. Written as JSON escapes, so a
+#: sentence or quote cannot lay out a fake `PAIR` or `ITEM` line for a reader
+#: that splits on them (J-99-05). Still valid JSON, and the same text.
+_LINE_BREAKS: Final[dict[str, str]] = {"\u2028": "\\u2028", "\u2029": "\\u2029", "\x85": "\\u0085"}
+
+
+def _json_text(text: str) -> str:
+    """`text` as one bounded JSON string with no line break in it."""
+    out = json.dumps(text, ensure_ascii=False)
+    for char, escape in _LINE_BREAKS.items():
+        out = out.replace(char, escape)
+    return out
+
+
 def _item_block(number: int, candidate: SynthesisCandidate) -> str:
     """One numbered item, exactly as both checkers read it: the sentence and
     each quote as a bounded JSON string, so data cannot pose as a reply."""
     quotes = " | ".join(
-        json.dumps(quote[:MAX_QUOTE_CHARS], ensure_ascii=False)
+        _json_text(quote[:MAX_QUOTE_CHARS])
         for quote in candidate.quotes
     )
     return (
-        f"ITEM {number}\nSENTENCE: {json.dumps(candidate.sentence[:MAX_SENTENCE_CHARS], ensure_ascii=False)}\n"
+        f"ITEM {number}\nSENTENCE: {_json_text(candidate.sentence[:MAX_SENTENCE_CHARS])}\n"
         f"QUOTES: {quotes}"
     )
 
@@ -492,9 +507,9 @@ def _pair_block(number: int, phrase: str, quote: str, sentence: str) -> str:
     """One numbered PAIR, the design's block: each field a bounded JSON
     string, so data cannot pose as a reply."""
     return (
-        f"PAIR {number}\nPHRASE: {json.dumps(phrase, ensure_ascii=False)}\n"
-        f"QUOTE: {json.dumps(quote[:MAX_QUOTE_CHARS], ensure_ascii=False)}\n"
-        f"SENTENCE: {json.dumps(sentence[:MAX_SENTENCE_CHARS], ensure_ascii=False)}"
+        f"PAIR {number}\nPHRASE: {_json_text(phrase)}\n"
+        f"QUOTE: {_json_text(quote[:MAX_QUOTE_CHARS])}\n"
+        f"SENTENCE: {_json_text(sentence[:MAX_SENTENCE_CHARS])}"
     )
 
 
