@@ -6,6 +6,11 @@ survive the grounding pass when it carries the record's exact supporting
 words as `[N: "words"]`, and passes four exact checks
 (`grounding.synthesis_is_supported`).
 
+Card 101 (2026-10-06): code no longer approves a reworded sentence on its
+own. The acceptance arms below now show the sentence only once the model
+check approved its key (`verified_syntheses`), which is how the write step's
+second grounding pass shows it; `test_check_every_rewording.py` pins the rule.
+
 WHAT THIS FILE EXERCISES:
 
 - Acceptance: a reworded sentence with a real quote survives, keeps its
@@ -73,6 +78,16 @@ def _ground(narrative: str, findings: list[SynthFinding] | None = None):
     return run_grounding_pass(narrative, findings or [PAPER, PAPER_TITLE], question=QUESTION)
 
 
+def _ground_approved(narrative: str, findings: list[SynthFinding] | None = None):
+    """The write step's two passes with a model check that approves every
+    candidate: the first pass collects them, the second shows exactly those."""
+    findings = findings or [PAPER, PAPER_TITLE]
+    sink: list[grounding.SynthesisCandidate] = []
+    run_grounding_pass(narrative, findings, question=QUESTION, candidate_sink=sink)
+    approved = frozenset(candidate.key for candidate in sink)
+    return run_grounding_pass(narrative, findings, question=QUESTION, verified_syntheses=approved)
+
+
 # --------------------------------------------------------------- acceptance
 
 
@@ -86,16 +101,19 @@ def test_a_reworded_sentence_with_its_record_words_survives() -> None:
     assert not grounding.ground_claim(
         "Studies report that caffeine enhanced endurance performance", ABSTRACT
     ), "populate-check: the strict path must reject this sentence, or the arm tests nothing new"
-    result = _ground(GOOD)
+    assert not _ground(GOOD).grounded, "card 101: code alone never shows a rewording"
+    result = _ground_approved(GOOD)
     assert result.grounded, result
     assert result.narrative == "Studies report that caffeine enhanced endurance performance [1]."
     assert result.claims[0].evidence_quote == "Caffeine consistently enhances endurance performance"
 
 
 def test_the_arm_above_fails_when_the_synthesis_path_is_off(monkeypatch) -> None:
-    """Mutation proof: the acceptance arm exercises the new path, not the old."""
-    monkeypatch.setattr(grounding, "synthesis_is_supported_by", lambda *a, **k: False)
-    assert not _ground(GOOD).grounded
+    """Mutation proof: the acceptance arm exercises the new path, not the old.
+    With the exact checks off the path, nothing reaches the model check, so
+    nothing is approved and the sentence is not shown."""
+    monkeypatch.setattr(grounding, "exact_synthesis_checks_pass", lambda *a, **k: False)
+    assert not _ground_approved(GOOD).grounded
 
 
 def test_a_strict_claim_carries_no_quote() -> None:
@@ -170,7 +188,7 @@ def test_a_quote_with_a_full_stop_does_not_split_the_sentence() -> None:
     )
     rewritten, quotes = extract_evidence_quotes(narrative)
     assert "[1#0]" in rewritten and len(quotes) == 1
-    result = _ground(narrative)
+    result = _ground_approved(narrative)
     assert result.grounded, result
     assert "trained athletes" not in result.narrative
 

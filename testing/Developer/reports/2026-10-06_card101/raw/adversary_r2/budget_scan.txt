@@ -1,0 +1,4 @@
+first passes with candidates: 120
+check ran: 120  check skipped: 0
+check budgets below the 12 s cap (budget_s = write budget left - 1):
+   (10.307111583999358, 'c101 build', 'gp6')

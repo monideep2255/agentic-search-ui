@@ -1,0 +1,60 @@
+source | answer | shown | moved (shown) | moved (all first passes) | check calls recorded | new calls | joined calls | answer s
+2026-10-05 wave 3, card 89 branch | gp1 | 4 | 0 | 0 | 2 | 0 | 0 | 25.8
+2026-10-05 wave 3, card 89 branch | gp2 | 3 | 0 | 0 | 2 | 0 | 0 | 35.9
+2026-10-05 wave 3, card 89 branch | gp3 | 4 | 0 | 0 | 2 | 0 | 0 | 31.3
+2026-10-05 wave 3, card 89 branch | gp4 | 2 | 0 | 0 | 2 | 0 | 0 | 20.3
+2026-10-05 wave 3, card 89 branch | gp5 | 5 | 0 | 0 | 1 | 0 | 0 | 17.2
+2026-10-05 wave 3, card 89 branch | gr1 | 6 | 1 | 1 | 2 | 0 | 1 | 17.7
+2026-10-05 wave 3, card 89 branch | gr2 | 5 | 1 | 2 | 2 | 0 | 1 | 29.2
+2026-10-05 wave 3, card 89 branch | gr3 | 5 | 0 | 0 | 1 | 0 | 0 | 15.7
+2026-10-05 wave 3, card 89 branch | gr4 | 5 | 2 | 1 | 2 | 0 | 1 | 22.1
+2026-10-05 wave 3, card 89 branch | gr5 | 7 | 2 | 2 | 2 | 0 | 2 | 20.3
+2026-10-05 wave 3, card 89 branch | md1 | 2 | 0 | 0 | 2 | 0 | 0 | 21.9
+2026-10-05 wave 3, card 89 branch | md2 | 5 | 2 | 2 | 2 | 0 | 1 | 29.3
+2026-10-05 wave 3, card 89 branch | md3 | 3 | 0 | 1 | 2 | 0 | 1 | 20.3
+2026-10-05 wave 3, card 89 branch | md4 | 4 | 0 | 0 | 2 | 0 | 0 | 23.5
+2026-10-05 wave 3, card 89 branch | md5 | 2 | 1 | 1 | 2 | 0 | 1 | 35.6
+2026-10-05 wave 3, develop control | cm1 | 1 | 1 | 1 | 2 | 0 | 1 | 16.4
+2026-10-05 wave 3, develop control | cm2 | 0 | 0 | 0 | 2 | 0 | 0 | 17.0
+2026-10-05 wave 3, develop control | cm3 | 0 | 0 | 0 | 2 | 0 | 0 | 15.6
+2026-10-05 wave 3, develop control | cm4 | 6 | 1 | 1 | 2 | 0 | 1 | 16.9
+2026-10-05 wave 3, develop control | cm5 | 3 | 0 | 0 | 2 | 0 | 0 | 20.4
+2026-10-05 wave 3, develop control | cp1 | 1 | 0 | 0 | 2 | 0 | 0 | 18.5
+2026-10-05 wave 3, develop control | cp2 | 3 | 0 | 0 | 2 | 0 | 0 | 17.0
+2026-10-05 wave 3, develop control | cp3 | 3 | 0 | 0 | 2 | 0 | 0 | 19.1
+2026-10-05 wave 3, develop control | cp4 | 4 | 0 | 0 | 2 | 0 | 0 | 22.0
+2026-10-05 wave 3, develop control | cp5 | 3 | 0 | 0 | 2 | 0 | 0 | 14.8
+2026-10-05 wave 3, develop control | cr1 | 9 | 4 | 4 | 2 | 0 | 1 | 23.4
+2026-10-05 wave 3, develop control | cr3 | 1 | 0 | 1 | 2 | 0 | 1 | 16.8
+2026-10-05 wave 3, develop control | cr4 | 3 | 0 | 1 | 2 | 0 | 1 | 20.7
+2026-10-05 wave 3, develop control | cr5 | 6 | 2 | 2 | 2 | 0 | 2 | 20.2
+2026-10-06 card 101 build | gp1 | 5 | 0 | 0 | 2 | 0 | 0 | 22.6
+2026-10-06 card 101 build | gp2 | 5 | 0 | 0 | 1 | 0 | 0 | 25.8
+2026-10-06 card 101 build | gp3 | 7 | 0 | 2 | 2 | 0 | 1 | 25.0
+2026-10-06 card 101 build | gp4 | 4 | 0 | 0 | 2 | 0 | 0 | 18.9
+2026-10-06 card 101 build | gp5 | 5 | 0 | 0 | 2 | 0 | 0 | 20.0
+2026-10-06 card 101 build | gp6 | 5 | 0 | 0 | 2 | 0 | 0 | 37.8
+2026-10-06 card 101 build | gr1 | 7 | 2 | 4 | 2 | 0 | 2 | 17.1
+2026-10-06 card 101 build | gr2 | 4 | 0 | 1 | 2 | 0 | 1 | 16.6
+2026-10-06 card 101 fix round | gp1 | 3 | 0 | 0 | 2 | 0 | 0 | 32.5
+2026-10-06 card 101 fix round | gp2 | 4 | 0 | 0 | 2 | 0 | 0 | 28.1
+2026-10-06 card 101 fix round | gp3 | 2 | 0 | 0 | 2 | 0 | 0 | 30.9
+2026-10-06 card 101 fix round | gp4 | 3 | 0 | 1 | 2 | 0 | 1 | 16.6
+2026-10-06 card 101 fix round | gp6 | 3 | 0 | 0 | 2 | 0 | 0 | 21.6
+2026-10-06 card 101 fix round | gp7 | 3 | 0 | 0 | 2 | 0 | 0 | 17.7
+2026-10-06 card 101 fix round | hb1 | 4 | 0 | 0 | 1 | 0 | 0 | 11.6
+2026-10-06 card 101 fix round | hb2 | 2 | 0 | 0 | 1 | 0 | 0 | 10.0
+2026-10-06 card 101 fix round | hb3 | 4 | 0 | 0 | 1 | 0 | 0 | 7.8
+2026-10-06 card 101 fix round | hb4 | 3 | 1 | 1 | 2 | 0 | 1 | 10.0
+2026-10-06 card 101 fix round | hd1 | 2 | 0 | 0 | 1 | 0 | 0 | 6.7
+2026-10-06 card 101 fix round | hd2 | 3 | 0 | 1 | 1 | 0 | 1 | 8.5
+2026-10-06 card 101 fix round | hd3 | 0 | 0 | 0 | 1 | 0 | 0 | 9.5
+2026-10-06 card 101 fix round | hd4 | 0 | 0 | 0 | 2 | 0 | 0 | 9.7
+
+Totals by source
+2026-10-05 wave 3, card 89 branch answers 15 shown 62 moved shown 9 moved fp 10 answers with moved 7 new calls 0 joined 8
+2026-10-05 wave 3, develop control answers 14 shown 43 moved shown 8 moved fp 10 answers with moved 6 new calls 0 joined 7
+2026-10-06 card 101 build answers 8 shown 42 moved shown 2 moved fp 7 answers with moved 3 new calls 0 joined 4
+2026-10-06 card 101 fix round answers 14 shown 36 moved shown 1 moved fp 3 answers with moved 3 new calls 0 joined 3
+all: answers 51 shown 183 moved shown 20 moved fp 30 answers with moved shown 12 new calls 0 joined 22
+check call duration s: n 93 median 0.307 p90 0.445 max 1.561
