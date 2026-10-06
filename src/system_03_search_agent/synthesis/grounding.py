@@ -772,7 +772,11 @@ _VERDICT_OPENER = re.compile(r"^\s*(?:yes|no)\s*[,.;:!]", re.IGNORECASE)
 
 @dataclass(frozen=True)
 class SynthesisCandidate:
-    """A reworded sentence that passed every exact check but the word check.
+    """A reworded sentence that passed every exact check.
+
+    Card 101 (2026-10-06): every such sentence, whether or not code's word
+    check (`synthesis_is_supported_by`) would have licensed its words. Code
+    may hold a reworded sentence back, never approve one on its own.
 
     Item 12.10, decided by the product owner on 2026-09-23: whether such a
     sentence says what its quotes say is the one question code cannot answer
@@ -865,6 +869,12 @@ def synthesis_is_supported_by(
 
     `licensed_question` must already be filtered by
     `_licensed_question_content`, the same licence the strict path gives.
+
+    Card 101 (the owner's decision of 2026-10-06): `run_grounding_pass` no
+    longer accepts a sentence on this check. A True here never shows a
+    sentence; every reworded sentence that passes the exact checks goes to
+    the model check (`SynthesisCandidate`). Kept as the record of the word
+    licence and for the measurements that compare against it.
     """
     if not exact_synthesis_checks_pass(claim_text, pairs, licensed_question):
         return False
@@ -1343,10 +1353,10 @@ def run_grounding_pass(
                 or not claim_introduces_no_new_content(claim_text, supporting_text)
             )
             # Items 12.9 and 12.10: a clause the strict path rejects may
-            # still stand when it carries the exact record words behind it
-            # and passes every check in `synthesis_is_supported`. Strict
-            # first, so this can never change an outcome the strict path
-            # already decided in the clause's favour.
+            # still stand when it carries the exact record words behind it,
+            # passes every exact check and the model check approves it
+            # (card 101). Strict first, so this can never change an outcome
+            # the strict path already decided in the clause's favour.
             # Every quote this clause carries: its own, plus those on markers
             # that follow it with nothing asserted in between, as in
             # `claim [7: "a"][7: "b"]` or `claim [4: "a"][9: "b"]`. Each is
@@ -1361,22 +1371,29 @@ def run_grounding_pass(
                 if later_finding is None or later_key is None or later_key >= len(evidence_quotes):
                     continue
                 pairs.append((evidence_quotes[later_key], later_finding))
-            labels = " ".join(
-                labels_by_url.get((cited.source_url or "").strip(), "") for _, cited in pairs
-            )
-            synthesized = (
-                not strict_ok
-                and bool(pairs)
-                and synthesis_is_supported_by(claim_text, pairs, licensed_question, labels)
-            )
-            # Item 12.10 (2026-09-23): the model check. A sentence whose words
-            # code could not license, but which passed every exact check, is
-            # accepted only when the model approved THIS sentence with THESE
-            # quotes. On the first pass it is collected instead, so the caller
-            # can ask the model once for every such sentence in the answer.
+            # Card 101 (the owner's decision of 2026-10-06): code never
+            # approves a reworded sentence on its own. The code word check
+            # (`synthesis_is_supported_by`) used to accept a sentence whose
+            # every word sat in its quotes, the record's title, the question
+            # or the reporting vocabulary, and such a sentence never reached
+            # the model. Measured on 52 traced answers, about one shown
+            # sentence in nine took that path, and one of them showed "For
+            # babies with severe bronchiolitis" where the paper says
+            # children: "babies" came from the question. The word check is
+            # one way, so it also passed a dropped limit ("usually",
+            # "healthy") that card 99's pair check exists to catch. Code
+            # still holds a sentence back (the exact checks below); only the
+            # model check approves one.
+            synthesized = False
+            # Item 12.10 (2026-09-23): the model check. A reworded sentence
+            # that passed every exact check is accepted only when the model
+            # approved THIS sentence with THESE quotes. On the first pass it
+            # is collected instead, so the caller can ask the model once for
+            # every such sentence in the answer. When the check cannot run
+            # (no budget, the cost cap, a failed or unreadable call), nothing
+            # is approved and the sentence is not shown.
             if (
                 not strict_ok
-                and not synthesized
                 and pairs
                 and exact_synthesis_checks_pass(claim_text, pairs, licensed_question)
             ):
