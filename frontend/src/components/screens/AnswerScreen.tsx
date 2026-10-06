@@ -211,7 +211,7 @@ const PROSE_SX = {
   textWrap: "pretty",
   "&:last-child": { mb: 0 },
   "@media (max-width:860px)": { maxWidth: "none" },
-  "@media (max-width:720px)": { fontSize: 16, lineHeight: 1.65, mb: "16px" },
+  "@media (max-width:720px)": { fontSize: 16, lineHeight: 1.65, mb: "16px", overflowWrap: "anywhere" },
 } as const;
 
 const RTAB_CELL = {
@@ -234,6 +234,7 @@ const RTAB_ID = {
   fontSize: 12.5,
   whiteSpace: "nowrap",
   color: designTokens.inkMuted,
+  "@media (max-width:720px)": { whiteSpace: "normal", overflowWrap: "anywhere" },
 } as const;
 
 /**
@@ -1298,7 +1299,7 @@ export function AnswerBody({
               >
                 <Box
                   component="span"
-                  sx={{ fontSize: 15, lineHeight: 1.45, color: designTokens.ink, ...uncitedInk(claim) }}
+                  sx={{ fontSize: 15, lineHeight: 1.45, color: designTokens.ink, overflowWrap: "anywhere", ...uncitedInk(claim) }}
                 >
                   {cells[0] ?? claim.text}
                   {citationChips(claim, index)}
@@ -1905,7 +1906,10 @@ export function AnswerBody({
                       >
                         {source.ns.map((n) => `[${n}]`).join("")}
                       </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, "@media (max-width:720px)": { minWidth: 0, overflowWrap: "anywhere" } }}
+                      >
                         {source.name}
                       </Typography>
                       {/*
