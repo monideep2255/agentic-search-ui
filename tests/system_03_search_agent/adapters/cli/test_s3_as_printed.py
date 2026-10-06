@@ -511,6 +511,20 @@ class TestAskJsonFailsAsJson:
         assert document["error"]["message"] == err.strip()
 
     @pytest.mark.asyncio
+    async def test_an_empty_200_stream_explains_the_incomplete_json(self, credential_file) -> None:
+        _signed_in()
+
+        exit_code, out, _err, seen = await _s3(["ask", "--json", "q"], [])
+
+        assert exit_code == 1
+        assert any(request.url.path.endswith("/events") for request in seen)
+        document = json.loads(out)
+        assert document["complete"] is False
+        assert document["error"]["error_class"] == "stream_incomplete"
+        assert "no final answer or error" in document["error"]["message"]
+        assert "Try again" in document["error"]["message"]
+
+    @pytest.mark.asyncio
     async def test_without_json_stdout_stays_empty(self, credential_file) -> None:
         # The human mode is unchanged: its failures go to stderr alone.
         exit_code, out, err, _ = await _s3(["ask", "diseases linked to BRCA1"], [])
