@@ -521,3 +521,17 @@ async def test_the_log_counts_only_sentences_the_item_question_approved_and_a_pa
     line = _check_log_line(caplog)
     assert "1 approved sentences held back by a pair" in line
     assert "0 sentences not asked" in line
+
+
+@pytest.mark.asyncio
+async def test_the_log_counts_the_sentences_the_call_cap_left_unasked_and_no_text(monkeypatch, caplog) -> None:
+    caplog.set_level("INFO", logger=sentence_check_module.logger.name)
+    monkeypatch.setattr(sentence_check_module, "MAX_PAIR_CALLS", 0)
+    _jev_on(monkeypatch, _FakeJev({"item_1": "no", "item_2": "no"}))
+
+    await _check([WITH_PAIRS, NO_PAIRS], guard=_FakeGuard())
+
+    line = _check_log_line(caplog)
+    assert "1 sentences not asked for want of room" in line
+    assert "0 approved sentences held back by a pair" in line
+    assert "children" not in line and "bones" not in line, "counts only, no sentence text"
