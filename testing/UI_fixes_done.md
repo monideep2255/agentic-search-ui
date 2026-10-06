@@ -610,7 +610,7 @@ Carried from 2026-09-29 and not re-checked today:
 - ADDED 2026-10-05:
   - Card 57 shows "Building, wave 0" on the board while the day's facts record #161 as touching it; the board's word stands until the owner retests it.
   - The untracked board-plan report folder holds copies whose names end in " 2" (`brief 2.md` and the like), the same copying seen on 2026-09-25. They are not committed.
-  - Factory, a second development agent, works the screen and wording lane (cards 43, 44, 18, 23, 24, 25, 47 and the rest of 61) in its own worktrees on `factory/` branches; the lead keeps the answer path, the board, the plan and the one merge queue.
+  - Factory, a second development agent, was given the screen and wording lane (cards 43, 44, 18, 23, 24, 25, 47 and the rest of 61) and paused the same night after a trial; the split is provisional and those cards are pending until the owner's renewed instructions; the lead keeps the answer path, the board, the plan and the one merge queue.
 
 ### Notes carried over from the old tracker
 
@@ -657,14 +657,14 @@ Rewritten 2026-10-05 in the order of the board's To do column, top to bottom, on
 17. Card 14: One 127-second search against a median of 14; a timeout that stops the wait but not the work (F-8.1-05).
 18. Card 15: Step 1 live (#171). Next: the remaining anchors, per decision D5, no model-written search except true count questions.
 19. Card 16: G-005 and G-022 find nothing, and G-036 never searches the graph. Nobody on it.
-20. Card 17: Building, wave 0 (reworded sentence that switches papers on a generic title word); order in `testing/Board_plan.md`.
-21. Card 18: A multi-sentence record shows as several list rows; the helper is on the 8.4 branch, its wiring is not built.
+20. Card 17: A reworded sentence can switch papers on a generic title word; a guard was tried in #161's build and taken out because it deleted good sentences, so it needs its own design. Nobody on it.
+21. Card 18: A multi-sentence record shows as several list rows; the helper is on the 8.4 branch, its wiring is not built. Pending: provisionally Factory's lane, paused 2026-10-05 until the owner's renewed instructions.
 22. Card 19: The paced handoff may show a false writing step on another path (11.28). Nobody on it.
 23. Card 20: An isolate search filters only by gene prefix; year is built on the 8.4 branch, location needs the plan step.
 24. Card 22: One answer shows several different totals (D-2); the owner decides.
-25. Card 23: The provenance note under the variant-to-disease table; the owner decides.
-26. Card 24: Where the mode toggle goes; the owner decides, and decision D21 sets the cost of switching on an answer.
-27. Card 25: Install the public USWDS package: decided 2026-09-25, not built.
+25. Card 23: The provenance note under the variant-to-disease table; the owner decides. Pending: provisionally Factory's lane, paused 2026-10-05 until the owner's renewed instructions.
+26. Card 24: Where the mode toggle goes; the owner decides, and decision D21 sets the cost of switching on an answer. Pending: provisionally Factory's lane, paused 2026-10-05 until the owner's renewed instructions.
+27. Card 25: Install the public USWDS package: decided 2026-09-25, not built. Pending: provisionally Factory's lane, paused 2026-10-05 until the owner's renewed instructions.
 28. Card 29: The sentence that answers the question under each cited paper; built and parked on `parked/phase-8.8-snippets-2026-09-25`.
 29. Card 30: The BRCA1 pathogenic-variants question lists 40 unclassified variants and drops the honest caveat (F-8.1-A16).
 30. Card 32: A graph search column named `clinical_features` would be read as MedGen's (F-8.1-V02).
@@ -675,20 +675,19 @@ Rewritten 2026-10-05 in the order of the board's To do column, top to bottom, on
 35. Card 38: Some answers list records that cannot answer the question (no species, no title); planned in phase 8.9.
 36. Card 40: Carry out the two harness reviews; the build-harness hooks and always-loaded rules need the owner's yes.
 37. Card 42: The build team checks the product the way a person uses it; proposal `docs/build/Verify_loop_proposal.md` waits for the owner's yes.
-38. Card 43: On a phone a long variant name scrolls the page sideways; a layout card in Factory's lane.
-39. Card 44: Two small controls fall under the 4.5 contrast minimum; Factory's lane, check `frontend/src/theme.ts` first.
-40. Card 47: The design prototype still draws the navy home hero; Factory's lane, a design-file card.
+38. Card 43: On a phone a long variant name scrolls the page sideways; a layout card. Pending: provisionally Factory's lane, paused 2026-10-05 until the owner's renewed instructions.
+39. Card 44: Two small controls fall under the 4.5 contrast minimum; check `frontend/src/theme.ts` first. Pending: provisionally Factory's lane, paused 2026-10-05 until the owner's renewed instructions.
+40. Card 47: The design prototype still draws the navy home hero; a design-file card. Pending: provisionally Factory's lane, paused 2026-10-05 until the owner's renewed instructions.
 41. Card 48: A fuzzy question should ask which aspect is meant first; extends Think's ask-back, decided by Jev, never a word list.
 42. Card 50: Nobody waits in silence: records within seconds, sentences one by one; phase 8.7 with card 2.
 43. Card 51: Part live (#156). Still open: the page claims the checker does not yet check.
 44. Card 52: Every answer ends by offering the next useful step; designed in `testing/Developer/reports/2026-09-26_conversation_next_steps/design.md`, a numbered phase after 8.7 and 8.9.
 45. Card 54: Reopening a long answer loses citations after the fiftieth; needs a diagnosis of the capture bound first.
 46. Card 55: The test queries document is the gate; the golden run is an alarm only (decision D4).
-47. Card 57: Building, wave 0: a cited sentence can show a quote that lacks its own numbers (F-8.10-A11).
-48. Card 59: A stopped question reads as answered after a reload; the run record and session memory must learn about the stop.
-49. Card 61: Ten small edge cases in the command line and the MCP bridge (F-8.10-V01 to V10).
-50. Card 67: A reopened outage answer still says the database is down "right now"; decide whether the note is dated or reworded.
-51. Card 71: A reopened answer does not look like the one read; first, which is right about the "could not be verified" note.
+47. Card 59: A stopped question reads as answered after a reload; the run record and session memory must learn about the stop.
+48. Card 61: Ten small edge cases in the command line and the MCP bridge (F-8.10-V01 to V10). Pending: provisionally Factory's lane, paused 2026-10-05 until the owner's renewed instructions.
+49. Card 67: A reopened outage answer still says the database is down "right now"; decide whether the note is dated or reworded.
+50. Card 71: A reopened answer does not look like the one read; first, which is right about the "could not be verified" note.
 
 Not on this list, deliberately: the explanation half of item 11.31. The owner approved the current state as is on 2026-09-21. The remaining lever is recorded in "The result that should shape what happens next" above as a standing option, not as queued work.
 
@@ -2038,7 +2037,7 @@ Twenty-one pull requests merged (#155 to #175), thirteen cards moved to Retest, 
 | Card 99, new | The sentence check approves rewordings that drop a qualifier | To do; measure first |
 | The test queries on develop | Morning: 84, 76, 99, 1, 75, 68, 27, 29, 25 and 24 passed, 33, 34 and 37 failed; afternoon: 27, GERD, Integrations and About at 1280 and 390 passed, 33 and 37 failed, fixed by #174; final: 9 of 10 passed, the SARS-CoV-2 question failed | Reports under `testing/Developer/reports/2026-10-05_*_test_queries/` |
 | Phase 8.7 | Resume plan written and its decisions taken | Parked, waiting on an OpenRouter top-up |
-| Process | Factory takes the screen and wording lane; lessons logged in `LEARNINGS.md` (the shared git stash, CI starvation, untracked evidence and the leak guard, Jev's literal criteria, fixtures from real answers, paths with a space, parallel builders on one file) | Standing |
+| Process | Factory takes the screen and wording lane, then the trial is paused the same night and its cards are pending; lessons logged in `LEARNINGS.md` (the shared git stash, CI starvation, untracked evidence and the leak guard, Jev's literal criteria, fixtures from real answers, paths with a space, parallel builders on one file) | Standing |
 
 ### 2026-09-30, overnight, in one table
 

@@ -1073,6 +1073,7 @@ This keeps the build stable while allowing continuous learning. Parked does not 
   - Card 99, new: the sentence check approves rewordings that drop a qualifier; waits on measuring the pair check first.
 - The board: four dead cards removed, ten moved to `testing/Future.md`, thirteen moved to Retest, card 99 added, card 56 returned. Factory, a second development agent, now works the screen and wording lane on its own branches; the lead keeps the answer path, the board, the plan and the merge queue.
 - Decisions logged: `DECISIONS.md`, rows dated 2026-10-05, covering the whole-board plan (D1 to D4), the filing rule, phase 8.7's resume terms, the sentence check reading the whole record sentence, card 56's build choices, card 89 shipping, dropped qualifiers measured first, and Factory's lane. The plan itself: `testing/Board_plan.md`. Learnings logged in `LEARNINGS.md`, 2026-10-05.
+- Night: the owner paused the Factory trial; its eight cards are pending and its lane provisional until renewed instructions, and the next session first asks whether Factory shares tasks (#177). The six unmerged parked branches stay on GitHub by the owner's choice, phase 8.7's four among them, since its resume plan lifts their commits.
 
 2026-09-30, overnight. `/SHIP` GAINS A LEAK SCAN IN BOTH REPOSITORIES; BRANCHES CLEANED. What awaits the owner and the next action: `HANDOFF.md`.
 
