@@ -456,6 +456,7 @@ import os
 import re
 import secrets
 import time
+import unicodedata
 import uuid
 import weakref
 from collections import defaultdict
@@ -2391,6 +2392,18 @@ class _ThinkClassification(BaseModel):
     record_type: Literal["sra", "assembly", "none"] = "none"
 
 
+#: The keys the parse retry asks the second reply to use, read from the
+#: schema in its declaration order. Card 56 follow-up (2026-10-06, round 1
+#: judge J-56-04): the hand-written list this replaces named three keys and
+#: not `record_type`, so a model that obeyed it dropped the record type and
+#: an SRA question became a gene question (probe: a first reply `not json`,
+#: then a second with the three keys only, asked "which gene, variant or
+#: condition do you mean?" of a person who typed SARS-CoV-2).
+_THINK_RETRY_KEY_LIST: Final[str] = ", ".join(
+    f'"{name}"' for name in _ThinkClassification.model_fields
+)
+
+
 class ThinkClassificationUnavailableError(RuntimeError):
     """The Plan tier could not produce a usable classification.
 
@@ -2610,7 +2623,12 @@ def _repair_think_narrative_key(parsed: dict[str, Any]) -> dict[str, Any]:
     """
     if "narrative" in parsed:
         return parsed
-    known_keys = {"query_class", "narrative", "entities"}
+    # Card 56 follow-up (2026-10-06, round 1 judge J-56-04): read from the
+    # schema, so a field added to `_ThinkClassification` is a known key here
+    # too. The hand-kept set this replaces lacked `record_type`, so a
+    # well-formed SRA reply that wrote "why" for "narrative" was refused,
+    # went to the parse retry, and could lose its record type there.
+    known_keys = set(_ThinkClassification.model_fields)
     for alias in _THINK_NARRATIVE_KEY_ALIASES:
         if alias not in parsed or not isinstance(parsed[alias], str):
             continue
@@ -3462,6 +3480,48 @@ def _gene_shaped_fallback_candidates(
     return candidates
 
 
+def _is_name_joiner(char: str) -> bool:
+    """A hyphen or dash that joins two parts of one name: the ASCII hyphen,
+    any Unicode dash punctuation (category Pd: U+2010 hyphen, U+2011
+    non-breaking hyphen, the figure, en and em dashes, U+FF0D) and the
+    minus sign U+2212, which pasted text sometimes carries in their place."""
+    return unicodedata.category(char) == "Pd" or char == "\u2212"
+
+
+def _only_a_piece_of_a_joined_name(query_text: str, token: str) -> bool:
+    """True when every place `token` stands in the question as a word is a
+    piece of a hyphen-joined name: a letter or digit, then a hyphen or dash,
+    on either side of it ("SARS" in "SARS-CoV-2", typed with an ASCII
+    hyphen or a Unicode one).
+
+    False when the token also stands anywhere as a whole word ("MODY" in
+    "SRA runs from MODY patients"), and False when it is not found at all,
+    so a caller that skips on True never drops a token it cannot place.
+    Occurrences are `_GENE_SHAPED_TOKEN_PATTERN` matches compared after
+    upper-casing, the same comparison the candidates were de-duplicated by.
+    """
+    wanted = token.upper()
+    found = False
+    for match in _GENE_SHAPED_TOKEN_PATTERN.finditer(query_text):
+        if match.group(0).upper() != wanted:
+            continue
+        found = True
+        start, end = match.start(), match.end()
+        joined_before = (
+            start >= 2
+            and _is_name_joiner(query_text[start - 1])
+            and query_text[start - 2].isalnum()
+        )
+        joined_after = (
+            end + 1 < len(query_text)
+            and _is_name_joiner(query_text[end])
+            and query_text[end + 1].isalnum()
+        )
+        if not (joined_before or joined_after):
+            return False
+    return found
+
+
 async def _confirm_fallback_candidates(
     candidates: list[str], taxon: str
 ) -> list[tuple[str, str]]:
@@ -3858,9 +3918,9 @@ async def _run_think_classification(
                         "content": (
                             "That reply did not match the required schema: "
                             f"{error_text}. Reply again with a single JSON object "
-                            'using exactly these keys: "query_class", '
-                            '"narrative", "entities". No other key name for '
-                            "the reasoning field is accepted."
+                            f"using exactly these keys: {_THINK_RETRY_KEY_LIST}. "
+                            "No other key name for the reasoning field is "
+                            "accepted."
                         ),
                     },
                 ]
@@ -4243,9 +4303,28 @@ async def _think(
     ):
         disease_fallback: list[tuple[str, str]] = []
         fallback_disclosures: list[str] = []
+        # Card 56 follow-up (2026-10-06): on a question that asks for SRA
+        # runs or genome assemblies, a token that stands in the question
+        # only as a piece of a hyphen-joined name is never tried as a
+        # disease. Measured live on develop's plan model (findings.md):
+        # 5 of 26 valid runs of "Find SRA runs of SARS-CoV-2 sequenced on
+        # Illumina ..." came back with no entity at all, so #173's organism
+        # exclusion above had no span to protect, the token rule cut "SARS"
+        # out of "SARS-CoV-2", and MedGen bound three records about the
+        # disease SARS. With the piece skipped nothing binds, and the run
+        # goes on as develop's does when nothing resolved (on that question,
+        # `CLARIFICATION_QUESTION` is asked back).
+        # A whole word is still tried ("MODY" in "SRA runs from MODY
+        # patients" binds as before), and every other record type, "none"
+        # included, is untouched, so a paper question keeps develop's
+        # behaviour exactly. No retry, no organism matching, no word list:
+        # the product owner's smallest safe fix after two review rounds.
+        skip_name_pieces = classification.record_type in breadth_plan.ORGANISM_RECORD_DBS
         for candidate in _gene_shaped_fallback_candidates(
             query.text, exact_matches, organism_spans
         )[:_MAX_LIVE_DISEASE_LOOKUPS]:
+            if skip_name_pieces and _only_a_piece_of_a_joined_name(query.text, candidate):
+                continue
             bound, matched = await resolve_disease_mention_to_curies(candidate)
             for curie in bound:
                 if curie not in {c for _, c in disease_fallback}:
