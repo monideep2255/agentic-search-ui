@@ -486,7 +486,7 @@ class PastSearch(BaseModel):
 
     trace_id: str = Field(..., max_length=64)
     question: str = Field(..., max_length=2000)
-    asked_at: datetime
+    asked_at: datetime = Field(..., json_schema_extra={"maxLength": 40})
     trust_signal: str = Field(..., max_length=20)
     citation_count: int = Field(..., ge=0)
     has_saved_answer: bool = False
@@ -528,7 +528,7 @@ class ReopenedAnswerOutput(BaseModel):
 
     trace_id: str = Field(..., max_length=64)
     question: str = Field(..., max_length=2000)
-    asked_at: datetime
+    asked_at: datetime = Field(..., json_schema_extra={"maxLength": 40})
     audience_depth: AudienceDepth
     answer_markdown: str = Field(..., max_length=32000)
     citations: list[CitationPayload] = Field(default_factory=list, max_length=_MAX_CITATIONS)
