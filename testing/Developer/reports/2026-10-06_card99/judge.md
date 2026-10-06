@@ -6,6 +6,7 @@ Judge for card 99, the per-pair qualifier check in `src/system_03_search_agent/s
 
 - [Findings](#findings)
 - [Checklist verdicts](#checklist-verdicts)
+- [Verdict](#verdict)
 - [What was not covered](#what-was-not-covered)
 
 ## Findings
