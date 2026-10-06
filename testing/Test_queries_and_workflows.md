@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-10-05.
+Last updated: 2026-10-06.
 
 Every entry has the same three parts:
 
@@ -423,6 +423,20 @@ What you should see:
 - A Plain language answer keeps its bold main point too. The fix over-corrected at first, so plain language had no bold at all, and that was repaired the same day, 2026-09-20.
 - Why it matters: in the product owner's words, "Too much bold: only the title or main point should be bold"; bold everywhere stops pointing the reader at anything.
 
+### 106. A plain-language answer never claims more than its paper (cards 99 and 101)
+
+Queries to try:
+
+- `What are the typical symptoms and risk factors of GERD?` in Plain language, five times
+- `What causes bronchiolitis in babies, and how is it usually treated?` in Plain language
+
+What you should see:
+
+- Where a paper says young children, the answer never says children; where it says potentially or may, the answer keeps the hedge.
+- The bronchiolitis answer never says babies where its record says children.
+- Each answer still has written sentences above its records. A plain-language GERD answer shows about two to three sentences; a sentence that drops a limiting word such as "transient" is held back rather than shown.
+- Why it matters: a parent reading about an older child, or a reader told a symptom is GERD's when the paper only suspects it, takes a wider claim as fact. A missing sentence is better than a wider one.
+
 ## 2. Follow-up questions and conversation
 
 ### 20. A follow-up carries the gene forward (Product test 2, 7.1 to 7.5)
@@ -677,6 +691,7 @@ What you should see:
 - The organism's NCBI Taxonomy record among the sources.
 - The Illumina and sample-type conditions are not yet applied to the search; the answer must not claim they were.
 - Why it matters: before 2026-10-05 the first question was answered confidently about the disease SARS, a confident wrong record.
+- Since 2026-10-06 (#186): when Think misses the organism, the question is asked back instead of answered about SARS. Still known and left open on card 56: "SARS CoV-2" typed with a space; a SARS-CoV-2 question asked after a gene question in the same conversation; "SRA runs from AML-derived cell lines"; and a refusal naming "Illumina" on about 1 run in 3.
 
 ### 104. The data records linked to one paper (card 74, G-006)
 
@@ -1253,6 +1268,7 @@ What you should see:
 - If the system refuses the question, the tour says so and ends with Done.
 - Escape closes the tour at any point. "Take the tour" starts it again any time.
 - At phone width the card sits at the bottom of the screen and nothing scrolls sideways.
+- Rest the pointer on "Take the tour": its dark blue text and border stay readable on the light blue it turns (card 44, 2026-10-06).
 - Why it matters: a first-time visitor who does not know what to ask should be able to see the whole product work end to end without having to guess a good question first.
 
 ### 99. The web app carries its libraries' license notices (card 60)
@@ -1269,6 +1285,20 @@ What you should see:
 - `react`, `react-dom` and `@mui/material` are among them, each with its version and its license text.
 - No package reads "no license file found".
 - Why it matters: React, React DOM and MUI are MIT licensed, and their licenses require the notices to travel with every copy of the app. Before card 60, the built app carried none of them.
+
+### 105. Long variant names on a phone (cards 43 and 43b)
+
+Queries to try:
+
+- `What does BRCA1 do?` on a phone, or with the browser window at 390 and then 414 pixels wide
+
+What you should see:
+
+- A long variant name such as NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG wraps inside its line, in the sentence, in the record list and under Sources.
+- The page never scrolls sideways, and every citation number stays on screen.
+- A citation number stays on the same line as the end of the name it belongs to, never alone on the next line.
+- On a wide screen the record list stays one line per record.
+- Why it matters: a sideways-scrolling answer hides its citations, and a number alone on a line reads as a stray digit rather than a source.
 
 ## 10. Questions with no gene and no disease in them
 
@@ -1937,6 +1967,11 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 101 | Every sentence the writer rewords is checked against its paper before you see it | Query 106 |
+| card 99 | A plain-language answer never says "children" for "young children" or drops "potentially" | Query 106 |
+| cards 43 and 43b | Long variant names wrap on a phone, with their citation numbers kept beside them | Query 105 |
+| card 44 | The "Take the tour" button stays readable when the pointer rests on it | Query 63 |
+| card 56 | An organism question is never answered about a disease cut out of its name | Query 103 |
 | card 63 | A "not yet confirmed" answer reopens with its trust line and notes, and an NCBI outage is said plainly | Query 100 |
 | card 60 | The web app carries the license notices of the libraries it bundles | Query 99 |
 | card 58 | Stop can be pressed until the answer's first sentence is on screen | Query 98 |
