@@ -603,21 +603,61 @@ def _batch_result(choices: dict[str, str], *, cost: float = 5e-05) -> jev_client
     )
 
 
+def _is_pair_call(kwargs: dict) -> bool:
+    """Card 99: a pair call's questions are keyed `pair_<item>_<k>`."""
+    return all(key.startswith("pair_") for key in kwargs["questions"])
+
+
 class _FakeJev:
     """Stands in for `call_jev_batch`: records every call, then answers
-    with `choices` (item key to "yes" or "no"), or raises `raises`."""
+    the item call with `choices` (item key to "yes" or "no"), or raises
+    `raises`.
 
-    def __init__(self, choices=None, *, raises=None, delay_s=0.0, cost=5e-05):
+    Card 99: a pair call is answered with `pair_choices` (pair key to
+    choice), every pair not named there "no", so a test about the item
+    question sees the item question decide, as before card 99; or it
+    raises `pair_raises`, or sleeps `pair_delay_s` first."""
+
+    def __init__(
+        self,
+        choices=None,
+        *,
+        raises=None,
+        delay_s=0.0,
+        cost=5e-05,
+        pair_choices=None,
+        pair_raises=None,
+        pair_delay_s=0.0,
+    ):
         self.calls: list[dict] = []
         self.choices = choices
         self.raises = raises
         self.delay_s = delay_s
         self.cost = cost
+        self.pair_choices = pair_choices or {}
+        self.pair_raises = pair_raises
+        self.pair_delay_s = pair_delay_s
+
+    @property
+    def item_calls(self) -> list[dict]:
+        return [call for call in self.calls if not _is_pair_call(call)]
+
+    @property
+    def pair_calls(self) -> list[dict]:
+        return [call for call in self.calls if _is_pair_call(call)]
 
     async def __call__(self, **kwargs):
         import asyncio
 
         self.calls.append(kwargs)
+        if _is_pair_call(kwargs):
+            if self.pair_delay_s:
+                await asyncio.sleep(self.pair_delay_s)
+            if self.pair_raises is not None:
+                raise self.pair_raises
+            return _batch_result(
+                {key: self.pair_choices.get(key, "no") for key in kwargs["questions"]}, cost=self.cost
+            )
         if self.delay_s:
             await asyncio.sleep(self.delay_s)
         if self.raises is not None:
@@ -717,9 +757,10 @@ async def test_jev_mode_asks_one_yes_no_question_per_sentence_in_one_call(monkey
 
     approved = await _check(candidates, guard=guard)
 
-    assert len(fake_jev.calls) == 1, "one call for the whole answer"
+    assert len(fake_jev.item_calls) == 1, "one item call for the whole answer"
+    assert len(fake_jev.pair_calls) == 1, "card 99: and one pair call beside it, for the pairs of items 1 and 3"
     assert guard.calls == [], "the guard is not asked when Jev answers"
-    call = fake_jev.calls[0]
+    call = fake_jev.item_calls[0]
     assert call["state"] == sentence_check_module.build_jev_state(candidates)[0]
     questions = call["questions"]
     assert list(questions) == ["item_1", "item_2", "item_3"]
@@ -742,7 +783,7 @@ async def test_jev_gets_less_time_when_less_is_left(monkeypatch) -> None:
     fake_jev = _FakeJev({"item_1": "no", "item_2": "no", "item_3": "no"})
     _jev_on(monkeypatch, fake_jev)
     await _check(_made_up_candidates(), guard=_FakeGuard(), budget_s=1.2)
-    assert fake_jev.calls[0]["timeout_s"] == 1.2
+    assert [call["timeout_s"] for call in fake_jev.calls] == [1.2, 1.2], "the item call and the pair call"
 
 
 @pytest.mark.asyncio
@@ -750,7 +791,8 @@ async def test_jevs_cost_is_checked_first_and_charged_to_the_question(monkeypatc
     _jev_on(monkeypatch, _FakeJev({"item_1": "no", "item_2": "no", "item_3": "no"}, cost=0.0042))
     harness = Harness(trace_id="k-cost")
     await _check(_made_up_candidates(), guard=_FakeGuard(), trace_id="k-cost", harness=harness)
-    assert harness.get_query_cost_usd("k-cost") == pytest.approx(0.0042)
+    # Card 99: the item call and the one pair call, each charged what it reported.
+    assert harness.get_query_cost_usd("k-cost") == pytest.approx(2 * 0.0042)
 
 
 @pytest.mark.parametrize(
@@ -927,7 +969,7 @@ async def test_sentences_past_the_cap_are_not_sent_and_not_approved(monkeypatch)
 
     approved = await _check(candidates, guard=_FakeGuard())
 
-    assert len(fake_jev.calls[0]["questions"]) == MAX_CANDIDATES
+    assert len(fake_jev.item_calls[0]["questions"]) == MAX_CANDIDATES
     assert approved == frozenset(c.key for c in candidates[:MAX_CANDIDATES])
     assert not approved & {c.key for c in candidates[MAX_CANDIDATES:]}
 
@@ -989,9 +1031,15 @@ def _jev_http_reply(answers: dict[str, dict], *, cost: float = 5e-05) -> httpx.R
     return httpx.Response(200, content=json.dumps(body).encode())
 
 
+_PAIR_CALL_COST = 6e-05
+
+
 def _jev_replies_with(monkeypatch, answers: dict[str, dict], *, cost: float = 5e-05) -> list[dict]:
     """Jev mode through the REAL `call_jev_batch`: only its HTTP seam is
-    stubbed, so parsing and validation run exactly as live."""
+    stubbed, so parsing and validation run exactly as live.
+
+    Card 99: the item call gets `answers` at `cost`; a pair call gets a
+    "no" backed by its probabilities for every pair, at `_PAIR_CALL_COST`."""
     monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "1.0")
@@ -999,6 +1047,10 @@ def _jev_replies_with(monkeypatch, answers: dict[str, dict], *, cost: float = 5e
 
     async def fake_post(_headers, body):
         bodies.append(body)
+        if all(key.startswith("pair_") for key in body["questions"]):
+            return _jev_http_reply(
+                {key: _jev_answer("no") for key in body["questions"]}, cost=_PAIR_CALL_COST
+            )
         return _jev_http_reply(answers, cost=cost)
 
     monkeypatch.setattr(jev_client_module, "_post", fake_post)
@@ -1091,7 +1143,8 @@ async def test_an_unusable_jev_reply_approves_nothing_and_is_charged_its_reporte
         await _check(_made_up_candidates(1), guard=guard, trace_id="j10-s", harness=harness)
 
     assert guard.calls == []
-    assert harness.get_query_cost_usd("j10-s") == pytest.approx(charged)
+    # Card 99: plus the one pair call beside it, which came back usable.
+    assert harness.get_query_cost_usd("j10-s") == pytest.approx(charged + _PAIR_CALL_COST)
 
 
 @pytest.mark.asyncio
@@ -1133,8 +1186,8 @@ async def test_the_write_step_asks_jev_and_not_the_guard_when_jev_decides(monkey
         trace_id="t-wire-1",
         budget_s=30.0,
     )
-    assert len(fake_jev.calls) == 1 and calls == []
-    assert result.grounded, "Jev's no approved the faithful rewording"
+    assert len(fake_jev.item_calls) == 1 and calls == []
+    assert result.grounded, "Jev's no approved the faithful rewording, and every pair said no"
 
 
 @pytest.mark.asyncio
