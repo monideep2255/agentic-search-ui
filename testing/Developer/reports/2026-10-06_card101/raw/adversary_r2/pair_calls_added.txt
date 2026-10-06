@@ -1,0 +1,23 @@
+sentence_check_raw gr1 Jev calls before 3 after 3
+sentence_check_raw gr2 Jev calls before 2 after 2
+sentence_check_raw gr4 Jev calls before 3 after 3
+sentence_check_raw gr5 Jev calls before 2 after 3
+sentence_check_raw gr5 Jev calls before 2 after 2
+sentence_check_raw md2 Jev calls before 3 after 3
+sentence_check_raw md3 Jev calls before 2 after 2
+sentence_check_raw md5 Jev calls before 2 after 2
+develop_control cm1 Jev calls before 2 after 2
+develop_control cm4 Jev calls before 2 after 2
+develop_control cr1 Jev calls before 2 after 2
+develop_control cr3 Jev calls before 2 after 2
+develop_control cr4 Jev calls before 2 after 2
+develop_control cr5 Jev calls before 2 after 2
+develop_control cr5 Jev calls before 2 after 2
+live gp3 Jev calls before 4 after 4
+live gr1 Jev calls before 2 after 2
+live gr1 Jev calls before 2 after 2
+live gr2 Jev calls before 2 after 3
+out gp4 Jev calls before 4 after 4
+out hb4 Jev calls before 2 after 2
+out hd2 Jev calls before 1 after 1
+Jev calls per affected check: before 50, after 52; checks that gained a call: 2

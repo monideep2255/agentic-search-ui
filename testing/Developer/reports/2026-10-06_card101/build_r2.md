@@ -37,6 +37,12 @@ Builder, 2026-10-06, branch `fix/card101-check-every-rewording` from develop 3d6
 
 No sentence the app writes in its own words reaches the screen unless the sentence check has read it against its paper. A sentence copied word for word from the record still shows at once, with no extra call. When the check cannot run, the reworded sentences it would have judged are not shown, as the check already did for the rest.
 
+Correction after review (judge J2-101-01, adversary A2-101-01 to 03): that holds for sentences the writer rewords. Three shapes still show without the check, on develop and on this branch alike. They stay on card 101:
+
+- A copied cut that drops a clause at either end, including "There is no evidence that".
+- Two copied clauses joined into a new claim.
+- A short record value, such as a title, wrapped in the question's words.
+
 So "babies" can no longer replace the paper's "children" just because the person asked about babies, and a dropped "usually" or "healthy" now meets card 99's dropped-limit check like every other rewording.
 
 ## What changed
