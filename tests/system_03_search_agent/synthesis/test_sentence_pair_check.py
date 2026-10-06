@@ -274,9 +274,8 @@ def test_an_unreadable_pair_verdict_raises(shape: str) -> None:
 async def test_a_query_too_close_to_its_cap_for_every_call_approves_nothing(monkeypatch) -> None:
     """Every call is cap-checked before any is sent, each counting the calls
     checked before it: room for the item call alone is not enough."""
-    estimate = cost_control.estimate_call_cost_usd("guard")
     fake_jev = _FakeJev({"item_1": "no", "item_2": "no"})
-    _jev_on(monkeypatch, fake_jev, cap_usd=str(estimate * 1.5))
+    _jev_on(monkeypatch, fake_jev, cap_usd=str(jev_client_module.MAX_JEV_COST_USD * 1.5))
     with pytest.raises(cost_control.QueryCapExceededError):
         await _check([WITH_PAIRS, NO_PAIRS], guard=_FakeGuard())
     assert fake_jev.calls == [], "nothing is sent"
@@ -285,9 +284,8 @@ async def test_a_query_too_close_to_its_cap_for_every_call_approves_nothing(monk
 @pytest.mark.asyncio
 async def test_room_for_every_call_sends_them_all(monkeypatch) -> None:
     """Populate-check for the arm above."""
-    estimate = cost_control.estimate_call_cost_usd("guard")
     fake_jev = _FakeJev({"item_1": "no", "item_2": "no"})
-    _jev_on(monkeypatch, fake_jev, cap_usd=str(estimate * 2.5))
+    _jev_on(monkeypatch, fake_jev, cap_usd=str(jev_client_module.MAX_JEV_COST_USD * 2.5))
     await _check([WITH_PAIRS, NO_PAIRS], guard=_FakeGuard())
     assert len(fake_jev.calls) == 2
 
@@ -449,3 +447,50 @@ async def test_a_pair_veto_lands_on_the_sentence_the_pair_belongs_to(monkeypatch
     assert approved == frozenset({NO_PAIRS.key})
     calls, _ = build_pair_calls([NO_PAIRS, WITH_PAIRS])
     assert set(calls[0].items.values()) == {2}, "every pair key maps to the sentence it was proposed for"
+
+
+# ------------------------------------------------ A-99-05, J-99-07: the cap holds for every call
+
+
+MANY_PAIRS = [
+    SynthesisCandidate(key=(f"s{n}", (YOUNG_CHILDREN_QUOTE,)), sentence=sentence, quotes=(YOUNG_CHILDREN_QUOTE,))
+    for n, (_id, sentence) in enumerate(DROPPED_YOUNG)
+]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("candidates", "calls"),
+    [([WITH_PAIRS, NO_PAIRS], 2), (MANY_PAIRS, 3)],
+    ids=["item call and one pair call", "item call and two pair calls"],
+)
+async def test_a_check_that_is_sent_can_never_take_the_query_past_its_cap(monkeypatch, candidates, calls) -> None:
+    """The arithmetic: every call can be charged up to `MAX_JEV_COST_USD`, so
+    a check of `calls` calls is sent only when spent + calls x ceiling fits
+    the cap. Just inside it, every call failing at the ceiling ends at or
+    under the cap; just outside it, nothing is sent."""
+    ceiling = jev_client_module.MAX_JEV_COST_USD
+    cap = 0.10
+    assert len(build_pair_calls(candidates)[0]) + 1 == calls
+    boundary = cap - calls * ceiling
+
+    async def run(spent: float):
+        failure = jev_client_module.JevCallError("bad shape", reason="malformed_reply", billed_cost_usd=ceiling)
+        item_choices = {f"item_{n}": "no" for n in range(1, len(candidates) + 1)}
+        fake_jev = _FakeJev(item_choices, raises=failure, pair_raises=failure)
+        _jev_on(monkeypatch, fake_jev, cap_usd=str(cap))
+        harness = Harness(trace_id="c99-cap")
+        harness.track_cost("c99-cap", "guard", spent)  # type: ignore[arg-type]
+        with pytest.raises((SentenceCheckUnreadable, cost_control.QueryCapExceededError)) as caught:
+            await _check(candidates, guard=_FakeGuard(), trace_id="c99-cap", harness=harness)
+        return caught.type, fake_jev, harness.get_query_cost_usd("c99-cap")
+
+    kind, fake_jev, total = await run(boundary - 0.001)
+    assert kind is SentenceCheckUnreadable
+    assert len(fake_jev.calls) == calls, "inside the margin: all sent"
+    assert total <= cap, f"{total} passed the cap {cap}"
+
+    kind, fake_jev, total = await run(boundary + 0.001)
+    assert kind is cost_control.QueryCapExceededError
+    assert fake_jev.calls == [], "outside it: nothing sent"
+    assert total == pytest.approx(boundary + 0.001)

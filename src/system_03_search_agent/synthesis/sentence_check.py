@@ -92,6 +92,7 @@ from system_03_search_agent.harness.decide import jev_decides
 from system_03_search_agent.harness.jev_client import (
     JEV_TOTAL_TIMEOUT_S,
     MAX_BATCH_QUESTIONS,
+    MAX_JEV_COST_USD,
     JevAnswer,
     JevBatchResult,
     JevCallError,
@@ -595,13 +596,14 @@ async def _ask_jev(
     """Jev's verdicts on every sentence: the item call, and the pair calls
     beside it, all concurrent and each within `timeout_s`.
 
-    Cap-checked first and charged after, exactly like `harness.decide`'s
-    Jev pick: Jev has no tier of its own, so the guard tier's conservative
-    estimate and cost bucket stand in. Every call is cap-checked before any
-    is sent, each counting the estimates of the calls checked before it,
-    since none of them is charged until it returns. Every call that comes
-    back is charged, a reply that came back unusable its reported cost too
-    (`JevCallError.billed_cost_usd`), and the check waits for all of them.
+    Cap-checked first and charged after, like `harness.decide`'s Jev
+    pick: Jev has no tier of its own, so the guard tier's cost bucket
+    stands in. The cap check is made once, before any call is sent, and
+    leaves room for every call at the most it can be charged
+    (`MAX_JEV_COST_USD` each), since none is charged until it returns.
+    Every call that comes back is charged, a reply that came back unusable
+    its reported cost too (`JevCallError.billed_cost_usd`), and the check
+    waits for all of them.
 
     A sentence is approved only when its item answer approves it and every
     one of its pairs was asked and answered "no" (`_jev_approves`). Any
@@ -612,15 +614,22 @@ async def _ask_jev(
     if not sent:
         raise SentenceCheckUnreadable("no item fits in one Jev call")
     pair_calls, not_asked = build_pair_calls(sent)
-    # Card 99: the pair calls run at the same time as the item call, so the
-    # cap must hold for all of them at once. A query too close to its cap
-    # for every call approves nothing, as a capped item call did before.
-    cap_usd = cost_control.per_query_cost_cap_usd()
+    # Card 99: the calls run at the same time and none is charged until it
+    # returns, so the cap must hold for all of them at once, at the most
+    # each can be charged: `MAX_JEV_COST_USD`, the ceiling the client bills
+    # for a reply it cannot read (A-99-05, J-99-07). One check then reserves
+    # (calls x ceiling): `check_per_query_cap` adds the guard estimate to the
+    # running cost, so the cap it is given is lowered to leave exactly that
+    # much room. A query too close to its cap for every call approves
+    # nothing, as a capped item call did before.
+    calls = 1 + len(pair_calls)
     estimate_usd = cost_control.estimate_call_cost_usd("guard")
-    for in_flight in range(1 + len(pair_calls)):
-        cost_control.check_per_query_cap(
-            harness, trace_id, "guard", query_cap_usd=cap_usd - in_flight * estimate_usd
-        )
+    cost_control.check_per_query_cap(
+        harness,
+        trace_id,
+        "guard",
+        query_cap_usd=cost_control.per_query_cost_cap_usd() - (calls * MAX_JEV_COST_USD - estimate_usd),
+    )
     model = resolve_jev_model()
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
 
