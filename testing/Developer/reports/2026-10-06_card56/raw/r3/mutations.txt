@@ -1,0 +1,34 @@
+M1 the piece is never skipped: 5 failed, 7 passed in 2.43s
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[ascii-hyphen]
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[unicode-hyphen]
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[non-breaking-hyphen]
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[dash]
+    red: test_assembly_question_with_no_entity_binds_no_medgen_record
+M2 skipped on SRA questions only: 1 failed, 11 passed in 2.22s
+    red: test_assembly_question_with_no_entity_binds_no_medgen_record
+M3 only the ASCII hyphen joins a name: 3 failed, 9 passed in 1.98s
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[unicode-hyphen]
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[non-breaking-hyphen]
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[dash]
+M4 every candidate is skipped on an SRA question: 7 failed, 5 passed in 2.07s
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[ascii-hyphen]
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[unicode-hyphen]
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[non-breaking-hyphen]
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[dash]
+    red: test_a_whole_word_on_an_sra_question_still_binds_as_on_develop
+    red: test_a_follow_up_with_session_memory_is_unchanged_from_develop[brca1-no-entity]
+    red: test_a_follow_up_with_session_memory_is_unchanged_from_develop[tuberculosis-no-entity]
+M5 the skip ignores the record type: 1 failed, 11 passed in 2.07s
+    red: test_a_paper_question_is_unchanged_from_develop
+M6 the whole disease fallback is skipped on an SRA question: 7 failed, 5 passed in 2.12s
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[ascii-hyphen]
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[unicode-hyphen]
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[non-breaking-hyphen]
+    red: test_sra_question_with_no_entity_binds_no_medgen_record[dash]
+    red: test_a_whole_word_on_an_sra_question_still_binds_as_on_develop
+    red: test_a_follow_up_with_session_memory_is_unchanged_from_develop[brca1-no-entity]
+    red: test_a_follow_up_with_session_memory_is_unchanged_from_develop[tuberculosis-no-entity]
+M7 the retry lists the three hand-kept keys: 1 failed, 11 passed in 2.03s
+    red: test_the_parse_retry_asks_for_every_schema_key
+M8 the repair knows the three hand-kept keys: 1 failed, 11 passed in 2.20s
+    red: test_the_narrative_repair_counts_record_type_as_a_known_key
