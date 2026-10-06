@@ -282,6 +282,9 @@ async def test_the_sentence_check_charges_the_ceiling(
 ) -> None:
     _patch_reply(monkeypatch, _site_content(shape, key="", choice="", batch=True))
     monkeypatch.setattr(sentence_check_module, "build_jev_state", lambda candidates: ("STATE", [object(), object()]))
+    # Card 99: the placeholder items carry no sentence, so no pair call; this
+    # test is about the item call's charge.
+    monkeypatch.setattr(sentence_check_module, "build_pair_calls", lambda sent: ([], frozenset()))
     harness = Harness(trace_id="s")
     with pytest.raises(JevCallError) as excinfo:
         await sentence_check_module._ask_jev([], harness=harness, trace_id="s", timeout_s=3.0)
