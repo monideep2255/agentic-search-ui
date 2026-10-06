@@ -431,3 +431,21 @@ def json_quote(quote: str) -> str:
     import json
 
     return "QUOTE: " + json.dumps(quote, ensure_ascii=False)
+
+
+# ------------------------------------------------ J-99-04: which sentence a veto lands on
+
+
+@pytest.mark.asyncio
+async def test_a_pair_veto_lands_on_the_sentence_the_pair_belongs_to(monkeypatch) -> None:
+    """The sentence with pairs is item 2, the one with none is item 1. A "yes"
+    on a pair of item 2 holds back item 2 and leaves item 1 shown; a veto
+    mapped to item 1 would do the reverse."""
+    young_pair = "pair_2_" + str(check_phrases(WITH_PAIRS.sentence, WITH_PAIRS.quotes).index("young children") + 1)
+    _jev_on(monkeypatch, _FakeJev({"item_1": "no", "item_2": "no"}, pair_choices={young_pair: "yes"}))
+
+    approved = await _check([NO_PAIRS, WITH_PAIRS], guard=_FakeGuard())
+
+    assert approved == frozenset({NO_PAIRS.key})
+    calls, _ = build_pair_calls([NO_PAIRS, WITH_PAIRS])
+    assert set(calls[0].items.values()) == {2}, "every pair key maps to the sentence it was proposed for"
