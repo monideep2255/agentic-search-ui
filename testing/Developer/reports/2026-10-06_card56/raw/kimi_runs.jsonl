@@ -1,0 +1,6 @@
+{"run": 1, "model": "moonshotai/kimi-k2.6", "secs": 0.1, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0}
+{"run": 2, "model": "moonshotai/kimi-k2.6", "secs": 0.0, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0}
+{"run": 3, "model": "moonshotai/kimi-k2.6", "secs": 0.0, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0}
+{"run": 4, "model": "moonshotai/kimi-k2.6", "secs": 0.1, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0}
+{"run": 5, "model": "moonshotai/kimi-k2.6", "secs": 0.0, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0}
+{"run": 6, "model": "moonshotai/kimi-k2.6", "secs": 0.0, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0}

@@ -1,0 +1,10 @@
+model call point=guardrail.injection trace=probe56-d15faa66 kind=jev elapsed_ms=303 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-d15faa66 kind=guard elapsed_ms=9973 outcome=timeout attempt=1 provider=unknown
+guard classification call failed (attempt 1 of 2, trace probe56-d15faa66, harness.enforce_timeout:guardrail, transient); asking once more within the guardrail's budget after 0.0s
+model call point=guardrail.classify trace=probe56-d15faa66 kind=guard elapsed_ms=4965 outcome=timeout attempt=2 provider=unknown
+model call point=guardrail.injection trace=probe56-0c03b5fd kind=jev elapsed_ms=241 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-0c03b5fd kind=guard elapsed_ms=1735 outcome=ok attempt=1 provider=GMICloud
+model call point=think.asks_features trace=probe56-0c03b5fd kind=jev elapsed_ms=262 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-0c03b5fd kind=jev elapsed_ms=333 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-0c03b5fd kind=jev elapsed_ms=364 outcome=ok attempt=1 provider=unknown
+model call point=think.gene_or_condition trace=probe56-0c03b5fd kind=jev elapsed_ms=220 outcome=ok attempt=1 provider=unknown

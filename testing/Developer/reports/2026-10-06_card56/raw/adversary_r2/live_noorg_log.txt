@@ -1,0 +1,18 @@
+model call point=guardrail.injection trace=probe56-44f5dfb7 kind=jev elapsed_ms=292 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-44f5dfb7 kind=guard elapsed_ms=564 outcome=ok attempt=1 provider=Relace
+model call point=think.recent_years trace=probe56-44f5dfb7 kind=jev elapsed_ms=228 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-44f5dfb7 kind=jev elapsed_ms=234 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-44f5dfb7 kind=jev elapsed_ms=266 outcome=ok attempt=1 provider=unknown
+think classification asked for sra records and named nothing (trace probe56-44f5dfb7); asked once more, kept the first reply: the second names no organism the question carries, in 1734 ms
+model call point=guardrail.injection trace=probe56-ee72ad23 kind=jev elapsed_ms=195 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-ee72ad23 kind=guard elapsed_ms=1446 outcome=ok attempt=1 provider=Novita
+model call point=plan.literature trace=probe56-ee72ad23 kind=jev elapsed_ms=231 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-ee72ad23 kind=jev elapsed_ms=231 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-ee72ad23 kind=jev elapsed_ms=321 outcome=ok attempt=1 provider=unknown
+think classification asked for sra records and named nothing (trace probe56-ee72ad23); asked once more, kept the first reply: the second names no organism the question carries, in 928 ms
+model call point=guardrail.injection trace=probe56-87efaba8 kind=jev elapsed_ms=457 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-87efaba8 kind=guard elapsed_ms=2209 outcome=ok attempt=1 provider=Novita
+model call point=think.recent_years trace=probe56-87efaba8 kind=jev elapsed_ms=223 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-87efaba8 kind=jev elapsed_ms=223 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-87efaba8 kind=jev elapsed_ms=284 outcome=ok attempt=1 provider=unknown
+think classification asked for sra records and named nothing (trace probe56-87efaba8); asked once more, kept the first reply: the second names no organism the question carries, in 1883 ms

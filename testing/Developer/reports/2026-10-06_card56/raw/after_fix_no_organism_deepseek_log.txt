@@ -1,0 +1,16 @@
+model call point=guardrail.injection trace=probe56-5a89f9b6 kind=jev elapsed_ms=302 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-5a89f9b6 kind=guard elapsed_ms=1736 outcome=ok attempt=1 provider=StreamLake
+model call point=think.asks_features trace=probe56-5a89f9b6 kind=jev elapsed_ms=277 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-5a89f9b6 kind=jev elapsed_ms=277 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-5a89f9b6 kind=jev elapsed_ms=347 outcome=ok attempt=1 provider=unknown
+think classification asked for sra records and named no organism (trace probe56-5a89f9b6); asked once more, kept the first reply: the second still names no organism, in 3119 ms
+model call point=guardrail.injection trace=probe56-a4e5d510 kind=jev elapsed_ms=265 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-a4e5d510 kind=guard elapsed_ms=1530 outcome=ok attempt=1 provider=AtlasCloud
+model call point=plan.literature trace=probe56-a4e5d510 kind=jev elapsed_ms=264 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-a4e5d510 kind=jev elapsed_ms=266 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-a4e5d510 kind=jev elapsed_ms=304 outcome=ok attempt=1 provider=unknown
+think classification asked for sra records and named no organism (trace probe56-a4e5d510); asked once more, kept the first reply: the second still names no organism, in 2256 ms
+model call point=guardrail.injection trace=probe56-9da38d9c kind=jev elapsed_ms=292 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-9da38d9c kind=guard elapsed_ms=10016 outcome=timeout attempt=1 provider=unknown
+guard classification call failed (attempt 1 of 2, trace probe56-9da38d9c, harness.enforce_timeout:guardrail, transient); asking once more within the guardrail's budget after 0.0s
+model call point=guardrail.classify trace=probe56-9da38d9c kind=guard elapsed_ms=68 outcome=error attempt=2 provider=unknown

@@ -1,0 +1,5 @@
+model call point=guardrail.injection trace=probe56-e86c9b56 kind=jev elapsed_ms=324 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-e86c9b56 kind=guard elapsed_ms=2024 outcome=ok attempt=1 provider=StreamLake
+model call point=think.recent_years trace=probe56-e86c9b56 kind=jev elapsed_ms=198 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-e86c9b56 kind=jev elapsed_ms=254 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-e86c9b56 kind=jev elapsed_ms=284 outcome=ok attempt=1 provider=unknown

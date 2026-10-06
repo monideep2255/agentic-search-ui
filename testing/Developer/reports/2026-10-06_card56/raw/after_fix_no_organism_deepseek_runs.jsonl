@@ -1,0 +1,7 @@
+{"run": 1, "model": "deepseek/deepseek-v4-flash", "secs": 7.6, "class": "lookup", "record_type": "sra", "entities": [], "resolved": [], "ended": "asked a question back", "tools": [], "cost": 0.0004, "step_error": "None"}
+{"run": 2, "model": "deepseek/deepseek-v4-flash", "secs": 6.6, "class": "exploratory", "record_type": "sra", "entities": [], "resolved": [], "ended": "asked a question back", "tools": [], "cost": 0.0004, "step_error": "None"}
+
+[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+{"run": 3, "model": "deepseek/deepseek-v4-flash", "secs": 10.1, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0002, "step_error": "{'fatal': True, 'scope': 'step', 'source': 'guardrail', 'error_class': 'unexpected', 'message': 'A step in this query failed unexpectedly.', 'retry_after_s': 0}"}
