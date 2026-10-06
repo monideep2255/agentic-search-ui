@@ -1,0 +1,18 @@
+model call point=guardrail.injection trace=probe56-ddc50422 kind=jev elapsed_ms=216 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-ddc50422 kind=guard elapsed_ms=9999 outcome=timeout attempt=1 provider=unknown
+guard classification call failed (attempt 1 of 2, trace probe56-ddc50422, harness.enforce_timeout:guardrail, transient); asking once more within the guardrail's budget after 0.0s
+model call point=guardrail.classify trace=probe56-ddc50422 kind=guard elapsed_ms=2413 outcome=ok attempt=2 provider=OpenInference
+model call point=think.asks_features trace=probe56-ddc50422 kind=jev elapsed_ms=257 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-ddc50422 kind=jev elapsed_ms=265 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-ddc50422 kind=jev elapsed_ms=277 outcome=ok attempt=1 provider=unknown
+model call point=think.ask_back trace=probe56-ddc50422 kind=jev elapsed_ms=280 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.injection trace=probe56-ccf69876 kind=jev elapsed_ms=275 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-ccf69876 kind=guard elapsed_ms=9999 outcome=timeout attempt=1 provider=unknown
+guard classification call failed (attempt 1 of 2, trace probe56-ccf69876, harness.enforce_timeout:guardrail, transient); asking once more within the guardrail's budget after 0.0s
+model call point=guardrail.classify trace=probe56-ccf69876 kind=guard elapsed_ms=4993 outcome=timeout attempt=2 provider=unknown
+model call point=guardrail.injection trace=probe56-a069baa8 kind=jev elapsed_ms=369 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-a069baa8 kind=guard elapsed_ms=1878 outcome=ok attempt=1 provider=Novita
+model call point=plan.literature trace=probe56-a069baa8 kind=jev elapsed_ms=234 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-a069baa8 kind=jev elapsed_ms=255 outcome=ok attempt=1 provider=unknown
+model call point=think.ask_back trace=probe56-a069baa8 kind=jev elapsed_ms=264 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-a069baa8 kind=jev elapsed_ms=285 outcome=ok attempt=1 provider=unknown

@@ -1,0 +1,1 @@
+{"run": 1, "model": "deepseek/deepseek-v4-flash", "secs": 6.5, "class": "single_hop", "record_type": "sra", "entities": [], "resolved": [], "ended": "asked a question back", "tools": [], "cost": 0.0004, "step_error": "None"}

@@ -1,0 +1,12 @@
+model call point=guardrail.injection trace=probe56-884d53c4 kind=jev elapsed_ms=313 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-884d53c4 kind=guard elapsed_ms=2537 outcome=ok attempt=1 provider=OpenInference
+model call point=think.recent_years trace=probe56-884d53c4 kind=jev elapsed_ms=223 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-884d53c4 kind=jev elapsed_ms=230 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-884d53c4 kind=jev elapsed_ms=415 outcome=ok attempt=1 provider=unknown
+model call point=think.gene_or_condition trace=probe56-884d53c4 kind=jev elapsed_ms=218 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.injection trace=probe56-70eb7838 kind=jev elapsed_ms=255 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-70eb7838 kind=guard elapsed_ms=550 outcome=ok attempt=1 provider=Relace
+model call point=think.asks_features trace=probe56-70eb7838 kind=jev elapsed_ms=211 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-70eb7838 kind=jev elapsed_ms=221 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-70eb7838 kind=jev elapsed_ms=245 outcome=ok attempt=1 provider=unknown
+model call point=think.gene_or_condition trace=probe56-70eb7838 kind=jev elapsed_ms=238 outcome=ok attempt=1 provider=unknown

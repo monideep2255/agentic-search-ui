@@ -1,0 +1,16 @@
+model call point=guardrail.injection trace=probe56-98d60be9 kind=jev elapsed_ms=290 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-98d60be9 kind=guard elapsed_ms=9944 outcome=timeout attempt=1 provider=unknown
+guard classification call failed (attempt 1 of 2, trace probe56-98d60be9, harness.enforce_timeout:guardrail, transient); asking once more within the guardrail's budget after 0.0s
+model call point=guardrail.classify trace=probe56-98d60be9 kind=guard elapsed_ms=5095 outcome=timeout attempt=2 provider=unknown
+model call point=guardrail.injection trace=probe56-f979dc85 kind=jev elapsed_ms=349 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-f979dc85 kind=guard elapsed_ms=6879 outcome=ok attempt=1 provider=Mancer 2
+model call point=think.recent_years trace=probe56-f979dc85 kind=jev elapsed_ms=279 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-f979dc85 kind=jev elapsed_ms=315 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-f979dc85 kind=jev elapsed_ms=363 outcome=ok attempt=1 provider=unknown
+think classification asked for sra records and named no organism (trace probe56-f979dc85); asked once more, kept the first reply: the second still names no organism, in 1030 ms
+model call point=guardrail.injection trace=probe56-bf05a791 kind=jev elapsed_ms=210 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-bf05a791 kind=guard elapsed_ms=2077 outcome=ok attempt=1 provider=DigitalOcean
+model call point=think.asks_features trace=probe56-bf05a791 kind=jev elapsed_ms=250 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-bf05a791 kind=jev elapsed_ms=277 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-bf05a791 kind=jev elapsed_ms=277 outcome=ok attempt=1 provider=unknown
+think classification asked for sra records and named no organism (trace probe56-bf05a791); asked once more, kept the first reply: the second still names no organism, in 1761 ms
