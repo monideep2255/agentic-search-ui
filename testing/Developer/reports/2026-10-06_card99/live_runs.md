@@ -70,7 +70,11 @@ md2, the run that lost its written answer. Trust line: "Based on 5 sources, not 
 
 gr1 (first run): trust line "Based on 12 sources, not yet confirmed", note "The background search of the knowledge graph did not finish, so this answer may be missing sources from it. Ask again to retry." The graph query returned an error, an upstream failure, so it was rerun once as gr1r, which gave a normal answer of 8 sentences.
 
-One unrelated observation: md1's first sentence says G6PD attacks are triggered by "infections, certain drugs, or fava beans"; the record text returned for that citation only says different gene mutations cause different levels of deficiency. It was approved by the existing check, is not a dropped limit, and is outside card 99.
+One unrelated observation, outside card 99:
+
+- md1's first sentence names three triggers of G6PD attacks: "infections, certain drugs, or fava beans".
+- The record text returned for that citation only says different gene mutations cause different levels of deficiency.
+- The existing check approved it. It is not a dropped limit.
 
 ## Spend
 

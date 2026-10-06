@@ -1,6 +1,10 @@
 # Card 99 live A/B: the pair check on the same sentences
 
-Measured on 2026-10-06 on develop at b930512a, which contains card 99 (merged as #184). The question: for exactly the same candidate sentences, how many does a person see with the item question alone, and how many with the pair check added? Answers were counted one by one, at both depths. Each arm ran twice, so the difference can be set against the model's own run-to-run noise. The evidence is in `raw/live_ab/`:
+Measured on 2026-10-06 on develop at b930512a, which contains card 99 (merged as #184).
+
+The question: does the pair check change how many of the same sentences a person sees? Every answer was counted at both depths.
+
+Each arm ran twice, so the difference can be set against the model's own run-to-run noise. The evidence is in `raw/live_ab/`:
 
 - `ab_run.py` rebuilds the checks and runs the arms.
 - `ab_analyse.py` builds the tables.
