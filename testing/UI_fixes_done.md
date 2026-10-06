@@ -12,6 +12,7 @@ architecture cards, whose detail sits under the board's To do.
 
 ## Table of contents
 
+- [Waiting for your retest](#waiting-for-your-retest)
 - [Done features at a glance](#done-features-at-a-glance)
 - [What is done, in summary](#what-is-done-in-summary)
 - [Progress at a glance](#progress-at-a-glance)
@@ -35,14 +36,43 @@ architecture cards, whose detail sits under the board's To do.
 - [History and what is live](#history-and-what-is-live)
 - [Developer detail](#developer-detail)
 
+## Waiting for your retest
+
+Built and live on develop, waiting for the product owner's verdict, newest first. Moved here from the board on 2026-10-06 at the owner's request, so the board counts only work still to do. The queries to type and what you should see are in `testing/Test_queries_and_workflows.md`, by the number in the Queries column. Your verdict sets the Retest column to Approved, or sends the card back to To do with your words.
+
+| # | What to check, in plain words | Item | Queries | Retest |
+|---|---|---|---|---|
+| 1 | On a phone, a long variant name wraps inside the answer and the page never scrolls sideways; its citation number stays on the same line as the end of the name, in the record list and in the sentence | cards 43 and 43b (#181, #187, built by Factory; checked on develop by the lead) | the answer to "What does BRCA1 do?" at phone width | Waiting for your verdict |
+| 2 | The design prototype's home page is light, like the app's, so screen checks stop flagging the live home page; closes by itself seven days after it reached Retest on 2026-10-06, unless you object (a design-file card the lead's reviewer passed at both widths) | card 47 (#188, built by Factory) | none, a design file | Closes by itself seven days after 2026-10-06 unless you object |
+| 3 | A plain-language GERD answer never says "children" where its paper says young children, or drops "potentially"; Researcher answers are unchanged. It also shows about one sentence fewer, mostly the risk-factor sentence, which card 101 works on | card 99 (#184) | 75, 68 | Waiting for your verdict |
+| 4 | The "Take the tour" button on the home page stays readable when the pointer rests on it: dark blue text and border, contrast 6.5 where it was 4.4 | card 44 (#183, built by Factory) | the home page, hover the button | Waiting for your verdict |
+| 5 | The Mediterranean question names Familial Mediterranean fever and has a written answer | card 89 (#175) | 73 | Waiting for your verdict |
+| 6 | GERD shows a written answer above its tables at both depths | card 88 (#161, #163) | 75, 68 | Waiting for your verdict |
+| 7 | A sentence that cites a record shows the record words it was checked against, even when another sentence cites the same record; seen today in the command line's `s3 --json` and the API's citation events, not yet on the web screen | card 57 (#161) | none | Waiting for your verdict |
+| 8 | A question about one paper's linked data lists the records NCBI links to it, or says plainly there are none | card 74 (#172) | 104 | Waiting for your verdict |
+| 9 | E. coli isolates show their resistance genes in Plain language, the colistin search finds mcr carriers, and the answer says which gene families were searched | card 94, part (#158, #165, #169, #174) | 33 to 37 | Waiting for your verdict |
+| 10 | A chromosome window lists its dbVar records, and its first sentence shows no raw bracketed numbers | cards 92 and 95 (#158, #164) | 27, 29 | Waiting for your verdict |
+| 11 | The TP53 dataset question no longer says a search did not finish, and when a search does fail the note says which and why | card 91 and 77 (#160, #169) | 25, and "Any trials for GERD?" in 76 | Waiting for your verdict |
+| 12 | "recent-onset diabetes treatment" is answered directly; GERD, BRCA1 and Marfan alone are still asked back | card 87 (#162) | 84, 76 | Waiting for your verdict |
+| 13 | Muir-Torré syndrome is spelled correctly, and no OMIM row appears twice | cards 96 and 97 (#170, #166) | 24 | Waiting for your verdict |
+| 14 | When no written summary survives, one plain line says why and the records found are listed | card 46 and decision D1 (#168) | none yet | Waiting for your verdict |
+| 15 | The Integrations page shows the command line tools' commands, the About page shows its layer cards first, and two page sentences are corrected | cards 79, 80 and 85, part (#167) | 102, 59, 60 | Waiting for your verdict |
+| 16 | Every library's license text ships with the web app | card 86 (#157) | 99 | Waiting for your verdict |
+| 17 | The MODY genes question passes its citation check; superseded by 11.20, and the board proposes closing it | card 13 | 78 | Waiting for your verdict |
+| 18 | The architecture deep dive is merged (`visualizations/System_3_deep_dive.md`); the board proposes closing it | card 39 | none | Waiting for your verdict |
+| 19 | The server address is gone from every tracked file (pull request #109); only git history holds it, and rewriting history is your call (recommendation: no). The board proposes closing it | card 41 | none | Waiting for your verdict |
+| 20 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | cards 49 and 21, phase 8.10 | 90 to 97, and 60 | Waiting for your verdict |
+| 21 | A graph search that cannot finish gives up after 30 seconds, not 90 | card 45, R-09 | 59 | Waiting for your verdict |
+| 22 | A one-to-three-word question is asked back, with choices written for its subject | 12.3 | 76 | Waiting for your verdict |
+
 ## Done features at a glance
 
 Done here means closed: built and live on develop, or answered, superseded,
 run or accepted, as the Status column says. For an item that is built and
 live, the Status column also says whether the product owner has approved it
 or it still awaits their retest or decision. Those actions are tracked on
-the board in `testing/UI_fix_plan.md`: retests in its Retest column,
-decisions in its To do column.
+the board in `testing/UI_fix_plan.md` (decisions in its To do column) and,
+for retests, in "Waiting for your retest" above.
 
 | Item | What you see | Status | Test query, `Test_queries_and_workflows.md` |
 |---|---|---|---|
