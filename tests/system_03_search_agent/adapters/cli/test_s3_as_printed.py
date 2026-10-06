@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 from pathlib import Path
 
 import httpx
@@ -450,6 +451,36 @@ class TestAskJsonFailsAsJson:
         _signed_in()
         _, answered, _, _ = await _s3(["ask", "--json", "q"], _answer_frames())
         assert set(document) == set(json.loads(answered)), "the same keys as an answer"
+
+    @pytest.mark.asyncio
+    async def test_insecure_credentials_keep_the_path_off_json_stdout(self, credential_file: Path) -> None:
+        _signed_in()
+        os.chmod(credential_file, 0o644)
+
+        exit_code, out, err, seen = await _s3(["ask", "--json", "q"], [])
+
+        assert exit_code == 1
+        assert seen == []
+        document = json.loads(out)
+        assert document["error"]["error_class"] == "credentials_insecure"
+        assert str(credential_file) not in out
+        assert "chmod 600" in err and str(credential_file) in err
+        assert "chmod 600" in document["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_corrupt_credentials_keep_the_path_off_json_stdout(self, credential_file: Path) -> None:
+        _signed_in()
+        credential_file.write_text("{", encoding="utf-8")
+
+        exit_code, out, err, seen = await _s3(["ask", "--json", "q"], [])
+
+        assert exit_code == 1
+        assert seen == []
+        document = json.loads(out)
+        assert document["error"]["error_class"] == "credentials_invalid"
+        assert str(credential_file) not in out
+        assert str(credential_file) in err
+        assert "s3 login" in document["error"]["message"]
 
     @pytest.mark.asyncio
     async def test_a_refused_start_is_one_json_object_with_the_servers_reason(
