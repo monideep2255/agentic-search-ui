@@ -1358,6 +1358,12 @@ class JsonRenderer:
     def finish(self) -> int:
         complete = self._exit_code is not None
         if self._exit_code is None:
+            if self._error is None:
+                self.record_failure(
+                    "stream_incomplete",
+                    "s3: the event stream ended with no final answer or error. "
+                    "Try again; if it happens again, check the connection to System 3.",
+                )
             self._exit_code = _EXIT_FAILURE
         # Build phase 8.10: a question back reports `ask`, as over MCP, and
         # only a question back carries the clarifying question and options.

@@ -110,21 +110,19 @@ MAX_INBOUND_LINE_BYTES = 1024 * 1024
 # schemas themselves and proves it passes.
 MAX_REMOTE_REPLY_BYTES = 4 * 1024 * 1024
 
-# The longest one request may take, from the moment the agent sends it to
-# the moment it is answered, the wait for a free slot included (F-8.10-A07:
-# a server that dripped one byte every few minutes held a slot for good, and
-# eight of them blocked every later request). The remote server stops a
-# question itself at 240 seconds (`adapters/mcp/server.py`'s
-# `_FOLD_LOOP_TIMEOUT_S`), so five minutes leaves a minute for renewing the
-# sign-in, the network and a short queue.
+# The longest active exchange may take once a slot opens (F-8.10-A07:
+# a server that dripped one byte every few minutes held a slot for good).
+# The remote server stops a question at 240 seconds, so five minutes leaves
+# a minute for sign-in renewal and the network. Queue time has its own bound.
 REQUEST_DEADLINE_SECONDS = 300.0
+QUEUE_WAIT_SECONDS = 60.0
 
 # Renew when the access token has less than this left, so a question that is
 # sent just before expiry is not refused mid-flight.
 RENEW_WHEN_SECONDS_LEFT = 60.0
 
-# At most this many messages forwarded at once. An agent that sends more
-# waits; nothing is dropped.
+# At most this many messages forwarded at once. A later message waits for
+# a slot up to QUEUE_WAIT_SECONDS, then receives an error rather than silence.
 MAX_IN_FLIGHT = 8
 
 # JSON-RPC error codes. The -32000 range is the server-defined range.
@@ -439,9 +437,8 @@ class McpBridge:
         task.add_done_callback(_done)
 
     async def drain(self) -> None:
-        """Wait for every forwarded message to finish, each bounded by
-        `REQUEST_DEADLINE_SECONDS`, so a reply already on its way is not cut
-        off and none is waited on for good."""
+        """Wait for forwarded messages, each bounded by its queue wait plus
+        active exchange deadline, so none is waited on for good."""
         while self._tasks:
             await asyncio.gather(*list(self._tasks), return_exceptions=True)
 
@@ -464,16 +461,25 @@ class McpBridge:
         request that gets no answer is one the agent cancelled, as MCP says:
         cancellation is not an `Exception`, so it is never caught here.
 
-        The whole of it runs inside `REQUEST_DEADLINE_SECONDS`, the wait for
-        a free slot included (F-8.10-A07), and only replies that are
+        The exchange runs inside `REQUEST_DEADLINE_SECONDS` once a slot is
+        free, so a queued request receives its full budget. Every active
+        exchange still has a deadline (F-8.10-A07). The queue wait is also
+        bounded separately, and only replies that are
         JSON-RPC and belong to this exchange reach the agent (F-8.10-A06,
         J12): the server's requests and notifications, and the first
         response to this request's id."""
         is_request = request_id is not _NO_ID
-        deadline = asyncio.timeout(REQUEST_DEADLINE_SECONDS)
+        deadline: asyncio.Timeout | None = None
         try:
-            async with deadline, self._slots:
-                replies = await self._exchange(message, request_id)
+            await asyncio.wait_for(self._slots.acquire(), timeout=QUEUE_WAIT_SECONDS)
+            try:
+                # `asyncio.timeout` sets its absolute expiry when created,
+                # not when entered, so construct it after acquiring the slot.
+                deadline = asyncio.timeout(REQUEST_DEADLINE_SECONDS)
+                async with deadline:
+                    replies = await self._exchange(message, request_id)
+            finally:
+                self._slots.release()
             replies = self._keep_replies_to(replies, request_id)
             lines = [_encode(reply) for reply in replies]
             if is_request and not any(_is_response_to(reply, request_id) for reply in replies):
@@ -494,26 +500,35 @@ class McpBridge:
                 return
             lines = [_encode(_error_response(request_id, exc.code, exc.message))]
         except TimeoutError as exc:
-            if not deadline.expired():
+            if deadline is None:
+                self.log(f"a message waited over {_duration(QUEUE_WAIT_SECONDS)} for a slot")
+                if not is_request:
+                    return
+                lines = [_encode(_error_response(
+                    request_id, REMOTE_UNREACHABLE,
+                    "System 3 is busy, so this request was not sent. Try again in a minute.",
+                ))]
+            elif not deadline.expired():
                 # A timeout from somewhere else is as unforeseen as any
                 # other failure, and is answered the same way below.
                 self._answer_unforeseen(exc, request_id)
                 return
-            limit = _duration(REQUEST_DEADLINE_SECONDS)
-            self.log(f"stopped a message that took longer than {limit}")
-            if not is_request:
-                return
-            lines = [
-                _encode(
-                    _error_response(
-                        request_id,
-                        REMOTE_UNREACHABLE,
-                        f"System 3 did not answer within {limit}, so this request was "
-                        "stopped. Try again; if several questions are running at once, "
-                        "send fewer at a time.",
+            else:
+                limit = _duration(REQUEST_DEADLINE_SECONDS)
+                self.log(f"stopped a message that took longer than {limit}")
+                if not is_request:
+                    return
+                lines = [
+                    _encode(
+                        _error_response(
+                            request_id,
+                            REMOTE_UNREACHABLE,
+                            f"System 3 did not answer within {limit}, so this request was "
+                            "stopped. Try again; if several questions are running at once, "
+                            "send fewer at a time.",
+                        )
                     )
-                )
-            ]
+                ]
         except Exception as exc:  # noqa: BLE001 - see the docstring
             self._answer_unforeseen(exc, request_id)
             return
@@ -790,6 +805,14 @@ class McpBridge:
             except FileNotFoundError as exc:
                 raise BridgeError(
                     SIGN_IN_NEEDED, f"You are not signed in to System 3. {_SIGN_IN_AGAIN}"
+                ) from exc
+            except httpx.DecodingError as exc:
+                self.log(f"could not decode the sign-in renewal reply; {_SIGN_IN_AGAIN}")
+                raise BridgeError(
+                    REMOTE_UNREACHABLE,
+                    "Could not read System 3's sign-in renewal reply. The server "
+                    "may have rotated your sign-in, so this request was not sent. "
+                    f"{_SIGN_IN_AGAIN}",
                 ) from exc
             except httpx.HTTPError as exc:
                 raise BridgeError(

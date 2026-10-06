@@ -475,6 +475,25 @@ class TestAReopenedAnswerCountsWhatItCannotShow:
         assert omitted == 0
 
 
+def test_past_answer_timestamps_are_bounded_in_both_output_schemas() -> None:
+    asked_at = datetime(2026, 10, 6, 12, 30, tzinfo=UTC)
+    models = (
+        server_module.PastSearch(
+            trace_id="t1", question="BRCA1?", asked_at=asked_at,
+            trust_signal="answer", citation_count=1,
+        ),
+        server_module.ReopenedAnswerOutput(
+            trace_id="t1", question="BRCA1?", asked_at=asked_at,
+            audience_depth="researcher", answer_markdown="BRCA1 [1].",
+            trust_signal="answer",
+        ),
+    )
+    for model in models:
+        schema = type(model).model_json_schema()["properties"]["asked_at"]
+        assert schema["maxLength"] == 40
+        assert model.model_dump(mode="json")["asked_at"].startswith("2026-10-06T12:30")
+
+
 # ---------------------------------------------------------------------------
 # DATABASE-BACKED from here on: the auth path and the three new tools.
 # ---------------------------------------------------------------------------
@@ -926,6 +945,12 @@ class TestFeedbackIsYoursAlone:
             {"run_id": run_id},
             {"run_id": run_id, "comment": "   ", "flagged_reason": ""},
             {"run_id": run_id, "citation_flags": []},
+            {"run_id": run_id, "comment": "\u200b"},
+            {"run_id": run_id, "flagged_reason": "\u200b\u200c"},
+            {"run_id": run_id, "comment": "\ufe0f"},
+            {"run_id": run_id, "comment": "\u0301"},
+            {"run_id": run_id, "comment": "\u3164"},
+            {"run_id": run_id, "comment": "\x00"},
         ):
             message = await _call_expecting_error(a_headers, "send_answer_feedback", empty)
             assert message == server_module._NOTHING_TO_RECORD_MESSAGE, empty
