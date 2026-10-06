@@ -32,6 +32,7 @@ import base64
 import io
 import json
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -310,6 +311,32 @@ class TestRenewal:
         assert "s3 login" in replies[0]["error"]["message"]
         assert expired not in harness.output()
         assert "refresh-1" not in harness.output()
+
+    @pytest.mark.asyncio
+    async def test_unreadable_renewal_reply_names_decode_failure_and_logs_it(
+        self,
+        signed_in: Callable[[str | None], credentials.Credentials],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        expired = jwt(-5, "decode")
+        stand_in = StandIn(valid_tokens={expired})
+        harness = Harness(stand_in, signed_in(expired))
+
+        async def unreadable_reply(
+            _http: httpx.AsyncClient, _creds: credentials.Credentials
+        ) -> credentials.Credentials:
+            raise httpx.DecodingError("bad gzip payload: secret-like server text")
+
+        monkeypatch.setattr(credentials, "refresh_locked", unreadable_reply)
+        replies = await harness.send(CALL())
+
+        assert stand_in.mcp_requests == [], "a failed renewal never forwards the request"
+        assert replies[0]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE
+        assert "Could not read System 3's sign-in renewal reply" in replies[0]["error"]["message"]
+        assert "Try again" in replies[0]["error"]["message"]
+        assert "could not decode the sign-in renewal reply" in harness.stderr.getvalue()
+        assert "secret-like" not in harness.output()
+        assert expired not in harness.output()
 
     @pytest.mark.asyncio
     async def test_a_renewed_token_refused_again_is_an_error_not_silence(self, signed_in) -> None:
@@ -726,7 +753,9 @@ class TestTheBridgesBounds:
 
     @pytest.mark.asyncio
     async def test_a_queued_request_gets_its_own_deadline_after_a_slot_opens(
-        self, signed_in, monkeypatch: pytest.MonkeyPatch
+        self,
+        signed_in: Callable[[str | None], credentials.Credentials],
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         # V01: nine 0.22-second calls through eight slots with a 0.31-second
         # exchange budget. The ninth must not spend its own budget in the queue.

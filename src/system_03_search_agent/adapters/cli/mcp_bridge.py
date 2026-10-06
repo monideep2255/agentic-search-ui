@@ -796,6 +796,13 @@ class McpBridge:
                 raise BridgeError(
                     SIGN_IN_NEEDED, f"You are not signed in to System 3. {_SIGN_IN_AGAIN}"
                 ) from exc
+            except httpx.DecodingError as exc:
+                self.log("could not decode the sign-in renewal reply; try again")
+                raise BridgeError(
+                    REMOTE_UNREACHABLE,
+                    "Could not read System 3's sign-in renewal reply. Try again; "
+                    "if it keeps happening, run s3 login.",
+                ) from exc
             except httpx.HTTPError as exc:
                 raise BridgeError(
                     REMOTE_UNREACHABLE,
