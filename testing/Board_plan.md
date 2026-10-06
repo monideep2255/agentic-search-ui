@@ -20,6 +20,8 @@ The test every step is ranked against, in the owner's words: a person types a qu
 
 Newest first.
 
+- 2026-10-06: Factory resumes with a written brief, `docs/build/Factory_onboarding.md`: cards 43, 44 and 47, then 61, one at a time; cards 18, 23, 24 and 25 leave its lane (`DECISIONS.md`, 2026-10-06).
+- 2026-10-06: card 56's remaining miss diagnosed (develop's plan model names nothing on some runs) and its fix built; card 99 measured on the full set and the owner said build it (`DECISIONS.md`, 2026-10-06).
 - 2026-10-05, night: the Factory trial is paused. Its lane is provisional and its eight cards are pending, not being built, until the owner gives renewed instructions; its trial worktree and branch were removed with no work in them (`DECISIONS.md`, 2026-10-05).
 - 2026-10-05, final test run: 9 of 10 passed on develop; card 56 (SARS-CoV-2) failed live although it passed locally, so it is back in To do for a diagnosis (`testing/Developer/reports/2026-10-05_final_test_queries/results.md`).
 - 2026-10-05, late: a second development agent, Factory, takes the screen and wording lane: cards 43, 44, 18, 23, 24, 25, 47 and the rest of 61, each in its own worktree on a `factory/` branch. The lead keeps the answer path, this plan, the board and the merge queue (`DECISIONS.md`, 2026-10-05).
