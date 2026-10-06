@@ -405,7 +405,9 @@ PAIR_MISSING_WORD_MIN_CHARS: Final[int] = 4
 #: `MAX_BATCH_QUESTIONS` pairs, all concurrent with the item call. Measured:
 #: 5.8 proposed pairs a sentence (median 4, maximum 25) and 4 to 8 sentences
 #: a live check, so 25 to 50 pairs, one or two calls. Four calls carry 120
-#: pairs, about 20 sentences at the measured mean. A sentence whose pairs do
+#: pairs, about 20 sentences at the mean, but long quotes fill them sooner:
+#: on the 2026-10-05 live candidates sentences went unasked in checks of 15
+#: (card 99 verifier, V-99-02). A sentence whose pairs do
 #: not all fit is not asked about and NOT approved, the same rule as
 #: `MAX_CANDIDATES`: whole sentences only, never half its pairs.
 MAX_PAIR_CALLS: Final[int] = 4
