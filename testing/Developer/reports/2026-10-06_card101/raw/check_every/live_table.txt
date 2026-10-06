@@ -1,0 +1,21 @@
+
+answer | shown | reworded | cands | codeok | held | moved_ok | moved_shown | checks | raised | secs | cost | outcome
+br1 | 1 | 0 | 7 | 0 | 0 | 0 | 0 | 2 | 0 | 15.0 | 0.0121 | answer
+br2 | 3 | 1 | 8 | 1 | 0 | 1 | 1 | 2 | 0 | 15.2 | 0.013 | answer
+br3 | 3 | 1 | 6 | 1 | 0 | 1 | 1 | 2 | 0 | 13.1 | 0.0116 | answer
+br4 | 4 | 4 | 10 | 0 | 0 | 0 | 0 | 2 | 0 | 19.2 | 0.0141 | answer
+br5 | 5 | 2 | 2 | 1 | 0 | 1 | 1 | 1 | 0 | 9.8 | 0.0102 | answer
+ge1 | 4 | 4 | 16 | 0 | 0 | 0 | 0 | 2 | 0 | 20.0 | 0.02 | answer
+ge2 | 4 | 4 | 10 | 0 | 0 | 0 | 0 | 2 | 0 | 18.4 | 0.0167 | answer
+ge3 | 3 | 2 | 10 | 0 | 0 | 0 | 0 | 2 | 0 | 14.4 | 0.0156 | answer
+ge4 | 3 | 3 | 13 | 0 | 0 | 0 | 0 | 2 | 0 | 19.8 | 0.0158 | answer
+ge5 | 3 | 3 | 15 | 0 | 0 | 0 | 0 | 2 | 0 | 21.2 | 0.0172 | answer
+me1 | 2 | 2 | 8 | 1 | 1 | 0 | 0 | 1 | 0 | 20.7 | 0.0181 | answer
+me2 | 7 | 6 | 13 | 3 | 0 | 3 | 2 | 2 | 0 | 24.5 | 0.0207 | answer
+me3 | 1 | 1 | 12 | 0 | 0 | 0 | 0 | 2 | 0 | 21.2 | 0.0194 | answer
+me4 | 7 | 7 | 12 | 2 | 0 | 2 | 2 | 1 | 0 | 18.4 | 0.0202 | answer
+me5 | 5 | 5 | 12 | 3 | 1 | 2 | 0 | 2 | 0 | 20.9 | 0.0189 | answer
+ge: answers 5, shown 17 (mean 3.40), held back code-approvable 0, moved and approved 0, of them shown 0, mean s 18.8, max s 21.2, answers with 0 shown 0
+me: answers 5, shown 22 (mean 4.40), held back code-approvable 2, moved and approved 7, of them shown 4, mean s 21.1, max s 24.5, answers with 0 shown 0
+br: answers 5, shown 16 (mean 3.20), held back code-approvable 0, moved and approved 3, of them shown 3, mean s 14.5, max s 19.2, answers with 0 shown 0
+total spend $0.2436 over 15 answers
