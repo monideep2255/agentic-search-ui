@@ -22,13 +22,15 @@ for (const width of [390, 1280]) {
     const button = page.getByTestId("take-the-tour");
     await expect(button).toBeVisible();
     await button.hover();
-    await mkdir(shots, { recursive: true });
-    await page.screenshot({
-      path: path.join(shots, `home_${width}.png`),
-      fullPage: true,
-      mask: [page.getByText(/Working as /)],
-      maskColor: "#f0f0f0",
-    });
+    if (process.env.FACTORY_SHOTS === "1") {
+      await mkdir(shots, { recursive: true });
+      await page.screenshot({
+        path: path.join(shots, `home_${width}.png`),
+        fullPage: true,
+        mask: [page.getByText(/Working as /)],
+        maskColor: "#f0f0f0",
+      });
+    }
 
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
