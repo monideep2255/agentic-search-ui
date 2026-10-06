@@ -118,7 +118,7 @@ If something slips, remove it from the working tree and tell the product owner a
 ### Git
 
 - Conventional Commits: `<type>(<scope>): <Description in sentence case>`, for example `fix(web-ui): Wrap a long variant name on a phone instead of scrolling sideways`. Types: feat, fix, docs, chore, refactor, test, ci, security. One logical change per commit. No emoji.
-- Never add a `Co-authored-by` line, or any other trailer, to a commit or a pull request. This repository forbids them. If your tooling adds one by default, remove it before you commit.
+- Your commits may carry your own `Co-authored-by: factory-droid[bot]` trailer: the product owner approved that for your commits only on 2026-10-06. Add no other trailer, and none to a pull request body.
 - Stage files by name. Never `git add -A` or `git add .`.
 - Never `git push --force`, never amend a pushed commit, never `--no-verify`. The two git hooks block local paths in commits and messages; when one blocks you, fix the content.
 - Never push to `develop` or `production`. Never merge a pull request.

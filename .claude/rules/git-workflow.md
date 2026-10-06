@@ -28,7 +28,7 @@ Commits:
 
 - Conventional Commits subject: `<type>[optional scope]: <description>`, the description in sentence case. Types: feat, fix, docs, chore, refactor, test, ci, security. A breaking change takes `!` before the colon or a `BREAKING CHANGE:` footer.
 - One logical change per commit, no emoji.
-- NEVER add Co-Authored-By lines to commit messages. No co-author trailers of any kind.
+- NEVER add Co-Authored-By lines to commit messages. No co-author trailers of any kind. One exception, the owner's of 2026-10-06: commits Factory authors may carry its own `Co-authored-by: factory-droid[bot]` trailer. Every other commit carries none.
 - Never `git push --force`. Never amend a published commit. Never `git add -A` blindly. Stage specific files.
 
 Gitignored paths: `node_modules/`, `__pycache__/`, `venv/`, `.env`, `.pytest_cache/`, `frontend/build/` or `frontend/dist/`
