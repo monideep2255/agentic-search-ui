@@ -494,3 +494,30 @@ async def test_a_check_that_is_sent_can_never_take_the_query_past_its_cap(monkey
     assert kind is cost_control.QueryCapExceededError
     assert fake_jev.calls == [], "outside it: nothing sent"
     assert total == pytest.approx(boundary + 0.001)
+
+
+# ------------------------------------------------ A-99-07, A-99-03: what the log line counts
+
+
+def _check_log_line(caplog) -> str:
+    lines = [r.getMessage() for r in caplog.records if r.getMessage().startswith("sentence check (trace")]
+    assert len(lines) == 1, "one line a check"
+    return lines[0]
+
+
+@pytest.mark.asyncio
+async def test_the_log_counts_only_sentences_the_item_question_approved_and_a_pair_held_back(
+    monkeypatch, caplog
+) -> None:
+    """Two sentences with pairs, every pair "yes": the item question rejected
+    the first and approved the second, so one sentence was held back by a pair."""
+    caplog.set_level("INFO", logger=sentence_check_module.logger.name)
+    pair_yes = {f"pair_{item}_{k}": "yes" for item in (1, 2) for k in range(1, 60)}
+    _jev_on(monkeypatch, _FakeJev({"item_1": "yes", "item_2": "no"}, pair_choices=pair_yes))
+
+    approved = await _check([WITH_PAIRS, DECOY_FIRST], guard=_FakeGuard())
+
+    assert approved == frozenset()
+    line = _check_log_line(caplog)
+    assert "1 approved sentences held back by a pair" in line
+    assert "0 sentences not asked" in line

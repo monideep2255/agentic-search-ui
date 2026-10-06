@@ -664,18 +664,23 @@ async def _ask_jev(
             raise outcome
     item_result, *pair_results = outcomes
     approved = approved_keys_from_jev(item_result, sent)  # type: ignore[arg-type]
-    held_back: set[int] = set(not_asked)
+    vetoed: set[int] = set()
     for result, call in zip(pair_results, pair_calls, strict=True):
-        held_back |= items_vetoed_by_pairs(result, call)  # type: ignore[arg-type]
-    held_keys = {sent[item - 1].key for item in held_back}
+        vetoed |= items_vetoed_by_pairs(result, call)  # type: ignore[arg-type]
+    held_keys = {sent[item - 1].key for item in vetoed | not_asked}
     if pair_calls or not_asked:
+        # Counts only, no text. "Held back by a pair" counts the sentences the
+        # item question approved and a pair then vetoed (A-99-07), the cost
+        # the pair check has for the reader. "Not asked" counts every
+        # sentence the call cap left without its pairs (A-99-03), approved by
+        # the item question or not, so the cap's reach is visible.
         logger.info(
-            "sentence check (trace %s): %d pair questions in %d calls; %d sentences held back "
-            "by a pair, %d not asked",
+            "sentence check (trace %s): %d pair questions in %d calls; %d approved sentences "
+            "held back by a pair, %d sentences not asked for want of room",
             trace_id,
             sum(len(call.questions) for call in pair_calls),
             len(pair_calls),
-            len(held_back - not_asked),
+            len(approved & {sent[item - 1].key for item in vetoed}),
             len(not_asked),
         )
     return frozenset(approved - held_keys)
