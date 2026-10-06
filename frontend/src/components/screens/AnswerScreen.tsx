@@ -1128,6 +1128,16 @@ export function AnswerBody({
     />
   );
 
+  const citedRecordName = (name: string, claim: Claim, index: number) => (
+    <>
+      {name.slice(0, -3)}
+      <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+        {name.slice(-3)}
+        {citationChips(claim, index)}
+      </Box>
+    </>
+  );
+
   /*
    * What each claim rests on, as a data attribute on the claim itself: its
    * layer, "pending" while its citations are still arriving, or "none". This
@@ -1301,8 +1311,7 @@ export function AnswerBody({
                   component="span"
                   sx={{ fontSize: 15, lineHeight: 1.45, color: designTokens.ink, overflowWrap: "anywhere", ...uncitedInk(claim) }}
                 >
-                  {cells[0] ?? claim.text}
-                  {citationChips(claim, index)}
+                  {citedRecordName(cells[0] ?? claim.text, claim, index)}
                 </Box>
                 {cells.slice(1).map((cell, c) =>
                   cell ? (

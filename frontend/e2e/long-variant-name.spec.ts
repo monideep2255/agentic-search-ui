@@ -6,8 +6,9 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const shots = path.resolve(__dirname, "..", "..", "testing/Developer/reports/2026-10-06_factory_card43");
+const shots = path.resolve(__dirname, "..", "..", "testing/Developer/reports/2026-10-06_factory_card43b");
 const name = "NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG";
+const shorterName = "NM_007294.4(BRCA1):c.5243_5277+2788del";
 
 test.use({ contextOptions: { reducedMotion: "reduce" } });
 
@@ -31,14 +32,24 @@ function answer(): string {
     frame("tool_start", { call_id: "c1", tool: "ncbi_efetch", layer: "layer_2_api", status: "running", persona: "Salk" }),
     frame("tool_result", { call_id: "c1", tool: "ncbi_efetch", layer: "layer_2_api", status: "ok", persona: "Salk", summary: "", result_count: 1, truncated: false }),
     token({ kind: "claim", text: `The ClinVar record names ${name} [10]. `, marker_ids: ["cid-10"] }),
+    token({ kind: "paragraph_break", text: "\n\n" }),
+    token({ kind: "claim", text: `This ClinVar record also names ${shorterName} [5]. `, marker_ids: ["cid-5"] }),
     token({ kind: "heading", text: "Where this answer comes from\n\n" }),
     token({ kind: "list_item", text: `Sequence variant name: ${name} [10]. `, cells: [name], marker_ids: ["cid-10"] }),
+    token({ kind: "list_item", text: `Sequence variant name: ${shorterName} [5]. `, cells: [shorterName], marker_ids: ["cid-5"] }),
     token({ kind: "table_header", text: "", cells: ["Record", "Identifier"] }),
     token({ kind: "table_row", text: `Sequence variant name: ${name} [10]. `, cells: ["ClinVar entry", name], marker_ids: ["cid-10"] }),
     frame("citation", {
       citation_id: "cid-10", display_index: 10, source: "clinvar", source_id: name,
       source_url: "https://www.ncbi.nlm.nih.gov/clinvar/variation/123456/",
       layer: "layer_2_api", field: "ncbi_efetch", claim_text: name,
+      evidence_kind: "curated assertion", assertion_confidence: "high",
+      population_ancestry_context: null, license: "public domain",
+    }),
+    frame("citation", {
+      citation_id: "cid-5", display_index: 5, source: "clinvar", source_id: shorterName,
+      source_url: "https://www.ncbi.nlm.nih.gov/clinvar/variation/654321/",
+      layer: "layer_2_api", field: "ncbi_efetch", claim_text: shorterName,
       evidence_kind: "curated assertion", assertion_confidence: "high",
       population_ancestry_context: null, license: "public domain",
     }),
@@ -78,6 +89,28 @@ async function noSidewaysScroll(page: Page): Promise<void> {
   expect(scroll, `the page scrolls sideways: ${scroll} > ${width}`).toBeLessThanOrEqual(width);
 }
 
+async function markerAndNameLastLine(page: Page, selector: string): Promise<{ nameBottom: number; markerTop: number }> {
+  return page.locator(selector).evaluate((element, variant) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let text: Node | null;
+    let lastCharacters: Text | null = null;
+    while ((text = walker.nextNode())) {
+      if (text.textContent?.includes(variant.slice(-3))) {
+        lastCharacters = text as Text;
+        break;
+      }
+    }
+    if (!lastCharacters) throw new Error("Variant text is missing from the claim");
+    const end = lastCharacters.textContent!.indexOf(variant.slice(-3)) + 3;
+    const range = document.createRange();
+    range.setStart(lastCharacters, end - 3);
+    range.setEnd(lastCharacters, end);
+    const marker = element.querySelector('[data-testid="citation-5"]');
+    if (!marker) throw new Error("Citation 5 is missing from the claim");
+    return { nameBottom: range.getBoundingClientRect().bottom, markerTop: marker.getBoundingClientRect().top };
+  }, shorterName);
+}
+
 for (const width of [390, 1280]) {
   test(`the long variant name stays inside the answer at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
@@ -92,18 +125,19 @@ for (const width of [390, 1280]) {
     await page.locator('[data-testid="sources-group-2"] > summary').click();
     const source = page.getByTestId("source-10");
     await expect(source).toContainText(name);
-    await mkdir(shots, { recursive: true });
-    const suffix = process.env.FACTORY_BASELINE === "1" ? "_baseline" : "";
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await page.screenshot({
-      path: path.join(shots, `answer_${width}${suffix}.png`),
-      fullPage: true,
-      mask: [
-        page.getByText(/Working as /),
-        page.getByText(/variant-[a-f0-9-]+@example\.com/),
-      ],
-      maskColor: "#f0f0f0",
-    });
+    if (process.env.FACTORY_SHOTS === "1") {
+      await mkdir(shots, { recursive: true });
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({
+        path: path.join(shots, `answer_${width}.png`),
+        fullPage: true,
+        mask: [
+          page.getByText(/Working as /),
+          page.getByText(/variant-[a-f0-9-]+@example\.com/),
+        ],
+        maskColor: "#f0f0f0",
+      });
+    }
 
     if (width === 390) {
       const row = records.locator("li > span").first();
@@ -128,6 +162,12 @@ for (const width of [390, 1280]) {
       const markerBox = (await marker.boundingBox())!;
       expect(markerBox.x + markerBox.width).toBeLessThanOrEqual(width);
       expect((await source.locator("summary").boundingBox())!.x).toBeGreaterThanOrEqual(0);
+      const shortRow = records.locator("li").filter({ hasText: shorterName });
+      await expect(shortRow).toBeVisible();
+      const { nameBottom, markerTop } = await markerAndNameLastLine(page, '[data-testid="answer-records-0"] li:nth-child(2) > span:first-child');
+      expect(markerTop, "citation 5 sits alone below the variant name").toBeLessThan(nameBottom);
+      const prosePosition = await markerAndNameLastLine(page, '[data-testid="claim-text-1"]');
+      expect(prosePosition.markerTop, "the prose citation sits alone below the variant name").toBeLessThan(prosePosition.nameBottom);
     } else {
       await expect(page.getByTestId("answer-table")).toHaveCount(2);
       const lines = await records.locator("tbody tr:first-child td:first-child").evaluate((element) => {
