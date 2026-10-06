@@ -725,6 +725,43 @@ class TestTheBridgesBounds:
         assert by_id[later]["result"]["isError"] is False
 
     @pytest.mark.asyncio
+    async def test_a_queued_request_gets_its_own_deadline_after_a_slot_opens(
+        self, signed_in, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # V01: nine 0.22-second calls through eight slots with a 0.31-second
+        # exchange budget. The ninth must not spend its own budget in the queue.
+        monkeypatch.setattr(mcp_bridge, "REQUEST_DEADLINE_SECONDS", 0.31)
+        token = jwt(900, "queued")
+        stand_in = StandIn(valid_tokens={token})
+        first_eight_started = asyncio.Event()
+        started = 0
+
+        async def slow_answer(request: httpx.Request) -> httpx.Response:
+            nonlocal started
+            started += 1
+            if started == mcp_bridge.MAX_IN_FLIGHT:
+                first_eight_started.set()
+            await asyncio.sleep(0.22)
+            message = json.loads(request.content)
+            return httpx.Response(200, json={
+                "jsonrpc": "2.0", "id": message["id"], "result": {"isError": False},
+            })
+
+        stand_in.override = slow_answer
+        harness = Harness(stand_in, signed_in(token))
+        for request_id in range(1, mcp_bridge.MAX_IN_FLIGHT + 1):
+            await harness.bridge.handle_line(json.dumps(CALL(request_id)).encode())
+        await asyncio.wait_for(first_eight_started.wait(), 2)
+        later = mcp_bridge.MAX_IN_FLIGHT + 1
+        await harness.bridge.handle_line(json.dumps(CALL(later)).encode())
+        await asyncio.wait_for(harness.bridge.drain(), 3)
+
+        by_id = {reply["id"]: reply for reply in harness.replies()}
+        assert sorted(by_id) == list(range(1, later + 1))
+        assert "result" in by_id[later], by_id[later]
+        assert all(reply["result"]["isError"] is False for reply in by_id.values())
+
+    @pytest.mark.asyncio
     async def test_the_deadline_never_loses_a_renewal_the_server_already_made(
         self, signed_in, monkeypatch: pytest.MonkeyPatch
     ) -> None:

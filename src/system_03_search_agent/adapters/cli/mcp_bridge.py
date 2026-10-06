@@ -464,16 +464,21 @@ class McpBridge:
         request that gets no answer is one the agent cancelled, as MCP says:
         cancellation is not an `Exception`, so it is never caught here.
 
-        The whole of it runs inside `REQUEST_DEADLINE_SECONDS`, the wait for
-        a free slot included (F-8.10-A07), and only replies that are
+        The exchange runs inside `REQUEST_DEADLINE_SECONDS` once a slot is
+        free, so a queued request receives its full budget. Every active
+        exchange still has a deadline (F-8.10-A07), and only replies that are
         JSON-RPC and belong to this exchange reach the agent (F-8.10-A06,
         J12): the server's requests and notifications, and the first
         response to this request's id."""
         is_request = request_id is not _NO_ID
-        deadline = asyncio.timeout(REQUEST_DEADLINE_SECONDS)
+        deadline: asyncio.Timeout | None = None
         try:
-            async with deadline, self._slots:
-                replies = await self._exchange(message, request_id)
+            async with self._slots:
+                # `asyncio.timeout` sets its absolute expiry when created,
+                # not when entered, so construct it after acquiring the slot.
+                deadline = asyncio.timeout(REQUEST_DEADLINE_SECONDS)
+                async with deadline:
+                    replies = await self._exchange(message, request_id)
             replies = self._keep_replies_to(replies, request_id)
             lines = [_encode(reply) for reply in replies]
             if is_request and not any(_is_response_to(reply, request_id) for reply in replies):
@@ -494,7 +499,7 @@ class McpBridge:
                 return
             lines = [_encode(_error_response(request_id, exc.code, exc.message))]
         except TimeoutError as exc:
-            if not deadline.expired():
+            if deadline is None or not deadline.expired():
                 # A timeout from somewhere else is as unforeseen as any
                 # other failure, and is answered the same way below.
                 self._answer_unforeseen(exc, request_id)
