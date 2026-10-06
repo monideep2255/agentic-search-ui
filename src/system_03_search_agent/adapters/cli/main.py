@@ -634,7 +634,9 @@ async def _create_run_never_retried(
         raise _CommandError(1) from exc
 
 
-def _load_credentials_or_report(stderr: TextIO) -> Credentials | None:
+def _load_credentials_or_report(
+    stderr: TextIO, *, on_failure: Callable[[str], None] | None = None
+) -> Credentials | None:
     """Loads the stored credentials, or writes an actionable message and
     returns None. Never widens or repairs an insecure or corrupt
     credential file; `credentials.load()` itself refuses to read one
@@ -654,9 +656,22 @@ def _load_credentials_or_report(stderr: TextIO) -> Credentials | None:
     except credentials_module.CredentialsError as exc:
         # The base class, not a per-type list: see
         # `_render_credentials_error`'s own docstring for why.
+        if on_failure is not None:
+            kind = (
+                "credential_folder_insecure"
+                if isinstance(exc, credentials_module.InsecureCredentialsDirectoryError)
+                else "credential_path_directory"
+                if isinstance(exc, credentials_module.CredentialsPathIsDirectoryError)
+                else "credentials_insecure"
+                if isinstance(exc, credentials_module.InsecureCredentialsError)
+                else "credentials_invalid"
+            )
+            on_failure(kind)
         _render_credentials_error(stderr, exc)
         return None
     except OSError as exc:
+        if on_failure is not None:
+            on_failure("credentials_unreadable")
         # type(exc).__name__ only, never str(exc): an OSError's message
         # can carry a full filesystem path, and this module's own
         # constraint is no raw exception text in user-facing output,
@@ -1021,7 +1036,9 @@ async def _run_ask(
     kept = _KeptText(stderr)
     report = cast(TextIO, kept) if as_json else stderr
 
-    def failed_before_the_stream(exit_code: int, error_class: str, fallback: str) -> int:
+    def failed_before_the_stream(
+        exit_code: int, error_class: str, fallback: str, *, safe_message: str | None = None
+    ) -> int:
         if as_json:
             from system_03_search_agent.adapters.cli.render import write_json_failure
 
@@ -1031,12 +1048,45 @@ async def _run_ask(
                 run_id=None,
                 persona_name=None,
                 error_class=error_class,
-                message=kept.take() or fallback,
+                message=safe_message if safe_message is not None else kept.take() or fallback,
             )
         return exit_code
 
-    creds = _load_credentials_or_report(report)
+    credential_failure: str | None = None
+
+    def note_credential_failure(kind: str) -> None:
+        nonlocal credential_failure
+        credential_failure = kind
+
+    creds = _load_credentials_or_report(report, on_failure=note_credential_failure)
     if creds is None:
+        if credential_failure == "credential_folder_insecure":
+            message = (
+                "s3: the credential folder is not private or accessible to your account. "
+                "Run chmod 700 on your credential folder, then try again."
+            )
+            return failed_before_the_stream(1, "credentials_insecure", message, safe_message=message)
+        if credential_failure == "credential_path_directory":
+            message = (
+                "s3: a directory occupies the credential file location. "
+                "Move the directory aside, then run 's3 login'."
+            )
+            return failed_before_the_stream(1, "credentials_invalid", message, safe_message=message)
+        if credential_failure == "credentials_insecure":
+            message = (
+                "s3: the credential file is not private. Run chmod 600 on your "
+                "credential file, then try again."
+            )
+            return failed_before_the_stream(1, credential_failure, message, safe_message=message)
+        if credential_failure == "credentials_invalid":
+            message = "s3: the credential file cannot be used. Run 's3 login' to replace it."
+            return failed_before_the_stream(1, credential_failure, message, safe_message=message)
+        if credential_failure == "credentials_unreadable":
+            message = (
+                "s3: stored credentials could not be read; check that the file "
+                "exists and is readable, then try again."
+            )
+            return failed_before_the_stream(1, credential_failure, message, safe_message=message)
         return failed_before_the_stream(1, "sign_in_needed", "s3: not signed in; run 's3 login' first")
 
     session_id = args.session_id or uuid.uuid4().hex
@@ -1128,6 +1178,11 @@ async def _run_ask(
             renderer.finish()
             return outcome
         if outcome == EXIT_INTERRUPTED:
+            if as_json:
+                renderer.record_failure(  # type: ignore[union-attr]
+                    "interrupted",
+                    "s3: you stopped this search. Start a new search if you still need an answer.",
+                )
             # F-4.2-V4-02, MAJOR: an interrupted run reaches a terminal
             # state with no `done`/fatal `error`/guard event ever
             # delivered to `renderer`, the exact undetermined-state shape

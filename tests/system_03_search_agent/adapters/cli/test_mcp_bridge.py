@@ -32,6 +32,7 @@ import base64
 import io
 import json
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -310,6 +311,70 @@ class TestRenewal:
         assert "s3 login" in replies[0]["error"]["message"]
         assert expired not in harness.output()
         assert "refresh-1" not in harness.output()
+
+    @pytest.mark.asyncio
+    async def test_unreadable_renewal_reply_names_decode_failure_and_logs_it(
+        self,
+        signed_in: Callable[[str | None], credentials.Credentials],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        expired = jwt(-5, "decode")
+        stand_in = StandIn(valid_tokens={expired})
+        harness = Harness(stand_in, signed_in(expired))
+
+        async def unreadable_reply(
+            _http: httpx.AsyncClient, _creds: credentials.Credentials
+        ) -> credentials.Credentials:
+            raise httpx.DecodingError("bad gzip payload: secret-like server text")
+
+        monkeypatch.setattr(credentials, "refresh_locked", unreadable_reply)
+        replies = await harness.send(CALL())
+
+        assert stand_in.mcp_requests == [], "a failed renewal never forwards the request"
+        assert replies[0]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE
+        assert "Could not read System 3's sign-in renewal reply" in replies[0]["error"]["message"]
+        assert "s3 login" in replies[0]["error"]["message"]
+        assert "Try again" not in replies[0]["error"]["message"]
+        assert "could not decode the sign-in renewal reply" in harness.stderr.getvalue()
+        assert "s3 login" in harness.stderr.getvalue()
+        assert "secret-like" not in harness.output()
+        assert expired not in harness.output()
+
+    @pytest.mark.asyncio
+    async def test_unreadable_200_renewal_never_reuses_the_rotated_token(
+        self, signed_in: Callable[[str | None], credentials.Credentials]
+    ) -> None:
+        expired = jwt(-5, "rotated")
+        creds = signed_in(expired)
+        stand_in = StandIn(valid_tokens={expired})
+        refresh_calls = 0
+
+        async def reply(request: httpx.Request) -> httpx.Response:
+            nonlocal refresh_calls
+            if request.url.path == "/auth/refresh":
+                refresh_calls += 1
+                return httpx.Response(
+                    200, content=b"not gzip",
+                    headers={"content-type": "application/json", "content-encoding": "gzip"},
+                )
+            return await stand_in.handler(request)
+
+        lines: list[bytes] = []
+        err = io.StringIO()
+        async with httpx.AsyncClient(transport=httpx.MockTransport(reply), base_url=BASE) as http:
+            bridge = mcp_bridge.McpBridge(http, creds, write_line=lines.append, stderr=err)
+            await bridge.handle_line(json.dumps(CALL()).encode())
+            await bridge.drain()
+
+        response = json.loads(lines[0])
+        assert len(lines) == 1
+        assert refresh_calls == 1
+        assert stand_in.mcp_requests == []
+        assert response["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE
+        assert "s3 login" in response["error"]["message"]
+        assert "Try again" not in response["error"]["message"]
+        assert "s3 login" in err.getvalue()
+        assert expired not in str(response) + err.getvalue()
 
     @pytest.mark.asyncio
     async def test_a_renewed_token_refused_again_is_an_error_not_silence(self, signed_in) -> None:
@@ -723,6 +788,77 @@ class TestTheBridgesBounds:
         assert sorted(by_id) == list(range(1, later + 1))
         assert all(by_id[i]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE for i in range(1, later))
         assert by_id[later]["result"]["isError"] is False
+
+    @pytest.mark.asyncio
+    async def test_a_queued_request_gets_its_own_deadline_after_a_slot_opens(
+        self,
+        signed_in: Callable[[str | None], credentials.Credentials],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # V01: nine 0.22-second calls through eight slots with a 0.31-second
+        # exchange budget. The ninth must not spend its own budget in the queue.
+        monkeypatch.setattr(mcp_bridge, "REQUEST_DEADLINE_SECONDS", 0.31)
+        token = jwt(900, "queued")
+        stand_in = StandIn(valid_tokens={token})
+        first_eight_started = asyncio.Event()
+        started = 0
+
+        async def slow_answer(request: httpx.Request) -> httpx.Response:
+            nonlocal started
+            started += 1
+            if started == mcp_bridge.MAX_IN_FLIGHT:
+                first_eight_started.set()
+            await asyncio.sleep(0.22)
+            message = json.loads(request.content)
+            return httpx.Response(200, json={
+                "jsonrpc": "2.0", "id": message["id"], "result": {"isError": False},
+            })
+
+        stand_in.override = slow_answer
+        harness = Harness(stand_in, signed_in(token))
+        for request_id in range(1, mcp_bridge.MAX_IN_FLIGHT + 1):
+            await harness.bridge.handle_line(json.dumps(CALL(request_id)).encode())
+        await asyncio.wait_for(first_eight_started.wait(), 2)
+        later = mcp_bridge.MAX_IN_FLIGHT + 1
+        await harness.bridge.handle_line(json.dumps(CALL(later)).encode())
+        await asyncio.wait_for(harness.bridge.drain(), 3)
+
+        by_id = {reply["id"]: reply for reply in harness.replies()}
+        assert sorted(by_id) == list(range(1, later + 1))
+        assert "result" in by_id[later], by_id[later]
+        assert all(reply["result"]["isError"] is False for reply in by_id.values())
+
+    @pytest.mark.asyncio
+    async def test_a_deep_queue_is_refused_before_its_slot_wait_grows_without_bound(
+        self,
+        signed_in: Callable[[str | None], credentials.Credentials],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(mcp_bridge, "REQUEST_DEADLINE_SECONDS", 0.30)
+        monkeypatch.setattr(mcp_bridge, "QUEUE_WAIT_SECONDS", 0.30)
+        token = jwt(900, "deep-queue")
+        stand_in = StandIn(valid_tokens={token})
+
+        async def slow_answer(request: httpx.Request) -> httpx.Response:
+            await asyncio.sleep(0.18)
+            message = json.loads(request.content)
+            return httpx.Response(
+                200, json={"jsonrpc": "2.0", "id": message["id"], "result": {"isError": False}}
+            )
+
+        stand_in.override = slow_answer
+        harness = Harness(stand_in, signed_in(token))
+        count = mcp_bridge.MAX_IN_FLIGHT * 3
+        for request_id in range(1, count + 1):
+            await harness.bridge.handle_line(json.dumps(CALL(request_id)).encode())
+        await asyncio.wait_for(harness.bridge.drain(), 3)
+
+        by_id = {reply["id"]: reply for reply in harness.replies()}
+        assert sorted(by_id) == list(range(1, count + 1))
+        for request_id in range(2 * mcp_bridge.MAX_IN_FLIGHT + 1, count + 1):
+            assert "System 3 is busy" in by_id[request_id]["error"]["message"]
+        forwarded = {json.loads(request.content)["id"] for request in stand_in.mcp_requests}
+        assert forwarded == set(range(1, 2 * mcp_bridge.MAX_IN_FLIGHT + 1))
 
     @pytest.mark.asyncio
     async def test_the_deadline_never_loses_a_renewal_the_server_already_made(
