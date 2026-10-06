@@ -111,9 +111,9 @@ async function markerAndNameLastLine(page: Page, selector: string): Promise<{ na
   }, shorterName);
 }
 
-for (const width of [390, 1280]) {
+for (const width of [390, 412, 414, 1280]) {
   test(`the long variant name stays inside the answer at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    await page.setViewportSize({ width, height: width < 720 ? 844 : 900 });
     await ask(page, answer());
     await expect(page.getByTestId("answer-meta")).toBeVisible({ timeout: 30_000 });
     const records = page.getByTestId("answer-records-0");
@@ -139,7 +139,7 @@ for (const width of [390, 1280]) {
       });
     }
 
-    if (width === 390) {
+    if (width < 720) {
       const row = records.locator("li > span").first();
       await expect(row).toContainText(name);
       const lines = await row.evaluate((element) => {

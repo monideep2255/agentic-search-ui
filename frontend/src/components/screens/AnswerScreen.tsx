@@ -1425,24 +1425,54 @@ export function AnswerBody({
     if (block.type === "records") return renderRecords(block);
     return (
       <Typography key={block.key} component="p" sx={PROSE_SX}>
-        {block.items.map(({ claim, index }) => (
-          <Box
-            component="span"
-            key={index}
-            data-testid={`${testIdPrefix}claim-text-${index}`}
-            data-layer={provenance(claim)}
-            sx={{ ...uncitedInk(claim), ...rise }}
-          >
-            {/* No space before the markers: a superscript sits against the
-                sentence it cites, and a space would let it wrap alone. */}
-            {withMainPoint(
-              claim.text,
-              mainPoint?.index === index ? mainPoint.term : undefined,
-              `${testIdPrefix}answer-main-point`,
-            )}
-            {citationChips(claim, index)}{" "}
-          </Box>
-        ))}
+        {block.items.map(({ claim, index }) => {
+          const trailing = claim.text.match(/[.!?]*\s*$/)?.[0].length ?? 0;
+          const longFinalName = (claim.citations.length > 0 || !!claim.pendingCitations)
+            && /(?:^|\s)\S{20,}$/.test(claim.text.slice(0, claim.text.length - trailing));
+          const tailStart = Math.max(0, claim.text.length - trailing - 3);
+          const term = mainPoint?.index === index ? mainPoint.term : undefined;
+          const termStart = term ? claim.text.indexOf(term) : -1;
+          const crossesTail = term && termStart >= 0 && termStart < tailStart && termStart + term.length > tailStart;
+          const mainPointId = `${testIdPrefix}answer-main-point`;
+          return (
+            <Box
+              component="span"
+              key={index}
+              data-testid={`${testIdPrefix}claim-text-${index}`}
+              data-layer={provenance(claim)}
+              sx={{ ...uncitedInk(claim), ...rise }}
+            >
+              {!longFinalName ? (
+                <>
+                  {withMainPoint(claim.text, term, mainPointId)}
+                  {citationChips(claim, index)}
+                </>
+              ) : crossesTail ? (
+                <>
+                  {claim.text.slice(0, termStart)}
+                  <Box component="strong" data-testid={mainPointId} sx={{ fontWeight: 700 }}>
+                    {claim.text.slice(termStart, tailStart)}
+                  </Box>
+                  <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+                    <Box component="strong" sx={{ fontWeight: 700 }}>
+                      {claim.text.slice(tailStart, termStart + term.length)}
+                    </Box>
+                    {claim.text.slice(termStart + term.length)}
+                    {citationChips(claim, index)}
+                  </Box>
+                </>
+              ) : (
+                <>
+                  {withMainPoint(claim.text.slice(0, tailStart), termStart < tailStart ? term : undefined, mainPointId)}
+                  <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+                    {withMainPoint(claim.text.slice(tailStart), termStart >= tailStart ? term : undefined, mainPointId)}
+                    {citationChips(claim, index)}
+                  </Box>
+                </>
+              )}{" "}
+            </Box>
+          );
+        })}
       </Typography>
     );
   };
