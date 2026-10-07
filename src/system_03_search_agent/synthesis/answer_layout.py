@@ -66,6 +66,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from system_03_search_agent.contracts.events import source_page_key
 from system_03_search_agent.core.next_step import entity_type_noun
 from system_03_search_agent.synthesis.disease_names import (
     is_placeholder_condition_title,
@@ -860,10 +861,12 @@ def drop_record_restatements(
     if not grounding.sentences or not grounding.claims:
         return grounding, 0
     claims = list(grounding.claims)
+    # Keyed by `source_page_key` (card 22), the one page key every count
+    # uses, so a cited link with a trailing slash still finds its record.
     shown_by_url = {
-        (finding.source_url or "").strip(): finding
+        source_page_key(finding.source_url): finding
         for finding in one_finding_per_record(synth_findings)
-        if (finding.source_url or "").strip()
+        if source_page_key(finding.source_url)
     }
     cursor = 0
     kept: list[tuple[str, int, list[GroundedClaim]]] = []
@@ -875,7 +878,7 @@ def drop_record_restatements(
         own = claims[cursor : cursor + marker_count]
         cursor += marker_count
         cited = [claim.finding for claim in own]
-        shown = shown_by_url.get((cited[0].source_url or "").strip()) if cited else None
+        shown = shown_by_url.get(source_page_key(cited[0].source_url)) if cited else None
         if (
             own
             and not any(claim.evidence_quote for claim in own)
@@ -1012,13 +1015,16 @@ def answer_summary_sentence(
     # Items 12.9 and 12.10 (2026-09-23), measured live: once the prose could
     # cite a paper's abstract as well as its title, "Found 10 pubmed records"
     # sat above a list of 5 papers, because two citations of one paper were
-    # counted as two records. One record per page, keyed by exact
-    # `source_url` as the list and the trust line key it, keeping the
-    # finding that NAMES the record (its title) when there is one.
+    # counted as two records. One record per page, keeping the finding that
+    # NAMES the record (its title) when there is one. Card 22 (2026-10-06):
+    # keyed by `source_page_key`, the key the Sources list, the meta line and
+    # the trust line all use, so the graph's gene link and the live Datasets
+    # gene link (which adds a trailing slash) are one record here too, and
+    # "Found 2 gene records" can no longer sit above one gene card (A-22-03).
     by_page: dict[str, SynthFinding] = {}
     unkeyed: list[SynthFinding] = []
     for finding in sorted(counted, key=lambda f: display_slots[f.citation_id]):
-        page = (finding.source_url or "").strip()
+        page = source_page_key(finding.source_url)
         if not page:
             unkeyed.append(finding)
             continue

@@ -23,6 +23,7 @@ from pathlib import Path
 import pytest
 
 from system_03_search_agent.feedback.history import _citation_count
+from system_03_search_agent.synthesis.answer_layout import answer_summary_sentence
 from system_03_search_agent.synthesis.findings import SynthFinding
 from system_03_search_agent.synthesis.grounding import GroundedClaim
 from system_03_search_agent.synthesis.trust import (
@@ -288,6 +289,40 @@ def test_the_history_rail_never_merges_what_it_cannot_read() -> None:
 def test_the_history_rail_count_agrees_with_the_trust_line_on_the_evidence() -> None:
     stored = [{"source_url": citation["source_url"]} for citation in _DATA["citations"]]
     assert _citation_count(stored) == _DATA["expected_after"]["sources_cited"]
+
+
+def test_the_opening_line_counts_one_record_per_page() -> None:
+    """A-22-03: "Found 2 gene records for BRCA1: BRCA1 [1] and BRCA1 [2]"
+    above one gene card. Mutation: key `by_page` by exact URL again and this
+    reads 2."""
+    graph = SynthFinding(
+        ref_index=1,
+        citation_id="c1",
+        layer="layer_1_graph",
+        tool="cypher_query",
+        field="symbol",
+        field_value="BRCA1",
+        source_url=_GENE,
+        entity_type="Gene",
+        curie="NCBIGene:672",
+    )
+    live = SynthFinding(
+        ref_index=2,
+        citation_id="c2",
+        layer="layer_2_api",
+        tool="ncbi_datasets",
+        field="symbol",
+        field_value="BRCA1",
+        source_url=_GENE + "/",
+        entity_type="Gene",
+    )
+    slots = {"c1": 1, "c2": 2}
+    researcher = answer_summary_sentence(
+        [graph, live], slots, "BRCA1", None, lambda finding: None, audience_depth="researcher"
+    )
+    assert researcher is not None
+    assert "2 gene records" not in researcher, researcher
+    assert "[2]" not in researcher, researcher
 
 
 def _evidence_claims() -> list[GroundedClaim]:
