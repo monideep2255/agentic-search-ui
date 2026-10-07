@@ -93,7 +93,11 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _citation_payload(*, claim_text: str = "BRCA1 is a gene.") -> dict:
+def _citation_payload(
+    *,
+    claim_text: str = "BRCA1 is a gene.",
+    source_url: str = "https://www.ncbi.nlm.nih.gov/gene/672",
+) -> dict:
     """A full, schema-conformant `contracts.events.CitationPayload` dict.
 
     Copied from `test_writer.py`'s own helper of the same name (same shape,
@@ -106,7 +110,7 @@ def _citation_payload(*, claim_text: str = "BRCA1 is a gene.") -> dict:
         "display_index": 1,
         "source": "NCBIGene",
         "source_id": "NCBIGene:672",
-        "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+        "source_url": source_url,
         "layer": "layer_1_graph",
         "field": "symbol",
         "claim_text": claim_text,
@@ -442,7 +446,18 @@ async def test_question_trust_signal_and_citation_count_round_trip() -> None:
 
     owner = _unique_owner()
     question = f"Which diseases are associated with TP53? {uuid.uuid4().hex[:8]}"
-    citations = [_citation_payload(), _citation_payload(claim_text="a second claim.")]
+    # Card 22: the count is distinct record pages, so the round trip seeds
+    # two citations of one gene page (with and without a trailing slash)
+    # and one of a second page, and reads back 2, not 3.
+    citations = [
+        _citation_payload(),
+        _citation_payload(
+            claim_text="a second claim.", source_url="https://www.ncbi.nlm.nih.gov/gene/672/"
+        ),
+        _citation_payload(
+            claim_text="a third claim.", source_url="https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+        ),
+    ]
     trace_id = await _seed(owner_id=owner, question=question, trust_signal="flag", citations=citations)
     assert _row_owner(trace_id) == owner
 
@@ -529,7 +544,13 @@ async def test_one_unreadable_row_does_not_cost_its_well_formed_siblings() -> No
     good_trace = await _seed(
         owner_id=owner,
         question=f"A well-formed row {uuid.uuid4().hex[:8]}",
-        citations=[_citation_payload(), _citation_payload(claim_text="a second claim.")],
+        citations=[
+            _citation_payload(),
+            _citation_payload(
+                claim_text="a second claim.",
+                source_url="https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+            ),
+        ],
     )
     bad_trace = _seed_with_raw_citations(owner, f"A scalar row {uuid.uuid4().hex[:8]}", "5")
     assert _row_owner(good_trace) == owner

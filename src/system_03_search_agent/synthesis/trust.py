@@ -39,7 +39,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import Literal
+from urllib.parse import urlsplit
 
+from system_03_search_agent.contracts.events import source_page_key
 from system_03_search_agent.synthesis.findings import SynthFinding
 from system_03_search_agent.synthesis.grounding import GroundedClaim
 
@@ -529,18 +531,82 @@ def trust_for_claims(
     return out
 
 
-def _origin_database(finding: SynthFinding) -> str:
-    """The database a finding's record belongs to, for counting sources.
+_NCBI_HOST = "ncbi.nlm.nih.gov"
 
-    Read from the record's CURIE prefix when it has one, so a Layer 1 snapshot
-    row and a Layer 2 live fetch of the same database count ONCE, which is
-    Section 8.3.2's independence rule. Falls back to the tool name only when
-    the finding carries no CURIE at all.
+
+def record_database(finding: SynthFinding) -> str:
+    """The database a finding's record lives in, for counting agreement.
+
+    Card 22 fix round (2026-10-06, findings A-22-01, A-22-02 and J-22-03):
+    "Confirmed by N independent databases" must never tell a reader more
+    databases agree than actually do. The count this replaced read the
+    record's CURIE prefix and fell back to the TOOL name, and only graph
+    rows carry a CURIE, so every live and enrichment record counted by its
+    tool: a graph ClinVar row and a live fetch of the same ClinVar record
+    read as two databases (`clinvar`, `ncbi_efetch`), and the graph's gene
+    page and the live Datasets gene page read as two (`ncbigene`,
+    `ncbi_datasets`).
+
+    So the database is read off the record PAGE first, which every layer
+    carries and which names the database the same way whichever tool
+    fetched it:
+
+    - an NCBI page is keyed by its database's path, `ncbi.nlm.nih.gov/
+      clinvar`, `ncbi.nlm.nih.gov/gene`; a database with its own NCBI
+      subdomain (`pubmed.ncbi.nlm.nih.gov`) keys the same way
+      (`ncbi.nlm.nih.gov/pubmed`), and an NCBI research resource keys by
+      its own name (`ncbi.nlm.nih.gov/research/litvar2`);
+    - any other host is its own database (`omim.org`, with or without
+      `www.`, and `clinicaltrials.gov`);
+    - with no page, the record's CURIE prefix;
+    - with neither, the empty string: a record that cannot name its
+      database is never counted as one, rather than counted by its tool.
+
+    A graph snapshot and a live fetch of one database therefore count once,
+    which is Section 8.3.2's independence rule.
     """
+    parts = urlsplit(source_page_key(finding.source_url))
+    host = (parts.hostname or "").lower().removeprefix("www.")
+    if host:
+        if host.endswith("." + _NCBI_HOST):
+            return f"{_NCBI_HOST}/{host[: -len(_NCBI_HOST) - 1]}"
+        if host == _NCBI_HOST:
+            segments = [segment.lower() for segment in parts.path.split("/") if segment]
+            if segments[:1] == ["research"] and len(segments) > 1:
+                return f"{_NCBI_HOST}/research/{segments[1]}"
+            if segments:
+                return f"{_NCBI_HOST}/{segments[0]}"
+        return host
     curie = finding.curie.strip()
     if ":" in curie:
         return curie.split(":", 1)[0].lower()
-    return finding.tool.lower()
+    return ""
+
+
+def _databases_backing(claim_finding: SynthFinding, cited: list[SynthFinding]) -> set[str]:
+    """The databases whose CITED records state the same value for this claim's fact.
+
+    The same structural comparison `triangulate` makes (same field, same
+    Section 8.3.2 equivalence bucket), counted by `record_database` instead
+    of by tool. A value outside the bucket table backs nothing, because
+    `triangulate` cannot call it concordant either.
+
+    `cited` is the answer's grounded claims' findings, the records the
+    reader can open in its Sources list, and nothing else (card 22 last
+    round, V-22-01). Counting the whole findings pool let uncited records,
+    possibly about a different variant, turn one cited ClinVar record into
+    "Confirmed by 3 independent databases"; N may never name a database
+    the reader cannot open.
+    """
+    bucket = bucket_for(claim_finding.field_value)
+    if bucket is None:
+        return set()
+    agreeing = [claim_finding] + [
+        finding
+        for finding in cited
+        if finding.field == claim_finding.field and bucket_for(finding.field_value) == bucket
+    ]
+    return {database for finding in agreeing if (database := record_database(finding))}
 
 
 def answer_trust_line(
@@ -558,68 +624,103 @@ def answer_trust_line(
     - `refuse`, or nothing grounded: None. A refusal has its own block.
     - `flag`: the sources disagree, which outranks any count.
     - `answer` with at least one high-risk claim, every high-risk claim
-      concordant, and two or more independent databases: "Confirmed by N
-      independent sources". This is the only line that says "confirmed",
-      because concordance is the only verdict that means it.
-    - `ask`: "Based on N source(s), not yet confirmed".
-    - Otherwise (every claim low risk): "Based on N source(s)". Low-risk
-      claims are never triangulated, so "not yet confirmed" would imply a
-      check that does not apply to them.
+      concordant, and every one of them backed by two or more databases:
+      "Confirmed by N independent databases". This is the only line that
+      says "confirmed", because concordance is the only verdict that means
+      it.
+    - `ask`, or a high-risk claim whose agreement does not reach two
+      databases: "Based on N source(s) cited, not yet confirmed".
+    - Otherwise (every claim low risk): "Based on N source(s) cited".
+      Low-risk claims are never triangulated, so "not yet confirmed" would
+      imply a check that does not apply to them.
+
+    Agreement is counted among the cited claims only, so N can never exceed
+    the number of databases in the answer's Sources list.
+
+    ## Card 22 (owner, 2026-10-06): every total says what it counts
+
+    One answer showed "18 sources" in the meta line and "Based on 17
+    sources" here, and neither said what it counted. Now "sources" means
+    one thing on the whole screen: distinct pages cited, keyed by
+    `source_page_key`, the number of source cards a person can open and
+    count. So the "Based on" lines gain the word "cited", and the
+    "Confirmed by" line, which counts DATABASES (below), says "databases".
+
+    ## Card 22 fix round: N counts only the databases that agree
+
+    The first build kept the old number under the new noun, and two
+    reviewers showed the noun made it false (A-22-01, A-22-02, J-22-03):
+    N counted the distinct databases of EVERY claim in the answer, low-risk
+    ones included, and counted a live or enrichment record by its tool. One
+    concordant ClinVar fact beside four unrelated records read "Confirmed by
+    5 independent databases", and a graph ClinVar row beside a live fetch
+    of the same record read "Confirmed by 2".
+
+    N is now the number of databases (`record_database`) whose CITED
+    records state the confirmed fact (last round, V-22-01: never an uncited
+    finding, so N never names a database the reader cannot open in the
+    Sources list), and with several high-risk facts it is the
+    smallest of their counts, so every confirmed fact has at least N
+    databases behind it. When that is fewer than two, the line says "not
+    yet confirmed", because two records from one database are not two
+    confirmations, whatever the per-claim verdict concluded from the tools.
 
     ## Fix-plan item 12.8 (2026-09-23): two different counts, not one
 
     Measured against real runs (`testing/Developer/reports/2026-09-23_set12/
     both_depths/`), the "Based on" line was printing "Based on 4 sources"
     under an answer with 20 clickable citations, and after item 12.7's
-    listing dedup, "Based on 1 source" over five visible papers. The line
-    was never wrong about what it counted, `_origin_database`'s comment
-    always said "databases, never records", and a test asserted exactly
-    that. It was wrong about what the WORD "source" means to the reader
-    looking at the chips underneath: to them, a source is one of those
-    chips, not one of the databases those chips happen to come from.
+    listing dedup, "Based on 1 source" over five visible papers. It was
+    counting databases, which is not what the WORD "source" means to the
+    reader looking at the chips underneath: to them, a source is one of
+    those chips, not one of the databases those chips happen to come from.
 
-    Section 8.3.2's independence rule is still real and still needed
-    somewhere: "Confirmed by N independent sources" is a claim about
-    CORROBORATION, that N separate databases agree, and counting
-    citations there would overstate independence (twenty ClinVar rows are
-    one database, not twenty separate confirmations). So the two counts
-    now live side by side and are never conflated:
+    So the two counts live side by side and are never conflated:
 
     - `citation_count`, the number of distinct pages among the grounded
-      claims, keyed by exact `source_url`. Item 12.11 corrected this the
-      same day it was written: it first counted distinct `citation_id`s,
-      and the page's source list merges several chips for one record into
-      one row by URL, so "Based on 14 sources" sat above a list of 12. It drives every "Based on N source(s))"
-      line, confirmed or not: the reader is told how much evidence they
-      can click through, which is the claim "Based on" actually makes.
-    - `database_count`, the pre-existing independent-origin count, kept
-      for exactly one job: deciding and wording "Confirmed by N
-      independent sources", where "independent" is the load-bearing word
-      and N must never exceed how many distinct databases actually
-      agree.
+      claims, keyed by `source_page_key` (card 22; item 12.11 keyed it by
+      exact `source_url`, and before that it counted citation ids, which
+      read "Based on 14 sources" above a list of 12). It drives every
+      "Based on N source(s) cited" line: the reader is told how much
+      evidence they can click through, which is the claim "Based on"
+      actually makes.
+    - the agreeing-database count above, for exactly one job: deciding and
+      wording "Confirmed by N independent databases", where "independent"
+      is the load-bearing word and N must never exceed how many distinct
+      databases actually agree.
     """
     if trust_outcome == "refuse" or not claims:
         return None
-    # Item 12.11 (2026-09-23): distinct PAGES, not distinct citation ids.
-    # Counting ids read "Based on 14 sources" above a source list headed 12,
-    # because the page merges every chip for the same record into one row by
-    # its exact URL (`groupSourcesByLayer` in `AnswerScreen.tsx`). Same key,
-    # same count. A claim with no URL counts on its own id, never merged.
+    # Distinct PAGES (item 12.11, keyed by `source_page_key` since card 22),
+    # the same key the page's Sources list merges its cards by
+    # (`groupSourcesByLayer` in `AnswerScreen.tsx`), so a trailing slash no
+    # longer splits one page in two. A claim with no URL counts on its own
+    # id, never merged.
     citation_count = len(
-        {claim.finding.source_url or claim.finding.citation_id for claim in claims}
+        {
+            source_page_key(claim.finding.source_url) or claim.finding.citation_id
+            for claim in claims
+        }
     )
-    database_count = len({_origin_database(claim.finding) for claim in claims})
     noun = "source" if citation_count == 1 else "sources"
     if trust_outcome == "flag":
         return "Sources disagree on at least one claim"
     high = [trust for trust in claim_trusts if trust.risk_tier == "high"]
-    if (
-        trust_outcome == "answer"
-        and high
-        and all(trust.triangulation == "concordant" for trust in high)
-        and database_count >= 2
+    if trust_outcome == "answer" and high and all(
+        trust.triangulation == "concordant" for trust in high
     ):
-        return f"Confirmed by {database_count} independent sources"
+        finding_by_id = {claim.finding.citation_id: claim.finding for claim in claims}
+        # Cited records only (V-22-01): never the uncited findings pool.
+        pool = list(finding_by_id.values())
+        backing = [
+            len(_databases_backing(finding_by_id[trust.citation_id], pool))
+            if trust.citation_id in finding_by_id
+            else 0
+            for trust in high
+        ]
+        if min(backing) >= 2:
+            return f"Confirmed by {min(backing)} independent databases"
+        return f"Based on {citation_count} {noun} cited, not yet confirmed"
     if trust_outcome == "ask":
-        return f"Based on {citation_count} {noun}, not yet confirmed"
-    return f"Based on {citation_count} {noun}"
+        return f"Based on {citation_count} {noun} cited, not yet confirmed"
+    return f"Based on {citation_count} {noun} cited"

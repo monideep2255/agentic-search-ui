@@ -314,7 +314,7 @@ def _claims(*findings: SynthFinding) -> list[GroundedClaim]:
 
 def test_trust_line_single_source_not_confirmed() -> None:
     line = answer_trust_line("ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE))
-    assert line == "Based on 1 source, not yet confirmed"
+    assert line == "Based on 1 source cited, not yet confirmed"
 
 
 def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
@@ -332,7 +332,30 @@ def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
     line = answer_trust_line(
         "ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE, other, GENE)
     )
-    assert line == "Based on 3 sources, not yet confirmed"
+    assert line == "Based on 3 sources cited, not yet confirmed"
+
+
+def _significance(ref_index: int, url: str, *, tool: str = "cypher_query") -> SynthFinding:
+    """A record stating one variant's clinical significance, "Pathogenic"."""
+    return SynthFinding(
+        ref_index=ref_index,
+        citation_id=f"c-{ref_index}",
+        layer="layer_1_graph" if tool == "cypher_query" else "layer_3_enrichment",
+        tool=tool,
+        field="clinical_significance",
+        field_value="Pathogenic",
+        source_url=url,
+        entity_type="Variant",
+    )
+
+
+# One variant's records (card 22 last round, V-22-04): its ClinVar variation
+# record, a ClinVar condition record for the same variant, and its dbSNP
+# page, which is also the link `litvar2_lookup` builds for a LitVar2 record
+# with a significance (`tools/litvar2_lookup.py`, `_snp_url_for_rsid`).
+CLINVAR_A = _significance(1, "https://www.ncbi.nlm.nih.gov/clinvar/variation/17661")
+CLINVAR_B = _significance(2, "https://www.ncbi.nlm.nih.gov/clinvar/RCV000019240")
+LITVAR = _significance(3, "https://www.ncbi.nlm.nih.gov/snp/rs80357713", tool="litvar2_lookup")
 
 
 def test_trust_line_confirmed_still_counts_independent_databases() -> None:
@@ -340,24 +363,28 @@ def test_trust_line_confirmed_still_counts_independent_databases() -> None:
     how many chips are on screen, so it must keep counting distinct
     databases even where `test_trust_line_based_on_counts_visible_
     citations_not_databases` just proved the "Based on" line does not.
-    Three distinct citations (DISEASE, other, GENE) share only two
-    databases (MedGen, NCBIGene); reporting "Confirmed by 3" would claim a
-    third, nonexistent, independent database agreed.
+    Three records of one variant state its significance, two in ClinVar
+    and one on its dbSNP page (cited by LitVar2): three pages, two
+    databases. Reporting "Confirmed by 3" would claim a third, nonexistent,
+    independent database agreed.
+
+    Card 22 fix round: rebuilt with records that state the same fact about
+    the same variant (last round, V-22-04). The old version marked a claim
+    concordant with nothing agreeing with it and still read "Confirmed by 2",
+    because the count then ran over every claim in the answer (A-22-02).
     """
-    other = _finding(3, "pancreatic cancer", curie="MedGen:C3")
-    trusts = [_trust("c-2", "high", "concordant", "answer")]
-    assert answer_trust_line("answer", trusts, _claims(DISEASE, other, GENE)) == (
-        "Confirmed by 2 independent sources"
-    )
+    trusts = [_trust("c-1", "high", "concordant", "answer")]
+    claims = _claims(CLINVAR_A, CLINVAR_B, LITVAR)
+    assert answer_trust_line("answer", trusts, claims) == "Confirmed by 2 independent databases"
 
 
 def test_trust_line_confirmed_only_on_concordance() -> None:
-    trusts = [_trust("c-2", "high", "concordant", "answer")]
-    assert answer_trust_line("answer", trusts, _claims(DISEASE, GENE)) == (
-        "Confirmed by 2 independent sources"
+    trusts = [_trust("c-1", "high", "concordant", "answer")]
+    assert answer_trust_line("answer", trusts, _claims(CLINVAR_A, LITVAR)) == (
+        "Confirmed by 2 independent databases"
     )
-    low = [_trust("c-2", "low", "insufficient", "answer")]
-    assert answer_trust_line("answer", low, _claims(DISEASE, GENE)) == "Based on 2 sources"
+    low = [_trust("c-1", "low", "insufficient", "answer")]
+    assert answer_trust_line("answer", low, _claims(CLINVAR_A, LITVAR)) == "Based on 2 sources cited"
 
 
 def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
@@ -370,7 +397,7 @@ def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
         for n in range(1, 6)
     ]
     line = answer_trust_line("answer", [], _claims(*papers))
-    assert line == "Based on 5 sources"
+    assert line == "Based on 5 sources cited"
 
 
 def test_trust_line_counts_pages_the_source_list_shows() -> None:
@@ -393,7 +420,7 @@ def test_trust_line_counts_pages_the_source_list_shows() -> None:
     assert len({c.finding.citation_id for c in claims}) == 3, (
         "populate-check: three citation ids, or the old count could not be told apart"
     )
-    assert answer_trust_line("answer", [], claims) == "Based on 2 sources"
+    assert answer_trust_line("answer", [], claims) == "Based on 2 sources cited"
 
 
 def test_trust_line_flag_and_refuse() -> None:
