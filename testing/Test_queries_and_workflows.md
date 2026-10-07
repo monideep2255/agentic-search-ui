@@ -1986,6 +1986,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 102 | A reopened saved answer lists its sources, one row per page, each linking to its record | Query 107 |
 | card 22 | Every total on an answer says what it counts, and every number that says sources is the same | Query 107 |
 | card 101 | Every sentence the writer rewords is checked against its paper before you see it | Query 106 |
 | card 99 | A plain-language answer never says "children" for "young children" or drops "potentially" | Query 106 |

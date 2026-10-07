@@ -88,7 +88,11 @@ export interface SavedSourceRow {
   citation: HistoryAnswerCitation;
   /** Every citation number that points at this page, in answer order. */
   indices: number[];
-  /** Every layer the page was cited from, ascending. */
+  /**
+   * Every layer the page was cited from, ascending. A citation whose stored
+   * layer was not recognised (`layer: null`, card 102) adds none, so its row
+   * still shows with its link and names no layer rather than a guessed one.
+   */
   layers: (1 | 2 | 3)[];
 }
 
@@ -110,13 +114,18 @@ export function savedSourceRows(citations: HistoryAnswerCitation[]): SavedSource
     .forEach((citation) => {
       const key = sourcePageKey(citation.source_url) || `#${citation.display_index}`;
       const row = rows.get(key);
+      const { layer } = citation;
       if (row) {
         row.indices.push(citation.display_index);
-        if (!row.layers.includes(citation.layer)) {
-          row.layers = [...row.layers, citation.layer].sort((a, b) => a - b);
+        if (layer !== null && !row.layers.includes(layer)) {
+          row.layers = [...row.layers, layer].sort((a, b) => a - b);
         }
       } else {
-        rows.set(key, { citation, indices: [citation.display_index], layers: [citation.layer] });
+        rows.set(key, {
+          citation,
+          indices: [citation.display_index],
+          layers: layer === null ? [] : [layer],
+        });
       }
     });
   return Array.from(rows.values());
@@ -125,7 +134,8 @@ export function savedSourceRows(citations: HistoryAnswerCitation[]): SavedSource
 /** One source row: layer dot, source name, link or "Not linked". */
 function CitationRow({ row }: { row: SavedSourceRow }) {
   const { citation } = row;
-  const colour = layerColour(citation.layer);
+  // An unrecognised layer draws `layerColour(null)`, the neutral gap colour.
+  const colour = layerColour(citation.layer ?? row.layers[0] ?? null);
   const linkable = isLinkableCitationUrl(citation.source_url);
   const label = citation.entity_name ?? citation.source;
   return (
@@ -165,11 +175,19 @@ function CitationRow({ row }: { row: SavedSourceRow }) {
         </Typography>
         {linkable ? (
           <Box sx={{ mt: "2px" }}>
+            {/*
+              A URL has no spaces, so without a break point a long one (a
+              Pathogen Detection isolate link, a ClinVar variation) runs past
+              its row and scrolls the page sideways on a phone (F-102-V-05).
+              `overflowWrap: "anywhere"` is the live answer's own rule for
+              long unbroken strings (`AnswerScreen.tsx`'s claim text and
+              phone source names), applied at every width.
+            */}
             <a
               href={citation.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ fontSize: 12.5, color: designTokens.link }}
+              style={{ fontSize: 12.5, color: designTokens.link, overflowWrap: "anywhere" }}
             >
               {citation.source_url}
             </a>

@@ -18,7 +18,7 @@ here before it is built.
 - Every other item's detail, every closed item and every note behind the board
   are in `testing/UI_fixes_done.md`.
 
-Last updated: 2026-10-06.
+Last updated: 2026-10-07.
 
 ## To do
 
@@ -422,6 +422,7 @@ as the answer to a failure the harness has not been worked on yet.
 
 | What | Cards | Where |
 |---|---|---|
+| Card 102: a reopened saved answer lists its sources again, one row per page under its "Based on N sources cited" line, so every fact links to its record | 102 | branch `fix/card102-saved-answer-sources`, being built |
 | Phase 8.7: the first sentence answers the question, the records show at about 8 seconds, and Opus writes | 2, 50, 5 | `tracker/phase_8.7.md`, branch `phase/8.7-answers-sooner`; parked 2026-09-27 with its three builders part-way, each listed in `HANDOFF.md` |
 | Two reviews of the harness, since "I do not think our harness works well right now": the product's, which turns a question into an answer, and the build's, which is how the product gets built; each ends in ranked changes and questions for you | the product owner, 2026-09-25 | `testing/Developer/reports/2026-09-25_harness_review/product_harness.md` and `build_harness.md` |
 

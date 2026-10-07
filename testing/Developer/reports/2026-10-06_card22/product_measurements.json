@@ -1,0 +1,1164 @@
+[
+  {
+    "testAccount": "card22-review+1791347580675@example.com"
+  },
+  {
+    "shot": "product_1280_signed_in_home.png",
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "wide": [],
+    "metas": [],
+    "sourcesCount": null,
+    "sourcesHeading": null,
+    "trust": null,
+    "savedTrust": null,
+    "cardCount": 0,
+    "cardInfo": [],
+    "groups": [],
+    "rail": [
+      "+ New search",
+      ""
+    ],
+    "savedRows": null,
+    "firstSentence": ""
+  },
+  {
+    "tag": "1280 researcher",
+    "q": "Which diseases are associated with BRCA1?",
+    "answered": true,
+    "secs": 32.133
+  },
+  {
+    "shot": "product_1280_q107_researcher.png",
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "wide": [],
+    "metas": [
+      "? Answered29.8s · 13 tool calls · 21 sources cited from 2 layers"
+    ],
+    "sourcesCount": "21",
+    "sourcesHeading": "▶Sources21▶Live NCBI APIs16▶[1]ncbi_efetch MedGen:C0346153L2 · liveFlag: does not supportToolnameEvidenceprimary_asserti",
+    "trust": "Based on 21 sources cited, not yet confirmed·High-risk claim",
+    "savedTrust": null,
+    "cardCount": 21,
+    "cardInfo": [
+      {
+        "id": "source-1",
+        "text": "▶[1]ncbi_efetch MedGen:C0346153L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 0,
+        "right": 0,
+        "width": 0
+      },
+      {
+        "id": "source-2",
+        "text": "▶[2]ncbi_efetch MedGen:C2676676L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-3",
+        "text": "▶[3]ncbi_efetch MedGen:C3280442L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-4",
+        "text": "▶[4]ncbi_efetch MedGen:C4554406L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-5",
+        "text": "▶[5][8][12]gene 672L2 · liveFlag: does not supportToolsummary, symbol, nameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://w",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-6",
+        "text": "▶[6]pubmed 36914836L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.n",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-7",
+        "text": "▶[7]pubmed 39265497L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.n",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-9",
+        "text": "▶[9]pubmed 28976962L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.n",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-10",
+        "text": "▶[10]clinvar 267740L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-11",
+        "text": "▶[11]omim 113705L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://omim.org/entry/11370",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-14",
+        "text": "▶[14]pubmed 35432218L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-15",
+        "text": "▶[15]clinvar 267741L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-17",
+        "text": "▶[17]clinvar 373892L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-19",
+        "text": "▶[19]pubmed 39261728L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-20",
+        "text": "▶[20]clinvar 4823850L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-22",
+        "text": "▶[22]clinvar 4848411L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-13",
+        "text": "▶[13]clinicaltrials.gov NCT00590109L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 0,
+        "right": 0,
+        "width": 0
+      },
+      {
+        "id": "source-16",
+        "text": "▶[16]clinicaltrials.gov NCT00597987L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-18",
+        "text": "▶[18]clinicaltrials.gov NCT00617656L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-21",
+        "text": "▶[21]clinicaltrials.gov NCT00673335L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-23",
+        "text": "▶[23]clinicaltrials.gov NCT00700778L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      }
+    ],
+    "groups": [
+      "sources-group-2 :: ▶Live NCBI APIs16▶[1]ncbi_efetch MedGen:C0346153L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepub",
+      "sources-group-2-count :: 16",
+      "sources-group-3 :: ▶Enrichment5▶[13]clinicaltrials.gov NCT00590109L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLic",
+      "sources-group-3-count :: 5"
+    ],
+    "rail": [
+      "+ New search",
+      "",
+      "Which diseases are associated with BRCA1?13 tool calls · 21 sources cited from 2 layers"
+    ],
+    "savedRows": null,
+    "firstSentence": "? Answered29.8s · 13 tool calls · 21 sources cited from 2 layersShow work ▾Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.⁠1–4 BRCA1 is associated with familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibili"
+  },
+  {
+    "tag": "1280 plain",
+    "q": "Which diseases are associated with BRCA1?",
+    "answered": true,
+    "secs": 33.13
+  },
+  {
+    "shot": "product_1280_q107_plain.png",
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "wide": [],
+    "metas": [
+      "? Answered22.1s · 13 tool calls · 21 sources cited from 2 layers"
+    ],
+    "sourcesCount": "21",
+    "sourcesHeading": "▶Sources21▶Live NCBI APIs16▶[1][6][10]gene 672L2 · liveFlag: does not supportToolsummary, symbol, nameEvidenceprimary_as",
+    "trust": "Based on 21 sources cited, not yet confirmed·High-risk claim",
+    "savedTrust": null,
+    "cardCount": 21,
+    "cardInfo": [
+      {
+        "id": "source-1",
+        "text": "▶[1][6][10]gene 672L2 · liveFlag: does not supportToolsummary, symbol, nameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://w",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-2",
+        "text": "▶[2]ncbi_efetch MedGen:C0346153L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-3",
+        "text": "▶[3]ncbi_efetch MedGen:C2676676L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-4",
+        "text": "▶[4]ncbi_efetch MedGen:C3280442L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-5",
+        "text": "▶[5]ncbi_efetch MedGen:C4554406L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-7",
+        "text": "▶[7]pubmed 28976962L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.n",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-8",
+        "text": "▶[8]clinvar 267740L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.g",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-9",
+        "text": "▶[9]omim 113705L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://omim.org/entry/113705",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-12",
+        "text": "▶[12]pubmed 35432218L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-13",
+        "text": "▶[13]clinvar 267741L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-15",
+        "text": "▶[15]pubmed 36914836L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-16",
+        "text": "▶[16]clinvar 373892L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-18",
+        "text": "▶[18]pubmed 39261728L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-19",
+        "text": "▶[19]clinvar 4823850L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-21",
+        "text": "▶[21]pubmed 39265497L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-22",
+        "text": "▶[22]clinvar 4848411L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-11",
+        "text": "▶[11]clinicaltrials.gov NCT00590109L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-14",
+        "text": "▶[14]clinicaltrials.gov NCT00597987L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-17",
+        "text": "▶[17]clinicaltrials.gov NCT00617656L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-20",
+        "text": "▶[20]clinicaltrials.gov NCT00673335L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-23",
+        "text": "▶[23]clinicaltrials.gov NCT00700778L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      }
+    ],
+    "groups": [
+      "sources-group-2 :: ▶Live NCBI APIs16▶[1][6][10]gene 672L2 · liveFlag: does not supportToolsummary, symbol, nameEvidenceprimary_assertionConfidenceassertedLicen",
+      "sources-group-2-count :: 16",
+      "sources-group-3 :: ▶Enrichment5▶[11]clinicaltrials.gov NCT00590109L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLic",
+      "sources-group-3-count :: 5"
+    ],
+    "rail": [
+      "+ New search",
+      "",
+      "Which diseases are associated with BRCA1?13 tool calls · 21 sources cited from 2 layers"
+    ],
+    "savedRows": null,
+    "firstSentence": "? Answered22.1s · 13 tool calls · 21 sources cited from 2 layersShow work ▾I found 4 conditions related to BRCA1.⁠2–5 BRCA1 is a gene whose protein helps keep genetic information stable and acts as a tumor suppressor.⁠1 Its protein works in DNA repair and recombination.⁠1 Changes in this gene account for roughly 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers.⁠"
+  },
+  {
+    "tag": "1280 gene",
+    "q": "What does the BRCA1 gene do?",
+    "answered": true,
+    "secs": 31.125
+  },
+  {
+    "shot": "product_1280_gene_researcher.png",
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "wide": [],
+    "metas": [
+      "✓ Answered17.1s · 13 tool calls · 17 sources cited from 3 layers"
+    ],
+    "sourcesCount": "17",
+    "sourcesHeading": "▶Sources17▶Knowledge graph1▶[1][2][3]NCBIGene 672L1 · graph, L2 · liveFlag: does not supportToolsummary, name, symbolEvi",
+    "trust": "Based on 17 sources cited",
+    "savedTrust": null,
+    "cardCount": 17,
+    "cardInfo": [
+      {
+        "id": "source-1",
+        "text": "▶[1][2][3]NCBIGene 672L1 · graph, L2 · liveFlag: does not supportToolsummary, name, symbolEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_gov",
+        "layers": "L1 · graph, L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-4",
+        "text": "▶[4]pubmed 28976962L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.n",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-5",
+        "text": "▶[5]clinvar 267740L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.g",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-6",
+        "text": "▶[6]omim 113705L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://omim.org/entry/113705",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-8",
+        "text": "▶[8]pubmed 35432218L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.n",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-9",
+        "text": "▶[9]clinvar 267741L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.g",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-11",
+        "text": "▶[11]pubmed 36914836L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-12",
+        "text": "▶[12]clinvar 373892L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-14",
+        "text": "▶[14]pubmed 39261728L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-15",
+        "text": "▶[15]clinvar 4823850L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-17",
+        "text": "▶[17]pubmed 39265497L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-18",
+        "text": "▶[18]clinvar 4848411L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih",
+        "layers": "L2 · live",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-7",
+        "text": "▶[7]clinicaltrials.gov NCT00590109L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordhtt",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-10",
+        "text": "▶[10]clinicaltrials.gov NCT00597987L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-13",
+        "text": "▶[13]clinicaltrials.gov NCT00617656L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-16",
+        "text": "▶[16]clinicaltrials.gov NCT00673335L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      },
+      {
+        "id": "source-19",
+        "text": "▶[19]clinicaltrials.gov NCT00700778L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 371,
+        "right": 1157,
+        "width": 786
+      }
+    ],
+    "groups": [
+      "sources-group-1 :: ▶Knowledge graph1▶[1][2][3]NCBIGene 672L1 · graph, L2 · liveFlag: does not supportToolsummary, name, symbolEvidenceprimary_assertionConfiden",
+      "sources-group-1-count :: 1",
+      "sources-group-2 :: ▶Live NCBI APIs12[1][3]NCBIGene 672: one card for this page, listed under Knowledge graph▶[4]pubmed 28976962L2 · liveFlag: does not supportT",
+      "sources-group-2-count :: 12",
+      "sources-group-2-also-1 :: [1][3]NCBIGene 672: one card for this page, listed under Knowledge graph",
+      "sources-group-3 :: ▶Enrichment5▶[7]clinicaltrials.gov NCT00590109L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLice",
+      "sources-group-3-count :: 5"
+    ],
+    "rail": [
+      "+ New search",
+      "",
+      "What does the BRCA1 gene do?13 tool calls · 17 sources cited from 3 layers",
+      "Which diseases are associated with BRCA1?13 tool calls · 21 sources cited from 2 layers"
+    ],
+    "savedRows": null,
+    "firstSentence": "✓ Answered17.1s · 13 tool calls · 17 sources cited from 3 layersShow work ▾Found 1 gene record for BRCA1: BRCA1 DNA repair associated.⁠2 DNA Repair FunctionMutations in this gene are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers.⁠1 Gene records foundGeneIdentifierBRCA1 DNA repair associatedNCBIGene:672⁠2BRCA1NCBIGene:672⁠3Pu"
+  },
+  {
+    "shot": "product_1280_after_reload.png",
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "wide": [],
+    "metas": [],
+    "sourcesCount": null,
+    "sourcesHeading": null,
+    "trust": null,
+    "savedTrust": null,
+    "cardCount": 0,
+    "cardInfo": [],
+    "groups": [],
+    "rail": [
+      "+ New search",
+      "",
+      "What does the BRCA1 gene do?17 sources cited · Oct 7",
+      "Which diseases are associated with BRCA1?21 sources cited · Oct 7",
+      "Which diseases are associated with BRCA1?21 sources cited · Oct 7"
+    ],
+    "savedRows": null,
+    "firstSentence": ""
+  },
+  {
+    "railButtonsAfterReload": 5
+  },
+  {
+    "shot": "product_1280_saved_0.png",
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "wide": [],
+    "metas": [],
+    "sourcesCount": null,
+    "sourcesHeading": null,
+    "trust": null,
+    "savedTrust": null,
+    "cardCount": 0,
+    "cardInfo": [],
+    "groups": [],
+    "rail": [
+      "+ New search",
+      "",
+      "What does the BRCA1 gene do?17 sources cited · Oct 7",
+      "Which diseases are associated with BRCA1?21 sources cited · Oct 7",
+      "Which diseases are associated with BRCA1?21 sources cited · Oct 7"
+    ],
+    "savedRows": null,
+    "firstSentence": ""
+  },
+  {
+    "shot": "product_1280_saved_1.png",
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "wide": [],
+    "metas": [],
+    "sourcesCount": null,
+    "sourcesHeading": null,
+    "trust": null,
+    "savedTrust": null,
+    "cardCount": 0,
+    "cardInfo": [],
+    "groups": [],
+    "rail": [],
+    "savedRows": null,
+    "firstSentence": ""
+  },
+  {
+    "shot": "product_1280_saved_2.png",
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "wide": [],
+    "metas": [],
+    "sourcesCount": null,
+    "sourcesHeading": null,
+    "trust": null,
+    "savedTrust": "Based on 17 sources cited",
+    "cardCount": 0,
+    "cardInfo": [],
+    "groups": [],
+    "rail": [
+      "+ New search",
+      "",
+      "What does the BRCA1 gene do?17 sources cited · Oct 7",
+      "Which diseases are associated with BRCA1?21 sources cited · Oct 7",
+      "Which diseases are associated with BRCA1?21 sources cited · Oct 7"
+    ],
+    "savedRows": [],
+    "firstSentence": ""
+  },
+  {
+    "shot": "product_390_home.png",
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "wide": [],
+    "metas": [],
+    "sourcesCount": null,
+    "sourcesHeading": null,
+    "trust": null,
+    "savedTrust": null,
+    "cardCount": 0,
+    "cardInfo": [],
+    "groups": [],
+    "rail": [],
+    "savedRows": null,
+    "firstSentence": ""
+  },
+  {
+    "tag": "390 researcher",
+    "q": "Which diseases are associated with BRCA1?",
+    "answered": true,
+    "secs": 30.139
+  },
+  {
+    "shot": "product_390_q107_researcher.png",
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "wide": [],
+    "metas": [
+      "? Answered13.0s · 13 tool calls · 21 sources cited from 2 layers"
+    ],
+    "sourcesCount": "21",
+    "sourcesHeading": "▶Sources21▶Live NCBI APIs16▶[1]ncbi_efetch MedGen:C0346153L2 · liveFlag: does not supportToolnameEvidenceprimary_asserti",
+    "trust": "Based on 21 sources cited, not yet confirmed·High-risk claim",
+    "savedTrust": null,
+    "cardCount": 21,
+    "cardInfo": [
+      {
+        "id": "source-1",
+        "text": "▶[1]ncbi_efetch MedGen:C0346153L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-2",
+        "text": "▶[2]ncbi_efetch MedGen:C2676676L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-3",
+        "text": "▶[3]ncbi_efetch MedGen:C3280442L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-4",
+        "text": "▶[4]ncbi_efetch MedGen:C4554406L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-5",
+        "text": "▶[5][11][14]gene 672L2 · liveFlag: does not supportToolsummary, symbol, nameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-6",
+        "text": "▶[6]clinvar 267740L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.g",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-7",
+        "text": "▶[7]clinvar 267741L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.g",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-8",
+        "text": "▶[8]clinvar 373892L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.g",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-9",
+        "text": "▶[9]clinvar 4823850L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-10",
+        "text": "▶[10]clinvar 4848411L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-12",
+        "text": "▶[12]pubmed 28976962L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-13",
+        "text": "▶[13]omim 113705L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://omim.org/entry/11370",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-16",
+        "text": "▶[16]pubmed 35432218L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-18",
+        "text": "▶[18]pubmed 36914836L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-20",
+        "text": "▶[20]pubmed 39261728L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-22",
+        "text": "▶[22]pubmed 39265497L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-15",
+        "text": "▶[15]clinicaltrials.gov NCT00590109L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-17",
+        "text": "▶[17]clinicaltrials.gov NCT00597987L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-19",
+        "text": "▶[19]clinicaltrials.gov NCT00617656L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-21",
+        "text": "▶[21]clinicaltrials.gov NCT00673335L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-23",
+        "text": "▶[23]clinicaltrials.gov NCT00700778L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      }
+    ],
+    "groups": [
+      "sources-group-2 :: ▶Live NCBI APIs16▶[1]ncbi_efetch MedGen:C0346153L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepub",
+      "sources-group-2-count :: 16",
+      "sources-group-3 :: ▶Enrichment5▶[15]clinicaltrials.gov NCT00590109L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLic",
+      "sources-group-3-count :: 5"
+    ],
+    "rail": [],
+    "savedRows": null,
+    "firstSentence": "? Answered13.0s · 13 tool calls · 21 sources cited from 2 layersShow work ▾Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.⁠1–4 BRCA1 is associated with four diseases: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic canc"
+  },
+  {
+    "shot": "product_390_rail_open.png",
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "wide": [],
+    "metas": [
+      "? Answered13.0s · 13 tool calls · 21 sources cited from 2 layers"
+    ],
+    "sourcesCount": "21",
+    "sourcesHeading": "▶Sources21▶Live NCBI APIs16▶[1]ncbi_efetch MedGen:C0346153L2 · liveFlag: does not supportToolnameEvidenceprimary_asserti",
+    "trust": "Based on 21 sources cited, not yet confirmed·High-risk claim",
+    "savedTrust": null,
+    "cardCount": 21,
+    "cardInfo": [
+      {
+        "id": "source-1",
+        "text": "▶[1]ncbi_efetch MedGen:C0346153L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-2",
+        "text": "▶[2]ncbi_efetch MedGen:C2676676L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-3",
+        "text": "▶[3]ncbi_efetch MedGen:C3280442L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-4",
+        "text": "▶[4]ncbi_efetch MedGen:C4554406L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.nc",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-5",
+        "text": "▶[5][11][14]gene 672L2 · liveFlag: does not supportToolsummary, symbol, nameEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-6",
+        "text": "▶[6]clinvar 267740L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.g",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-7",
+        "text": "▶[7]clinvar 267741L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.g",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-8",
+        "text": "▶[8]clinvar 373892L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.g",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-9",
+        "text": "▶[9]clinvar 4823850L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih.",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-10",
+        "text": "▶[10]clinvar 4848411L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://www.ncbi.nlm.nih",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-12",
+        "text": "▶[12]pubmed 28976962L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-13",
+        "text": "▶[13]omim 113705L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://omim.org/entry/11370",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-16",
+        "text": "▶[16]pubmed 35432218L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-18",
+        "text": "▶[18]pubmed 36914836L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-20",
+        "text": "▶[20]pubmed 39261728L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-22",
+        "text": "▶[22]pubmed 39265497L2 · liveFlag: does not supportTooltitleEvidenceprimary_assertionConfidenceassertedLicensepublic_domain_us_govRecordhttps://pubmed.ncbi.nlm.",
+        "layers": "L2 · live",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-15",
+        "text": "▶[15]clinicaltrials.gov NCT00590109L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-17",
+        "text": "▶[17]clinicaltrials.gov NCT00597987L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-19",
+        "text": "▶[19]clinicaltrials.gov NCT00617656L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-21",
+        "text": "▶[21]clinicaltrials.gov NCT00673335L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      },
+      {
+        "id": "source-23",
+        "text": "▶[23]clinicaltrials.gov NCT00700778L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLicensepublic_domain_us_govRecordht",
+        "layers": "L3 · literature",
+        "left": 35,
+        "right": 355,
+        "width": 320
+      }
+    ],
+    "groups": [
+      "sources-group-2 :: ▶Live NCBI APIs16▶[1]ncbi_efetch MedGen:C0346153L2 · liveFlag: does not supportToolnameEvidenceprimary_assertionConfidenceassertedLicensepub",
+      "sources-group-2-count :: 16",
+      "sources-group-3 :: ▶Enrichment5▶[15]clinicaltrials.gov NCT00590109L3 · literatureFlag: does not supportToolnameEvidenceexternal_annotationConfidenceassertedLic",
+      "sources-group-3-count :: 5"
+    ],
+    "rail": [
+      "+ New search",
+      "",
+      "Which diseases are associated with BRCA1?13 tool calls · 21 sources cited from 2 layers",
+      "What does the BRCA1 gene do?17 sources cited · Oct 7"
+    ],
+    "savedRows": null,
+    "firstSentence": "? Answered13.0s · 13 tool calls · 21 sources cited from 2 layersShow work ▾Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.⁠1–4 BRCA1 is associated with four diseases: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic canc"
+  },
+  {
+    "shot": "product_390_saved_q107.png",
+    "overflow": 33,
+    "bodyOverflow": 33,
+    "wide": [
+      "saved-answer-table-12 right=524",
+      "THEAD right=524",
+      "TR right=524",
+      "TH right=406",
+      "TH right=524",
+      "TBODY right=524",
+      "TR right=524",
+      "TD right=406"
+    ],
+    "metas": [],
+    "sourcesCount": null,
+    "sourcesHeading": null,
+    "trust": null,
+    "savedTrust": "Based on 21 sources cited, not yet confirmed",
+    "cardCount": 0,
+    "cardInfo": [],
+    "groups": [],
+    "rail": [
+      "+ New search",
+      "",
+      "Which diseases are associated with BRCA1?13 tool calls · 21 sources cited from 2 layers",
+      "What does the BRCA1 gene do?17 sources cited · Oct 7"
+    ],
+    "savedRows": [],
+    "firstSentence": ""
+  },
+  {
+    "shot": "product_390_rail_after_reload.png",
+    "overflow": 0,
+    "bodyOverflow": 0,
+    "wide": [],
+    "metas": [],
+    "sourcesCount": null,
+    "sourcesHeading": null,
+    "trust": null,
+    "savedTrust": null,
+    "cardCount": 0,
+    "cardInfo": [],
+    "groups": [],
+    "rail": [
+      "+ New search",
+      "",
+      "Which diseases are associated with BRCA1?21 sources cited · Oct 7",
+      "What does the BRCA1 gene do?17 sources cited · Oct 7",
+      "Which diseases are associated with BRCA1?21 sources cited · Oct 7",
+      "Which diseases are associated with BRCA1?21 sources cited · Oct 7"
+    ],
+    "savedRows": null,
+    "firstSentence": ""
+  }
+]
