@@ -9667,11 +9667,12 @@ def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
 #: measure: skipping is free, timing out is not.
 _WRITE_REPAIR_MIN_BUDGET_S = 5.0
 
-# Items 12.9 and 12.10 (2026-09-23): the model check on reworded sentences
-# runs only with at least this much of the write budget left, and is itself
-# capped, so it can never be the reason an answer times out. Below the floor
-# it is skipped, which approves nothing: the answer is what code alone
-# accepts, exactly as before the check existed.
+# Items 12.9 and 12.10 (2026-09-23): the sentence check runs only with at
+# least this much of the write budget left, and is itself capped, so it can
+# never be the reason an answer times out. Below the floor it is skipped,
+# which approves nothing: no reworded sentence and no copied cut is shown,
+# only what code shows with no check (a whole record sentence, a wrapped
+# record value). Card 101 (2026-10-06).
 _SENTENCE_CHECK_MIN_BUDGET_S = 4.0
 _SENTENCE_CHECK_MAX_BUDGET_S = 12.0
 
@@ -9686,15 +9687,17 @@ async def _ground_with_sentence_check(
     trace_id: str,
     budget_s: float,
 ) -> GroundingResult:
-    """Ground a reply, asking a model about reworded sentences.
+    """Ground a reply, asking a model about reworded sentences and copied cuts.
 
     Decided by the product owner on 2026-09-23 (items 12.9 and 12.10; the
     reasoning is in `synthesis/sentence_check.py`). Two grounding passes over
     the same reply:
 
-    1. The ordinary pass, collecting every reworded sentence that passed all
-       of code's exact checks (quote in the record, numbers, negation) and
-       failed only the word check.
+    1. The ordinary pass, collecting the check's items: every reworded
+       sentence that passed all of code's exact checks (quote in the
+       record, numbers, negation), and, since card 101 (2026-10-06), every
+       copied clause that is not a whole record sentence, read as the
+       sentence up to it (`grounding._copied_clause_candidate`).
     2. When there are any, ONE model check about all of them, then the
        pass again, accepting exactly the sentences the model approved with
        exactly those quotes. Which model is `sentence_check.
@@ -9706,7 +9709,7 @@ async def _ground_with_sentence_check(
 
     Fails closed at every step: no candidates, too little budget, the cost
     cap, a failed or timed-out call, or an unreadable reply all return the
-    first pass unchanged, which is what code alone accepts.
+    first pass unchanged, which shows none of the items.
     """
     candidates: list[SynthesisCandidate] = []
     first = run_grounding_pass(
