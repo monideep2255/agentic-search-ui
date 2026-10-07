@@ -10,6 +10,7 @@ The one fix round for card 22, 2026-10-06, on `fix/card22-name-every-total` from
 - [Mutations](#mutations)
 - [Gates](#gates)
 - [Not fixed and left for a card](#not-fixed-and-left-for-a-card)
+- [Last round](#last-round)
 
 ## What a person sees now
 
@@ -107,3 +108,38 @@ Run with the main checkout's virtual environment first on PATH, load average abo
 - Agreement is compared by field and value, not by subject: two records stating "Pathogenic" for different variants agree under both `triangulate` and the new count. Inherited from `triangulate`.
 - The MCP `ask` output still returns the trust line beside the full per-citation list (J-22-06's second surface); a client that prints the list one line per citation shows more lines than sources.
 - J-22-01 and A-22-07, above.
+
+## Last round
+
+The fresh verifier failed the fix round on V-22-01 (`verify.md` in this folder). The lead decided one narrow last round on the owner's behalf: V-22-01 to V-22-04 and nothing else.
+
+| Finding | Status | What changed | Test that holds it |
+|---|---|---|---|
+| V-22-01 | Fixed | `answer_trust_line` (`src/system_03_search_agent/synthesis/trust.py`) no longer takes a findings pool: `_databases_backing` counts agreement among the cited claims' findings only, the records the reader can open under SOURCES, so N never exceeds the databases listed there. `core/graph.py` calls it with `grounding.claims` and nothing else, as develop did. | `test_agreement_is_read_from_the_cited_records_only` (the verifier's probe: one cited ClinVar record, uncited dbSNP and PubTator, reads "not yet confirmed", not 3), `test_one_record_fetched_twice_beside_an_uncited_corroborator_confirms_nothing` (case H), `test_n_never_exceeds_the_databases_in_the_sources_list`, and `test_genuine_agreement_among_cited_records_still_confirms` (ClinVar with LitVar2, ClinVar with dbSNP, three databases: 2, 2 and 3). `test_agreement_is_read_from_the_whole_findings_pool` is replaced by the cited-only test. |
+| V-22-02 | Fixed | The restatement gate (`src/system_03_search_agent/synthesis/answer_layout.py`, `drop_record_restatements`) keeps every listed row on a page and drops a sentence that restates any of them. "Gene BRCA1 symbol [1]." is dropped again, in either order. | `test_the_restatement_gate_drops_a_restatement_of_either_row_on_a_page`, both orders |
+| V-22-03 | Fixed | Tests for the gate's page key and for the trust line's wiring. | `test_the_restatement_gate_reads_every_row_on_the_page` (a sentence citing the graph row that says only what the live row on the same page lists); `core/test_graph.py::test_the_trust_line_is_computed_from_the_cited_claims_only` (a spy on `answer_trust_line` through `write_node`: three arguments, no keyword, its claims are exactly the citation events) |
+| V-22-04 | Fixed | The "Confirmed by" tests use records of one variant: ClinVar variation 17661, a ClinVar condition record, the dbSNP page `/snp/rs80357713` (the link `litvar2_lookup` builds, `_snp_url_for_rsid`) and an OMIM allelic variant entry. A LitVar2 record and a dbSNP record for one variant are the same page and one database. | `test_answer_layout.py`'s two confirmed tests; the card test file's confirmed tests; the `record_database` cases now include the dbSNP link for both tools |
+
+Not attempted, as briefed: same-subject matching. Agreement is still compared by field and value, so two cited records stating "Pathogenic" for different variants still read as agreeing (the verifier's case L, the same on develop).
+
+### Mutations
+
+| Mutation | Result |
+|---|---|
+| W3 the pool comes back: `all_findings` re-added to `answer_trust_line` and passed from `write_node` (the verifier's V-M11 shape) | Caught, 1 failed (`test_the_trust_line_is_computed_from_the_cited_claims_only`) |
+| W2 the pool passed as a fourth argument | Caught, write steps fail |
+| G1 the gate keeps the last row per page (V-22-02) | Caught, 1 failed |
+| G2 the gate keeps the first row per page | Caught, 1 failed |
+| G3 the gate keyed by exact link, develop's key (V-22-03) | Caught, 1 failed |
+| W1 claims built from every prepared finding instead of the grounded claims | Survived. In every write path I could drive, the findings tail cites every prepared finding, so the two lists hold the same records and the line is the same. The spy pins that the claims equal the citation events, which is the property the reader depends on. |
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| gate02, import order | Pass, "Skipped 2 files" |
+| gate03, `ruff check` with no path | "Found 10 errors.", all 10 in the reviewers' untracked probes under `raw/adversary/`; nothing else fails. The intermediate commit's test file lints clean. |
+| gate04, whole unit suite | Pass: "7078 passed, 143 skipped, 24 deselected, 1 xfailed, 7 warnings in 483.21s" |
+| Frontend gate | Not run: this round touched no frontend file |
+| `CI=1 npx playwright test e2e/card22-name-every-total.spec.ts` | Pass: "4 passed (36.4s)", at 1280 and 390 |
+| `check_public_leaks.py --base origin/develop` | PASS, 0 findings over 14 commits; 12 binary files listed, all untracked |
