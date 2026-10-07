@@ -283,7 +283,8 @@ And in `src/system_03_search_agent/adapters/cli/credentials.py`, read only:
 
 The rule to build: once a renewal fails with `httpx.DecodingError` or with any `credentials_module.RefreshError`, this `s3 mcp` process never calls `/auth/refresh` again and never sends another request.
 
-- Why: in each of those cases the stored refresh token is dead, refused by the server or spent by a 200 the bridge could not use. Sending it again can only sign the person out again, including a web sign-in they made in the meantime.
+- Why: in each of those cases the stored refresh token is dead, or may be: refused by the server, or spent by a 200 the bridge could not use. Sending it again can only sign the person out again, including a web sign-in they made in the meantime. This is the product owner's decision of 2026-10-06: the latch fires on an unreadable reply and on a refused renewal.
+- A 5xx reply latches too. `_refresh_and_store` raises `RefreshError` for any reply that is not 200 (`credentials.py` line 705), including a 5xx from the proxy during a deploy, and the bridge cannot tell whether the server rotated the token before that reply came back. Latching is the safe side of that doubt. Name this choice under Decisions in your pull request.
 - Every other failure keeps today's behaviour: a network failure (`httpx.HTTPError` other than `DecodingError`), a missing credential file (`FileNotFoundError`), and the local credential errors in the table above.
 - The cost: a person who runs `s3 login` and does not restart the MCP server must restart it, which every one of these messages already tells them to do.
 
@@ -293,38 +294,53 @@ What to build, all in `mcp_bridge.py`:
 2. In `__init__`, after line 314: `self._sign_in_spent = False`.
 3. The first lines of `_exchange` (line 584): if `self._sign_in_spent`, raise `BridgeError(SIGN_IN_NEEDED, _SIGN_IN_SPENT)`. Nothing reaches `/mcp/` or `/auth/refresh`.
 4. The first lines inside `async with self._renew_lock:` in `_renew` (line 780, before the "another request renewed it" check): the same check and the same raise. A request that was already waiting on the lock when the first renewal failed stops here.
-5. In the `CredentialsError` branch (lines 799 to 804), set `self._sign_in_spent = True` when `isinstance(exc, credentials_module.RefreshError)`, before the raise.
-6. In the `DecodingError` branch (lines 809 to 816), set `self._sign_in_spent = True` and change `REMOTE_UNREACHABLE` (line 812) to `SIGN_IN_NEEDED`. Keep its sentence and its stderr line.
+5. A new method, `_latch_if_spent(self, task: asyncio.Future[Any]) -> None`: it returns at once if `task.cancelled()`, and otherwise sets `self._sign_in_spent = True` when `task.exception()` is an `httpx.DecodingError` or a `credentials_module.RefreshError`. Every other failure, and a success, leaves the flag alone.
+6. In the `DecodingError` branch (lines 809 to 816), change `REMOTE_UNREACHABLE` (line 812) to `SIGN_IN_NEEDED`. Keep its sentence and its stderr line.
+7. In `_renew`, register `refresh.add_done_callback(self._latch_if_spent)` on the renewal task, after the `_retrieve_quietly` callback (line 794) and before `asyncio.shield(refresh)` (line 798). This callback is the one place the latch is set: the `except` branches do not set it themselves.
 
-The lead applied steps 1 to 6 to a scratch copy on 2026-10-06: scratch versions of the six new tests below passed, and the only existing tests that failed in `tests/system_03_search_agent/adapters/cli/` were the two assertions step 6 changes. Your build is still yours to prove.
+Why step 7 is a done callback and not a line in the `except` branches:
+
+- The renewal task is shielded, so it runs to the end even when the request waiting on it is cancelled, by the agent's `notifications/cancelled` (line 414) or by the request deadline.
+- That request never reaches its `except` branch, and `_retrieve_quietly` (lines 831 to 837) reads and drops the error. A latch set only in the `except` branches would stay unset, and the next request would send the spent token again.
+- The callback runs whether or not anyone still waits. Callbacks run in the order they were added, and `asyncio.shield` adds its own when it is called, so the flag is set before the waiting request resumes.
+
+The lead applied an earlier version of steps 1 to 6, which set the latch in the two `except` branches, to a scratch copy on 2026-10-06: scratch versions of the six new tests below other than the cancelled-request one passed, and the only existing tests that failed in `tests/system_03_search_agent/adapters/cli/` were the two assertions step 6 changes. Step 7 has not been run by anyone. Your build is still yours to prove.
 
 How to test, in `tests/system_03_search_agent/adapters/cli/test_mcp_bridge.py`, class `TestRenewal` (line 243). The file's stand-in server is `StandIn` (lines 64 to 140), with `refresh_calls` and `mcp_requests`; `signed_in` (lines 167 to 180) writes a private credential file; `CALL(request_id)` (line 199) builds a `tools/call`. The handler in `test_unreadable_200_renewal_never_reuses_the_rotated_token` (lines 343 to 377) answers `/auth/refresh` with HTTP 200, `content-encoding: gzip` and the body `b"not gzip"`: reuse it.
+
+How to set the tests up:
+
+- Every new test except "Nothing is sent after the latch" and "A renewal that fails after its request was cancelled" starts from `signed_in(jwt(-5, "<marker>"))` with `StandIn(valid_tokens={that token})`, so the first request renews at once.
+- `StandIn.override` takes over `/mcp/` only: `StandIn.handler` answers `/auth/refresh` before it looks at `override` (lines 85 to 103). A test that changes how `/auth/refresh` answers therefore wraps `stand_in.handler` in its own handler, as lines 352 to 360 do, and counts the refresh calls in that wrapper.
 
 | Test | What it asserts | Turns red when you remove |
 |---|---|---|
 | Lines 334 and 373 | The two existing assertions expect `mcp_bridge.SIGN_IN_NEEDED`, not `REMOTE_UNREACHABLE` | Step 6's code change |
-| Unreadable reply, two requests in turn | Two `tools/call` requests through one bridge, each sent with `handle_line` then `drain`: one refresh call in total, both replies `-32001` with "s3 login", `stand_in.mcp_requests == []` | Step 6's latch |
+| Unreadable reply, two requests in turn | Two `tools/call` requests through one bridge, each sent with `handle_line` then `drain`: one refresh call in total, both replies `-32001` with "s3 login", `stand_in.mcp_requests == []` | The `DecodingError` arm of step 5 |
 | Unreadable reply, two requests at once | Both sent with `handle_line` before one `drain`, as `test_two_requests_at_once_renew_only_once` does (line 398), and the handler waits `await asyncio.sleep(0.02)` before answering, as `StandIn.handler` does (line 88), so the second request is waiting on the lock: one refresh call in total, both answered `-32001` | Step 4 |
-| A 200 that is not JSON | `/auth/refresh` answers 200 with `content-type: text/html` and `b"<html></html>"`, two requests in turn: one refresh call in total | Step 5 |
-| A refused renewal | As `test_renewal_that_fails_sends_nothing_and_says_to_sign_in` (line 300, the stand-in's `valid_refresh_tokens = set()`), then a second request: `stand_in.refresh_calls == 1` | Step 5 |
+| A 200 that is not JSON | `/auth/refresh` answers 200 with `content-type: text/html` and `b"<html></html>"`, two requests in turn: one refresh call in total | The `RefreshError` arm of step 5 |
+| A refused renewal | As `test_renewal_that_fails_sends_nothing_and_says_to_sign_in` (line 300, the stand-in's `valid_refresh_tokens = set()`), then a second request: `stand_in.refresh_calls == 1` | The `RefreshError` arm of step 5 |
 | Nothing is sent after the latch | Start with `signed_in("opaque")`, a token with no expiry that `StandIn(valid_tokens=set())` refuses, and `valid_refresh_tokens = set()`; two requests in turn: `len(stand_in.mcp_requests) == 1` and `stand_in.refresh_calls == 1` | Step 3 |
+| A renewal that fails after its request was cancelled | As `test_the_deadline_never_loses_a_renewal_the_server_already_made` (line 864): the deadline set to 0.2 s, and a wrapper whose `/auth/refresh` sleeps 0.5 s and then answers 200 with the unreadable gzip body. The first request answers `-32002` at the deadline; after `await asyncio.sleep(0.8)`, a second request answers `-32001` and the refresh count stays 1 | Step 7: set the latch in the two `except` branches instead of the done callback, and this test goes red |
 | A network failure does not latch | `/auth/refresh` raises `httpx.ConnectError("down", request=request)` on its first call and behaves normally after; the first request answers `-32002`, the second renews and gets a result | Nothing: it turns red if the latch is widened to every failure |
 
-Measured on develop on 2026-10-06 with scratch versions of the first five new tests: each made 2 refresh calls where it should make 1, and the "nothing is sent" case sent 2 requests to `/mcp/`. In every new test also assert that no reply and no stderr line contains the access token or the refresh token's value.
+Measured on develop on 2026-10-06 with scratch versions of the first five new tests: each made 2 refresh calls where it should make 1, and the "nothing is sent" case sent 2 requests to `/mcp/`. In every new test also assert that no reply and no stderr line contains the access token or the refresh token's value. In the two-requests-in-turn tests, assert the second reply's message equals `mcp_bridge._SIGN_IN_SPENT`.
 
 Run: `PATH="<main checkout>/venv/bin:$PATH" PYTHONPATH=src python -m pytest tests/system_03_search_agent/adapters/cli/ -q`, then the Python checks in [Checks before you push](#checks-before-you-push).
 
 Done when:
 
-- Every test in the table passes, and your report shows each one red with only its one property removed.
+- Every test in the table passes, and your report shows each one red with only its one property removed; the network-failure test instead goes red when the latch is widened to every failure.
 - The change is in the client alone and works against production as it runs today. No server file changes.
 - The Python checks pass.
+- No screenshots: card 75 changes no screen. The report shows each test's output instead.
 
 Not in this card, named in your pull request under Not covered:
 
 - The older items in card 75's board row: an agent argument whose name contains "bearer token" makes `s3 mcp` say to log in again, and two Authorization headers or an empty "Bearer " get the wrong fixed message. They wait for the server's `data.reason` refusal field to land and reach production first, and a production release is the product owner's. Leave them.
 - The next process. The latch lives in one `s3 mcp` process, and the credential file still holds the spent refresh token. A restarted `s3 mcp`, or an `s3 ask`, run before `s3 login` would send it again. Every message says to run `s3 login` first.
-- A renewal that times out after it was sent (`httpx.ReadTimeout`), where the server may have rotated the token.
+- A renewal whose connection fails after it was sent (`httpx.ReadTimeout`, `httpx.ReadError`, `httpx.RemoteProtocolError`), where the server may have rotated the token.
+- A request that was already waiting on the renewal lock when another request was cancelled mid-renewal. The cancelled request lets go of the lock while its renewal still runs in the background, so the waiting one takes the lock before that renewal finishes, finds no latch yet, and can send the same token once more. Closing it needs the waiting request to await the same renewal task, a larger change.
 - `s3 ask`'s own remedy for a 200 it cannot use, "Retry, or report this to the operator if it recurs." (`credentials.py` lines 731, 743 and 751), which also leads to a resend.
 
 ## Card 24: the Plain language and Researcher switch on an answer
@@ -340,11 +356,15 @@ What they should see, by the product owner's decision of 2026-10-06 and decision
 - The new answer joins the conversation like a follow-up, and the answer they were reading folds above it. Later follow-ups use the new mode.
 - Clicking the mode already shown does nothing.
 
-Port the built version, then add the cost. The switch was built on 2026-09-25 in commit `df7d7a2c` ("feat(web-ui): add the Plain language / Researcher toggle to the answer status strip"). Its branch, `phase/8.4-answers-worth-reading`, is gone from the remote; the commit survives under the local tag `parked/phase-8.4-2026-09-25`, which your worktree shares with the main checkout. Port that one commit and nothing else from the tag:
+Port the built version, then add the cost. The switch was built on 2026-09-25 in commit `df7d7a2c` ("feat(web-ui): add the Plain language / Researcher toggle to the answer status strip"). Its branch, `phase/8.4-answers-worth-reading`, is gone from the remote; the commit survives under the local tag `parked/phase-8.4-2026-09-25`, which your worktree shares with the main checkout.
+
+The tag is not on the remote, so a fresh clone cannot see it. Check first with `git cat-file -t df7d7a2c`; if it does not print `commit`, stop and ask the product owner. Port that one commit and nothing else from the tag:
 
 ```bash
 git cherry-pick df7d7a2c
 ```
+
+Keep the cherry-picked commit's message as it is, even though its subject starts in lowercase. Title the pull request with your own commit's subject, for example `feat(web-ui): Show the cost before the answer mode switch asks again`.
 
 What it brings:
 
@@ -353,19 +373,41 @@ What it brings:
 - `onDepthChange={(next) => void ask(searchView.question, next, true)}` in `frontend/src/App.tsx`.
 - Three test files: `App.depthToggle.test.tsx`, `AnswerScreen.depthToggle.test.tsx` and new cases in `DepthControl.test.tsx`.
 
-Its message says "Card 33", the card's number before the board was renumbered: write card 24 in anything you add.
+Its message and its comments say "Card 33", the card's number before the board was renumbered. Card 33 is now a different card. In your own commit, change the 12 comments and test names under `frontend/src` that say it to "card 24". Write card 24 in anything you add.
 
 The cherry-pick stops on one conflict, checked on 2026-10-06 against develop `5cf63d6c`: the import line of `frontend/src/components/controls/DepthControl.test.tsx`. Develop imports `{ DepthControl, displayedMode }`; the commit adds `ANSWER_MODE_EXPLAINER` and `DepthStripToggle`. Resolve it to `import { DepthControl, DepthStripToggle, displayedMode } from "./DepthControl";`, and add `ANSWER_MODE_EXPLAINER` only if a test in the file still uses it. The other files merge without conflict; build and test before you change anything else.
+
+Line numbers in `AnswerScreen.tsx` from here on are the file's after the cherry-pick, checked on 2026-10-06 against develop `5cf63d6c`. The port moves every one of them by 47 to 50 lines from develop's:
+
+| What | After the cherry-pick | On develop before it |
+|---|---|---|
+| The status strip's outer `Box`, holding the row and the work panel | Line 1542 | Line 1516 |
+| The Show work button | Lines 1624 to 1640 | Lines 1577 to 1594 |
+| The work panel, `ReasoningLog` | Line 1645 | Line 1597 |
+| The folded previous turn's `AnswerBody` | Line 2311 | Line 2263 |
+| The New search button | Lines 2502 to 2524 | Lines 2452 to 2474 |
+| The streaming preview's `AnswerBody` | Line 2551 | Line 2501 |
+
+In `App.tsx` the port changes only lines further down (the ported `onDepthChange` lands at line 1835), so the two lines this card reads keep develop's numbers: `allowance` (line 404) and `dailyLimitLine` (line 982).
 
 Then add the cost on click, which the ported commit lacks (it re-runs at once):
 
 - In `AnswerBody`, hold the mode the person clicked in state. `DepthStripToggle` stays as ported and calls that state's setter, never `onDepthChange` directly.
-- While a mode is held, show one line inside the status strip, below its row, where the work panel opens today (`AnswerScreen.tsx` line 1597): `Ask this question again in <mode>? It counts as one new search (<limit>).`, where `<mode>` is "Researcher" or "Plain language" and `<limit>` is the account's search standing. Give it `data-testid="answer-depth-confirm"` and `aria-live="polite"`, text in `body2` with colour `designTokens.inkMuted`.
-- Two buttons on that line. "Ask again" calls `onDepthChange` with the held mode and clears it; style it as the New search button (`AnswerScreen.tsx` lines 2452 to 2474: 12.5 px, weight 600, `designTokens.blue` fill, `designTokens.navy` on hover). "Cancel" clears it and calls nothing; style it as the Show work button (lines 1577 to 1594: 13 px, `designTokens.link`, no border).
-- `<limit>` is the string `App.tsx` already builds for the account menu: `dailyLimitLine` (line 982), from `dailyLimitPhrase` in `frontend/src/lib/guestSession.ts` (line 148). It reads "N of M searches left today" when searches are counted, "no search limit in effect yet" when they are not, and "checking your search limit…" before the count arrives. Pass it down as a new prop, `searchLimitCopy`: `App.tsx` passes `searchLimitCopy={dailyLimitLine}` beside the ported `onDepthChange`, and `AnswerScreen` hands it to the live `AnswerBody`. Never write a number of your own.
-- The switch renders only on the live, landed answer, as the ported commit does: never on the streaming preview (line 2501) or a folded previous turn (line 2263).
+- While a mode is held, show one line inside the status strip, below its row, where the work panel opens (line 1645). `<mode>` is the held option's label from `AUDIENCE_MODE_OPTIONS`, "Researcher" or "Plain language". The line has two forms, both approved by the product owner on 2026-10-06:
 
-This wording is set by this brief from D21's words. If the product owner asks for different words at retest, only the strings change.
+  | Who | When | The line |
+  |---|---|---|
+  | A guest | `allowance.counted` is true | `Ask this question again in <mode>? It counts as one new search (<N> left today).` |
+  | A signed-in person, whose searches are not limited per day, or anyone before the count has loaded | `allowance.counted` is false, or `allowance` is still null | `Ask this question again in <mode>? It runs as one new search.` |
+
+  `<N>` is `Math.max(allowance.total - allowance.used, 0)`. Never show "no search limit in effect yet" or any other number in this line. Give the line `data-testid="answer-depth-confirm"`, text in `body2` with colour `designTokens.inkMuted`.
+- Keep an `aria-live="polite"` box mounted for as long as the answer shows, and put the line inside it only while a mode is held: a live region that mounts with its text already inside is often not announced.
+- Two buttons on that line, the same in both forms. "Ask again" calls `onDepthChange` with the held mode and clears it; style it as the New search button (lines 2502 to 2524: 12.5 px, weight 600, `designTokens.blue` fill, `designTokens.navy` on hover). "Cancel" clears it and calls nothing; style it as the Show work button (lines 1624 to 1640: 13 px, `designTokens.link`, no border).
+- `<N>` comes from the same `allowance` state `dailyLimitPhrase` reads (`App.tsx` line 404 and line 982; `frontend/src/lib/guestSession.ts` line 148). Build the finished sentence in `App.tsx` and pass it down as a new prop, `depthConfirmCopy: (modeLabel: string) => string`, beside the ported `onDepthChange`; `AnswerScreen` hands it to the live `AnswerBody`. Never write a number of your own.
+- At "(0 left today)", "Ask again" still sends the run, and the server refuses it with the existing daily-limit refusal. Name that under Not covered unless a test proves it.
+- The switch renders only on the live, landed answer, as the ported commit does: never on the streaming preview (line 2551) or a folded previous turn (line 2311).
+
+The product owner approved this wording on 2026-10-06 (`DECISIONS.md`): the guest form as first proposed, and the signed-in form because a signed-in person has no daily count to show. Use it exactly; if they ask for different words at retest, only the strings change.
 
 The design:
 
@@ -375,12 +417,16 @@ The design:
 
 How to test:
 
-- `frontend/src/components/screens/AnswerScreen.depthToggle.test.tsx`, from the port: add that clicking Researcher shows `answer-depth-confirm` with the limit text passed in and does not call `onDepthChange`; that "Ask again" calls it once with `"researcher"`; that "Cancel" hides the line and calls nothing. The first fails on the ported commit as it stands, because it calls `onDepthChange` at once: that is your one-property break.
-- `frontend/src/App.depthToggle.test.tsx`, from the port: its test at line 144 clicks the strip's Researcher and expects a second `createRun` with `audience_depth: "researcher"` (lines 174 to 177). Make it assert `createRun` was still called once after the click on Researcher, then twice after "Ask again".
+- `frontend/src/components/screens/AnswerScreen.depthToggle.test.tsx`, from the port: add that clicking Researcher shows `answer-depth-confirm` with the sentence `depthConfirmCopy` returns and does not call `onDepthChange`; that "Ask again" calls it once with `"researcher"`; that "Cancel" hides the line and calls nothing. Reverting to the ported commit does not count as a break: there the first test fails because `answer-depth-confirm` does not exist yet, the missing-name failure step 4 of [How you work here](#how-you-work-here) rules out. Each test's one-property break instead:
+  - (a) The toggle's handler both sets the held mode and calls `onDepthChange` (`(m) => { setHeld(m); onDepthChange?.(m); }`): the line shows, but `onDepthChange` was called, so the first test goes red on that assertion.
+  - (b) "Ask again" clears the held mode without calling `onDepthChange`: the second test goes red.
+  - (c) "Cancel" calls `onDepthChange` with the held mode: the third test goes red.
+- `frontend/src/App.depthToggle.test.tsx`, from the port: its test at line 144 clicks the strip's Researcher and expects a second `createRun` with `audience_depth: "researcher"` (lines 174 to 177). Make it assert `createRun` was still called once after the click on Researcher, then twice after "Ask again". Its break is (a) above.
+- In the same file, cover both forms of the line. With `getAllowance` answering `counted: true`, the line shows "(<N> left today)" with the right number; with it answering `counted: false`, as it does for a signed-in person, the line reads "It runs as one new search." with no number. Break: build the guest form whatever `counted` says.
 - A new `frontend/e2e/answer-depth-switch.spec.ts`. Copy from `frontend/e2e/answer-layout.spec.ts` the scripted answer (lines 30 to 186: `frame`, `head`, `token`, `answerTokens`, `landedStream`), `ask` (lines 188 to 212) and `noSidewaysScroll` (lines 214 to 220). Point screenshots at your own report folder, written only when `FACTORY_SHOTS=1`, as `frontend/e2e/long-variant-name.spec.ts` does (line 128). Use `test.use({ contextOptions: { reducedMotion: "reduce" } })`, and record each `POST` to `**/v1/query` with `page.on("request")`. Then, at 1280 and at 390:
   - The switch is visible, with Plain language pressed.
   - Clicking Researcher shows `answer-depth-confirm` and records no new `POST`.
-  - An axe scan scoped to the status strip, with the line open, finds no violation: `new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])`.
+  - An axe scan of the status strip, with the line open, finds no violation. The strip has no test id today (`answer-meta` sits on its `Typography` and leaves out the switch and the line), so give the strip's outer `Box` (line 1542) ``data-testid={`${testIdPrefix}answer-status-strip`}`` and run `new AxeBuilder({ page }).include('[data-testid="answer-status-strip"]').withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze()`.
   - The page never scrolls sideways.
   - "Ask again" records exactly one new `POST`, whose JSON body has `audience_depth: "researcher"`.
 
@@ -388,14 +434,14 @@ Done when:
 
 - The port, the cost line and the tests above are in, and each new test fails with its one property removed.
 - Build, unit tests, your spec and `accessibility.spec.ts` pass.
-- The report has screenshots at 1280 and 390 of the answer with the switch, and with the cost line open, beside the design's answer screen from the capture in [Checks before you push](#checks-before-you-push).
+- The report has the capture's answer screen at 1280 and 390 beside the prototype, from [Checks before you push](#checks-before-you-push), and your spec's screenshots at 1280 and 390 with the cost line open, compared with `Main.dc.html` lines 50 to 61. The capture's prototype draws no switch and never opens the cost line, so the cost line's screenshots can only come from your spec.
 - At most three live questions on the develop app, and none when the fake-model tests prove the change.
 
 ## Card 100: a very long email in the top bar
 
 Dial 1. Branch `factory/card100-long-email-top-bar`.
 
-What the person sees today: between 721 and 900 pixels wide, the top bar runs off the screen when the signed-in email is very long. Above 720 pixels the account button shows the whole email, and nothing in the bar lets it give way.
+What the person sees today: between 721 and 900 pixels wide, the top bar runs off the screen when the signed-in email is very long. Above 720 pixels the account button shows the whole email and never gives way. Only the brand shrinks, and it cannot give enough.
 
 The lead found it on 2026-10-06 with a 50-character test email while checking cards 43 and 44. No real email that long has been tried, and nobody has measured it yet: measure develop first and put the numbers in your report.
 
@@ -407,7 +453,7 @@ Where, in `frontend/src/components/shell/`:
 | The button: accessible name is the email (line 119), pill styles from line 120 | `AccountMenu.tsx` lines 106 to 176 |
 | The initials circle, 24 px | `AccountMenu.tsx` lines 135 to 161 |
 | The visible email, hidden at 720 and below | `AccountMenu.tsx` lines 170 to 172 |
-| The email again in the open menu's header, already cut with an ellipsis | `AccountMenu.tsx` lines 198 to 211 |
+| The email again in the open menu's header: `overflow: hidden` and `textOverflow: "ellipsis"`, but no `whiteSpace: "nowrap"`, so an email with hyphens wraps there. Leave it unless your spec shows it breaking the menu | `AccountMenu.tsx` lines 198 to 211 |
 | The brand button, which today is the one part of the bar that shrinks (read its comment, lines 391 to 436) | `AppShell.tsx` lines 381 to 448 |
 | The nav, `flexShrink: 0` at line 462, holding the page buttons (lines 465 to 490), the overflow menu (line 492), the scientist chip, shown from 900 pixels up (line 494), and the account button (line 508) | `AppShell.tsx` lines 450 to 533 |
 
@@ -416,7 +462,10 @@ The design: `docs/build/design/design-system/prototype/app.html` draws the bar (
 What to build: the email text is the one thing in the bar that gives way. It ends in an ellipsis when the bar is short of room, and shows in full when there is room.
 
 - `AccountMenu.tsx`: the wrapper (line 105) gets `display: "flex"` and `minWidth: 0`; the button (line 120) gets `minWidth: 0` and `maxWidth: "100%"`; the initials circle gets `flex: "none"`; the email span (line 170) gets `minWidth: 0`, `overflow: "hidden"`, `textOverflow: "ellipsis"` and `whiteSpace: "nowrap"`, keeping its 720 rule; the button gets `title={email}`, so the full email shows on hover.
-- `AppShell.tsx`: the nav's `flexShrink: 0` (line 462) becomes `flexShrink: 1`, keeping `minWidth: 0`; each page button, the overflow menu and the scientist chip's box get `flexShrink: 0`, so only the account button can shrink; the brand button gets `"@media (min-width:721px)": { flexShrink: 0 }`, so above 720 the brand stays whole while it still shrinks below 720 as its comment requires.
+- `AppShell.tsx`:
+  - The nav's `flexShrink: 0` (line 462) stays at 720 pixels and below and gives way only above it: `flexShrink: 0, "@media (min-width:721px)": { flexShrink: 1 }`, keeping `minWidth: 0`. At 720 and below the nav keeps its full width, as the brand button's comment requires (lines 409 to 420); a nav that shrank there would let the account pill be squeezed narrower than its initials and chevron at 360 or 375 pixels.
+  - Each page button, the overflow menu and the scientist chip's box get `flexShrink: 0`, so only the account button can shrink.
+  - The brand button gets `"@media (min-width:721px)": { flexShrink: 0 }`, so above 720 the brand stays whole while it still shrinks below 720 as its comment requires.
 
 This is the recommended way, not yet run. If the spec below shows it does not hold, the done-when is the bar: say in the report what you changed instead and why.
 
@@ -433,13 +482,14 @@ Also:
 
 - At 1280, a second sign-in with a 20-character email, `e2e-${randomUUID().slice(0, 4)}@example.com`, shows that email in full in the button: the email span's `scrollWidth <= clientWidth` and its text equals the email.
 - At 390, the button still shows the initials and no email text.
+- At 360 and 390, the account button's `scrollWidth <= clientWidth`, so the initials and chevron are never squeezed. Measure the button's width on develop at both widths first; the report shows it unchanged.
 - An axe scan of the header at 800 with the long email finds no violation.
 - Screenshots at 721, 800 and 900 when `FACTORY_SHOTS=1`, into your report folder.
 
 Done when:
 
 - The spec passes, and it fails on develop at one or more of 721, 800 and 900. Your report names which widths failed on develop and by how many pixels.
-- Nothing changes at 390 or for a short email at 1280.
+- Nothing changes at 360, at 390, or for a short email at 1280.
 - Build, unit tests, your spec and `accessibility.spec.ts` pass.
 
 ## Not yours now
