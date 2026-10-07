@@ -18,7 +18,7 @@ here before it is built.
 - Every other item's detail, every closed item and every note behind the board
   are in `testing/UI_fixes_done.md`.
 
-Last updated: 2026-10-06.
+Last updated: 2026-10-07.
 
 ## To do
 
@@ -26,6 +26,7 @@ In priority order.
 
 | # | Feature, in plain words | Item | Waiting on |
 |---|---|---|---|
+| 102 | A reopened saved answer lists no sources at all, so none of its facts links to a record | Found by card 22's product review on develop, 2026-10-07: PR-card22-02 (`testing/Developer/reports/2026-10-06_card22/product_review.md`); the saved answer reads "Based on 21 sources cited" and then nothing | Nobody on it |
 | 56 | A question about SARS-CoV-2 is answered about the disease SARS, so a person gets a confident wrong record and no sequencing runs | Card 56 diagnosis (`testing/Developer/reports/2026-10-05_card56/diagnosis.md`); the fix (#173) passed 3 of 3 local Think and Plan runs but failed on develop on 2026-10-05 (`testing/Developer/reports/2026-10-05_final_test_queries/results.md`) | Part live once merged (#186 or the next number): the plain SARS-CoV-2 question no longer binds the SARS disease (0 of 20 live runs, 5 of 26 before). Still open, for a design with you first: "SARS CoV-2" typed with a space still binds SARS; after a gene in the same conversation a missed SARS-CoV-2 question uses the remembered gene; "SRA runs from AML-derived cell lines" can lose its leukaemia match; the "Illumina" refusal (7 of 20 runs). Evidence: `testing/Developer/reports/2026-10-06_card56/` |
 | 101 | A reworded sentence can reach the screen without passing the sentence check: a bronchiolitis answer said "For babies with severe bronchiolitis" where its record says children, and that sentence was never among the check's candidates. Re-aimed 2026-10-06 from card 99's sentence cost, whose writer line measured no gain | `testing/Developer/reports/2026-10-06_card101/fix_round.md`, "For the owner" | Part live once merged: every sentence the writer rewords now goes to the sentence check ("babies" for "children" 0 of 5 live runs). Still open, live on develop and production: a copied cut can drop a clause such as "There is no evidence that" and show the paper's opposite with no check; two copied clauses can be joined into a new claim; a record title wrapped in the question's words shows unchecked; and production runs the older checker mode without card 99's pair check. Evidence: `testing/Developer/reports/2026-10-06_card101/adversary_r2.md` |
 | 94 | Isolate questions answer with a table of isolates and their resistance genes: the default mode often shows names without genes, the blaCTX-M note is missing, a colistin question returns a suspicious zero, and a single-isolate answer lacks its details (queries 33, 35, 36, 44 and the isolate workflow); some counts differ only because the snapshot is newer | G-035; failed the batch retest of 2026-09-29 (`testing/Developer/reports/2026-09-29_retest/`) | Part live, 2026-10-05: the colistin search matches mcr genes (#158), the isolate table shows in Plain language beside the organism record (#165, #174) and the answer says which gene families were searched (#169); in Retest. Still open: the place and accession columns, a follow-up such as "from 2023", and a single-isolate lookup (wave 4 of `testing/Board_plan.md`) |
