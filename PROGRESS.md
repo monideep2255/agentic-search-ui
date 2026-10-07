@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-10-05.
+Last updated: 2026-10-07.
 
 ## Table of contents
 
@@ -56,6 +56,21 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+### 6 and 7 October
+
+NEW ON 6 AND 7 OCTOBER, on the practice site, each change checked by a fresh reviewer before it went in:
+
+- An answer now says the same number of sources everywhere: the line under the question, the line at the end, the Sources heading, your list of past searches and a saved answer all count the same pages.
+- When the same record page was found both in our own database and from NCBI live, it shows as one source that names both.
+- "Confirmed by N independent databases" now counts only the sources the answer lists that say the same thing, so it never claims more agreement than you can check.
+- A reopened saved answer lists its sources again. It had been showing none, so none of its facts linked to a record. Long links now wrap on a phone instead of pushing the page sideways.
+- The note under a table of variants and diseases now says what the rows are, and that a variant's classification (harmful, harmless or uncertain) is not shown there. It sits directly under its table.
+- The coronavirus question no longer answers about the disease SARS when it is typed the usual way.
+- The sentence checker now holds back a plain-language sentence that drops a limit its paper sets, such as "young children" shown as "children", and every sentence the writer rewords now goes through that checker.
+- On a phone, long variant names wrap inside the answer and keep their reference number beside them.
+- A second development agent, Factory, now works every day from one written brief, and every change it makes is checked by the lead before it goes in.
+- The team's main planning documents were rewritten to be easier to read, with nothing lost, and a check now proves they agree with each other before anything is published.
 
 ### 5 October
 
@@ -255,6 +270,20 @@ All six live-government-API connections the plan called for are now built. That 
 - Give it a stretch of chromosome coordinates with the genome build, and it names the genes under that stretch without being told them, then lists the structural and clinical variants recorded there, each with a link. Leave the build out and it asks which one, rather than guessing. On the practice site since the night of 22 September, waiting for the product owner to try it.
 
 ## What does not work yet
+
+### 7 October
+
+THE HONEST HEADLINE AS OF 7 OCTOBER, in one sentence:
+
+- a sentence copied from part of a paper can still drop a word such as "no evidence that" and say the opposite,
+- answers still take 20 to 35 seconds,
+- and a virus typed in an unusual way, such as "SARS CoV-2" with a space, can still be answered about the wrong thing.
+
+What the night found, in plain words:
+
+- A fix for the copied-sentence problem was built and checked four times, and is held back. Its last check found that when the checker runs out of time, a sentence could show with its limit cut off, which is the very mistake the fix exists to stop. The product owner decides the next step.
+- A saved answer was found to show no sources at all, and was fixed the same night.
+- The stronger writer still waits on topping up the model account, and the gatekeeper redesign still waits on a fuller day of call logs.
 
 ### 5 October
 
@@ -538,6 +567,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| A day and a night with a second builder, and answers that count honestly | Factory, the second development agent, returned with one written brief and built five screen and wording fixes, each checked before it went in. Overnight, every sources number on an answer was made to agree, the variant table's note was made truthful, saved answers got their sources back, and the planning documents were made easier to read. One fix, for sentences copied from part of a paper, was held back because its last check found a new way to drop a limit | 7 October |
 | A day of fixing what the owner's checks found, and a clean-up of the to-do board | Twenty-one changes merged. People now get a written GERD answer, a Mediterranean question that names the disease, isolate answers with their resistance genes, chromosome windows with structural variant records, and a paper's linked data. Notes now say what was searched and why something failed. The to-do board was cut down, with four dead items removed and ten moved to the future list. The day ended with nine of ten test questions passing; the coronavirus question still answers about the wrong thing. The stronger writer and the gatekeeper redesign are held, and a second development agent now works the screens and wording | 5 October |
 | A secret check before anything is published | Before any change is published to either public project, a check now reads every piece of it for passwords, keys and private details, and stops the publish if it finds a secret | 30 September |
 | Crash reasons in the log, the gatekeeper held back, and the waiting checks cleared | A search that crashes now leaves a written reason. Two changes to the gatekeeper were stopped because reviews found they could let the wrong question through. Every check waiting for the owner was run at once: 39 accepted, 9 sent back | 29 September, evening |
@@ -1050,14 +1080,14 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. Find out why the coronavirus question still fails on the practice site after passing on a practice machine, so a question about a virus or bacterium stops being answered about the wrong thing.
-2. Build the stronger writer, once the model account is topped up: a first sentence that answers the question, and records on screen within seconds.
-3. Agree the gatekeeper's design, using a fuller day of its call logs, before anything about it is built.
-4. The product owner retests what went live on 5 October, and the remaining older items waiting in the retest column.
-5. Measure how often the sentence checker lets a dropped qualifier through, then decide the fix.
+1. The product owner retests what went live on 6 and 7 October: the sources counts, the variant table's note and saved answers, then the older items waiting for a retest.
+2. Decide how to finish the fix for sentences copied from part of a paper, which is built and held back.
+3. Build the stronger writer, once the model account is topped up: a first sentence that answers the question, and records on screen within seconds.
+4. Agree the gatekeeper's design, using a fuller day of its call logs, before anything about it is built.
+5. Finish the coronavirus question: the unusual spellings and the follow-up cases the first fix left open.
 6. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
 7. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting for the owner's yes.
-8. Finish and merge the overnight work that is built but not yet on the practice site: the plain-language and researcher switch on the answer itself, counts that say what they count, a calmer trust line, and narrowing bacterial sample searches by place and year.
+8. Finish and merge the overnight work that is built but not yet on the practice site: the plain-language and researcher switch on the answer itself (now Factory's next screen card), a calmer trust line, and narrowing bacterial sample searches by place and year.
 9. Build the step where the system checks its own results and tries once more when they do not answer the question.
 10. Tell the reader when the system wrote its own search rather than using a checked one.
 11. Build the connections between facts the product owner chose on 25 September: facts cited as paths through the graph, such as other genes that turn up in the same papers, with no vector search. Background: connecting facts across several steps now has a measured document rather than an opinion. It counts how many of the fifty test questions actually need it (five, and all five follow one route that is already built), and says plainly that two of the three technologies usually proposed for this have nothing here to justify them.
@@ -1178,12 +1208,12 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
 | ~~Nine features failed the owner's checks on 29 September: bacterial sample answers without resistance genes, a GERD answer with no written summary, a chromosome-range answer with no structural-variant records, and others~~ | Fixed by 5 October and live on the practice site: the GERD answer, the isolate resistance genes, the chromosome records and the Mediterranean question passed the end-of-day checks. Waiting on the owner's retest |
-| A question about a virus or bacterium can be answered about the wrong thing. The coronavirus question passed on a practice machine, then answered about the disease SARS on the practice site | Next to fix, starting with finding why it differs live |
-| The sentence checker approves some rewordings that drop a qualifier, such as "young children" shown as "children", so the system sometimes shows a slightly broader claim than its source | After the owner's chosen measurement of how often it happens |
+| A question about a virus or bacterium can be answered about the wrong thing. Fixed on 6 October for the coronavirus question typed the usual way; "SARS CoV-2" with a space and some follow-up questions can still go wrong | Next to fix, starting with finding why it differs live |
+| The sentence checker approved some rewordings that drop a qualifier, such as "young children" shown as "children". Fixed on 6 October for reworded sentences; a sentence copied from part of a paper can still drop "no evidence that", and its fix is held back for the owner's decision | After the owner's chosen measurement of how often it happens |
 | The gatekeeper's on-topic check takes from about one second to over seven depending on which outside host answers | Waits on a fuller day of call logs, then a design agreed with the owner first |
 | About three searches in a hundred fail with "a temporary error" because the gatekeeper's model did not answer in time, twice in a row | Two fixes were tried on 29 September and both stopped, because each could let through a question the gatekeeper should refuse. It comes back only as a design agreed with the owner first |
 | ~~When a search crashes, nothing records why, so the cause cannot be traced afterwards~~ | Fixed on 29 September: the reason is now written to the log; a smaller follow-up would put the search's reference on every line of it |
-| A saved answer, reopened, does not look exactly like the answer you read: a table shows all its rows at once, a note appears that was not there before, and the sources list is missing | On the list of work to do, found on 29 September |
+| A saved answer, reopened, does not look exactly like the answer you read: a table shows all its rows at once and a note appears that was not there before. Its missing sources list was fixed on 7 October | On the list of work to do, found on 29 September |
 | ~~A sentence added overnight, "MedGen lists no clinical features for ...", appears in answers that never asked about features~~ | Fixed on 26 September; on the practice site, waiting for the product owner's retest |
 | The decision-model change turned away "Tell me about the tree of life" as off topic, let one brief error stop a whole question, and gave a less helpful message to a request to change the graph. It is off the practice site | Reworked and back on the practice site since 26 September; the product owner's retest decides |
 | Every answer opens with a stock line of counts written by the code, so its first sentence never answers the question | Being built in the next phase of work, parked on 27 September when the computer restarted |

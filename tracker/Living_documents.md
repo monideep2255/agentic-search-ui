@@ -20,7 +20,7 @@ Nothing here requires a document to carry today's date:
 - Build harness review item D2 removed the column and the gate, delegated by the product owner on 2026-09-25 (DECISIONS.md, the lead implements both harness reviews' takeaways).
 - Now `HANDOFF.md` is rewritten at every session end, and every other document is edited when its fact changes.
 
-Last updated: 2026-10-06.
+Last updated: 2026-10-07.
 
 ## Table of contents
 
@@ -67,7 +67,14 @@ Last updated: 2026-10-06.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-10-05 that begins "The six unmerged parked branches stay on GitHub as they are", the last row at the night checkpoint of 2026-10-05. Of the two rows read at this checkpoint, the Factory trial's pause changes how the board marks Factory's cards (the board's row); keeping the parked branches changes which branches exist, not a registered document.
+Guarded through the DECISIONS.md row dated 2026-10-07 that begins "Card 102's long source links wrap inside their row before it merges", the last row at the overnight checkpoint of 2026-10-06 to 07. Of the 47 rows read at this checkpoint, these change a registered document or a process this skill runs, each already in its row above:
+
+- The Retest list moving to the done file (the board's and the done file's rows).
+- The cross-document sync check (Step 6b).
+- `README.md`, the Factory brief and the model architecture joining the registry.
+- The done file's closed history moving to `testing/UI_fixes_archive.md`, registered.
+
+The lead's overnight choice to move the board's long cells was withdrawn the same night, so the board's shape is unchanged.
 
 The two 2026-09-27 checkpoints guarded the rows before them. Three of those changed a registered document's job or a process this skill runs, each cited in its row above: the test queries document as the gate, a `/verify` pass starting the seven-day close, and owner decisions asked at once.
 

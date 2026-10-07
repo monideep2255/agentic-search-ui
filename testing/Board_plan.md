@@ -24,6 +24,8 @@ The test every step is ranked against, in the owner's words: a person types a qu
 
 Newest first.
 
+- 2026-10-07, overnight: cards 22, 23 and 102 are live and wait for the owner's retest (#197 to #199); card 102 (a saved answer listed no sources) was found by card 22's product review and built the same night. Card 101's copied-cut fix is parked on `fix/card101-copied-cuts` for the owner's decision. Factory's next cards are 75, 24 and 100 (`DECISIONS.md`, 2026-10-07).
+- 2026-10-06: cards 43, 43b, 44, 47 and 61 (Factory), 99 and part of 101 went live and wait for retest; card 56's smallest fix is live and the card stays open (#181 to #193).
 - 2026-10-06: Factory resumes with a written brief, `docs/build/Factory_onboarding.md`: cards 43, 44 and 47, then 61, one at a time; cards 18, 23, 24 and 25 leave its lane (`DECISIONS.md`, 2026-10-06).
 - 2026-10-06: card 56's remaining miss diagnosed (develop's plan model names nothing on some runs) and its fix built; card 99 measured on the full set and the owner said build it (`DECISIONS.md`, 2026-10-06).
 - 2026-10-05, night: the Factory trial is paused. Its lane is provisional and its eight cards are pending, not being built, until the owner gives renewed instructions; its trial worktree and branch were removed with no work in them (`DECISIONS.md`, 2026-10-05).

@@ -377,6 +377,13 @@ Its message and its comments say "Card 33", the card's number before the board w
 
 The cherry-pick stops on one conflict, checked on 2026-10-06 against develop `5cf63d6c`: the import line of `frontend/src/components/controls/DepthControl.test.tsx`. Develop imports `{ DepthControl, displayedMode }`; the commit adds `ANSWER_MODE_EXPLAINER` and `DepthStripToggle`. Resolve it to `import { DepthControl, DepthStripToggle, displayedMode } from "./DepthControl";`, and add `ANSWER_MODE_EXPLAINER` only if a test in the file still uses it. The other files merge without conflict; build and test before you change anything else.
 
+Before you start, note that develop moved on 2026-10-07: cards 22, 23 and 102 (#197 to #199) changed the answer screen files. The conflict and line numbers below were checked against `5cf63d6c`, before those changes.
+
+- Files changed: `AnswerScreen.tsx`, `useRunView.ts`, `SavedAnswerScreen.tsx`, `lib/events.ts`.
+- Branch from today's develop, and expect the cherry-pick to stop on more conflicts in `AnswerScreen.tsx`; keep both sides' changes.
+- Find each place by the name the table gives, not by its line number.
+- Run the card 22, 23 and 102 tests as well as your own: `AnswerScreen.card22.test.tsx`, the card 23 block in `answerLayout.test.tsx`, and `SavedAnswerScreen.card102.test.tsx`.
+
 Line numbers in `AnswerScreen.tsx` from here on are the file's after the cherry-pick, checked on 2026-10-06 against develop `5cf63d6c`. The port moves every one of them by 47 to 50 lines from develop's:
 
 | What | After the cherry-pick | On develop before it |
@@ -499,7 +506,7 @@ The board once listed these in your lane. Leave them alone until the product own
 | Card | Why it waits |
 |---|---|
 | 18 | Its wiring is in `core/graph.py`, the answer path the lead is changing this week |
-| 23 | The lead builds it, by the product owner's decision of 2026-10-06: its wiring is in `core/graph.py`, the answer path |
+| 23 | Built by the lead and live on develop since 2026-10-07 (#198), waiting for the product owner's retest |
 | 25 | Installs a new package, the public design system base. That waits on the product owner's approval and a supply-chain review first |
 
 ## When you are stuck
