@@ -744,13 +744,14 @@ def test_card23_the_note_makes_no_freshness_claim_about_disease_names() -> None:
 
 def test_card23_query_79_quotes_the_line_that_ships() -> None:
     """Card 23's fix round: the test-queries document is the owner's gate,
-    so query 79's expected line must be the shipped text, word for word, and
-    must not yet promise "directly under that table": when the table ends the
-    answer, the screen still moves the line to the Notes list (J-23-01,
-    A-23-01, card 23's second part).
+    so query 79's expected line must be the shipped text, word for word.
+    Card 23's second part (J-23-01, A-23-01) keeps the line directly under
+    its table on screen even when the table ends the answer
+    (`frontend/src/answerLayout.test.tsx`, `e2e/card23-source-note.spec.ts`),
+    so query 79 promises "directly under that table" and never the Notes list.
 
-    Red when the document quotes an older wording (the mutation run) or
-    promises the placement before it ships."""
+    Red when the document quotes an older wording (the mutation run), drops
+    the placement promise, or sends the line to the Notes list again."""
     from pathlib import Path
 
     from system_03_search_agent.synthesis.answer_layout import VARIANT_TO_DISEASE_SOURCE_NOTE
@@ -761,7 +762,9 @@ def test_card23_query_79_quotes_the_line_that_ships() -> None:
     end = text.index("\n### ", start + 1)
     section = text[start:end]
     assert f'"{VARIANT_TO_DISEASE_SOURCE_NOTE}"' in section
-    assert "directly under that table" not in section.lower()
+    assert "directly under that table" in section.lower()
+    assert "never in the notes list" in section.lower()
+    assert "shows first in the notes list" not in section.lower()
 
 
 def test_card23_the_screen_finds_the_line_by_the_words_that_ship() -> None:
