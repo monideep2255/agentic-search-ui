@@ -1168,9 +1168,11 @@ export function useRunView(events: AgentEvent[]): RunView {
      * citations while "Based on 17 sources" and the Sources heading counted
      * pages, on one screen. Every "sources" number now counts distinct pages
      * under one key, read off the same grouping the Sources list renders
-     * (`citedSourceCounts`), so this reads "13 tool calls · 17 sources cited
+     * (`citedSourceCounts`), so this reads "13 tool calls · 16 sources cited
      * from 3 layers" and agrees with the list and the trust line. The layers
-     * figure is the number of groups that list shows.
+     * figure counts every layer any cited page came from, which is the
+     * number of groups that list shows: a page cited from the graph and from
+     * a live fetch is one card, and both of its layers keep their group.
      */
     const cited = citedSourceCounts(sources);
     const meta = landed

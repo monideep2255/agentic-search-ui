@@ -121,8 +121,43 @@ function answer(): string {
   ].join("");
 }
 
-async function ask(page: Page): Promise<void> {
-  const body = answer();
+/**
+ * Card 22 fix round (owner, 2026-10-06, J-22-02 and A-22-09): the graph's
+ * gene link and the live Datasets gene link (trailing slash) are one page,
+ * cited from two layers. Two tool calls, two citations, one card.
+ */
+function crossLayerAnswer(): string {
+  const gene = "https://www.ncbi.nlm.nih.gov/gene/672";
+  const cite = (n: number, url: string, layer: string, tool: string) =>
+    frame("citation", {
+      citation_id: cid(n),
+      display_index: n,
+      source: "NCBIGene",
+      source_id: "NCBIGene:672",
+      source_url: url,
+      layer,
+      field: "symbol",
+      claim_text: tool,
+      evidence_kind: "primary_assertion",
+      assertion_confidence: "asserted",
+      population_ancestry_context: null,
+      license: "public_domain_us_gov",
+    });
+  return [
+    frame("guard", { passed: true, category: "ok", reason: null }),
+    frame("tool_result", { call_id: "g1", tool: "cypher_query", layer: "layer_1_graph", status: "ok", summary: "", result_count: 1, truncated: false }),
+    // The live Datasets gene lookup runs through the `ncbi_efetch` tool.
+    frame("tool_result", { call_id: "l1", tool: "ncbi_efetch", layer: "layer_2_api", status: "ok", summary: "", result_count: 2, truncated: false }),
+    frame("token", { kind: "claim", text: "BRCA1 is a gene in the graph [1]. ", marker_ids: [cid(1)] }),
+    frame("token", { kind: "claim", text: "The live gene record names it BRCA1 [2]. ", marker_ids: [cid(2)] }),
+    cite(1, gene, "layer_1_graph", "cypher_query"),
+    cite(2, `${gene}/`, "layer_2_api", "ncbi_efetch"),
+    frame("trust_signal", { outcome: "answer", risk_tier: "low", grounded: true, triangulated: null, scope: "answer" }),
+    frame("done", { total_cost_usd: 0, total_tool_calls: 2, elapsed_ms: 1000, trust_outcome: "answer", trust_line: "Based on 1 source cited" }),
+  ].join("");
+}
+
+async function ask(page: Page, body: string = answer()): Promise<void> {
   await page.route("**/v1/query/*/events*", (route) =>
     route.fulfill({ status: 200, headers: { "content-type": "text/event-stream", "cache-control": "no-cache" }, body }),
   );
@@ -181,5 +216,28 @@ for (const width of [1280, 390]) {
         maskColor: "#f0f0f0",
       });
     }
+  });
+}
+
+for (const width of [1280, 390]) {
+  test(`one page cited from the graph and a live lookup is one card naming both layers, at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width < 720 ? 844 : 900 });
+    await ask(page, crossLayerAnswer());
+
+    const meta = page.getByTestId("answer-meta");
+    await expect(meta).toBeVisible({ timeout: 30_000 });
+    await expect(meta).toContainText("2 tool calls · 1 source cited from 2 layers");
+    await expect(page.getByTestId("sources-count")).toHaveText("1");
+
+    await page.locator('[data-testid="sources-disclosure"] > summary').click();
+    await page.locator('[data-testid="sources-group-1"] > summary').click();
+    await expect(page.getByTestId("source-1-layers")).toHaveText("L1 · graph, L2 · live");
+    await expect(page.getByTestId("source-1-markers")).toHaveText("[1][2]");
+
+    // The live group stays, naming the page and where its one card is.
+    await expect(page.getByTestId("sources-group-2-count")).toHaveText("1");
+    await page.locator('[data-testid="sources-group-2"] > summary').click();
+    await expect(page.getByTestId("sources-group-2-also-1")).toContainText("listed under Knowledge graph");
+    await expect(page.locator('[data-testid="source-2"]')).toHaveCount(0);
   });
 }

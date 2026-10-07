@@ -15,7 +15,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { render, renderHook, screen } from "@testing-library/react";
+import { render, renderHook, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import type { AgentEvent, Layer } from "../../lib/events";
@@ -116,9 +117,18 @@ function runEvents(toolCalls: number, citations: FixtureCitation[], trustLine: s
   ];
 }
 
-function source(n: number, url: string, layer: 1 | 2 | 3 = 2): Source {
-  return { n, layer, name: "r", tool: "t", evidence: "e", confidence: "c", license: "l", url };
+function source(n: number, url: string, layer: 1 | 2 | 3 = 2, name = "r", tool = "t"): Source {
+  return { n, layer, name, tool, evidence: "e", confidence: "c", license: "l", url };
 }
+
+/**
+ * Card 22 fix round, the owner's decision of 2026-10-06 (J-22-02, A-22-09):
+ * the graph's gene link (no trailing slash, layer 1) and the live Datasets
+ * gene link (trailing slash, layer 2) are one page. It stays ONE card that
+ * names both layers, and both layer groups stay in the list.
+ */
+const GRAPH_GENE = "https://www.ncbi.nlm.nih.gov/gene/672";
+const LIVE_GENE = `${GRAPH_GENE}/`;
 
 describe("the page key", () => {
   it.each(FIXTURE.page_key_cases)("keys %j as %j", (url, key) => {
@@ -145,6 +155,35 @@ describe("the Sources list", () => {
   it("never merges two sources that have no link", () => {
     const groups = groupSourcesByLayer([source(1, ""), source(2, "")]);
     expect(groups[0].items).toHaveLength(2);
+  });
+
+  it("files a page cited from two layers under the lowest-numbered layer, whichever was cited first", () => {
+    // The rule (groupSourcesByLayer's docstring): the card sits under the
+    // group of the lowest-numbered layer it was cited from. Both orders are
+    // asserted, so a merge that keeps the FIRST citation's layer fails the
+    // live-first arm and one that keeps the LAST fails the graph-first arm
+    // (J-22-07's surviving mutation M2).
+    for (const order of [
+      [source(1, GRAPH_GENE, 1, "graph gene", "cypher_query"), source(2, LIVE_GENE, 2, "live gene", "ncbi_datasets")],
+      [source(1, LIVE_GENE, 2, "live gene", "ncbi_datasets"), source(2, GRAPH_GENE, 1, "graph gene", "cypher_query")],
+    ]) {
+      const groups = groupSourcesByLayer(order);
+      const graph = groups.find((group) => group.layer === 1);
+      const live = groups.find((group) => group.layer === 2);
+      expect(graph?.items).toHaveLength(1);
+      expect(graph?.items[0].layer).toBe(1);
+      expect(graph?.items[0].layers).toEqual([1, 2]);
+      expect(graph?.items[0].ns).toHaveLength(2);
+      // Name and link from the citation in the layer it sits under; tools from both.
+      expect(graph?.items[0].name).toBe("graph gene");
+      expect(graph?.items[0].url).toBe(GRAPH_GENE);
+      expect(graph?.items[0].tool.split(", ").sort()).toEqual(["cypher_query", "ncbi_datasets"]);
+      // The live group does not vanish: it names the page, with no second card.
+      expect(live?.items).toHaveLength(0);
+      expect(live?.alsoCited).toHaveLength(1);
+      expect(live?.alsoCited[0]).toBe(graph?.items[0]);
+      expect(citedSourceCounts(order)).toEqual({ pages: 1, layers: 2 });
+    }
   });
 
   it("keeps the first link's spelling on the merged card", () => {
@@ -209,10 +248,11 @@ describe("the meta line's words", () => {
     expect(meta).toBe("1 tool call · 1 source cited from 1 layer");
   });
 
-  it("counts layers as the Sources list groups them when one page is cited from two layers", () => {
-    // The graph's gene link has no trailing slash and the live Datasets link
-    // has one: one page, one card, filed under the layer cited first. The
-    // meta line must say one layer, as the list shows, not two.
+  it("counts every layer a cited page came from when one page is cited from two layers", () => {
+    // The graph's gene link has no trailing slash and the live Datasets
+    // link has one: one page, one card, cited from two layers. The owner's
+    // decision (2026-10-06): the meta line says "from 2 layers". The first
+    // build pinned "1 layer" here, which hid the live lookup (J-22-02).
     const graph: FixtureCitation = {
       display_index: 1,
       source_url: "https://www.ncbi.nlm.nih.gov/gene/672",
@@ -225,13 +265,51 @@ describe("the meta line's words", () => {
     const events = runEvents(2, [graph, live], "Based on 1 source cited");
     const { meta, sources } = renderHook(() => useRunView(events)).result.current;
     expect(sources).toHaveLength(2);
-    expect(meta).toBe("2 tool calls · 1 source cited from 1 layer");
+    expect(meta).toBe("2 tool calls · 1 source cited from 2 layers");
   });
 
   it("says no sources cited without a layer clause when nothing was cited", () => {
     const events = runEvents(2, [], "");
     const { meta } = renderHook(() => useRunView(events)).result.current;
     expect(meta).toBe("2 tool calls · 0 sources cited");
+  });
+});
+
+describe("one page cited from the graph and from a live lookup, on screen", () => {
+  it("shows one card naming both layers, keeps the live group, and every marker keeps its layer", async () => {
+    const sources = [
+      source(1, GRAPH_GENE, 1, "NCBIGene 672", "cypher_query"),
+      source(2, LIVE_GENE, 2, "NCBIGene 672", "ncbi_datasets"),
+    ];
+    render(
+      <AnswerScreen
+        question="What is BRCA1?"
+        claims={[
+          { text: "BRCA1 is a gene in the graph.", layer: 1, citations: [1] },
+          { text: "The live gene record names it BRCA1.", layer: 2, citations: [2] },
+        ]}
+        sources={sources}
+      />,
+    );
+    const user = userEvent.setup();
+    const disclosure = screen.getByTestId("sources-disclosure");
+    await user.click(within(disclosure).getByText(/^sources$/i));
+    expect(screen.getByTestId("sources-count")).toHaveTextContent(/^1$/);
+
+    const graph = screen.getByTestId("sources-group-1");
+    await user.click(within(graph).getByText("Knowledge graph"));
+    const card = within(graph).getByTestId("source-1");
+    expect(card).toHaveAttribute("data-layers", "1 2");
+    expect(within(card).getByTestId("source-1-markers")).toHaveTextContent("[1][2]");
+    expect(within(card).getByTestId("source-1-layers")).toHaveTextContent("L1 · graph, L2 · live");
+
+    const live = screen.getByTestId("sources-group-2");
+    expect(within(live).getByTestId("sources-group-2-count")).toHaveTextContent(/^1$/);
+    await user.click(within(live).getByText("Live NCBI APIs"));
+    const line = within(live).getByTestId("sources-group-2-also-1");
+    expect(line).toHaveTextContent("[2]");
+    expect(line).toHaveTextContent("listed under Knowledge graph");
+    expect(within(live).queryByTestId("source-2")).toBeNull();
   });
 });
 
