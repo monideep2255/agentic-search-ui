@@ -11,6 +11,7 @@ One fix-and-verify round on branch `fix/card23-source-note`, after the judge (`j
 - [Tests and mutations](#tests-and-mutations)
 - [Gates](#gates)
 - [For the lead](#for-the-lead)
+- [Part 2](#part-2)
 
 ## In the user's words
 
@@ -96,3 +97,66 @@ No live answer was run: no column was added, and the line's text is code-built, 
 - One wording nuance in the lead's text: "Each row is a condition" while a row can name two (live r1, c.737T>G: "Maturity-onset diabetes of the young type 3; Monogenic diabetes"). I kept the approved text verbatim. If the owner wants it exact, "Each row's conditions are those the variant's ClinVar record names" fixes it with the same meaning.
 - The graph lost ClinVar's classification and review status on load. Restoring them is System 1 work in the data-engineering repository; once they are back, the table can show a classification column and this line can drop its "not shown" clause. The new test goes red the day the table shows one, which forces the line to be revisited.
 - Part 2: the J-23-01 placement fix in the frontend after card 22 merges, then "directly under that table" back into query 79 and into its test.
+
+## Part 2
+
+Branch `fix/card23-source-note`, 2026-10-07, after card 22 merged into `develop`. The placement fix part 1 deferred, the tightened first sentence, and query 79's placement promise put back.
+
+### In the user's words, part 2
+
+A person who asks "What diseases are caused by variants in the HNF1A gene?" at Researcher depth now reads this line directly under the "Variant-to-disease mapping" table, at 1280 and 390, whether more records follow the table or the table ends the answer:
+
+> Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI.
+
+Before, when the table ended the answer, the line showed first in the Notes list after the answer, away from the table it describes. "Lists the conditions" replaces "is a condition" because one row can name two (live c.737T>G: "Maturity-onset diabetes of the young type 3; Monogenic diabetes").
+
+### Commits, part 2
+
+| Commit | What |
+|---|---|
+| `1608817f` Merge origin/develop | Card 22's merge brought in. One conflict, `DECISIONS.md`, where both sides only appended rows: develop's nine rows kept first, then this branch's card 23 row. `graph.py`, `answer_layout.py`, `test_answer_layout.py` and the test-queries document merged on their own |
+| `6ae00d28` fix(write): Say each variant row lists the conditions its ClinVar record names | The backend constant, its pinned test and query 79's quote |
+| `f5703691` fix(web-ui): Keep the variant-to-disease source line directly under its table | `useRunView.ts` attaches the line to the table's last row when it arrives straight after it (`noteAfter`); `AnswerScreen.tsx` renders it right after that table; four vitest arms, a backend pin test, and `e2e/card23-source-note.spec.ts` |
+| `3f2dd25d` docs(test-queries): Promise the source line directly under its table again | Query 79 says "Directly under that table, at 1280 and 390, whether more records follow it or the table ends the answer; never in the Notes list"; its test requires that |
+| `a8b7f844` docs(decisions): Record card 23's tightened first sentence and how the line stays under its table | Two appended rows: the sentence, and the placement mechanism with the alternatives |
+
+### Every finding, part 2
+
+| Finding | Outcome | Why |
+|---|---|---|
+| J-23-01, the line leaves the table when the table ends the answer | Fixed, `f5703691` | The line attaches under its own table in the hook, so it no longer waits for a later sentence that never comes |
+| A-23-01, same as J-23-01 | Fixed, `f5703691` | As J-23-01 |
+| The fix round's wording nuance, "Each row is a condition" | Fixed, `6ae00d28` | "Each row lists the conditions", the lead's text |
+
+How the screen recognises the line: by its opening words, `VARIANT_TABLE_SOURCE_NOTE_PREFIX`. Nothing else on the wire tells it apart from an answer-wide note that also follows a table, and attaching every such note would move "no written summary", the findings-tail note and the placeholder note under whatever table came last. A new token kind would change the event contract for one line. `test_card23_the_screen_finds_the_line_by_the_words_that_ship` holds the prefix to the backend constant.
+
+### Tests and mutations, part 2
+
+| Test | Mutation | Turns red |
+|---|---|---|
+| `answerLayout.test.tsx`, card 23 block (4 arms) | Both source files back to the pre-fix code | Yes, the two table-last arms (1280 shape and phone) |
+| The same | The `noteAfter` attach disabled in `useRunView` | Yes, the two table-last arms |
+| The same | The prefix guard removed, so any note after a table attaches | Yes, "leaves an answer-wide note after any table in the Notes list" |
+| The same | `buildAnswerBlocks` ignores `noteAfter` | Yes, three arms |
+| `test_card23_the_screen_finds_the_line_by_the_words_that_ship` | The frontend prefix put back to "Each row is a condition" | Yes |
+| `test_card23_query_79_quotes_the_line_that_ships` | Query 79 without "Directly under that table" | Yes |
+| `e2e/card23-source-note.spec.ts`, 4 tests | Both source files back to the pre-fix code | Yes, both table-last tests (1280 and 390); the more-records tests stayed green, as expected |
+
+Each mutation was restored from a copy; `git status` showed no tracked change afterwards.
+
+### On screen, part 2
+
+`CI=1 CARD23_SHOTS=1 npx playwright test e2e/card23-source-note.spec.ts`, ports 5273 and 8931 free first: 4 passed. Each test checks the element right after the table's block is the line, the line starts within 48 pixels below the table, the Notes list holds the placeholder note and not the line, and there is no sideways scroll. Screenshots: `part2_table_last_1280.png`, `part2_table_last_390.png`, `part2_more_after_1280.png`, `part2_more_after_390.png`. In the full-page shots the app's fixed footer is painted across the middle of the page; that is the screenshot method, not the layout. `e2e/answer-layout.spec.ts` and `e2e/long-variant-name.spec.ts` also pass (13 tests); the answer-layout run rewrote its 2026-09-14 screenshots, which were restored with `git checkout`.
+
+### Gates, part 2
+
+| Gate | Result |
+|---|---|
+| gate02, import order | Pass, exit 0 |
+| gate03, lint over the whole repository | Pass, "All checks passed!" |
+| gate04, the whole unit suite | Pass: 7093 passed, 143 skipped, 24 deselected, 1 xfailed |
+| gate08, frontend build, tests and license notices | Pass: build clean, 59 files and 517 tests passed, license check ok |
+| `check_public_leaks.py --base origin/develop` | Pass: 16 commits, 0 findings; the four part 2 screenshots are binary, so I looked at each: fixture data only, the sign-in email masked |
+| `tracker/check_doc_sync.py` | Pass: "the board, the done file, the test queries, the board plan, the Factory brief, the handoff and the registry agree" |
+
+The worktree had no `node_modules`; the main checkout's, from the identical `package-lock.json`, was linked in for the run and unlinked afterwards. Nothing was installed.
