@@ -6,13 +6,17 @@ progress when someone starts it. Once it is live on develop it moves to
 closes it.
 
 This board is the source of truth for what gets worked on: an item is written
-here before it is built. A review finding goes on this board only if a person
-using the product would notice it; anything else is fixed in that review round
-or recorded in the phase ledger (`DECISIONS.md`, 2026-10-05). Engineering work
-no user would notice lives in `testing/Future.md`. The order every card is
-built in, and what blocks what, is `testing/Board_plan.md`. The detail behind the architecture cards sits under
-To do, below its table. Every other item's detail, every closed item and every
-note behind the board are in `testing/UI_fixes_done.md`.
+here before it is built.
+
+- A review finding goes on this board only if a person using the product would
+  notice it; anything else is fixed in that review round or recorded in the
+  phase ledger (`DECISIONS.md`, 2026-10-05).
+- Engineering work no user would notice lives in `testing/Future.md`.
+- The order every card is built in, and what blocks what, is
+  `testing/Board_plan.md`.
+- The detail behind the architecture cards sits under To do, below its table.
+- Every other item's detail, every closed item and every note behind the board
+  are in `testing/UI_fixes_done.md`.
 
 Last updated: 2026-10-06.
 
@@ -108,24 +112,28 @@ knowledge-graph model?
 Status: Discussion, not started
 
 Raised 2026-09-20. A DISCUSSION ITEM, deliberately not a build item, and it
-needs its own session rather than a slot in the fix loop. Three things are worth
-settling before it opens. FIRST, most of the premise is not this repository's to
-decide: "everything is in the graph" is Systems 1 and 2, which live in a
-separate repository, and `.claude/rules/file-protection.md` forbids this
-repository writing into the graph at all, by direction of data flow.
+needs its own session rather than a slot in the fix loop.
 
-System 3 can only read. SECOND, vector embeddings, RAG pipelines and
-knowledge-graph federation sit on the v1 out-of-scope and fast-follow lists in
-`.claude/rules/v1-scope-boundary.md`; external non-NCBI federation has NO named
-trigger at all, so it stops and asks by rule. Discussing is free, building is
-not. THIRD, the multi-hop half is already real and measured rather than
-hypothetical: the live graph rejects edge alternation, `[:a|b|c]` fails with
-SyntaxError, so the broad search traverses `participates_in` alone and GO
-molecular activities and cellular components are not reached
-(`2026-09-19_breadth_wiring/build.md`).
+Three things are worth settling before it opens.
 
-That is a soft-edge limitation sitting in the product today, and it costs one
-graph call per edge to widen . THE PRODUCT OWNER'S OWN FRAMING, given 2026-09-20
+- FIRST, most of the premise is not this repository's to decide: "everything
+  is in the graph" is Systems 1 and 2, which live in a separate repository, and
+  `.claude/rules/file-protection.md` forbids this repository writing into the
+  graph at all, by direction of data flow. System 3 can only read.
+- SECOND, vector embeddings, RAG pipelines and knowledge-graph federation sit
+  on the v1 out-of-scope and fast-follow lists in
+  `.claude/rules/v1-scope-boundary.md`; external non-NCBI federation has NO
+  named trigger at all, so it stops and asks by rule. Discussing is free,
+  building is not.
+- THIRD, the multi-hop half is already real and measured rather than
+  hypothetical: the live graph rejects edge alternation, `[:a|b|c]` fails with
+  SyntaxError, so the broad search traverses `participates_in` alone and GO
+  molecular activities and cellular components are not reached
+  (`2026-09-19_breadth_wiring/build.md`). That is a soft-edge limitation
+  sitting in the product today, and it costs one graph call per edge to
+  widen .
+
+THE PRODUCT OWNER'S OWN FRAMING, given 2026-09-20
 when asked whether the product fails because the data is absent or because we
 cannot find the path between things that are present: BOTH, and the headline
 verdict is blunter than either: "the answers all look surface level and most
@@ -158,28 +166,33 @@ seven tools and their transports, so under `.claude/rules/v1-scope-boundary.md`
 it is scoped against that section and signed off before any work starts, never
 the other way round.
 
-Two questions to settle when it is scoped, neither decided here. Whether an
-internal MCP server is a TRANSPORT SWAP underneath the existing seven tools,
-which would leave every tool schema and call site unchanged the way build phase
-4.11's HTTPS graph service did, or a RE-CUT of what the tools are, which is a
-contract-version event under `system-design-patterns` pattern 10. And what it
-buys over the direct calls the tools make today, since
-`.claude/rules/supply-chain-security.md` treats every MCP server as an execution
-surface running with the app's own credentials, so the answer has to be worth
-that.
+Two questions to settle when it is scoped, neither decided here.
+
+- Whether an internal MCP server is a TRANSPORT SWAP underneath the existing
+  seven tools, which would leave every tool schema and call site unchanged the
+  way build phase 4.11's HTTPS graph service did, or a RE-CUT of what the tools
+  are, which is a contract-version event under `system-design-patterns`
+  pattern 10.
+- And what it buys over the direct calls the tools make today, since
+  `.claude/rules/supply-chain-security.md` treats every MCP server as an
+  execution surface running with the app's own credentials, so the answer has
+  to be worth that.
 
 ANSWERED 2026-09-22, when the product owner asked directly whether wrapping
 Layer 2 and Layer 3 in MCP would be faster and more reliable. The honest answer
 splits their question in two, because the valuable half is not the MCP half.
 
-On speed, no, and this is measured rather than argued. MCP is a protocol for one
-process to offer tools to another. It does not change what NCBI returns or how
-fast NCBI returns it, so wrapping our own calls in it adds a hop rather than
-removing one. Item 11.4 measured where the wait actually is: the searches take
-about a second, and the wait was the writing step. Item 11.8 then cut the median
-answer from 26.5 to 19.7 seconds by working on that step, not on the transport.
-Under `.claude/rules/attack-the-constraint.md`, the transport is not the
-constraint, so optimising it buys nothing a person would feel.
+On speed, no, and this is measured rather than argued.
+
+- MCP is a protocol for one process to offer tools to another.
+- It does not change what NCBI returns or how fast NCBI returns it, so
+  wrapping our own calls in it adds a hop rather than removing one.
+- Item 11.4 measured where the wait actually is: the searches take about a
+  second, and the wait was the writing step.
+- Item 11.8 then cut the median answer from 26.5 to 19.7 seconds by working on
+  that step, not on the transport.
+- Under `.claude/rules/attack-the-constraint.md`, the transport is not the
+  constraint, so optimising it buys nothing a person would feel.
 
 On reliability, yes, and the product owner's instinct is right, but the thing
 that buys it is the half of their sentence that does not mention MCP:
@@ -255,12 +268,14 @@ third is writing, and Jev cannot do it at all.
 | Writing the answer | The Synth tier writes prose with inline citations | NO. It emits no free-form text. Not a candidate, at any price |
 
 ON "ZERO HALLUCINATIONS", which is on the vendor's front page and should be read
-carefully rather than quoted. The honest version of that claim is structural: a
-decision constrained to a fixed option set cannot return an option outside the
-set. That is real and it is worth something here, since this product's failures
-include the model reading MODY as an organism (item 11.19). It is NOT a claim
-that the chosen option is correct, and it must never be repeated to a user as
-though it were.
+carefully rather than quoted.
+
+- The honest version of that claim is structural: a decision constrained to a
+  fixed option set cannot return an option outside the set.
+- That is real and it is worth something here, since this product's failures
+  include the model reading MODY as an organism (item 11.19).
+- It is NOT a claim that the chosen option is correct, and it must never be
+  repeated to a user as though it were.
 
 WHY THE INSTINCT IS SOUND, independently of which model it turns out to be. The
 loop currently makes three decisions that are taken as if certain and are not:
@@ -275,23 +290,31 @@ A calibrated confidence turns each of those from a silent guess into a number
 that can be acted on, and the third one is the trust moat: a product that can
 say "I am not sure" honestly is worth more than one that is fluent and wrong.
 
-WHAT IS CHEAP AND WHAT IS NOT, since these are usually conflated. A CORRECTION
-FIRST, recorded rather than quietly fixed: on the night of 2026-09-22 the
-assistant said trying this model would be a config change under
-`system-design-patterns` pattern 11, reversible in one edit. That was said
-before the model was identified and it is WRONG for this model. Jev answers on
-its own `/api/alpha/decisions` endpoint, not on chat completions, so
-`resolve_model()` pointing a tier at it does nothing. A trial needs a new client
-path in the harness, which is a small build rather than a config edit. The cost
-estimate moves with it.
+WHAT IS CHEAP AND WHAT IS NOT, since these are usually conflated.
 
-What remains cheap: the trial is still bounded and reversible, because the two
-candidate call sites are decisions with closed option sets, and either can fall
-back to today's path on any error. Output tokens being free makes a
-side-by-side shadow run, where Jev decides in parallel and its answer is only
-recorded rather than acted on, unusually affordable. That shadow run is the
-right first step, because it produces this product's own calibration data
-instead of a vendor benchmark.
+A CORRECTION FIRST, recorded rather than quietly fixed:
+
+- on the night of 2026-09-22 the assistant said trying this model would be a
+  config change under `system-design-patterns` pattern 11, reversible in one
+  edit.
+- That was said before the model was identified and it is WRONG for this
+  model.
+- Jev answers on its own `/api/alpha/decisions` endpoint, not on chat
+  completions, so `resolve_model()` pointing a tier at it does nothing.
+- A trial needs a new client path in the harness, which is a small build
+  rather than a config edit.
+- The cost estimate moves with it.
+
+What remains cheap:
+
+- the trial is still bounded and reversible, because the two candidate call
+  sites are decisions with closed option sets, and either can fall back to
+  today's path on any error.
+- Output tokens being free makes a side-by-side shadow run, where Jev decides
+  in parallel and its answer is only recorded rather than acted on, unusually
+  affordable.
+- That shadow run is the right first step, because it produces this product's
+  own calibration data instead of a vendor benchmark.
 
 What is NOT cheap: ACTING on a confidence number. A threshold anywhere in the
 loop is a new control with its own failure modes, it must be calibrated against
@@ -377,16 +400,18 @@ kept separate from the quote above:
 - Point b), NCBI APIs and enrichment calls as MCP-style functions: item 11.32,
   parked as a discussion that precedes a build.
 - THE MODEL CHECK: a decision point added on 2026-09-23 under items 12.9 and
-  12.10, approved by the product owner the same evening. A guard-tier model
-  decides whether a sentence the answer model REWORDED says anything more than
-  the exact record words it quotes, after code has verified the quote is in
-  the record character for character, the numbers are in the quote and the
-  negation matches. It fails closed. It is exactly the kind of yes-or-no
-  decision point point c) names, and a candidate for Jev's Bool question type
-  once a shadow run has calibrated it. It amends the first constraint above
-  (the cite-or-refuse gate stays deterministic) for that one bounded case: the
-  rule text changes in pull request #101, and the reasoning is in DECISIONS.md
-  on 2026-09-23.
+  12.10, approved by the product owner the same evening.
+  - A guard-tier model decides whether a sentence the answer model REWORDED
+    says anything more than the exact record words it quotes, after code has
+    verified the quote is in the record character for character, the numbers
+    are in the quote and the negation matches.
+  - It fails closed.
+  - It is exactly the kind of yes-or-no decision point point c) names, and a
+    candidate for Jev's Bool question type once a shadow run has calibrated
+    it.
+  - It amends the first constraint above (the cite-or-refuse gate stays
+    deterministic) for that one bounded case: the rule text changes in pull
+    request #101, and the reasoning is in DECISIONS.md on 2026-09-23.
 
 ONE STANDING RULE TO HOLD AGAINST IT, `system-design-patterns` pattern 11 again:
 on a recurring failure, iterate the harness first and swap the model second. So
