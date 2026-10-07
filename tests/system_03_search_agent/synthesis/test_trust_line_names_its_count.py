@@ -17,12 +17,14 @@ are checked against the same inputs.
 
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 
 import pytest
 
-from system_03_search_agent.contracts.events import CitationPayload
+from system_03_search_agent.adapters.cli.render import Renderer
+from system_03_search_agent.contracts.events import CitationPayload, Event
 from system_03_search_agent.core.graph import _cited_page_count
 from system_03_search_agent.feedback.history import _citation_count
 from system_03_search_agent.synthesis.answer_layout import answer_summary_sentence
@@ -354,6 +356,75 @@ def test_the_opening_line_counts_one_record_per_page() -> None:
     assert researcher is not None
     assert "2 gene records" not in researcher, researcher
     assert "[2]" not in researcher, researcher
+
+
+def test_the_command_line_lists_one_reference_per_page() -> None:
+    """J-22-06, A-22-08: "Based on 16 sources cited" above 18 numbered
+    references, the gene page three times. Mutation: print one line per
+    citation again and this reads 18 lines."""
+    out, err = io.StringIO(), io.StringIO()
+    renderer = Renderer(out, err, operator=False)
+    seq = 0
+
+    def event(kind: str, payload: dict) -> Event:
+        nonlocal seq
+        seq += 1
+        return Event.model_validate(
+            {
+                "type": kind,
+                "version": "v1",
+                "trace_id": "card22",
+                "seq": seq,
+                "ts": "2026-10-06T00:00:00Z",
+                "payload": payload,
+            }
+        )
+
+    ids = [f"cid-{c['display_index']}" for c in _DATA["citations"]]
+    renderer.handle(event("guard", {"passed": True, "category": "ok", "reason": None}))
+    renderer.handle(event("token", {"text": "BRCA1 claims. ", "marker_ids": ids}))
+    for c in _DATA["citations"]:
+        renderer.handle(
+            event(
+                "citation",
+                {
+                    "citation_id": f"cid-{c['display_index']}",
+                    "display_index": c["display_index"],
+                    "source": c["source"],
+                    "source_id": c["source_id"],
+                    "source_url": c["source_url"],
+                    "layer": c["layer"],
+                    "field": c["field"],
+                    "claim_text": "x",
+                    "evidence_kind": "primary_assertion",
+                    "assertion_confidence": "asserted",
+                    "population_ancestry_context": None,
+                    "license": "public_domain_us_gov",
+                },
+            )
+        )
+    after = _DATA["expected_after"]
+    renderer.handle(
+        event(
+            "done",
+            {
+                "total_cost_usd": 0,
+                "total_tool_calls": 13,
+                "elapsed_ms": 1,
+                "trust_outcome": "ask",
+                "trust_line": after["trust_line"],
+            },
+        )
+    )
+    text = out.getvalue()
+    assert after["trust_line"] in text
+    references = text.split("References:\n", 1)[1].splitlines()
+    numbered = [line for line in references if line.startswith("[")]
+    assert len(numbered) == after["sources_cited"], text
+    gene = [line for line in numbered if "/gene/672" in line]
+    assert gene == ["[1][6][9] NCBIGene - https://www.ncbi.nlm.nih.gov/gene/672/"], gene
+    for marker in range(1, len(_DATA["citations"]) + 1):
+        assert f"[{marker}]" in "".join(numbered), f"marker {marker} lost its reference"
 
 
 def _evidence_claims() -> list[GroundedClaim]:
