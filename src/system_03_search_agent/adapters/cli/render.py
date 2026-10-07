@@ -175,6 +175,7 @@ from system_03_search_agent.contracts.events import (
     ToolResultPayload,
     ToolStartPayload,
     TrustSignalPayload,
+    source_page_key,
 )
 
 if TYPE_CHECKING:
@@ -1087,7 +1088,24 @@ class Renderer:
         # contains.
         if self._citations:
             self._out.write("\nReferences:\n")
+            # Card 22 fix round (2026-10-06, J-22-06, A-22-08): one line per
+            # record PAGE, not per citation. The trust line above says "Based
+            # on 16 sources cited", counting distinct pages under
+            # `source_page_key`; printing one line per citation listed 18
+            # under it, the BRCA1 gene page three times. Every marker that
+            # points at one page now sits on that page's line ("[1][6][9]
+            # NCBIGene - ..."), in the order the page was first cited, so the
+            # numbered lines a person counts are the sources the line names
+            # and every marker in the answer still resolves to a line. The
+            # first citation's source name and link spelling are printed. A
+            # citation with no link is its own line, never merged.
+            pages: dict[str, list[CitationPayload]] = {}
             for citation in sorted(self._citations.values(), key=lambda c: c.display_index):
+                key = source_page_key(citation.source_url) or f"#{citation.display_index}"
+                pages.setdefault(key, []).append(citation)
+            for cited in pages.values():
+                citation = cited[0]
+                markers = "".join(f"[{each.display_index}]" for each in cited)
                 source = _sanitize_untrusted(citation.source)
                 # `source_url` is also constrained by `contracts.events.
                 # NCBI_SOURCE_URL_PATTERN` (build phase 4.2 review, F-4.2-A-01
@@ -1100,7 +1118,7 @@ class Renderer:
                 # that `citation.source` (unconstrained beyond `max_length`)
                 # still needs it regardless.
                 source_url = _sanitize_untrusted(citation.source_url)
-                self._out.write(f"[{citation.display_index}] {source} - {source_url}\n")
+                self._out.write(f"{markers} {source} - {source_url}\n")
             self._out.flush()
 
         if unresolved:

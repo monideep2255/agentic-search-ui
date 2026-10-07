@@ -1438,6 +1438,24 @@ What you should see:
 - Before, `GERD` read 14 against 12 and `recent papers on statins` read 6 against 5. Earlier still, the trust line undercounted, reading "Based on 1 source" beneath five cited papers; item 12.8 fixed the undercount and item 12.11 the remaining disagreement.
 - Why it matters: two numbers on the same screen disagreeing about the same count undermines trust in both of them, not just the wrong one.
 
+### 107. Every total says what it counts, and every sources number is the same (card 22)
+
+Queries to try:
+
+- `Which diseases are associated with BRCA1?` at Researcher, then the same question at Plain language. Read the line under the question, open SOURCES and count its cards, then read the line under the sources.
+
+What you should see:
+
+- The line under the question reads "N tool calls · S sources cited from L layers", never a bare "tools" or "sources".
+- The SOURCES heading shows the same S, and the line under the sources reads "Based on S sources cited", with ", not yet confirmed" when a high-stakes fact has not been found in a second database.
+- A confirmed answer reads "Confirmed by N independent databases": N counts the databases among the answer's own sources whose records state the confirmed fact, never a record that is not listed under SOURCES, so it is never more than the databases you can open there. A graph record and a live lookup of the same database count as one database, so two copies of one ClinVar record never read as confirmed.
+- The info card beside that line says "not yet confirmed" has two causes: a high-stakes fact not yet found in a second database, or an answer that may be incomplete, for example because a search did not finish.
+- The NCBI Gene record for BRCA1 is one source card, even when the answer cites it through two links, one ending in a slash. Before, the 2026-09-27 BRCA1 answer read "18 sources" above a SOURCES heading of 17 and "Based on 17 sources"; the same answer now reads 16 in all three places.
+- When one page is cited both from the knowledge graph and from a live lookup, it is still one card, and the card names both layers ("L1 · graph, L2 · live"). It sits under Knowledge graph, the Live NCBI APIs group still shows and names it, and the line under the question counts both layers.
+- The opening line counts one record per page ("Found 4 disease records for BRCA1" at Researcher, "I found 4 conditions related to BRCA1" at Plain language): it counts the records that answer the question, which is a different thing from sources.
+- After a reload, YOUR SEARCHES shows the same search as "S sources cited", the same S. Open it: the saved answer lists S source rows under its "Based on S sources cited" line, the gene page once.
+- Why it matters: a number that says "sources" should be the number of sources you can open and count, wherever it appears.
+
 ### 75. A papers list reads as clean prose, with no record repeated (12.12)
 
 Queries to try:
@@ -1967,6 +1985,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 22 | Every total on an answer says what it counts, and every number that says sources is the same | Query 107 |
 | card 101 | Every sentence the writer rewords is checked against its paper before you see it | Query 106 |
 | card 99 | A plain-language answer never says "children" for "young children" or drops "potentially" | Query 106 |
 | cards 43 and 43b | Long variant names wrap on a phone, with their citation numbers kept beside them | Query 105 |

@@ -1573,6 +1573,110 @@ def test_truncated_answer_note_is_one_sentence_opening_with_note(
     assert ";" not in note, f"an interior semicolon fragments the note into uncited claims: {note!r}"
 
 
+@pytest.mark.asyncio
+async def test_truncation_note_and_more_to_show_count_record_pages_not_citations(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Card 22 fix round (2026-10-06, A-22-04): "truncated to N records" and
+    the "more to show" count both said records and counted numbered
+    citations, while every other total on the screen counts distinct pages.
+
+    150 rows past the display cap, where rows 0 and 1 cite one gene page,
+    once without and once with a trailing slash (the graph's and the live
+    Datasets builder's spellings of one link). The note's N and the offer's
+    remaining count must both count that page once. Mutation: pass
+    `len(citations)` again at either call site and its arm fails.
+    """
+    harness = harness_module.Harness(trace_id="test-trace-truncation-pages")
+    call = ToolCall(tool="cypher_query", call_id="call-truncation-pages", layer="layer_1_graph")
+    row_count = 150
+    rows = [_unique_citeable_row(i) for i in range(row_count)]
+    rows[1]["source_url"] = f"{rows[0]['source_url']}/"
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": rows,
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    citations = [event.payload for event in events if event.type == "citation"]
+    urls = [citation["source_url"] for citation in citations]
+    assert rows[0]["source_url"] in urls and rows[1]["source_url"] in urls, (
+        "populate-check: both spellings of the one gene page must be cited, "
+        "or a citation count and a page count cannot be told apart"
+    )
+    pages = len({url.rstrip("/") for url in urls})
+    assert pages == len(citations) - 1
+
+    note = next(
+        event.payload["text"]
+        for event in events
+        if event.type == "token" and "truncated to" in event.payload["text"]
+    )
+    assert f"truncated to {pages} of the {row_count} records" in note, note
+
+    done = next(event.payload for event in events if event.type == "done")
+    offer = done["next_step"]
+    assert offer is not None and str(row_count - pages) in offer, offer
+    assert str(row_count - len(citations)) not in offer, offer
+
+
+@pytest.mark.asyncio
+async def test_the_trust_line_is_computed_from_the_cited_claims_only(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Card 22 last round (V-22-01, V-22-03): "Confirmed by N independent
+    databases" may count only records the reader can open, so the write
+    step hands `answer_trust_line` the grounded claims, exactly the records
+    its citation events list, and no findings pool. 150 rows past the
+    display cap leave findings that are prepared but not cited, so a call
+    that passes the pool, or claims built from it, fails here.
+    """
+    seen: list[tuple[tuple[object, ...], dict[str, object]]] = []
+    real = graph_module.answer_trust_line
+
+    def spy(*args: object, **kwargs: object) -> str | None:
+        seen.append((args, kwargs))
+        return real(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(graph_module, "answer_trust_line", spy)
+    harness = harness_module.Harness(trace_id="test-trace-trust-line-wiring")
+    call = ToolCall(tool="cypher_query", call_id="call-trust-line-wiring", layer="layer_1_graph")
+    row_count = 150
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": [_unique_citeable_row(i) for i in range(row_count)],
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    assert len(seen) == 1, f"one trust line per answer, got {len(seen)} calls"
+    args, kwargs = seen[0]
+    assert kwargs == {}, f"no findings pool may reach the trust line: {sorted(kwargs)}"
+    assert len(args) == 3
+    claims = args[2]
+    cited_ids = {event.payload["citation_id"] for event in events if event.type == "citation"}
+    claim_ids = {claim.finding.citation_id for claim in claims}  # type: ignore[attr-defined]
+    assert cited_ids and claim_ids == cited_ids
+    assert len(cited_ids) < row_count, "populate-check: some prepared rows must go uncited"
+
+
 # ---------------------------------------------------------------------------
 # Answer quality fix (2026-09-20): the prompt bound (how many findings a
 # Synth model call may see) and the display bound (how many code-built rows
