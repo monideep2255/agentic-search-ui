@@ -61,6 +61,7 @@ from uuid import UUID
 
 from sqlalchemy import select, update
 
+from system_03_search_agent.contracts.events import source_page_key
 from system_03_search_agent.data.models import Interaction
 from system_03_search_agent.data.session import session_scope
 
@@ -119,7 +120,9 @@ class HistoryEntry:
     answer` below is the one boolean that list needs; `get_saved_answer`
     fetches the answer itself, once, when a person actually opens one.
     `citation_count` is a count rather than the citations for the same
-    reason it always was.
+    reason it always was. Since card 22 it counts the distinct record pages
+    those citations point at (`_citation_count`), the number the answer's
+    own line called "sources cited".
 
     `citation_count` is `None`, never a guess, when the row's stored
     `citations` value is not the list this table's Python type declares.
@@ -144,8 +147,8 @@ class HistoryEntry:
 
 
 def _citation_count(stored: object) -> int | None:
-    """How many citations a stored `interactions.citations` value holds, or
-    `None` when that cannot be answered from what is actually stored.
+    """How many record pages a stored `interactions.citations` value cites,
+    or `None` when that cannot be answered from what is actually stored.
 
     F-4.13-RV-02. This used to be `len(row.citations or [])` inline, and
     that single expression carried an assumption the DATABASE does not
@@ -204,10 +207,37 @@ def _citation_count(stored: object) -> int | None:
     arguments. Anything it cannot read honestly is handed onward in a form
     the single downstream guard can judge, so exactly one place decides
     what a bad row costs the caller.
+
+    ## Card 22 fix round (2026-10-06): pages, not citations
+
+    The live rail item reads the answer's own line, "16 sources cited",
+    which counts distinct record PAGES (`source_page_key`). This count read
+    `len(stored)`, one per stored citation event, so the same search read
+    "18 sources" after a reload (J-22-05, A-22-06). It now counts the
+    stored citations' distinct pages under the same key, from the
+    `source_url` each stored citation payload already carries, so no
+    column or migration is needed. A stored element with no readable link
+    (not an object, or no `source_url`) counts on its own, never merged
+    with another, the same fallback every other count uses. The field keeps
+    its wire name, `citation_count`, because renaming it would break the
+    v1 history contract; what it counts is the sources cited.
     """
     if isinstance(stored, list):
-        return len(stored)
+        return len(
+            {
+                _stored_page_key(element) or f"#{position}"
+                for position, element in enumerate(stored)
+            }
+        )
     return None
+
+
+def _stored_page_key(element: object) -> str:
+    """The page key of one stored citation payload, or "" when it has none."""
+    if not isinstance(element, dict):
+        return ""
+    url = element.get("source_url")
+    return source_page_key(url) if isinstance(url, str) else ""
 
 
 def list_history(owner_id: str, limit: int = DEFAULT_LIMIT) -> list[HistoryEntry]:

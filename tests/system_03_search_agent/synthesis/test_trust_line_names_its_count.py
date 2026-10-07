@@ -22,6 +22,7 @@ from pathlib import Path
 
 import pytest
 
+from system_03_search_agent.feedback.history import _citation_count
 from system_03_search_agent.synthesis.findings import SynthFinding
 from system_03_search_agent.synthesis.grounding import GroundedClaim
 from system_03_search_agent.synthesis.trust import (
@@ -259,6 +260,34 @@ def test_with_several_confirmed_facts_n_is_what_every_one_of_them_has() -> None:
     pool = [one, one_litvar, one_omim, two, two_litvar]
     line = answer_trust_line("answer", _confirmed("c-1", "c-4"), _claims(one, two), all_findings=pool)
     assert line == "Confirmed by 2 independent databases"
+
+
+# --------------------------------------- every other total counts pages too
+
+
+def test_the_history_rail_count_after_a_reload_counts_pages() -> None:
+    """J-22-05, A-22-06: the same search read "16 sources cited" live and "18
+    sources" after a reload. The stored citations carry their links, so the
+    reloaded count is their distinct pages. Mutation: `len(stored)` again and
+    this reads 4."""
+    stored = [
+        {"source_url": _GENE},
+        {"source_url": _GENE + "/"},
+        {"source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1"},
+        {"source_url": ""},
+    ]
+    assert _citation_count(stored) == 3
+
+
+def test_the_history_rail_never_merges_what_it_cannot_read() -> None:
+    assert _citation_count([{"source_url": ""}, {"no_link": 1}, "not an object", 5]) == 4
+    assert _citation_count([]) == 0
+    assert _citation_count("abc") is None
+
+
+def test_the_history_rail_count_agrees_with_the_trust_line_on_the_evidence() -> None:
+    stored = [{"source_url": citation["source_url"]} for citation in _DATA["citations"]]
+    assert _citation_count(stored) == _DATA["expected_after"]["sources_cited"]
 
 
 def _evidence_claims() -> list[GroundedClaim]:
