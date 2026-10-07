@@ -40,6 +40,7 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
+from system_03_search_agent.contracts.events import source_page_key
 from system_03_search_agent.synthesis.findings import SynthFinding
 from system_03_search_agent.synthesis.grounding import GroundedClaim
 
@@ -541,31 +542,6 @@ def _origin_database(finding: SynthFinding) -> str:
     if ":" in curie:
         return curie.split(":", 1)[0].lower()
     return finding.tool.lower()
-
-
-def source_page_key(source_url: str | None) -> str:
-    """The key that decides whether two citations point at the same page.
-
-    Card 22 (owner, 2026-10-06): every number on the answer screen that
-    says "sources" counts distinct pages under this one key, so the meta
-    line, the Sources list heading and this module's trust line all show
-    the same number. The frontend applies the identical rule in
-    `sourcePageKey` (`frontend/src/components/screens/AnswerScreen.tsx`);
-    both are tested against the same cases.
-
-    Narrow on purpose: surrounding whitespace and trailing slashes are
-    dropped, nothing else. That is the one difference measured live: the
-    graph's gene URL has no trailing slash (`cypher_provenance.py`) and the
-    live Datasets builder adds one (`ncbi_datasets_actions.py`), so the
-    BRCA1 answer of 2026-09-27 listed `.../gene/672` and `.../gene/672/` as
-    two sources. Case, query strings and fragments are left alone: a query
-    string can name a different record, and no measured duplicate differed
-    in them, so merging on them would be a guess.
-
-    An empty key means "no page"; callers fall back to their own id so a
-    record without a link is never merged with another one.
-    """
-    return (source_url or "").strip().rstrip("/")
 
 
 def answer_trust_line(
