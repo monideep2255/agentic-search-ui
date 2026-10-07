@@ -88,7 +88,11 @@ export interface SavedSourceRow {
   citation: HistoryAnswerCitation;
   /** Every citation number that points at this page, in answer order. */
   indices: number[];
-  /** Every layer the page was cited from, ascending. */
+  /**
+   * Every layer the page was cited from, ascending. A citation whose stored
+   * layer was not recognised (`layer: null`, card 102) adds none, so its row
+   * still shows with its link and names no layer rather than a guessed one.
+   */
   layers: (1 | 2 | 3)[];
 }
 
@@ -110,13 +114,18 @@ export function savedSourceRows(citations: HistoryAnswerCitation[]): SavedSource
     .forEach((citation) => {
       const key = sourcePageKey(citation.source_url) || `#${citation.display_index}`;
       const row = rows.get(key);
+      const { layer } = citation;
       if (row) {
         row.indices.push(citation.display_index);
-        if (!row.layers.includes(citation.layer)) {
-          row.layers = [...row.layers, citation.layer].sort((a, b) => a - b);
+        if (layer !== null && !row.layers.includes(layer)) {
+          row.layers = [...row.layers, layer].sort((a, b) => a - b);
         }
       } else {
-        rows.set(key, { citation, indices: [citation.display_index], layers: [citation.layer] });
+        rows.set(key, {
+          citation,
+          indices: [citation.display_index],
+          layers: layer === null ? [] : [layer],
+        });
       }
     });
   return Array.from(rows.values());
@@ -125,7 +134,8 @@ export function savedSourceRows(citations: HistoryAnswerCitation[]): SavedSource
 /** One source row: layer dot, source name, link or "Not linked". */
 function CitationRow({ row }: { row: SavedSourceRow }) {
   const { citation } = row;
-  const colour = layerColour(citation.layer);
+  // An unrecognised layer draws `layerColour(null)`, the neutral gap colour.
+  const colour = layerColour(citation.layer ?? row.layers[0] ?? null);
   const linkable = isLinkableCitationUrl(citation.source_url);
   const label = citation.entity_name ?? citation.source;
   return (

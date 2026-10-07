@@ -25,7 +25,8 @@
 
 import { useMemo } from "react";
 
-import type { AgentEvent, GuardPayload, Layer } from "../lib/events";
+import type { AgentEvent, GuardPayload } from "../lib/events";
+import { layerNumber } from "../lib/events";
 import { deriveStopEnabled } from "../components/chat/StopButton";
 import { CATEGORY_COPY } from "../components/chat/GuardrailBanner";
 import { isCapShapedError, CAP_MESSAGE_COPY } from "../components/chat/CapMessage";
@@ -141,18 +142,6 @@ export function sourceDisplayName(source: string, sourceId: string): string {
     ? sourceId.slice(prefix.length)
     : sourceId;
   return `${source} ${deduped}`.trim();
-}
-
-/** The wire's layer strings, mapped to the design system's 1, 2, 3. */
-export function layerNumber(layer: Layer): 1 | 2 | 3 {
-  switch (layer) {
-    case "layer_1_graph":
-      return 1;
-    case "layer_2_api":
-      return 2;
-    default:
-      return 3;
-  }
 }
 
 /**

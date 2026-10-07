@@ -29,7 +29,7 @@ const VALID_BODY = {
   depth: "plain_language",
   answer_markdown: "BRCA1 is a gene.",
   citations: [
-    { display_index: 1, source: "Gene", source_url: "https://www.ncbi.nlm.nih.gov/gene/672", layer: 1 },
+    { display_index: 1, source: "Gene", source_url: "https://www.ncbi.nlm.nih.gov/gene/672", layer: "layer_1_graph" },
   ],
   trust_signal: "Grounded, every claim cited",
 };
@@ -98,8 +98,8 @@ describe("fetchHistoryAnswer", () => {
         JSON.stringify({
           ...VALID_BODY,
           citations: [
-            { display_index: 1, source: "Gene", source_url: "https://www.ncbi.nlm.nih.gov/gene/672", layer: 1 },
-            { display_index: 2, source: "Bad", layer: 1 },
+            { display_index: 1, source: "Gene", source_url: "https://www.ncbi.nlm.nih.gov/gene/672", layer: "layer_1_graph" },
+            { display_index: 2, source: "Bad", layer: "layer_1_graph" },
           ],
         }),
         { status: 200 },
@@ -153,5 +153,84 @@ describe("fetchHistoryAnswer", () => {
     await expect(
       fetchHistoryAnswer("token-1", "t-1", { baseUrl: "https://api.test" }),
     ).rejects.toThrow(/documented saved-answer shape/);
+  });
+
+  // Card 102 (2026-10-07): the endpoint returns each citation as it was
+  // stored, the live stream's `CitationPayload`, so `layer` is the wire
+  // string. Deployed develop measured 19 such citations and 0 kept.
+  function storedCitation(n: number, url: string, layer: unknown) {
+    // Every key the deployed reply carried (`product_saved_api_probe2.json`,
+    // `citationKeys`); the values are obviously fake test values.
+    return {
+      citation_id: `cit-test-${n}`,
+      display_index: n,
+      source: "NCBIGene",
+      source_id: "NCBIGene:672",
+      source_url: url,
+      layer,
+      field: "summary",
+      claim_text: "A test claim.",
+      evidence_kind: "curated assertion",
+      assertion_confidence: "high",
+      population_ancestry_context: null,
+      license: "test licence",
+      snapshot_date: null,
+      entity_name: "Test gene",
+    };
+  }
+
+  it("reads the stored layer names as 1, 2 and 3 and keeps every citation", async () => {
+    // Mutation: accept only the numbers 1, 2 or 3 as `layer` again (the
+    // deployed check) and this reads 0 citations, red.
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ...VALID_BODY,
+          citations: [
+            storedCitation(1, "https://www.ncbi.nlm.nih.gov/gene/672", "layer_1_graph"),
+            storedCitation(2, "https://www.ncbi.nlm.nih.gov/gene/672/", "layer_2_api"),
+            storedCitation(3, "https://www.ncbi.nlm.nih.gov/research/pubtator3/", "layer_3_enrichment"),
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchHistoryAnswer("token-1", "t-1", { baseUrl: "https://api.test" });
+    expect(result.citations.map((c) => [c.display_index, c.layer])).toEqual([
+      [1, 1],
+      [2, 2],
+      [3, 3],
+    ]);
+    expect(result.citations[0]).toMatchObject({ source_id: "NCBIGene:672", entity_name: "Test gene" });
+  });
+
+  it("keeps a citation whose layer it does not recognise, with no layer, instead of dropping it", async () => {
+    // Mutation: make an unrecognised layer drop the citation again (gate
+    // on `isLayer`) and this reads 1 citation instead of 3, red. A guessed
+    // layer (mapping an unknown value to 3, `layerNumber`'s own default)
+    // reads 3 where null is expected, also red.
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ...VALID_BODY,
+          citations: [
+            storedCitation(1, "https://www.ncbi.nlm.nih.gov/gene/672", "layer_1_graph"),
+            storedCitation(2, "https://www.ncbi.nlm.nih.gov/clinvar/", "layer_4_new"),
+            storedCitation(3, "https://www.ncbi.nlm.nih.gov/medgen/", 2),
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchHistoryAnswer("token-1", "t-1", { baseUrl: "https://api.test" });
+    expect(result.citations.map((c) => [c.display_index, c.layer])).toEqual([
+      [1, 1],
+      [2, null],
+      [3, null],
+    ]);
   });
 });
