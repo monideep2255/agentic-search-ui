@@ -53,6 +53,7 @@ import { Box, Typography } from "@mui/material";
 
 import { designTokens, layerColour } from "../../theme";
 import { LAYER_WORD, isLinkableCitationUrl } from "../answer/CitationMarkers";
+import { sourcePageKey } from "./AnswerScreen";
 import { SavedAnswerMarkdown } from "./savedAnswerMarkdown";
 import type { HistoryAnswerCitation, HistoryAnswerResponse } from "../../lib/api";
 
@@ -81,8 +82,49 @@ function formatAskedAt(iso: string): string {
   });
 }
 
-/** One citation row: layer dot, source name, link or "Not linked". */
-function CitationRow({ citation }: { citation: HistoryAnswerCitation }) {
+/** One page in a saved answer's Sources list, and every citation of it. */
+export interface SavedSourceRow {
+  /** The first citation of the page; its name and link spelling are shown. */
+  citation: HistoryAnswerCitation;
+  /** Every citation number that points at this page, in answer order. */
+  indices: number[];
+  /** Every layer the page was cited from, ascending. */
+  layers: (1 | 2 | 3)[];
+}
+
+/**
+ * A saved answer's citations, one row per record page.
+ *
+ * Card 22 fix round (2026-10-06, J-22-04, A-22-05): this screen listed one
+ * row per citation under a trust line that counts pages, so a reopened
+ * BRCA1 answer read "Based on 16 sources cited" above 18 rows, the gene
+ * page three times. Rows are now keyed by `sourcePageKey`, the key the live
+ * Sources list and the trust line use, so the rows a person counts are the
+ * sources the line names. A citation with no link is its own row, never
+ * merged.
+ */
+export function savedSourceRows(citations: HistoryAnswerCitation[]): SavedSourceRow[] {
+  const rows = new Map<string, SavedSourceRow>();
+  [...citations]
+    .sort((a, b) => a.display_index - b.display_index)
+    .forEach((citation) => {
+      const key = sourcePageKey(citation.source_url) || `#${citation.display_index}`;
+      const row = rows.get(key);
+      if (row) {
+        row.indices.push(citation.display_index);
+        if (!row.layers.includes(citation.layer)) {
+          row.layers = [...row.layers, citation.layer].sort((a, b) => a - b);
+        }
+      } else {
+        rows.set(key, { citation, indices: [citation.display_index], layers: [citation.layer] });
+      }
+    });
+  return Array.from(rows.values());
+}
+
+/** One source row: layer dot, source name, link or "Not linked". */
+function CitationRow({ row }: { row: SavedSourceRow }) {
+  const { citation } = row;
   const colour = layerColour(citation.layer);
   const linkable = isLinkableCitationUrl(citation.source_url);
   const label = citation.entity_name ?? citation.source;
@@ -113,13 +155,13 @@ function CitationRow({ citation }: { citation: HistoryAnswerCitation }) {
       />
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Typography component="span" sx={{ fontSize: 13, color: designTokens.ink }}>
-          {citation.display_index}. {label}
+          {row.indices.join(", ")}. {label}
         </Typography>
         <Typography
           component="span"
           sx={{ ml: 0.75, fontSize: 11.5, color: designTokens.inkFaint, textTransform: "uppercase" }}
         >
-          {LAYER_WORD[citation.layer]}
+          {row.layers.map((layer) => LAYER_WORD[layer]).join(" · ")}
         </Typography>
         {linkable ? (
           <Box sx={{ mt: "2px" }}>
@@ -295,9 +337,9 @@ export function SavedAnswerScreen({
                   component="ul"
                   sx={{ listStyle: "none", m: 0, p: 0, display: "flex", flexDirection: "column", gap: 0.75 }}
                 >
-                  {answer.citations.map((citation) => (
-                    <Fragment key={citation.display_index}>
-                      <CitationRow citation={citation} />
+                  {savedSourceRows(answer.citations).map((row) => (
+                    <Fragment key={row.indices.join(",")}>
+                      <CitationRow row={row} />
                     </Fragment>
                   ))}
                 </Box>

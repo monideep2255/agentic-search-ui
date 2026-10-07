@@ -19,6 +19,7 @@ import { render, renderHook, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
+import type { HistoryAnswerResponse } from "../../lib/api";
 import type { AgentEvent, Layer } from "../../lib/events";
 import { useRunView } from "../../hooks/useRunView";
 import {
@@ -29,6 +30,7 @@ import {
   sourcePageKey,
   type Source,
 } from "./AnswerScreen";
+import { SavedAnswerScreen, savedSourceRows } from "./SavedAnswerScreen";
 
 interface FixtureCitation {
   display_index: number;
@@ -310,6 +312,51 @@ describe("one page cited from the graph and from a live lookup, on screen", () =
     expect(line).toHaveTextContent("[2]");
     expect(line).toHaveTextContent("listed under Knowledge graph");
     expect(within(live).queryByTestId("source-2")).toBeNull();
+  });
+});
+
+describe("a reopened saved answer", () => {
+  it("lists one row per page, so its rows agree with its stored trust line", () => {
+    // J-22-04, A-22-05: "Based on 16 sources cited" above 18 rows, the gene
+    // page three times. Mutation: map one row per citation again and this
+    // reads 18 rows and 3 gene rows.
+    const after = FIXTURE.expected_after;
+    const answer: HistoryAnswerResponse = {
+      trace_id: "card22",
+      question: "Which diseases are associated with BRCA1?",
+      asked_at: "2026-09-27T12:00:00Z",
+      depth: "researcher",
+      answer_markdown: "BRCA1 is associated with several conditions [1].",
+      citations: FIXTURE.citations.map((c) => ({
+        display_index: c.display_index,
+        source: c.source,
+        source_url: c.source_url,
+        layer: Number(c.layer.slice(6, 7)) as 1 | 2 | 3,
+      })),
+      trust_signal: "ask",
+      trust_line: after.trust_line,
+    };
+    expect(savedSourceRows(answer.citations)).toHaveLength(after.sources_cited);
+    render(<SavedAnswerScreen question={answer.question} loading={false} answer={answer} onRunAgain={() => undefined} />);
+    expect(screen.getByTestId("saved-answer-trust-line")).toHaveTextContent(
+      `Based on ${after.sources_cited} sources cited`,
+    );
+    const rows = within(screen.getByRole("list")).getAllByRole("listitem");
+    expect(rows).toHaveLength(after.sources_cited);
+    const geneRows = rows.filter((row) => row.textContent?.includes("/gene/672"));
+    expect(geneRows).toHaveLength(1);
+    expect(geneRows[0]).toHaveTextContent(/1, 6, 9\./);
+  });
+
+  it("names every layer a merged row was cited from and never merges rows without a link", () => {
+    const rows = savedSourceRows([
+      { display_index: 1, source: "NCBIGene", source_url: GRAPH_GENE, layer: 1 },
+      { display_index: 2, source: "NCBIGene", source_url: LIVE_GENE, layer: 2 },
+      { display_index: 3, source: "x", source_url: "", layer: 2 },
+      { display_index: 4, source: "y", source_url: "", layer: 2 },
+    ]);
+    expect(rows.map((row) => row.indices)).toEqual([[1, 2], [3], [4]]);
+    expect(rows[0].layers).toEqual([1, 2]);
   });
 });
 
