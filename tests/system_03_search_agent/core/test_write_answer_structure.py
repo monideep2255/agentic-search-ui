@@ -1124,7 +1124,7 @@ def test_card23_the_note_names_the_sources_the_code_actually_uses() -> None:
     assert LABEL_CURIE_PREFIXES["SequenceVariant"] == ("ClinVar",)
 
     note = VARIANT_TO_DISEASE_SOURCE_NOTE
-    assert "ClinVar" in note and "variation record" in note
+    assert "ClinVar record" in note
     assert "MedGen titles" in note
     for other in ("LitVar", "PubTator", "dbSNP", "OMIM"):
         assert other not in note, other

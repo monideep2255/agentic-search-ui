@@ -319,9 +319,20 @@ TABLE_HEADINGS: dict[str, str] = {
 # model-written: the reader is told which two systems produced the two
 # columns they are looking at, ClinVar for the variant-disease link and
 # MedGen for the disease's own name.
+#
+# Card 23's fix round (2026-10-06, A-23-05): the first wording called every
+# row a "ClinVar assertion", and beside a question about which diseases
+# variants "cause" that read as "ClinVar says this variant causes this
+# disease", under rows ClinVar classifies as likely benign or uncertain. The
+# graph keeps no classification: the System 1 parser reads ClinVar's
+# ClinicalSignificance, but the loaded SequenceVariant vertex and its
+# `has_phenotype` edge carry neither it nor the review status (read-only
+# probe, 2026-10-06), so the table cannot show it. The line says so instead
+# of implying cause.
 VARIANT_TO_DISEASE_SOURCE_NOTE = (
-    "Variant-to-disease links are ClinVar assertions, each cited to its "
-    "variation record. Disease names are MedGen titles read live from NCBI."
+    "Each row is a condition the variant's ClinVar record names; the "
+    "record's classification (for example pathogenic, benign or uncertain) "
+    "is not shown here. Disease names are MedGen titles read live from NCBI."
 )
 
 

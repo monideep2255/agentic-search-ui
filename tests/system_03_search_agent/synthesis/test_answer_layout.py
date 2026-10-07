@@ -656,10 +656,43 @@ def test_the_variant_to_disease_table_names_its_two_sources() -> None:
     )
 
     assert VARIANT_TO_DISEASE_SOURCE_NOTE == (
-        "Variant-to-disease links are ClinVar assertions, each cited to its "
-        "variation record. Disease names are MedGen titles read live from NCBI."
+        "Each row is a condition the variant's ClinVar record names; the "
+        "record's classification (for example pathogenic, benign or uncertain) "
+        "is not shown here. Disease names are MedGen titles read live from NCBI."
     )
     assert variant_to_disease_source_note("SequenceVariant", True) == VARIANT_TO_DISEASE_SOURCE_NOTE
+
+
+def test_card23_the_note_never_implies_the_variant_causes_the_disease() -> None:
+    """Card 23's fix round, A-23-05. The table lists every variant whose
+    ClinVar record names a condition, likely benign and uncertain ones
+    included (live HNF1A: c.1011C>T, Likely benign, beside "Maturity-onset
+    diabetes of the young"), and the table has no classification column. So
+    the line under it must say the classification is not shown, and must
+    not call a row an assertion or a cause.
+
+    Red when the line goes back to "ClinVar assertions" (the mutation run),
+    when it drops the "not shown" clause, or when the table starts showing a
+    variant's classification without the line being revisited."""
+    from system_03_search_agent.synthesis.answer_layout import (
+        VARIANT_TO_DISEASE_SOURCE_NOTE,
+        record_status_or_year,
+    )
+
+    note = VARIANT_TO_DISEASE_SOURCE_NOTE.lower()
+    assert "classification" in note and "is not shown here" in note
+    for word in ("assertion", "cause", "caused", "responsible for", "pathogenic variant"):
+        assert word not in note, word
+
+    # "is not shown here" stays true only while the table shows no
+    # classification for a variant row, even when a row carries one.
+    variant_row = {
+        "clinical_significance": "Likely benign",
+        "ClinicalSignificance": "Likely benign",
+        "germline_classification": "Likely benign",
+        "clinvar_condition_ids": ["MedGen:C0342276"],
+    }
+    assert record_status_or_year("SequenceVariant", variant_row) is None
 
 
 @pytest.mark.parametrize(
