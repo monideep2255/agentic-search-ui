@@ -1006,3 +1006,125 @@ async def test_card94_plain_language_isolates_with_an_organism_keep_the_table(
     items = [t for t in _tokens(result) if t["kind"] == "list_item"]
     assert len(items) == 1 and "Escherichia coli" in items[0]["cells"][0]
     assert items[0]["marker_ids"]
+
+
+# ---------------------------------------------------------------------------
+# Card 23 (owner, 2026-10-06): under the variant-to-disease table, and under
+# no other table, one code-built line says where its links and its disease
+# names come from. Each arm was shown red by one mutation before it was kept
+# (`testing/Developer/reports/2026-10-06_card23/build.md`).
+# ---------------------------------------------------------------------------
+
+# A gene-to-disease table beside the variant one, so "under no other table"
+# is tested against a real second mapping table, not only an absent one.
+_FOLDED_GENE_ROW = {
+    "node_or_edge_type": "Gene",
+    "curie": "NCBIGene:2645",
+    "fields": {"name": "GCK", "medgen_condition_ids": ["MedGen:C0342276"]},
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/2645",
+    "graph_snapshot_version": "v1",
+}
+
+
+def _source_notes(tokens: list[dict]) -> list[int]:
+    from system_03_search_agent.synthesis.answer_layout import VARIANT_TO_DISEASE_SOURCE_NOTE
+
+    return [
+        index
+        for index, token in enumerate(tokens)
+        if token["kind"] == "note" and token["text"] == VARIANT_TO_DISEASE_SOURCE_NOTE
+    ]
+
+
+@pytest.mark.asyncio
+async def test_card23_the_source_note_sits_directly_under_the_variant_table(monkeypatch) -> None:
+    """Red when the wiring is removed (no note) or when the note is emitted
+    above the table's rows instead of after them."""
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+    _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
+    rows = [*_FOLDED_VARIANT_ROWS, _FOLDED_GENE_ROW]
+    tokens = _tokens(await graph_module.write_node(_state("researcher", rows=rows)))
+    headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    assert "Variant-to-disease mapping" in headings and "Gene-to-disease mapping" in headings
+    (note_at,) = _source_notes(tokens)
+    variant_heading = next(
+        i for i, t in enumerate(tokens) if t["kind"] == "heading" and "Variant-to-disease" in t["text"]
+    )
+    # Everything between the variant heading and the note is that table.
+    between = [t["kind"] for t in tokens[variant_heading + 1 : note_at]]
+    assert between[0] == "table_header" and between[-1] == "paragraph_break", between
+    assert set(between[1:-1]) == {"table_row"}, between
+    # And the very next structure after the note is the gene table's heading.
+    after = [t for t in tokens[note_at + 1 :] if t["kind"] != "paragraph_break"]
+    assert after[0]["kind"] == "heading" and "Gene-to-disease" in after[0]["text"], after[:2]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("depth", "rows"),
+    [
+        # Plain language lists the same records as titles, with no table.
+        ("plain_language", _FOLDED_VARIANT_ROWS),
+        # Variants with no folded diseases: a variant list, not the mapping.
+        ("researcher", _VARIANT_ROWS),
+        # A gene-to-disease table alone: a different mapping table.
+        ("researcher", [_FOLDED_GENE_ROW, *_FOLDED_VARIANT_ROWS[1:3]]),
+    ],
+    ids=["plain_language", "variants_without_diseases", "gene_to_disease_table"],
+)
+async def test_card23_no_variant_table_no_source_note(monkeypatch, depth, rows) -> None:
+    """Red when the helper drops its `entity_type` check (the gene table
+    gets the note), its `mapped` check (the plain variant list gets it), or
+    when the note is added to the answer-wide notes (Plain language gets it)."""
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+    _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
+    tokens = _tokens(await graph_module.write_node(_state(depth, rows=rows)))
+    headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    assert "Variant-to-disease mapping" not in headings, headings
+    # Populate-check: each case still lists its records, and the gene case
+    # really shows its own mapping table, so the arm cannot pass on an
+    # empty page.
+    listed = [t for t in tokens if t["kind"] in ("table_row", "list_item")]
+    assert len(listed) >= 2, tokens
+    if rows[0] is _FOLDED_GENE_ROW:
+        assert "Gene-to-disease mapping" in headings, headings
+    assert _source_notes(tokens) == [], [t["text"] for t in tokens if t["kind"] == "note"]
+
+
+def test_card23_the_note_names_the_sources_the_code_actually_uses() -> None:
+    """The note's words, checked against the code that fills the table.
+
+    - The mapping column is the fold field only the two variant templates
+      write, and both traverse `has_phenotype`, the ClinVar edge.
+    - A table row's anchor is a SequenceVariant, whose only CURIE prefix in
+      this graph is ClinVar, cited to its ClinVar variation page.
+    - The disease cell is a MedGen title, resolved by `resolve_concept_ids`.
+
+    Red when the note names another source (LitVar2 in the mutation run) or
+    stops naming ClinVar or MedGen."""
+    from system_03_search_agent.synthesis.answer_layout import (
+        TABLE_COLUMNS,
+        VARIANT_TO_DISEASE_SOURCE_NOTE,
+    )
+    from system_03_search_agent.tools import cypher_templates
+    from system_03_search_agent.tools.graph_schema_constants import (
+        EDGE_ENDPOINTS,
+        LABEL_CURIE_PREFIXES,
+    )
+
+    field = TABLE_COLUMNS["SequenceVariant"][0]
+    assert field == cypher_templates.FOLD_FIELD_VARIANT_CONDITIONS
+    for template in (
+        cypher_templates._gene_variant_diseases_template("e0"),
+        cypher_templates._gene_variant_disease_link_template("e0", ["e1"]),
+    ):
+        assert template.fold is not None and template.fold[2] == field
+        assert template.edge_label == "has_phenotype"
+    assert EDGE_ENDPOINTS["has_phenotype"] == ("SequenceVariant", "Disease")
+    assert LABEL_CURIE_PREFIXES["SequenceVariant"] == ("ClinVar",)
+
+    note = VARIANT_TO_DISEASE_SOURCE_NOTE
+    assert "ClinVar" in note and "variation record" in note
+    assert "MedGen titles" in note
+    for other in ("LitVar", "PubTator", "dbSNP", "OMIM"):
+        assert other not in note, other
