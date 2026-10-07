@@ -27,9 +27,12 @@ from system_03_search_agent.adapters.cli.render import Renderer
 from system_03_search_agent.contracts.events import CitationPayload, Event
 from system_03_search_agent.core.graph import _cited_page_count
 from system_03_search_agent.feedback.history import _citation_count
-from system_03_search_agent.synthesis.answer_layout import answer_summary_sentence
+from system_03_search_agent.synthesis.answer_layout import (
+    answer_summary_sentence,
+    drop_record_restatements,
+)
 from system_03_search_agent.synthesis.findings import SynthFinding
-from system_03_search_agent.synthesis.grounding import GroundedClaim
+from system_03_search_agent.synthesis.grounding import GroundedClaim, run_grounding_pass
 from system_03_search_agent.synthesis.trust import (
     ClaimTrust,
     answer_trust_line,
@@ -424,6 +427,67 @@ def test_the_opening_line_counts_one_record_per_page() -> None:
     assert researcher is not None
     assert "2 gene records" not in researcher, researcher
     assert "[2]" not in researcher, researcher
+
+
+def _gene_rows(graph_first: bool) -> list[SynthFinding]:
+    """The graph's gene row and the live Datasets gene row: two listed rows
+    (`one_finding_per_record` groups by exact link) on one page."""
+    def row(index: int, layer: str, tool: str, field: str, value: str, url: str) -> SynthFinding:
+        return SynthFinding(
+            ref_index=index,
+            citation_id=f"c{index}",
+            layer=layer,
+            tool=tool,
+            field=field,
+            field_value=value,
+            source_url=url,
+            entity_type="Gene",
+        )
+
+    graph_index, live_index = (1, 2) if graph_first else (2, 1)
+    graph = row(graph_index, "layer_1_graph", "cypher_query", "symbol", "BRCA1", _GENE)
+    live = row(
+        live_index, "layer_2_api", "ncbi_efetch", "description", "BRCA1 DNA repair associated", _GENE + "/"
+    )
+    return [graph, live] if graph_first else [live, graph]
+
+
+@pytest.mark.parametrize(
+    ("graph_first", "sentence"),
+    [
+        (True, "Gene BRCA1 symbol [1]."),
+        (False, "BRCA1 DNA repair associated description [1]."),
+    ],
+)
+def test_the_restatement_gate_drops_a_restatement_of_either_row_on_a_page(
+    graph_first: bool, sentence: str
+) -> None:
+    """V-22-02: keyed by page, the gate kept only the last row written for
+    the page, so a sentence restating the other row survived above the list
+    that repeats it. Both orders are run, so keeping either the first or
+    the last row fails one of them."""
+    findings = _gene_rows(graph_first)
+    grounding = run_grounding_pass(sentence, findings, core_ask_required=False)
+    assert len(grounding.claims) == 1, "populate-check: the sentence must ground"
+    result, dropped = drop_record_restatements(grounding, findings)
+    assert dropped == 1, result.sentences
+
+
+def test_the_restatement_gate_reads_every_row_on_the_page() -> None:
+    """V-22-03: the gate's page key. The sentence cites the graph row and
+    says only what the live row on the same page lists; keyed by exact link
+    (develop's key) the gate never sees the live row and keeps the
+    sentence. Mutation: key the gate by exact link and this keeps it."""
+    findings = _gene_rows(True)
+    grounding = run_grounding_pass(
+        "BRCA1 DNA repair associated [1].",
+        findings,
+        core_ask_required=False,
+        question="What does BRCA1 DNA repair associated mean?",
+    )
+    assert [claim.finding.citation_id for claim in grounding.claims] == ["c1"], "populate-check"
+    result, dropped = drop_record_restatements(grounding, findings)
+    assert dropped == 1, result.sentences
 
 
 def test_the_command_line_lists_one_reference_per_page() -> None:

@@ -863,11 +863,16 @@ def drop_record_restatements(
     claims = list(grounding.claims)
     # Keyed by `source_page_key` (card 22), the one page key every count
     # uses, so a cited link with a trailing slash still finds its record.
-    shown_by_url = {
-        source_page_key(finding.source_url): finding
-        for finding in one_finding_per_record(synth_findings)
-        if source_page_key(finding.source_url)
-    }
+    # Every listed row on a page is kept (card 22 last round, V-22-02):
+    # `one_finding_per_record` groups by exact link, so the graph's gene
+    # row and the live Datasets gene row are two rows on one page, and a
+    # sentence is a restatement when it restates ANY of them. Keeping only
+    # the last one written compared the sentence against the wrong row.
+    shown_by_page: dict[str, list[SynthFinding]] = {}
+    for finding in one_finding_per_record(synth_findings):
+        page = source_page_key(finding.source_url)
+        if page:
+            shown_by_page.setdefault(page, []).append(finding)
     cursor = 0
     kept: list[tuple[str, int, list[GroundedClaim]]] = []
     dropped = 0
@@ -878,11 +883,13 @@ def drop_record_restatements(
         own = claims[cursor : cursor + marker_count]
         cursor += marker_count
         cited = [claim.finding for claim in own]
-        shown = shown_by_url.get(source_page_key(cited[0].source_url)) if cited else None
+        shown_rows: list[SynthFinding | None] = (
+            list(shown_by_page.get(source_page_key(cited[0].source_url), [])) if cited else []
+        ) or [None]
         if (
             own
             and not any(claim.evidence_quote for claim in own)
-            and is_record_restatement(sentence, cited, shown)
+            and any(is_record_restatement(sentence, cited, shown) for shown in shown_rows)
         ):
             dropped += 1
             continue
