@@ -1448,10 +1448,12 @@ What you should see:
 
 - The line under the question reads "N tool calls · S sources cited from L layers", never a bare "tools" or "sources".
 - The SOURCES heading shows the same S, and the line under the sources reads "Based on S sources cited", with ", not yet confirmed" when a high-stakes fact has not been found in a second database.
-- A confirmed answer reads "Confirmed by N independent databases": that number counts databases, not pages, so it can be smaller than S.
+- A confirmed answer reads "Confirmed by N independent databases": N counts the databases whose records state the confirmed fact, not pages. A graph record and a live lookup of the same database count as one database, so two copies of one ClinVar record never read as confirmed.
+- The info card beside that line says "not yet confirmed" has two causes: a high-stakes fact not yet found in a second database, or an answer that may be incomplete, for example because a search did not finish.
 - The NCBI Gene record for BRCA1 is one source card, even when the answer cites it through two links, one ending in a slash. Before, the 2026-09-27 BRCA1 answer read "18 sources" above a SOURCES heading of 17 and "Based on 17 sources"; the same answer now reads 16 in all three places.
-- The opening line is unchanged ("Found 4 disease records for BRCA1" at Researcher, "I found 4 conditions related to BRCA1" at Plain language): it counts the records that answer the question, which is a different thing from sources.
-- Known: the YOUR SEARCHES list, after a reload, still shows a past search as "N sources" from its stored citations, which can be larger than S.
+- When one page is cited both from the knowledge graph and from a live lookup, it is still one card, and the card names both layers ("L1 · graph, L2 · live"). It sits under Knowledge graph, the Live NCBI APIs group still shows and names it, and the line under the question counts both layers.
+- The opening line counts one record per page ("Found 4 disease records for BRCA1" at Researcher, "I found 4 conditions related to BRCA1" at Plain language): it counts the records that answer the question, which is a different thing from sources.
+- After a reload, YOUR SEARCHES shows the same search as "S sources cited", the same S. Open it: the saved answer lists S source rows under its "Based on S sources cited" line, the gene page once.
 - Why it matters: a number that says "sources" should be the number of sources you can open and count, wherever it appears.
 
 ### 75. A papers list reads as clean prose, with no record repeated (12.12)
