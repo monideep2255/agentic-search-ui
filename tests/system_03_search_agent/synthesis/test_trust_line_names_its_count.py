@@ -118,10 +118,18 @@ def test_based_on_says_sources_cited(outcome: str, count: int, expected: str) ->
 #
 # "Confirmed by N independent databases" (A-22-01, A-22-02, J-22-03): N is the
 # number of databases whose records state the confirmed fact, read off the
-# record page, never off the tool that fetched it.
+# record page, never off the tool that fetched it. Last round (V-22-01): only
+# the CITED records count, so N never names a database the reader cannot open.
+#
+# The records below are about one variant: its ClinVar record, its dbSNP page
+# (which is also the link `litvar2_lookup` builds for a variant with a
+# significance, `tools/litvar2_lookup.py`, `_snp_url_for_rsid`) and its OMIM
+# allelic variant entry (V-22-04: the same fact, not the same value about
+# different variants).
 
 _CLINVAR = "https://www.ncbi.nlm.nih.gov/clinvar/variation/17661"
-_LITVAR = "https://www.ncbi.nlm.nih.gov/research/litvar2/docsum?variant=rs80357906"
+_SNP = "https://www.ncbi.nlm.nih.gov/snp/rs80357713"
+_OMIM = "https://omim.org/entry/113705#0003"
 
 
 def _fact(
@@ -160,7 +168,8 @@ def _confirmed(*high_ids: str) -> list[ClaimTrust]:
         (_CLINVAR + "/", "", "ncbi_efetch", "ncbi.nlm.nih.gov/clinvar"),
         ("https://pubmed.ncbi.nlm.nih.gov/12345/", "", "ncbi_efetch", "ncbi.nlm.nih.gov/pubmed"),
         ("https://www.ncbi.nlm.nih.gov/pubmed/12345", "", "ncbi_efetch", "ncbi.nlm.nih.gov/pubmed"),
-        (_LITVAR, "", "litvar2_lookup", "ncbi.nlm.nih.gov/research/litvar2"),
+        (_SNP, "", "litvar2_lookup", "ncbi.nlm.nih.gov/snp"),
+        (_SNP, "", "ncbi_dbsnp", "ncbi.nlm.nih.gov/snp"),
         (
             "https://www.ncbi.nlm.nih.gov/research/pubtator3/publication/123",
             "",
@@ -168,7 +177,7 @@ def _confirmed(*high_ids: str) -> list[ClaimTrust]:
             "ncbi.nlm.nih.gov/research/pubtator3",
         ),
         ("https://www.omim.org/entry/113705", "", "ncbi_efetch", "omim.org"),
-        ("https://omim.org/entry/113705", "", "ncbi_efetch", "omim.org"),
+        (_OMIM, "", "ncbi_efetch", "omim.org"),
         ("https://clinicaltrials.gov/study/NCT00590109", "", "clinicaltrials_search", "clinicaltrials.gov"),
         ("", "MedGen:C1", "cypher_query", "medgen"),
         ("", "", "ncbi_efetch", ""),
@@ -189,7 +198,7 @@ def test_confirmed_counts_only_the_databases_that_state_the_fact() -> None:
     reads 5."""
     claims = _claims(
         _fact(1, _CLINVAR, curie="ClinVar:17661"),
-        _fact(2, _LITVAR, tool="litvar2_lookup", layer="layer_3_enrichment"),
+        _fact(2, _SNP, tool="litvar2_lookup", layer="layer_3_enrichment"),
         _finding(3, "https://www.ncbi.nlm.nih.gov/medgen/C1"),
         _finding(4, _GENE, curie="NCBIGene:672"),
         _finding(5, "https://clinicaltrials.gov/study/NCT00590109", curie=""),
@@ -199,12 +208,43 @@ def test_confirmed_counts_only_the_databases_that_state_the_fact() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("cited", "expected"),
+    [
+        (
+            [_fact(1, _CLINVAR, curie="ClinVar:17661"), _fact(2, _SNP, tool="litvar2_lookup")],
+            "Confirmed by 2 independent databases",
+        ),
+        (
+            [_fact(1, _CLINVAR, curie="ClinVar:17661"), _fact(2, _SNP, tool="ncbi_dbsnp")],
+            "Confirmed by 2 independent databases",
+        ),
+        (
+            [
+                _fact(1, _CLINVAR, curie="ClinVar:17661"),
+                _fact(2, _SNP, tool="ncbi_dbsnp"),
+                _fact(3, _OMIM, tool="ncbi_efetch"),
+            ],
+            "Confirmed by 3 independent databases",
+        ),
+    ],
+)
+def test_genuine_agreement_among_cited_records_still_confirms(
+    cited: list[SynthFinding], expected: str
+) -> None:
+    """V-22-01's controls: real agreement on one variant, every record cited,
+    reads what develop read (2, 2 and 3)."""
+    trusts = trust_for_claims(_claims(*cited), cited)
+    assert all(t.triangulation == "concordant" for t in trusts)
+    assert answer_trust_line("answer", trusts, _claims(*cited)) == expected
+
+
 def test_a_graph_row_and_a_live_fetch_of_one_record_confirm_nothing() -> None:
     """A-22-01: the graph's ClinVar row and a live fetch of the same ClinVar
     record. The per-claim check compares tools, so it calls them concordant
-    (pinned below, a separate card); the line must not repeat that as two
-    databases. Mutation: key `record_database` by tool and this reads
-    "Confirmed by 2 independent databases"."""
+    (a separate card); the line must not repeat that as two databases.
+    Mutation: key `record_database` by tool and this reads "Confirmed by 2
+    independent databases"."""
     graph = _fact(1, _CLINVAR, curie="ClinVar:17661")
     live = _fact(2, _CLINVAR + "/", tool="ncbi_efetch", layer="layer_2_api")
     claims = _claims(graph, live)
@@ -213,8 +253,7 @@ def test_a_graph_row_and_a_live_fetch_of_one_record_confirm_nothing() -> None:
         "populate-check: the per-claim verdict still compares tools; if this "
         "changes, the case below no longer reaches the line"
     )
-    line = answer_trust_line("answer", trusts, claims, all_findings=[graph, live])
-    assert line == "Based on 1 source cited, not yet confirmed"
+    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, not yet confirmed"
 
 
 def test_the_graph_gene_page_and_the_live_gene_page_are_one_database() -> None:
@@ -222,48 +261,77 @@ def test_the_graph_gene_page_and_the_live_gene_page_are_one_database() -> None:
     two keys for one database."""
     graph = _fact(1, _GENE, curie="NCBIGene:672")
     live = _fact(2, _GENE + "/", tool="ncbi_datasets", layer="layer_2_api")
-    line = answer_trust_line("answer", _confirmed("c-1"), _claims(graph, live), all_findings=[graph, live])
+    line = answer_trust_line("answer", _confirmed("c-1"), _claims(graph, live))
     assert line == "Based on 1 source cited, not yet confirmed"
 
 
-def test_agreement_is_read_from_the_whole_findings_pool() -> None:
-    """The second database's record need not be cited in the prose: the
-    pool `triangulate` compared against is the pool counted. Mutation: ignore
-    `all_findings` and this reads "not yet confirmed"."""
+def test_agreement_is_read_from_the_cited_records_only() -> None:
+    """V-22-01, the verifier's probe: one cited ClinVar record, and uncited
+    dbSNP and PubTator records in the findings pool stating "Pathogenic".
+    The per-claim check sees the pool and calls the claim concordant; the
+    line counts only what the reader can open, so it must not read
+    "Confirmed by 3". Mutation: count the pool again and this reads 3."""
     cited = _fact(1, _CLINVAR, curie="ClinVar:17661")
-    corroborator = _fact(2, _LITVAR, tool="litvar2_lookup", layer="layer_3_enrichment")
-    line = answer_trust_line(
-        "answer", _confirmed("c-1"), _claims(cited), all_findings=[cited, corroborator]
+    uncited = [
+        _fact(2, "https://www.ncbi.nlm.nih.gov/snp/rs999", tool="ncbi_dbsnp", layer="layer_2_api"),
+        _fact(
+            3,
+            "https://www.ncbi.nlm.nih.gov/research/pubtator3/publication/123",
+            tool="pubtator_annotate",
+            layer="layer_3_enrichment",
+        ),
+    ]
+    trusts = trust_for_claims(_claims(cited), [cited, *uncited])
+    assert [t.triangulation for t in trusts] == ["concordant"], "populate-check"
+    assert answer_trust_line("answer", trusts, _claims(cited)) == (
+        "Based on 1 source cited, not yet confirmed"
     )
+
+
+def test_one_record_fetched_twice_beside_an_uncited_corroborator_confirms_nothing() -> None:
+    """V-22-01, case H: the graph ClinVar row and a live fetch of the same
+    record are cited, an uncited LitVar2 record agrees. Every cited source
+    is one database, so the line must not read "Confirmed by 2"."""
+    graph = _fact(1, _CLINVAR, curie="ClinVar:17661")
+    live = _fact(2, _CLINVAR + "/", tool="ncbi_efetch", layer="layer_2_api")
+    litvar = _fact(3, _SNP, tool="litvar2_lookup", layer="layer_3_enrichment")
+    claims = _claims(graph, live)
+    trusts = trust_for_claims(claims, [graph, live, litvar])
+    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, not yet confirmed"
+
+
+def test_n_never_exceeds_the_databases_in_the_sources_list() -> None:
+    """Whatever the pool held, N is at most the number of databases among
+    the cited records."""
+    cited = [_fact(1, _CLINVAR, curie="ClinVar:17661"), _fact(2, _SNP, tool="ncbi_dbsnp")]
+    pool = [*cited, _fact(3, _OMIM, tool="ncbi_efetch"), _fact(4, "https://clinicaltrials.gov/study/NCT1")]
+    trusts = trust_for_claims(_claims(*cited), pool)
+    line = answer_trust_line("answer", trusts, _claims(*cited))
     assert line == "Confirmed by 2 independent databases"
+    assert len({record_database(f) for f in cited}) == 2
 
 
 def test_a_record_stating_a_different_value_does_not_count_as_agreeing() -> None:
     cited = _fact(1, _CLINVAR, curie="ClinVar:17661")
-    other = _fact(2, _LITVAR, tool="litvar2_lookup", value="Benign")
-    line = answer_trust_line("answer", _confirmed("c-1"), _claims(cited), all_findings=[cited, other])
-    assert line == "Based on 1 source cited, not yet confirmed"
+    other = _fact(2, _SNP, tool="ncbi_dbsnp", value="Benign")
+    line = answer_trust_line("answer", _confirmed("c-1"), _claims(cited, other))
+    assert line == "Based on 2 sources cited, not yet confirmed"
 
 
 def test_with_several_confirmed_facts_n_is_what_every_one_of_them_has() -> None:
-    """Fact one has three databases behind it and fact two has two. "Confirmed
-    by 3" would overstate fact two, so N is the smaller count."""
-    one = _fact(1, _CLINVAR, curie="ClinVar:17661")
-    one_litvar = _fact(2, _LITVAR, tool="litvar2_lookup")
-    one_omim = _fact(3, "https://omim.org/entry/113705", tool="ncbi_efetch")
-    two = SynthFinding(
-        ref_index=4,
-        citation_id="c-4",
-        layer="layer_1_graph",
-        tool="cypher_query",
-        field="review_status",
-        field_value="Likely benign",
-        source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/99",
-        entity_type="Variant",
-    )
-    two_litvar = SynthFinding(**{**two.__dict__, "ref_index": 5, "citation_id": "c-5", "source_url": _LITVAR})
-    pool = [one, one_litvar, one_omim, two, two_litvar]
-    line = answer_trust_line("answer", _confirmed("c-1", "c-4"), _claims(one, two), all_findings=pool)
+    """Variant one has three databases behind its significance and variant
+    two has two. "Confirmed by 3" would overstate variant two, so N is the
+    smaller count. Mutation: the largest count and this reads 3."""
+    one = [
+        _fact(1, _CLINVAR, curie="ClinVar:17661"),
+        _fact(2, _SNP, tool="ncbi_dbsnp"),
+        _fact(3, _OMIM, tool="ncbi_efetch"),
+    ]
+    two = [
+        _fact(4, "https://www.ncbi.nlm.nih.gov/clinvar/variation/99", curie="ClinVar:99", value="Benign"),
+        _fact(5, "https://www.ncbi.nlm.nih.gov/snp/rs999", tool="ncbi_dbsnp", value="Benign"),
+    ]
+    line = answer_trust_line("answer", _confirmed("c-1", "c-4"), _claims(*one, *two))
     assert line == "Confirmed by 2 independent databases"
 
 

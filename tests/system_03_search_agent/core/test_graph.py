@@ -1629,6 +1629,54 @@ async def test_truncation_note_and_more_to_show_count_record_pages_not_citations
     assert str(row_count - len(citations)) not in offer, offer
 
 
+@pytest.mark.asyncio
+async def test_the_trust_line_is_computed_from_the_cited_claims_only(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Card 22 last round (V-22-01, V-22-03): "Confirmed by N independent
+    databases" may count only records the reader can open, so the write
+    step hands `answer_trust_line` the grounded claims, exactly the records
+    its citation events list, and no findings pool. 150 rows past the
+    display cap leave findings that are prepared but not cited, so a call
+    that passes the pool, or claims built from it, fails here.
+    """
+    seen: list[tuple[tuple[object, ...], dict[str, object]]] = []
+    real = graph_module.answer_trust_line
+
+    def spy(*args: object, **kwargs: object) -> str | None:
+        seen.append((args, kwargs))
+        return real(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(graph_module, "answer_trust_line", spy)
+    harness = harness_module.Harness(trace_id="test-trace-trust-line-wiring")
+    call = ToolCall(tool="cypher_query", call_id="call-trust-line-wiring", layer="layer_1_graph")
+    row_count = 150
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": [_unique_citeable_row(i) for i in range(row_count)],
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    assert len(seen) == 1, f"one trust line per answer, got {len(seen)} calls"
+    args, kwargs = seen[0]
+    assert kwargs == {}, f"no findings pool may reach the trust line: {sorted(kwargs)}"
+    assert len(args) == 3
+    claims = args[2]
+    cited_ids = {event.payload["citation_id"] for event in events if event.type == "citation"}
+    claim_ids = {claim.finding.citation_id for claim in claims}  # type: ignore[attr-defined]
+    assert cited_ids and claim_ids == cited_ids
+    assert len(cited_ids) < row_count, "populate-check: some prepared rows must go uncited"
+
+
 # ---------------------------------------------------------------------------
 # Answer quality fix (2026-09-20): the prompt bound (how many findings a
 # Synth model call may see) and the display bound (how many code-built rows

@@ -583,20 +583,27 @@ def record_database(finding: SynthFinding) -> str:
     return ""
 
 
-def _databases_backing(claim_finding: SynthFinding, all_findings: list[SynthFinding]) -> set[str]:
-    """The databases whose records state the same value for this claim's fact.
+def _databases_backing(claim_finding: SynthFinding, cited: list[SynthFinding]) -> set[str]:
+    """The databases whose CITED records state the same value for this claim's fact.
 
     The same structural comparison `triangulate` makes (same field, same
     Section 8.3.2 equivalence bucket), counted by `record_database` instead
     of by tool. A value outside the bucket table backs nothing, because
     `triangulate` cannot call it concordant either.
+
+    `cited` is the answer's grounded claims' findings, the records the
+    reader can open in its Sources list, and nothing else (card 22 last
+    round, V-22-01). Counting the whole findings pool let uncited records,
+    possibly about a different variant, turn one cited ClinVar record into
+    "Confirmed by 3 independent databases"; N may never name a database
+    the reader cannot open.
     """
     bucket = bucket_for(claim_finding.field_value)
     if bucket is None:
         return set()
     agreeing = [claim_finding] + [
         finding
-        for finding in all_findings
+        for finding in cited
         if finding.field == claim_finding.field and bucket_for(finding.field_value) == bucket
     ]
     return {database for finding in agreeing if (database := record_database(finding))}
@@ -606,7 +613,6 @@ def answer_trust_line(
     trust_outcome: TrustOutcome,
     claim_trusts: list[ClaimTrust],
     claims: list[GroundedClaim],
-    all_findings: list[SynthFinding] | None = None,
 ) -> str | None:
     """UI fix set 9, item 9.9 (decision U1): one plain line for an answer.
 
@@ -628,9 +634,8 @@ def answer_trust_line(
       Low-risk claims are never triangulated, so "not yet confirmed" would
       imply a check that does not apply to them.
 
-    `all_findings` is the pool `triangulate` compared each claim against
-    (the caller passes the same list it gave `trust_for_claims`). Without
-    it, only the grounded claims' own findings are searched for agreement.
+    Agreement is counted among the cited claims only, so N can never exceed
+    the number of databases in the answer's Sources list.
 
     ## Card 22 (owner, 2026-10-06): every total says what it counts
 
@@ -651,8 +656,10 @@ def answer_trust_line(
     5 independent databases", and a graph ClinVar row beside a live fetch
     of the same record read "Confirmed by 2".
 
-    N is now the number of databases (`record_database`) whose records
-    state the confirmed fact, and with several high-risk facts it is the
+    N is now the number of databases (`record_database`) whose CITED
+    records state the confirmed fact (last round, V-22-01: never an uncited
+    finding, so N never names a database the reader cannot open in the
+    Sources list), and with several high-risk facts it is the
     smallest of their counts, so every confirmed fact has at least N
     databases behind it. When that is fewer than two, the line says "not
     yet confirmed", because two records from one database are not two
@@ -703,7 +710,8 @@ def answer_trust_line(
         trust.triangulation == "concordant" for trust in high
     ):
         finding_by_id = {claim.finding.citation_id: claim.finding for claim in claims}
-        pool = all_findings if all_findings is not None else list(finding_by_id.values())
+        # Cited records only (V-22-01): never the uncited findings pool.
+        pool = list(finding_by_id.values())
         backing = [
             len(_databases_backing(finding_by_id[trust.citation_id], pool))
             if trust.citation_id in finding_by_id
