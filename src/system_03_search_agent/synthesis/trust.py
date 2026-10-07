@@ -543,6 +543,31 @@ def _origin_database(finding: SynthFinding) -> str:
     return finding.tool.lower()
 
 
+def source_page_key(source_url: str | None) -> str:
+    """The key that decides whether two citations point at the same page.
+
+    Card 22 (owner, 2026-10-06): every number on the answer screen that
+    says "sources" counts distinct pages under this one key, so the meta
+    line, the Sources list heading and this module's trust line all show
+    the same number. The frontend applies the identical rule in
+    `sourcePageKey` (`frontend/src/components/screens/AnswerScreen.tsx`);
+    both are tested against the same cases.
+
+    Narrow on purpose: surrounding whitespace and trailing slashes are
+    dropped, nothing else. That is the one difference measured live: the
+    graph's gene URL has no trailing slash (`cypher_provenance.py`) and the
+    live Datasets builder adds one (`ncbi_datasets_actions.py`), so the
+    BRCA1 answer of 2026-09-27 listed `.../gene/672` and `.../gene/672/` as
+    two sources. Case, query strings and fragments are left alone: a query
+    string can name a different record, and no measured duplicate differed
+    in them, so merging on them would be a guess.
+
+    An empty key means "no page"; callers fall back to their own id so a
+    record without a link is never merged with another one.
+    """
+    return (source_url or "").strip().rstrip("/")
+
+
 def answer_trust_line(
     trust_outcome: TrustOutcome,
     claim_trusts: list[ClaimTrust],
@@ -559,12 +584,23 @@ def answer_trust_line(
     - `flag`: the sources disagree, which outranks any count.
     - `answer` with at least one high-risk claim, every high-risk claim
       concordant, and two or more independent databases: "Confirmed by N
-      independent sources". This is the only line that says "confirmed",
+      independent databases". This is the only line that says "confirmed",
       because concordance is the only verdict that means it.
-    - `ask`: "Based on N source(s), not yet confirmed".
-    - Otherwise (every claim low risk): "Based on N source(s)". Low-risk
-      claims are never triangulated, so "not yet confirmed" would imply a
-      check that does not apply to them.
+    - `ask`: "Based on N source(s) cited, not yet confirmed".
+    - Otherwise (every claim low risk): "Based on N source(s) cited".
+      Low-risk claims are never triangulated, so "not yet confirmed" would
+      imply a check that does not apply to them.
+
+    ## Card 22 (owner, 2026-10-06): every total says what it counts
+
+    One answer showed "18 sources" in the meta line and "Based on 17
+    sources" here, and neither said what it counted. Now "sources" means
+    one thing on the whole screen: distinct pages cited, keyed by
+    `source_page_key`, the number of source cards a person can open and
+    count. So the "Based on" lines gain the word "cited", and the
+    "Confirmed by" line, which counts DATABASES (below), now says
+    "databases" instead of "sources": its number and its rule are
+    unchanged, only the noun now names what it counts.
 
     ## Fix-plan item 12.8 (2026-09-23): two different counts, not one
 
@@ -594,7 +630,7 @@ def answer_trust_line(
       can click through, which is the claim "Based on" actually makes.
     - `database_count`, the pre-existing independent-origin count, kept
       for exactly one job: deciding and wording "Confirmed by N
-      independent sources", where "independent" is the load-bearing word
+      independent databases", where "independent" is the load-bearing word
       and N must never exceed how many distinct databases actually
       agree.
     """
@@ -602,11 +638,16 @@ def answer_trust_line(
         return None
     # Item 12.11 (2026-09-23): distinct PAGES, not distinct citation ids.
     # Counting ids read "Based on 14 sources" above a source list headed 12,
-    # because the page merges every chip for the same record into one row by
-    # its exact URL (`groupSourcesByLayer` in `AnswerScreen.tsx`). Same key,
-    # same count. A claim with no URL counts on its own id, never merged.
+    # because the page merges every chip for the same record into one row
+    # (`groupSourcesByLayer` in `AnswerScreen.tsx`). Card 22: both now use
+    # `source_page_key`, so a trailing slash no longer splits one page in
+    # two. Same key, same count. A claim with no URL counts on its own id,
+    # never merged.
     citation_count = len(
-        {claim.finding.source_url or claim.finding.citation_id for claim in claims}
+        {
+            source_page_key(claim.finding.source_url) or claim.finding.citation_id
+            for claim in claims
+        }
     )
     database_count = len({_origin_database(claim.finding) for claim in claims})
     noun = "source" if citation_count == 1 else "sources"
@@ -619,7 +660,7 @@ def answer_trust_line(
         and all(trust.triangulation == "concordant" for trust in high)
         and database_count >= 2
     ):
-        return f"Confirmed by {database_count} independent sources"
+        return f"Confirmed by {database_count} independent databases"
     if trust_outcome == "ask":
-        return f"Based on {citation_count} {noun}, not yet confirmed"
-    return f"Based on {citation_count} {noun}"
+        return f"Based on {citation_count} {noun} cited, not yet confirmed"
+    return f"Based on {citation_count} {noun} cited"

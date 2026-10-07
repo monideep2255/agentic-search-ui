@@ -85,11 +85,18 @@ export interface Claim {
   findingsTail?: boolean;
 }
 
-/** What the trust line's info card says (item 9.9). */
+/**
+ * What the trust line's info card says (item 9.9).
+ *
+ * Card 22 (2026-10-06): this used to say sources were counted by database,
+ * which stopped being true for "Based on N sources" on 2026-09-23 (item
+ * 12.8 made it count pages). It now states what each number counts.
+ */
 export const TRUST_LINE_EXPLAINER =
-  "Sources are counted by the database each record comes from, so twenty records from one " +
-  "database are one source. Confirmed means two independent databases agree on the same " +
-  "high-stakes fact. Not yet confirmed means a high-stakes fact rests on a single source.";
+  "Sources cited counts the record pages this answer cites, the same pages listed under " +
+  "Sources; two links to one page count once. Confirmed means two or more independent " +
+  "databases agree on the same high-stakes fact. Not yet confirmed means a high-stakes fact " +
+  "has not been found in a second independent database.";
 
 /*
  * UI fix 11.27, product owner 2026-09-14: "There is too much bold. Only the
@@ -483,6 +490,37 @@ export interface MergedSource {
 }
 
 /**
+ * The key that decides whether two citations point at the same page.
+ *
+ * Card 22 (owner, 2026-10-06): every number on the answer screen that says
+ * "sources" counts distinct pages under this key. It is the same rule as
+ * `source_page_key` in `synthesis/trust.py`, which counts the trust line's
+ * "Based on N sources cited": surrounding whitespace and trailing slashes are
+ * dropped, nothing else. The one measured duplicate was `.../gene/672` beside
+ * `.../gene/672/` (the graph's and the live Datasets builder's links to one
+ * gene). Case, query strings and fragments are kept, because a query string
+ * can name a different record and merging on a guess would hide a source.
+ *
+ * An empty string means "no page"; callers fall back to their own id.
+ */
+export function sourcePageKey(url: string | null | undefined): string {
+  return (url ?? "").trim().replace(/\/+$/, "");
+}
+
+/**
+ * How many distinct pages the answer cites, and from how many layers: the
+ * numbers the meta line states. Read off `groupSourcesByLayer` itself, so
+ * the meta line can never disagree with the Sources list heading.
+ */
+export function citedSourceCounts(sources: Source[]): { pages: number; layers: number } {
+  const groups = groupSourcesByLayer(sources);
+  return {
+    pages: groups.reduce((total, group) => total + group.items.length, 0),
+    layers: groups.length,
+  };
+}
+
+/**
  * Groups `sources` by layer, Knowledge graph then Live NCBI APIs then
  * Enrichment, and within each group collapses every citation that names the
  * SAME record (`source.url`) into one row carrying every marker that
@@ -498,10 +536,18 @@ export interface MergedSource {
  * the duplication the product owner asked removed (2026-09-20), and this
  * function only ever runs on the list that answers that question.
  *
- * A merged record's group is the layer of its FIRST citation. The same URL
- * cited from two different layers is not a modelled case in this system
- * (Section 6 gives each tool exactly one layer, so a record's layer is fixed
- * by which tool fetched it); this is a defensive default, not a real path.
+ * Card 22 (owner, 2026-10-06): "the same record" is decided by
+ * `sourcePageKey`, the one page key the trust line's count also uses, so a
+ * link with and without a trailing slash is one card, and the heading over
+ * this list, the meta line and "Based on N sources cited" are one number.
+ *
+ * A merged record's group is the layer of its FIRST citation. Before card 22
+ * the same URL cited from two layers was not reachable (each tool has one
+ * layer). Under the page key it is: the graph's gene link has no trailing
+ * slash and the live Datasets gene link has one, so a graph row and a live
+ * fetch of one gene become one card, filed under the layer cited first and
+ * carrying both markers. Section 8.3.2 already treats a graph snapshot and a
+ * live fetch of one database as one origin, so one card is the honest count.
  */
 export function groupSourcesByLayer(
   sources: Source[],
@@ -509,12 +555,15 @@ export function groupSourcesByLayer(
   const byUrl = new Map<string, MergedSource>();
   const order: string[] = [];
   sources.forEach((source) => {
-    const existing = byUrl.get(source.url);
+    // A source with no link is its own card, never merged with another
+    // link-less one: the same fallback the trust line's count uses.
+    const key = sourcePageKey(source.url) || `#${source.n}`;
+    const existing = byUrl.get(key);
     if (existing) {
       existing.ns.push(source.n);
       return;
     }
-    byUrl.set(source.url, {
+    byUrl.set(key, {
       ns: [source.n],
       layer: source.layer,
       name: source.name,
@@ -524,7 +573,7 @@ export function groupSourcesByLayer(
       license: source.license,
       url: source.url,
     });
-    order.push(source.url);
+    order.push(key);
   });
   const merged = order.map((url) => byUrl.get(url) as MergedSource);
   return ([1, 2, 3] as Layer[])
@@ -557,7 +606,7 @@ export interface TrustSignal {
 export interface AnswerBodyContent {
   claims: Claim[];
   sources: Source[];
-  /** The counts line the run reported, e.g. "3 tools · 5 sources". */
+  /** The counts line the run reported, e.g. "3 tool calls · 5 sources cited from 2 layers". */
   meta?: string;
   /** The run's outcome word, e.g. "Answered" (F-4.8-D-05). */
   outcome?: string | null;

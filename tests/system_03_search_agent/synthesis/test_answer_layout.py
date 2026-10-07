@@ -314,7 +314,7 @@ def _claims(*findings: SynthFinding) -> list[GroundedClaim]:
 
 def test_trust_line_single_source_not_confirmed() -> None:
     line = answer_trust_line("ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE))
-    assert line == "Based on 1 source, not yet confirmed"
+    assert line == "Based on 1 source cited, not yet confirmed"
 
 
 def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
@@ -332,7 +332,7 @@ def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
     line = answer_trust_line(
         "ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE, other, GENE)
     )
-    assert line == "Based on 3 sources, not yet confirmed"
+    assert line == "Based on 3 sources cited, not yet confirmed"
 
 
 def test_trust_line_confirmed_still_counts_independent_databases() -> None:
@@ -347,17 +347,17 @@ def test_trust_line_confirmed_still_counts_independent_databases() -> None:
     other = _finding(3, "pancreatic cancer", curie="MedGen:C3")
     trusts = [_trust("c-2", "high", "concordant", "answer")]
     assert answer_trust_line("answer", trusts, _claims(DISEASE, other, GENE)) == (
-        "Confirmed by 2 independent sources"
+        "Confirmed by 2 independent databases"
     )
 
 
 def test_trust_line_confirmed_only_on_concordance() -> None:
     trusts = [_trust("c-2", "high", "concordant", "answer")]
     assert answer_trust_line("answer", trusts, _claims(DISEASE, GENE)) == (
-        "Confirmed by 2 independent sources"
+        "Confirmed by 2 independent databases"
     )
     low = [_trust("c-2", "low", "insufficient", "answer")]
-    assert answer_trust_line("answer", low, _claims(DISEASE, GENE)) == "Based on 2 sources"
+    assert answer_trust_line("answer", low, _claims(DISEASE, GENE)) == "Based on 2 sources cited"
 
 
 def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
@@ -370,7 +370,7 @@ def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
         for n in range(1, 6)
     ]
     line = answer_trust_line("answer", [], _claims(*papers))
-    assert line == "Based on 5 sources"
+    assert line == "Based on 5 sources cited"
 
 
 def test_trust_line_counts_pages_the_source_list_shows() -> None:
@@ -393,7 +393,7 @@ def test_trust_line_counts_pages_the_source_list_shows() -> None:
     assert len({c.finding.citation_id for c in claims}) == 3, (
         "populate-check: three citation ids, or the old count could not be told apart"
     )
-    assert answer_trust_line("answer", [], claims) == "Based on 2 sources"
+    assert answer_trust_line("answer", [], claims) == "Based on 2 sources cited"
 
 
 def test_trust_line_flag_and_refuse() -> None:

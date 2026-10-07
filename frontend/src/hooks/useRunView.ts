@@ -89,6 +89,7 @@ const isSystemNote = (text: string) =>
   SYSTEM_NOTE_PREFIXES.some((prefix) => text.trimStart().startsWith(prefix));
 import type { ReasoningStep, StepName, ToolCall } from "../components/screens/RunScreen";
 import type { Claim, Source, TrustSignal } from "../components/screens/AnswerScreen";
+import { citedSourceCounts } from "../components/screens/AnswerScreen";
 
 /**
  * How a source reads on a citation chip and a source card.
@@ -1155,19 +1156,28 @@ export function useRunView(events: AgentEvent[]): RunView {
       }
     }
     /*
-     * Each figure NAMES what it counts (F-4.9-R-02).
+     * Each figure NAMES what it counts (F-4.9-R-02, card 22).
      *
      * The tools figure counts calls the run made; the layers figure counts
      * layers the answer actually rests on. Those are different bases, and the
      * old wording put them side by side as bare nouns, so "4 tools · 2 layers"
      * read as a contradiction of the reasoning log directly above it. Saying
      * "from N layers" ties the layer count to the sources it describes.
+     *
+     * Card 22 (owner, 2026-10-06): "18 sources" here counted numbered
+     * citations while "Based on 17 sources" and the Sources heading counted
+     * pages, on one screen. Every "sources" number now counts distinct pages
+     * under one key, read off the same grouping the Sources list renders
+     * (`citedSourceCounts`), so this reads "13 tool calls · 17 sources cited
+     * from 3 layers" and agrees with the list and the trust line. The layers
+     * figure is the number of groups that list shows.
      */
+    const cited = citedSourceCounts(sources);
     const meta = landed
-      ? `${toolCalls.length} ${toolCalls.length === 1 ? "tool" : "tools"} · ` +
-        `${sources.length} ${sources.length === 1 ? "source" : "sources"}` +
-        (sources.length > 0
-          ? ` from ${layerCount} ${layerCount === 1 ? "layer" : "layers"}`
+      ? `${toolCalls.length} ${toolCalls.length === 1 ? "tool call" : "tool calls"} · ` +
+        `${cited.pages} ${cited.pages === 1 ? "source" : "sources"} cited` +
+        (cited.pages > 0
+          ? ` from ${cited.layers} ${cited.layers === 1 ? "layer" : "layers"}`
           : "")
       : "";
 

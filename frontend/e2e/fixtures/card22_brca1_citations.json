@@ -1,0 +1,205 @@
+{
+  "about": "Card 22. The 18 citations of the BRCA1 Researcher answer in testing/Developer/reports/2026-09-27_product_review_8.10/web_researcher.json, rebuilt from its record table markers and record_links. The OMIM link is not in record_links and uses the code's own OMIM builder; which gene marker carried the trailing slash is not recorded, only that both forms were cited.",
+  "page_key_cases": [
+    [
+      "https://www.ncbi.nlm.nih.gov/gene/672",
+      "https://www.ncbi.nlm.nih.gov/gene/672"
+    ],
+    [
+      "https://www.ncbi.nlm.nih.gov/gene/672/",
+      "https://www.ncbi.nlm.nih.gov/gene/672"
+    ],
+    [
+      "https://www.ncbi.nlm.nih.gov/gene/672//",
+      "https://www.ncbi.nlm.nih.gov/gene/672"
+    ],
+    [
+      "  https://www.ncbi.nlm.nih.gov/gene/672/ ",
+      "https://www.ncbi.nlm.nih.gov/gene/672"
+    ],
+    [
+      "https://www.ncbi.nlm.nih.gov/Gene/672",
+      "https://www.ncbi.nlm.nih.gov/Gene/672"
+    ],
+    [
+      "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/entity/autocomplete/?query=BRCA1",
+      "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/entity/autocomplete/?query=BRCA1"
+    ],
+    [
+      "https://www.ncbi.nlm.nih.gov/gene/672#summary",
+      "https://www.ncbi.nlm.nih.gov/gene/672#summary"
+    ],
+    [
+      "",
+      ""
+    ]
+  ],
+  "citations": [
+    {
+      "display_index": 1,
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/672/",
+      "layer": "layer_2_api",
+      "source": "NCBIGene",
+      "source_id": "NCBIGene:672",
+      "field": "summary"
+    },
+    {
+      "display_index": 2,
+      "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+      "layer": "layer_1_graph",
+      "source": "MedGen",
+      "source_id": "MedGen:C0346153",
+      "field": "name"
+    },
+    {
+      "display_index": 3,
+      "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C2676676",
+      "layer": "layer_1_graph",
+      "source": "MedGen",
+      "source_id": "MedGen:C2676676",
+      "field": "name"
+    },
+    {
+      "display_index": 4,
+      "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C3280442",
+      "layer": "layer_1_graph",
+      "source": "MedGen",
+      "source_id": "MedGen:C3280442",
+      "field": "name"
+    },
+    {
+      "display_index": 5,
+      "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4554406",
+      "layer": "layer_1_graph",
+      "source": "MedGen",
+      "source_id": "MedGen:C4554406",
+      "field": "name"
+    },
+    {
+      "display_index": 6,
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+      "layer": "layer_2_api",
+      "source": "NCBIGene",
+      "source_id": "NCBIGene:672",
+      "field": "symbol"
+    },
+    {
+      "display_index": 7,
+      "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/",
+      "layer": "layer_2_api",
+      "source": "ClinVar",
+      "source_id": "VCV000267740",
+      "field": "title"
+    },
+    {
+      "display_index": 8,
+      "source_url": "https://omim.org/entry/113705",
+      "layer": "layer_2_api",
+      "source": "omim",
+      "source_id": "omim:113705",
+      "field": "title"
+    },
+    {
+      "display_index": 9,
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/672/",
+      "layer": "layer_2_api",
+      "source": "NCBIGene",
+      "source_id": "NCBIGene:672",
+      "field": "name"
+    },
+    {
+      "display_index": 10,
+      "source_url": "https://clinicaltrials.gov/study/NCT00590109",
+      "layer": "layer_3_enrichment",
+      "source": "ClinicalTrials.gov",
+      "source_id": "NCT00590109",
+      "field": "brief_title"
+    },
+    {
+      "display_index": 11,
+      "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/",
+      "layer": "layer_2_api",
+      "source": "ClinVar",
+      "source_id": "VCV000267741",
+      "field": "title"
+    },
+    {
+      "display_index": 12,
+      "source_url": "https://clinicaltrials.gov/study/NCT00597987",
+      "layer": "layer_3_enrichment",
+      "source": "ClinicalTrials.gov",
+      "source_id": "NCT00597987",
+      "field": "brief_title"
+    },
+    {
+      "display_index": 13,
+      "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/",
+      "layer": "layer_2_api",
+      "source": "ClinVar",
+      "source_id": "VCV000373892",
+      "field": "title"
+    },
+    {
+      "display_index": 14,
+      "source_url": "https://clinicaltrials.gov/study/NCT00617656",
+      "layer": "layer_3_enrichment",
+      "source": "ClinicalTrials.gov",
+      "source_id": "NCT00617656",
+      "field": "brief_title"
+    },
+    {
+      "display_index": 15,
+      "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/",
+      "layer": "layer_2_api",
+      "source": "ClinVar",
+      "source_id": "VCV004823850",
+      "field": "title"
+    },
+    {
+      "display_index": 16,
+      "source_url": "https://clinicaltrials.gov/study/NCT00673335",
+      "layer": "layer_3_enrichment",
+      "source": "ClinicalTrials.gov",
+      "source_id": "NCT00673335",
+      "field": "brief_title"
+    },
+    {
+      "display_index": 17,
+      "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/",
+      "layer": "layer_2_api",
+      "source": "ClinVar",
+      "source_id": "VCV004848411",
+      "field": "title"
+    },
+    {
+      "display_index": 18,
+      "source_url": "https://clinicaltrials.gov/study/NCT00700778",
+      "layer": "layer_3_enrichment",
+      "source": "ClinicalTrials.gov",
+      "source_id": "NCT00700778",
+      "field": "brief_title"
+    }
+  ],
+  "evidence_before": {
+    "meta_sources": 18,
+    "sources_heading": 17,
+    "trust_line": "Based on 17 sources, not yet confirmed",
+    "groups": {
+      "1": 4,
+      "2": 8,
+      "3": 5
+    },
+    "tool_calls": 13
+  },
+  "expected_after": {
+    "sources_cited": 16,
+    "layers": 3,
+    "groups": {
+      "1": 4,
+      "2": 7,
+      "3": 5
+    },
+    "meta": "13 tool calls · 16 sources cited from 3 layers",
+    "trust_line": "Based on 16 sources cited, not yet confirmed"
+  }
+}
