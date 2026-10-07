@@ -18,7 +18,7 @@ Last updated: 2026-10-07.
 - The overnight run of 2026-10-06 to 07 merged the readability pass (#196) and cards 22, 23 and 102 (#197 to #199), each behind CI and a fresh verifier. What it did and why: the done file's session table and `DECISIONS.md` rows dated 2026-10-06 and 2026-10-07.
 - Factory works every day from `docs/build/Factory_onboarding.md`; its next cards are 75, then 24, then 100. Paste-in prompt: "Read docs/build/Factory_onboarding.md in full, then build card 75, one pull request; then card 24, then card 100." The lead verifies each pull request before merging.
 - Kept on GitHub: `fix/card101-copied-cuts` (card 101, parked); `feat/8.7-s1` to `s3` and `phase/8.7-answers-sooner` (phase 8.7); `fix/card72-r10-guardrail` and `fix/card84-r10-sound-parts` (guardrail reference).
-- Local worktrees left for the morning clean-up, all merged or pushed: `asu-card22`, `asu-card23`, `asu-card101c`, `asu-card102`, `asu-readability`, `asu-checkpoint`. Remove only after `git merge-base --is-ancestor` or a pushed branch confirms nothing is lost.
+- Fourteen local worktrees wait for the morning clean-up, each on a merged or pushed branch (`git worktree list`): tonight's six and eight from 2026-10-06. Check each for uncommitted work before removing it. GitHub holds only develop, production and the kept branches.
 
 ## What awaits the product owner
 
