@@ -175,11 +175,19 @@ function CitationRow({ row }: { row: SavedSourceRow }) {
         </Typography>
         {linkable ? (
           <Box sx={{ mt: "2px" }}>
+            {/*
+              A URL has no spaces, so without a break point a long one (a
+              Pathogen Detection isolate link, a ClinVar variation) runs past
+              its row and scrolls the page sideways on a phone (F-102-V-05).
+              `overflowWrap: "anywhere"` is the live answer's own rule for
+              long unbroken strings (`AnswerScreen.tsx`'s claim text and
+              phone source names), applied at every width.
+            */}
             <a
               href={citation.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ fontSize: 12.5, color: designTokens.link }}
+              style={{ fontSize: 12.5, color: designTokens.link, overflowWrap: "anywhere" }}
             >
               {citation.source_url}
             </a>

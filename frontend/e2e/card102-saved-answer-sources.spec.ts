@@ -15,6 +15,13 @@
  * deployed reply carried, with obviously fake values where a field is not in
  * the fixture.
  *
+ * Phone width follow-up (F-102-V-05): two more pages carry the longest real
+ * link shapes, a Pathogen Detection isolate link (the shape
+ * `tools/pathogen_detection.py`'s `_build_isolate_source_url` builds) and a
+ * seven-digit ClinVar variation link, both with fake IDs. A URL has no
+ * spaces, so it only stays inside its row if the row lets it break; the
+ * spec checks every link's right edge against its row as well as the page.
+ *
  * Screenshots at 1280 and 390 only when CARD102_SHOTS=1.
  */
 
@@ -42,6 +49,28 @@ const FIXTURE = JSON.parse(
 ) as { citations: FixtureCitation[]; expected_after: { sources_cited: number; trust_line: string } };
 const AFTER = FIXTURE.expected_after;
 
+/** The longest real link shapes, each its own page, with fake IDs. */
+const LONG_LINKS: FixtureCitation[] = [
+  {
+    display_index: 19,
+    source_url: "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN99999999",
+    layer: "layer_2_api",
+    source: "Pathogen Detection",
+    source_id: "biosample:SAMN99999999",
+    field: "isolate",
+  },
+  {
+    display_index: 20,
+    source_url: "https://www.ncbi.nlm.nih.gov/clinvar/variation/9999999/",
+    layer: "layer_2_api",
+    source: "ClinVar",
+    source_id: "ClinVar:9999999",
+    field: "classification",
+  },
+];
+const ROWS = AFTER.sources_cited + LONG_LINKS.length;
+const TRUST_LINE = AFTER.trust_line.replace(String(AFTER.sources_cited), String(ROWS));
+
 const QUESTION = "Which diseases are associated with BRCA1?";
 const TRACE_ID = "card102-e2e-trace";
 
@@ -51,7 +80,7 @@ const SAVED_ANSWER = {
   asked_at: "2026-10-07T04:00:00Z",
   depth: "researcher",
   answer_markdown: "Found 4 disease records for BRCA1 [2][3][4][5]. The gene page is cited three times [1][6][9].",
-  citations: FIXTURE.citations.map((c) => ({
+  citations: [...FIXTURE.citations, ...LONG_LINKS].map((c) => ({
     citation_id: `cit-test-${c.display_index}`,
     display_index: c.display_index,
     source: c.source,
@@ -68,7 +97,7 @@ const SAVED_ANSWER = {
     entity_name: null,
   })),
   trust_signal: "ask",
-  trust_line: AFTER.trust_line,
+  trust_line: TRUST_LINE,
 };
 
 async function signInWithOneSavedSearch(page: Page): Promise<void> {
@@ -83,7 +112,7 @@ async function signInWithOneSavedSearch(page: Page): Promise<void> {
             question: QUESTION,
             asked_at: SAVED_ANSWER.asked_at,
             trust_signal: "ask",
-            citation_count: AFTER.sources_cited,
+            citation_count: ROWS,
             has_saved_answer: true,
           },
         ],
@@ -154,17 +183,17 @@ for (const width of [1280, 390]) {
     const screen = page.getByTestId("saved-answer-screen");
     await expect(screen).toBeVisible({ timeout: 10_000 });
     const trust = screen.getByTestId("saved-answer-trust-line");
-    await expect(trust).toContainText(`Based on ${AFTER.sources_cited} sources cited`);
+    await expect(trust).toContainText(`Based on ${ROWS} sources cited`);
 
     // The rows a person counts are the sources the line names.
     const rows = screen.getByRole("list").getByRole("listitem");
-    await expect(rows).toHaveCount(AFTER.sources_cited);
+    await expect(rows).toHaveCount(ROWS);
     const geneRows = rows.filter({ hasText: "/gene/672" });
     await expect(geneRows).toHaveCount(1);
     await expect(geneRows).toContainText("1, 6, 9.");
     // Every row links to its record, except the OMIM page, which is not on
     // an NCBI host and says so ("Not linked"), as on the live answer.
-    await expect(screen.getByRole("list").getByRole("link")).toHaveCount(AFTER.sources_cited - 1);
+    await expect(screen.getByRole("list").getByRole("link")).toHaveCount(ROWS - 1);
     const notLinked = rows.filter({ hasText: "Not linked" });
     await expect(notLinked).toHaveCount(1);
     await expect(notLinked).toContainText(/^8\. /);
@@ -172,6 +201,18 @@ for (const width of [1280, 390]) {
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
+    // Every link ends inside its own row: a link that runs over the row's
+    // border breaks the card even when the page itself does not scroll.
+    const spills = await screen.getByRole("list").evaluate((list) =>
+      Array.from(list.querySelectorAll("li")).flatMap((row) => {
+        const link = row.querySelector("a");
+        if (!link) return [];
+        const over = link.getBoundingClientRect().right - row.getBoundingClientRect().right;
+        return over > 0.5 ? [`${link.getAttribute("href")} by ${Math.round(over)} px`] : [];
+      }),
+    );
+    console.log(`card102 ${width}px: page overflow ${overflow} px, links past their row: ${spills.length}`, spills);
+    expect(spills, "every source link stays inside its row").toEqual([]);
     expect(overflow, "the saved answer must not scroll sideways").toBeLessThanOrEqual(0);
 
     if (process.env.CARD102_SHOTS === "1") {
