@@ -22,7 +22,7 @@ Last updated: 2026-10-07.
 
 ## What awaits the product owner
 
-- Retests: "Waiting for your retest" in `testing/UI_fixes_done.md`, newest first, cards 102, 23 and 22 on top.
+- Retests: "Waiting for your retest" in `testing/UI_fixes_done.md`, newest first, cards 102, 23 and 22 on top. Product checks on develop passed them, except that an answer over 50 citations reopens with only 50 (card 54).
 - Card 101: whether to try dropping the whole sentence whenever a copied cut is held back, on its parked branch (`DECISIONS.md`, 2026-10-07).
 - The decisions the lead took on your behalf overnight, each a `DECISIONS.md` row: the readability merge bar, the withdrawn board-cell move, the last rounds of cards 22 and 101, and card 102.
 - Card 40: the itemized list of hook and always-loaded rule changes, each for your yes or no. Nothing in the security layer changed overnight.

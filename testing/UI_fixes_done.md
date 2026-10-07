@@ -336,6 +336,14 @@ Carried from 2026-09-29 and not re-checked today:
 
 ### Loose ends, named rather than left
 
+- FROM THE NIGHT OF 2026-10-06 TO 07, found by the product checks and fresh verifiers on develop, none filed as a card yet (`testing/Developer/reports/2026-10-06_card22/product_review.md`, `testing/Developer/reports/2026-10-07_card102/product_review.md`):
+  - Card 23's line sits above five rows with an empty disease cell on HNF1A's first page; the cell drops a condition whose name lookup fails and cuts off at 500 characters.
+  - A reopened answer's tables run past a phone's screen edge, though the page does not scroll sideways; the saved query 107 table is 33 px too wide at 390.
+  - The Sources group badges can add to one more than the Sources heading in the two-layer case; the group's line explains it.
+  - A gene page can appear twice in the gene record tables while Sources lists it once.
+  - Answers take 31 to 36 seconds on screen from click to trust line, against 15 to 25 on the app's own timer.
+  - The golden run is owed for cards 22 and 23, which change what an answer says.
+  - Card 22's per-claim check still compares tools, not databases, and agreement does not check that two records are about the same variant; both are candidates for a card.
 - L-01 is MEASURED, its two causes are READ, and the reader is now TOLD: a lost search is disclosed under the answer and a question the product could not read is answered with a request for a name (`10f6a46`).
   - What is NOT fixed is the cause itself: the deterministic half is a Think gap and the variance half is the act budget, both below.
 - THE DETERMINISTIC HALF OF L-01 was a Think gap. For these questions Think
