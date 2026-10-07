@@ -259,8 +259,9 @@ async def test_no_candidates_means_no_call(monkeypatch) -> None:
         return _Reply('{"supported": [1]}')
 
     monkeypatch.setattr(graph_module, "_dispatch_tier_call", fake_dispatch)
+    # A whole record sentence: card 101 round 3 sends a cut to the check.
     result = await graph_module._ground_with_sentence_check(
-        "Long-term use of PPIs is associated with bone fractures [1].",
+        "Caffeine had no effect on maximal strength [1].",
         [PAPER],
         question=QUESTION,
         evidence_quotes=(),

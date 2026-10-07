@@ -51,7 +51,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from system_03_search_agent.synthesis.findings import SynthFinding
+from system_03_search_agent.synthesis.findings import SynthFinding, render_finding_body
 
 _MARKER = re.compile(r"\[(\d{1,3})\]")
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[.;?!])\s+")
@@ -778,6 +778,10 @@ class SynthesisCandidate:
     check (`synthesis_is_supported_by`) would have licensed its words. Code
     may hold a reworded sentence back, never approve one on its own.
 
+    Card 101, round 3: also every copied clause that is not a whole record
+    sentence (`_copied_clause_candidate`). Its `sentence` is the writer's
+    sentence up to that clause, and its `quotes` the record text behind it.
+
     Item 12.10, decided by the product owner on 2026-09-23: whether such a
     sentence says what its quotes say is the one question code cannot answer
     (a synonym and an invention look the same to it), so it goes to the
@@ -887,6 +891,166 @@ def synthesis_is_supported_by(
     support = content_tokens(f"{quotes} {record_labels} {fields} {context} {licensed_question}")
     allowed = _stemmed(support) | _stemmed(set(_SYNTHESIS_VOCABULARY))
     return _stemmed(content_tokens(claim_text)) <= allowed
+
+
+# ---------------------------------------------------------------------------
+# Card 101, round 3 (the owner's rule of 2026-10-06): code may hold a
+# sentence back but never approves one on its own; only the sentence check
+# approves a sentence that is not the record's own words.
+#
+# Before it, the strict path (`ground_claim`, containment in either
+# direction) showed with no check any run of record words and any short
+# record value wrapped in licensed words. Three shapes reached the screen
+# that way, offline through this pass (round 2's adversary, A2-101-01 to 03):
+#
+# - a cut that drops a clause at either end: "Aspirin prevents colorectal
+#   cancer in adults" cut from "There is no evidence that aspirin prevents
+#   colorectal cancer in adults.", the paper's opposite;
+# - two copied clauses joined into a new claim: "Drug X reduces mortality
+#   [1] in men [1]" from "... in women but not in men";
+# - a short value wrapped in the question's words: "Ribavirin can cure
+#   bronchiolitis in babies [3]" cited to a record that only names the drug.
+#
+# So a copied clause shows with no check only when it is a WHOLE sentence of
+# its record, word for word. A cut, alone or joined to another clause, goes to
+# the sentence check exactly as a reworded sentence does. The third shape, a
+# wrapped value, is not changed yet: see the note in `run_grounding_pass`.
+# ---------------------------------------------------------------------------
+
+# Where a record sentence may start: after the marks this pass itself ends a
+# sentence on (`_SENTENCE_BOUNDARY`: full stop, semicolon, question or
+# exclamation mark) or a colon (the label of a structured abstract,
+# "Results: ..."), then whitespace.
+#
+# The semicolon is a deliberate, measured choice. The code-built listing and
+# findings tail split a value on it (`findings.build_structured_fallback_
+# narrative`), so an OMIM title "GLUCOKINASE; GCK" is listed as two rows, and
+# without it those rows would no longer show. The cost: a copy of the clause
+# before "; however, ..." still shows unchecked. Measured on the recorded
+# answers' records, 3 of 133 record sentences carry a semicolon and 1 puts a
+# limit after it.
+_WHOLE_SENTENCE_START = re.compile(r"[.;!?:]\s+")
+# Where a record sentence may end. A colon is not an end: what follows it is
+# the content the clause before it introduces.
+_WHOLE_SENTENCE_ENDS = (".", ";", "?", "!")
+# Quote marks and brackets that may open or close a record sentence around
+# its words; punctuation, never a word, so a copy may leave them off.
+_OPENING_MARKS = "\"'“‘(["
+_CLOSING_MARKS = "\"'”’)]"
+
+
+def _whole_form(text: str) -> str:
+    """`text` with its whitespace collapsed and its trailing punctuation off.
+
+    Nothing else changes: no lowercasing, no bracket or separator removal,
+    so a word written differently is a different word.
+    """
+    return " ".join(text.split()).rstrip(" .,;:!?")
+
+
+def _same_but_first_letter(claim: str, record: str) -> bool:
+    return (
+        len(claim) == len(record)
+        and claim[:1].lower() == record[:1].lower()
+        and claim[1:] == record[1:]
+    )
+
+
+def is_whole_record_sentence(claim_text: str, finding: SynthFinding) -> bool:
+    """Whether a clause is one whole sentence of its record, word for word.
+
+    True when the clause, ignoring only the case of its first letter, its
+    trailing punctuation and whitespace, either:
+
+    - equals the finding as code renders it to the writer
+      (`findings.render_finding_body`, its type, identifier, field name and
+      value: the code-built row the structured fallback and the findings
+      tail print), or
+    - sits in the record's value starting where a record sentence starts
+      (`_WHOLE_SENTENCE_START`, or the value's start) and ending where one
+      ends (`_WHOLE_SENTENCE_ENDS`, or the value's end).
+
+    No word list: where the words sit in the record decides, as in
+    `_starts_inside_record_sentence`.
+    """
+    claim = _whole_form(claim_text)
+    if not claim:
+        return False
+    if _same_but_first_letter(claim, _whole_form(render_finding_body(finding))):
+        return True
+    value = " ".join(finding.field_value.split())
+    starts = [0] + [match.end() for match in _WHOLE_SENTENCE_START.finditer(value)]
+    for start in starts:
+        while start < len(value) and value[start] in _OPENING_MARKS and claim[0] != value[start]:
+            start += 1
+        if not _same_but_first_letter(claim, value[start : start + len(claim)]):
+            continue
+        rest = value[start + len(claim) :].lstrip(_CLOSING_MARKS)
+        if not rest or rest.startswith(_WHOLE_SENTENCE_ENDS):
+            return True
+    return False
+
+
+def _wraps_record_value(claim_text: str, finding: SynthFinding) -> bool:
+    """`ground_claim`'s second direction: the record's value inside the claim."""
+    claim = normalize(claim_text)
+    value = normalize(finding.field_value)
+    return bool(value) and value in claim and claim not in value
+
+
+def _copied_record_span(claim_text: str, finding: SynthFinding) -> str:
+    """The record text a copied clause rests on, as the sentence check reads it.
+
+    A cut: the whole record sentence(s) it sits in (`widen_to_record_
+    sentences`, card 89), so the check sees the clause it dropped. A wrapped
+    value: the finding as the writer was shown it (`render_finding_body`),
+    which is all the record says.
+    """
+    if _wraps_record_value(claim_text, finding):
+        return render_finding_body(finding)
+    return widen_to_record_sentences(claim_text, finding.field_value)
+
+
+def _copied_clause_candidate(
+    sentence: str,
+    segments: list[tuple[str, int | None, int | None]],
+    upto: int,
+    by_ref: dict[int, SynthFinding],
+    evidence_quotes: tuple[str, ...],
+) -> SynthesisCandidate:
+    """The check item for a copied clause that is not a whole record sentence.
+
+    The check reads the sentence as far as this clause, markers removed, the
+    way a reader would see it if the sentence stopped there, so two copied
+    clauses joined into a new claim are judged joined. A strip at a
+    sentence's end leaves a prefix, and a strip in its middle drops the
+    sentence, so whatever is shown ending at this clause is what was read.
+    Its quotes are the record text behind every clause up to here: a
+    writer's quote widened to its record sentence(s), or a copied clause's
+    own record span.
+    """
+    marker_ends = [match.end() for match in _KEYED_MARKER.finditer(sentence)]
+    prefix = " ".join(_KEYED_MARKER.sub(" ", sentence[: marker_ends[upto]]).split())
+    prefix = prefix.rstrip(" ,;:")
+    spans: list[str] = []
+    for text, marker, quote_key in segments[: upto + 1]:
+        finding = by_ref.get(marker) if marker is not None else None
+        if finding is None:
+            continue
+        quote = (
+            evidence_quotes[quote_key]
+            if quote_key is not None and 0 <= quote_key < len(evidence_quotes)
+            else None
+        )
+        claim = _clean_claim(text)
+        if quote is not None and _quote_is_valid(quote, finding):
+            spans.append(widen_to_record_sentences(quote, finding.field_value))
+        elif _asserts_something(claim) and ground_claim(claim, finding.field_value):
+            spans.append(_copied_record_span(claim, finding))
+    quotes = tuple(dict.fromkeys(spans))
+    return SynthesisCandidate(
+        key=synthesis_key(prefix, quotes), sentence=prefix, quotes=quotes
+    )
 
 
 def _is_framing(clause: str) -> bool:
@@ -1412,6 +1576,36 @@ def run_grounding_pass(
                     candidate_sink.append(
                         SynthesisCandidate(key=key, sentence=claim_text, quotes=widened)
                     )
+            # Card 101, round 3: a copied clause shows with no check only
+            # when it is a whole sentence of its record, word for word
+            # (`is_whole_record_sentence`). A cut, or a cut joined to another
+            # clause, needs the check's approval, read as the sentence up to
+            # this clause (`_copied_clause_candidate`). Code may still hold
+            # one back: a sentence opening on a bare verdict. When the check
+            # cannot run, nothing is approved and the clause is not shown.
+            #
+            # NOT YET: a short record value wrapped in other words (the
+            # strict path's second direction) keeps today's path. Sending it
+            # to the check also sends every gene answer such as "BRCA1 is
+            # associated with familial cancer of breast", whose record only
+            # names the disease, and the check held that back 3 of 3 times
+            # (`testing/Developer/reports/2026-10-06_card101/build_r3.md`).
+            # That trade is the owner's to decide.
+            if (
+                strict_ok
+                and not _wraps_record_value(claim_text, finding)
+                and not is_whole_record_sentence(claim_text, finding)
+            ):
+                strict_ok = False
+                held_by_code = _VERDICT_OPENER.match(claim_text) is not None
+                if not held_by_code:
+                    copied = _copied_clause_candidate(
+                        sentence, segments, segment_index, by_ref, evidence_quotes
+                    )
+                    if verified_syntheses is not None and copied.key in verified_syntheses:
+                        strict_ok = True
+                    elif candidate_sink is not None:
+                        candidate_sink.append(copied)
             if synthesized and quote is None:
                 # Carried by the quotes on the markers after it; the claim
                 # keeps the first of them as the words it rests on.

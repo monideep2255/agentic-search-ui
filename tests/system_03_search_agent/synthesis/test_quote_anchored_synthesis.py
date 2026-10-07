@@ -165,8 +165,11 @@ def test_a_synthesis_the_quote_does_not_carry_is_stripped(narrative: str, why: s
 
 
 def test_the_same_negative_sentence_with_its_negation_survives() -> None:
-    """Populate-check for the polarity arm: it is the negation, not the rest."""
-    result = _ground(
+    """Populate-check for the polarity arm: it is the negation, not the rest.
+
+    Card 101, round 3: the sentence is a cut of its record sentence ("... in
+    12 of the studies reviewed"), so it shows once the check approves it."""
+    result = _ground_approved(
         'Caffeine had no effect on maximal strength [1: "Caffeine had no effect on maximal strength"].'
     )
     assert result.grounded
@@ -283,10 +286,14 @@ def test_a_subjectless_clause_from_mid_record_is_dropped() -> None:
 
 
 def test_the_record_fragment_rule_can_fail(monkeypatch) -> None:
-    """Mutation proof: with the rule off, the measured fragment ships."""
+    """Mutation proof: with the rule off, the measured fragment ships.
+
+    Card 101, round 3: the fragment is a cut, so it needs the check's
+    approval first; with the check approving it, only this rule stands in
+    the way."""
     monkeypatch.setattr(grounding, "_starts_inside_record_sentence", lambda *a, **k: False)
     paper = _finding(9, "Statins lower the risk, so that clinical judgment remains necessary.")
-    assert _ground("so that clinical judgment remains necessary [9].", [paper]).grounded
+    assert _ground_approved("so that clinical judgment remains necessary [9].", [paper]).grounded
 
 
 # ------------------------------------------------------- restatement drop
