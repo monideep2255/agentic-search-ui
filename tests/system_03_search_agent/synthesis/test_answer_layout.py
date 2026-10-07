@@ -683,7 +683,7 @@ def test_the_variant_to_disease_table_names_its_two_sources() -> None:
     )
 
     assert VARIANT_TO_DISEASE_SOURCE_NOTE == (
-        "Each row is a condition the variant's ClinVar record names; the "
+        "Each row lists the conditions the variant's ClinVar record names; the "
         "record's classification (for example pathogenic, benign or uncertain) "
         "is not shown here. Disease names are MedGen titles looked up from NCBI."
     )

@@ -332,8 +332,15 @@ TABLE_HEADINGS: dict[str, str] = {
 # of implying cause. "Looked up from NCBI", never "read live": the product
 # owner's wording decision of 2026-10-06, since a title is kept for up to a
 # week per process (`disease_names._CACHE_TTL_S`).
+#
+# Card 23's second part (2026-10-07): "Each row lists the conditions", not
+# "Each row is a condition", because one row can name two conditions (live
+# HNF1A c.737T>G: "Maturity-onset diabetes of the young type 3; Monogenic
+# diabetes"). The screen keeps this line under its own table by its opening
+# words, `VARIANT_TABLE_SOURCE_NOTE_PREFIX` in `frontend/src/hooks/
+# useRunView.ts`; a test holds the two together.
 VARIANT_TO_DISEASE_SOURCE_NOTE = (
-    "Each row is a condition the variant's ClinVar record names; the "
+    "Each row lists the conditions the variant's ClinVar record names; the "
     "record's classification (for example pathogenic, benign or uncertain) "
     "is not shown here. Disease names are MedGen titles looked up from NCBI."
 )
