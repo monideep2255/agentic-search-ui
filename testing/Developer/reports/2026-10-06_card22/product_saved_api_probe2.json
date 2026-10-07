@@ -1,0 +1,66 @@
+[
+  {
+    "testAccount": "card22-review+1791347928457@example.com"
+  },
+  {
+    "url": "/v1/history",
+    "status": 200,
+    "items": []
+  },
+  {
+    "answeredSecs": 30.163,
+    "meta": "✓ Answered20.0s · 13 tool calls · 17 sources cited from 3 layers"
+  },
+  {
+    "url": "/v1/history",
+    "status": 200,
+    "items": [
+      {
+        "q": "What does the BRCA1 gene do?",
+        "citation_count": 17
+      }
+    ]
+  },
+  {
+    "url": "/v1/history/ade7c71e-1a6c-49ee-9bc8-a495d10b43c9/answer",
+    "status": 200,
+    "citations": 19,
+    "citationKeys": [
+      "field",
+      "layer",
+      "source",
+      "license",
+      "source_id",
+      "claim_text",
+      "source_url",
+      "citation_id",
+      "entity_name",
+      "display_index",
+      "evidence_kind",
+      "snapshot_date",
+      "assertion_confidence",
+      "population_ancestry_context"
+    ],
+    "types": [
+      "number/string/string/\"layer_2_api\"",
+      "number/string/string/\"layer_1_graph\"",
+      "number/string/string/\"layer_3_enrichment\""
+    ],
+    "passValidator": 0,
+    "distinctUrls": 17,
+    "trust_line": "Based on 17 sources cited",
+    "keys": [
+      "trace_id",
+      "question",
+      "asked_at",
+      "depth",
+      "answer_markdown",
+      "citations",
+      "trust_signal",
+      "trust_line"
+    ]
+  },
+  {
+    "savedSourcesHeading": false
+  }
+]
