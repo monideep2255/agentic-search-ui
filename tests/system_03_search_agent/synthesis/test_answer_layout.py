@@ -764,6 +764,31 @@ def test_card23_query_79_quotes_the_line_that_ships() -> None:
     assert "directly under that table" not in section.lower()
 
 
+def test_card23_the_screen_finds_the_line_by_the_words_that_ship() -> None:
+    """Card 23's second part (J-23-01, A-23-01): the web screen keeps the
+    line directly under its table by matching its opening words,
+    `VARIANT_TABLE_SOURCE_NOTE_PREFIX` in `frontend/src/hooks/useRunView.ts`,
+    because no field on the wire tells it apart from an answer-wide note.
+
+    Red when the backend line is reworded without the frontend prefix (the
+    mutation run: the old "Each row is a condition" opening), which would
+    send the line back to the Notes list when the table ends the answer."""
+    import re
+    from pathlib import Path
+
+    from system_03_search_agent.synthesis.answer_layout import VARIANT_TO_DISEASE_SOURCE_NOTE
+
+    hook = Path(__file__).resolve().parents[3] / "frontend" / "src" / "hooks" / "useRunView.ts"
+    match = re.search(
+        r'export const VARIANT_TABLE_SOURCE_NOTE_PREFIX = "([^"]+)";',
+        hook.read_text(encoding="utf-8"),
+    )
+    assert match is not None
+    prefix = match.group(1)
+    assert len(prefix) >= 40, prefix
+    assert VARIANT_TO_DISEASE_SOURCE_NOTE.startswith(prefix)
+
+
 @pytest.mark.parametrize(
     ("entity_type", "mapped"),
     [
