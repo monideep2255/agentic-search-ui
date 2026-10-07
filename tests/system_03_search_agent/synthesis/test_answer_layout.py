@@ -715,6 +715,28 @@ def test_card23_the_note_makes_no_freshness_claim_about_disease_names() -> None:
         assert word not in note, word
 
 
+def test_card23_query_79_quotes_the_line_that_ships() -> None:
+    """Card 23's fix round: the test-queries document is the owner's gate,
+    so query 79's expected line must be the shipped text, word for word, and
+    must not yet promise "directly under that table": when the table ends the
+    answer, the screen still moves the line to the Notes list (J-23-01,
+    A-23-01, card 23's second part).
+
+    Red when the document quotes an older wording (the mutation run) or
+    promises the placement before it ships."""
+    from pathlib import Path
+
+    from system_03_search_agent.synthesis.answer_layout import VARIANT_TO_DISEASE_SOURCE_NOTE
+
+    document = Path(__file__).resolve().parents[3] / "testing" / "Test_queries_and_workflows.md"
+    text = document.read_text(encoding="utf-8")
+    start = text.index("### 79. ")
+    end = text.index("\n### ", start + 1)
+    section = text[start:end]
+    assert f'"{VARIANT_TO_DISEASE_SOURCE_NOTE}"' in section
+    assert "directly under that table" not in section.lower()
+
+
 @pytest.mark.parametrize(
     ("entity_type", "mapped"),
     [
