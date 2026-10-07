@@ -1,6 +1,6 @@
 # Factory onboarding
 
-Everything Factory needs to work on this repository, in one file. Written by the lead development agent on 2026-10-06, when the product owner restarted the Factory trial paused on 2026-10-05.
+Everything Factory needs to work on this repository, in one file. Written by the lead development agent on 2026-10-06, when the product owner restarted the Factory trial paused on 2026-10-05, and updated the same day once cards 43 to 61 had merged.
 
 You do not need to read any other document to start. The rules you must follow are written out below, and each card names the exact files it touches, its evidence and its values. Open only the files a card names. If a card turns out to need something this file does not cover, that is a gap in this file: ask the product owner rather than searching the repository for an answer.
 
@@ -12,11 +12,10 @@ You do not need to read any other document to start. The rules you must follow a
 - [Rules](#rules)
 - [Checks before you push](#checks-before-you-push)
 - [The pull request](#the-pull-request)
-- [Card 43: a long variant name on a phone](#card-43-a-long-variant-name-on-a-phone)
-- [Card 44: two controls below the contrast minimum](#card-44-two-controls-below-the-contrast-minimum)
-- [Card 43b: the citation number stays with the name](#card-43b-the-citation-number-stays-with-the-name)
-- [Card 47: the design prototype's old home page](#card-47-the-design-prototypes-old-home-page)
-- [Card 61: command line and MCP bridge edge cases](#card-61-command-line-and-mcp-bridge-edge-cases)
+- [Done so far](#done-so-far)
+- [Card 75: a renewal that cannot be read signs the person out everywhere](#card-75-a-renewal-that-cannot-be-read-signs-the-person-out-everywhere)
+- [Card 24: the Plain language and Researcher switch on an answer](#card-24-the-plain-language-and-researcher-switch-on-an-answer)
+- [Card 100: a very long email in the top bar](#card-100-a-very-long-email-in-the-top-bar)
 - [Not yours now](#not-yours-now)
 - [When you are stuck](#when-you-are-stuck)
 
@@ -26,7 +25,7 @@ You do not need to read any other document to start. The rules you must follow a
 |---|---|---|
 | Product owner | The person who runs this project | Every product decision, every retest verdict, scope, cost, new colours, new public wording, new dependencies. Their verdict closes a card |
 | Lead | The main development agent | The answer path, the board and the project's decision, handoff and learnings files, the review of your pull requests, every merge |
-| You, Factory | The second development agent | The four cards below, one at a time, each ending in a pull request |
+| You, Factory | The second development agent | The three cards below, one at a time, each ending in a pull request |
 
 You and the lead cannot message each other. Your pull request body and your report reach the lead. A question that needs a decision goes to the product owner.
 
@@ -51,21 +50,21 @@ Two values decide every close call:
 
 ## How you work here
 
-One card at a time, in this order: 43b (a follow-up to card 43, below), then 47, then 61. Cards 43 and 44 are merged. Once a card's pull request is open you may start the next card, but never have more than two pull requests open, and answer review comments on an open one before new work.
+One card at a time, in this order: 75 (the renewal gap), then 24 (the mode switch), then 100 (the long email). Cards 43, 43b, 44, 47 and 61 are merged: see [Done so far](#done-so-far). Once a card's pull request is open you may start the next card, but never have more than two pull requests open, and answer review comments on an open one before new work.
 
 Once per machine, before your first Playwright run: `cd frontend && npx playwright install chromium`. It downloads the browser the pinned `@playwright/test` expects and changes no file in the repository.
 
 For each card:
 
-1. From the main checkout's root, start from the newest `develop` in your own worktree beside the main checkout, never inside it (replace 43 and the description with the card's):
+1. From the main checkout's root, start from the newest `develop` in your own worktree beside the main checkout, never inside it (replace 75 and the description with the card's):
 
    ```bash
    git fetch origin
-   git worktree add -b factory/card43-wrap-long-names ../asu-factory-43 origin/develop
+   git worktree add -b factory/card75-renewal-latch ../asu-factory-75 origin/develop
    ```
 
    Branch names: `factory/card<N>-<short-description>`.
-2. For cards 43, 44 and 47 (47 needs the app running for its screenshots), install from the committed lockfile, which adds nothing new: `cd frontend && npm ci`.
+2. For cards 24 and 100, install from the committed lockfile, which adds nothing new: `cd frontend && npm ci`.
 3. Read the card's section below and open the files it names.
 4. Write the test first where you can, then the fix. A test proves something only if it fails without the fix: break the one property your fix adds, watch the test go red, put the property back. Reverting the whole change does not count, because the test usually then fails on a missing name before it checks anything.
 5. Run every check in [Checks before you push](#checks-before-you-push) that applies.
@@ -84,9 +83,8 @@ None of this repository's automatic rule loading or safety hooks run for you, ap
 
 You may change:
 
-- `frontend/src/`, `frontend/e2e/` and frontend tests, for cards 43 and 44.
-- `docs/build/design/design-system/prototype/app.html` and `docs/build/design/design-system/screens/home.html`, for card 47.
-- `src/system_03_search_agent/adapters/cli/`, `adapters/mcp/` and their tests under `tests/system_03_search_agent/adapters/`, for card 61.
+- `src/system_03_search_agent/adapters/cli/` and its tests under `tests/system_03_search_agent/adapters/cli/`, for card 75.
+- `frontend/src/`, `frontend/e2e/` and frontend tests, for cards 24 and 100.
 - Your own report folders under `testing/Developer/reports/`.
 
 You never change, even to fix a typo:
@@ -139,7 +137,7 @@ React:
 - Every UI change needs a WCAG 2.1 AA accessibility check: the axe scan in `frontend/e2e/accessibility.spec.ts`.
 - Text in the app never belittles a reader and never names who the reader is. It says what a mode or control gives, never who it is for.
 
-Python (card 61):
+Python (card 75):
 
 - Type hints on every function signature, snake_case arguments, imports ordered by isort.
 - An error message says what to do next, not only what failed: the reader may be an agent deciding its next step.
@@ -190,7 +188,7 @@ Notes on the end-to-end run:
 - `CI=1` makes Playwright start its own servers and fail loudly if a port is taken. Without it, a server already on those ports from another checkout is silently reused and you would test someone else's code. If a port is taken, wait and retry; never stop another process.
 - The backend needs the local PostgreSQL database `search_agent_users` on `localhost:5432` and refuses to start without it. Every spec that signs in creates a throwaway user there, which is expected. If the database is unreachable, stop and ask the product owner; never create or migrate a database.
 
-Screenshots of the app beside the design prototype (cards 44 and 47):
+Screenshots of the app beside the design prototype (card 24):
 
 1. Shell one, from the worktree root: `PATH="<main checkout>/venv/bin:$PATH" python3 -m tests.e2e_support.mock_llm_backend`.
 2. Shell two, from `frontend/`: `VITE_API_BASE_URL=http://127.0.0.1:8931 npm run dev -- --port 5273 --strictPort --host 127.0.0.1`.
@@ -236,139 +234,213 @@ Not covered:
 - <what you did not check>
 ```
 
-## Card 43: a long variant name on a phone
+## Done so far
 
-Dial 1. Branch `factory/card43-wrap-long-names`.
+Merged into `develop` and waiting for the product owner's retest. Leave them alone unless a comment on their pull request asks for a change.
 
-What the person sees today: on a phone, an answer that cites a long variant name scrolls sideways. The answer to "What does BRCA1 do?" at 390 pixels made the page 449 pixels wide, because the name `NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG` does not wrap. It pushes citation marker 10 (`button[data-testid="citation-10"]`) off the right edge. Evidence: `testing/Developer/reports/2026-09-26_verify_home_and_answer/report.md`, `answer_390.png`, `answer_390.txt` and `results.json`.
+- Card 43 (#181): on a phone, a long variant name wraps inside the answer and the page never scrolls sideways.
+- Card 43b (#187): a citation number stays on the same line as the end of the name it belongs to.
+- Card 44 (#183): the "Take the tour" button stays readable when the pointer rests on it.
+- Card 47 (#188): the design prototype draws the light home page the app shows.
+- Card 61 (#190): the command line and its MCP bridge give a queued request its full time, say so when the person stopped a search, refuse invisible-only feedback and name the right credential fix without printing a path. Its one open gap is card 75, below.
 
-What they should see:
+## Card 75: a renewal that cannot be read signs the person out everywhere
 
-- The name wraps inside its own line.
-- The page never scrolls sideways.
-- Every citation marker stays on screen.
-- Nothing changes at 1280 pixels.
+Dial 2: the lead runs a judge and an adversary on your pull request. Branch `factory/card75-renewal-latch`. Python only.
 
-Where it overflows, in `frontend/src/components/screens/AnswerScreen.tsx`:
+What the person sees today, when an agent app talks to System 3 through `s3 mcp`:
 
-- The failing element on 2026-09-26 is a phone record row in the "Where this answer comes from" list: the `<span>` at lines 1299 to 1304 (`{cells[0] ?? claim.text}` and its citation markers), inside `ul[data-testid="answer-records-N"]`. At 390 pixels (the phone layout, up to 720) records render as stacked rows, lines 1273 to 1320.
-- A citation marker is kept on the same line as the word before it (`CitationMarkers.tsx` lines 532 to 545, `nowrap` with a word joiner), so the name and its marker form one unbreakable unit.
-- Identifier cells in the same row use `RTAB_ID` (lines 232 to 237, applied at 1312), which is `whiteSpace: "nowrap"`.
-- The Sources card's name (line 1909) has no wrap rule either.
-- `CitationMarkers.tsx` lines 425 and 430 already wrap the name inside the popover card a marker opens: that is the precedent, not the place to fix.
+1. The bridge renews the sign-in, and System 3 answers HTTP 200 with a body the bridge cannot read.
+2. The server has already swapped the refresh token for a new one, and the bridge never stored the new one.
+3. On the agent's next request, the bridge renews again with the old, spent token.
+4. Production treats a spent token as stolen and ends every sign-in that person has: they are signed out of the command line and the web app at once.
 
-The design: the prototype keeps identifiers on one line (`docs/build/design/design-system/prototype/app.html` line 196) and lets its phone table scroll inside its own box (line 409). The app draws phone records as stacked rows instead, so this card's wrap is the decision. Use the prototype's own `overflow-wrap:anywhere` (line 372) as the precedent, and list the difference under Design gaps.
+Develop does the same today. Evidence: the lead's re-verification comment on #190 (`gh pr view 190 --comments`, the newest comment).
 
-How to build the test: `frontend/e2e/answer-layout.spec.ts` drives a fake answer by fulfilling `**/v1/query/*/events*` with a scripted event stream (lines 188 to 191). Its helpers are local, not exported: copy `frame` (lines 33 to 38), `token` (line 111), `ask` (lines 188 to 212) and `noSidewaysScroll` (lines 214 to 220) into your new spec, and point its screenshots at your own report folder, never at its `2026-09-14_answer_layout` folder. Build the stream from:
+Why the server does that, for reading only (`auth/` is outside your lane): `src/system_03_search_agent/auth/router.py`, the same on develop and on production (`git show origin/production:src/system_03_search_agent/auth/router.py`). `refresh` (line 609) calls `_revoke_family_on_reuse` (line 375) when no active sign-in matches the token. That function finds the already-revoked row and revokes every live sign-in of that user, then answers 401.
 
-- A `citation` frame with `display_index: 10`, `layer: "layer_2_api"`, `source: "clinvar"`, `source_id` set to the long name, and an `https://www.ncbi.nlm.nih.gov/clinvar/...` `source_url`.
-- A `claim` token whose text contains the name and `[10]`.
-- A `heading` token `Where this answer comes from`.
-- A `list_item` token with `cells: [name]` and `marker_ids: ["cid-10"]`. This row is the case that overflowed.
-- Open Sources by clicking `[data-testid="sources-disclosure"] > summary` before measuring.
+Where it happens, in `src/system_03_search_agent/adapters/cli/mcp_bridge.py`:
 
-Done when:
+| What | Where |
+|---|---|
+| The error codes: `SIGN_IN_NEEDED = -32001`, `REMOTE_UNREACHABLE = -32002` | Lines 132 and 133 |
+| `_SIGN_IN_AGAIN`, "In a terminal, run: s3 login, then restart this MCP server." | Line 136 |
+| `_message_from_credentials_error`, the fixed sentences for a failed renewal | Lines 268 to 285 |
+| `McpBridge.__init__`: nothing remembers a failed renewal | Lines 295 to 314 |
+| `_exchange`: renews when the token is about to expire (line 588), sends, and on a refusal renews once more (line 596) | Lines 583 to 603 |
+| `_renew`: under `self._renew_lock` (line 779), skips when another request already renewed (line 780), then calls `credentials_module.refresh_locked` (line 792) | Lines 776 to 823 |
+| A `CredentialsError` answers `SIGN_IN_NEEDED` | Lines 799 to 804 |
+| An `httpx.DecodingError` answers `REMOTE_UNREACHABLE` with "Could not read System 3's sign-in renewal reply ..." | Lines 809 to 816 |
+| Any other `httpx.HTTPError` answers `REMOTE_UNREACHABLE` with "Check the network connection, then try again." | Lines 817 to 822 |
 
-- Your new spec renders that exact name in a sentence, in a phone record row and in the opened Sources list at 390 pixels, and asserts `document.documentElement.scrollWidth <= window.innerWidth` and that the right edge of `button[data-testid="citation-10"]` is inside the window. It fails without your fix.
-- At 1280 pixels the same spec asserts no sideways scroll, that the record table still renders (`answer-table` present) and that the long name's element is one line tall. The report puts the 1280 screenshot from `origin/develop` beside yours.
-- `npm run build`, `npm test`, your spec and `accessibility.spec.ts` pass.
+And in `src/system_03_search_agent/adapters/cli/credentials.py`, read only:
 
-Prefer a rule that wraps only where needed (`overflow-wrap: anywhere` on the row's text) over breaking every word. Say in the report which you chose and why.
+| Error | Raised when |
+|---|---|
+| `RefreshError` (line 240) | `_refresh_and_store` (from line 699) gets a reply that is not 200 (line 705), or a 200 it cannot use: a content type that is not JSON (line 727), a body that does not parse (line 740), missing fields (line 748) |
+| `SessionLostError` (line 248), a `RefreshError` | The server rotated the token but the new one could not be saved |
+| `InsecureCredentialsError` (line 224), `CorruptCredentialsError` (line 263), `RefreshLockTimeoutError` (line 279), `RefreshLockUnavailableError` (line 290) | A local problem. These are `CredentialsError`s but not `RefreshError`s, and the server was never asked |
 
-## Card 44: two controls below the contrast minimum
+The rule to build: once a renewal fails with `httpx.DecodingError` or with any `credentials_module.RefreshError`, this `s3 mcp` process never calls `/auth/refresh` again and never sends another request.
 
-Dial 1. Branch `factory/card44-contrast`. Start the marker half only after card 43 has merged.
+- Why: in each of those cases the stored refresh token is dead, refused by the server or spent by a 200 the bridge could not use. Sending it again can only sign the person out again, including a web sign-in they made in the meantime.
+- Every other failure keeps today's behaviour: a network failure (`httpx.HTTPError` other than `DecodingError`), a missing credential file (`FileNotFoundError`), and the local credential errors in the table above.
+- The cost: a person who runs `s3 login` and does not restart the MCP server must restart it, which every one of these messages already tells them to do.
 
-What the person sees today: the axe scan at 390 pixels on 2026-09-26 flagged two controls below the WCAG 2.1 AA contrast minimum of 4.5 for small text.
+What to build, all in `mcp_bridge.py`:
 
-| Control | Where | Colours | Contrast |
-|---|---|---|---|
-| "Take the tour" button, 13.5 px bold, when hovered | `frontend/src/components/screens/HomeScreen.tsx`, `data-testid="take-the-tour"`, styles at lines 455 to 466 | text and border `link` `#0071BC` on its hover background `layer1Wash` `#E7EEF6` (line 465). At rest it sits on `surface` `#FFFFFF` at 5.14 and passes | 4.39 when hovered |
-| Citation marker 10, a layer 2 source, 11 px bold | `frontend/src/components/answer/CitationMarkers.tsx`, the marker button at lines 282 to 318, colour `layerColour(sharedLayer).main` (line 271) | text `layer2` `#2E8540` on the page canvas `#F0F0F0` | 4.05 |
+1. Below `_SIGN_IN_AGAIN` (line 136), a new constant: `_SIGN_IN_SPENT = f"Your System 3 sign-in could not be renewed earlier in this MCP server, so this request was not sent. {_SIGN_IN_AGAIN}"`.
+2. In `__init__`, after line 314: `self._sign_in_spent = False`.
+3. The first lines of `_exchange` (line 584): if `self._sign_in_spent`, raise `BridgeError(SIGN_IN_NEEDED, _SIGN_IN_SPENT)`. Nothing reaches `/mcp/` or `/auth/refresh`.
+4. The first lines inside `async with self._renew_lock:` in `_renew` (line 780, before the "another request renewed it" check): the same check and the same raise. A request that was already waiting on the lock when the first renewal failed stops here.
+5. In the `CredentialsError` branch (lines 799 to 804), set `self._sign_in_spent = True` when `isinstance(exc, credentials_module.RefreshError)`, before the raise.
+6. In the `DecodingError` branch (lines 809 to 816), set `self._sign_in_spent = True` and change `REMOTE_UNREACHABLE` (line 812) to `SIGN_IN_NEEDED`. Keep its sentence and its stderr line.
 
-The existing tokens, all in `frontend/src/theme.ts`, measured:
+The lead applied steps 1 to 6 to a scratch copy on 2026-10-06: scratch versions of the six new tests below passed, and the only existing tests that failed in `tests/system_03_search_agent/adapters/cli/` were the two assertions step 6 changes. Your build is still yours to prove.
 
-| Text token | On | Contrast |
+How to test, in `tests/system_03_search_agent/adapters/cli/test_mcp_bridge.py`, class `TestRenewal` (line 243). The file's stand-in server is `StandIn` (lines 64 to 140), with `refresh_calls` and `mcp_requests`; `signed_in` (lines 167 to 180) writes a private credential file; `CALL(request_id)` (line 199) builds a `tools/call`. The handler in `test_unreadable_200_renewal_never_reuses_the_rotated_token` (lines 343 to 377) answers `/auth/refresh` with HTTP 200, `content-encoding: gzip` and the body `b"not gzip"`: reuse it.
+
+| Test | What it asserts | Turns red when you remove |
 |---|---|---|
-| `blue` `#205493` | `surface` `#FFFFFF` | 7.63 |
-| `blue` `#205493` | `layer1Wash` `#E7EEF6` | 6.53 |
-| `layer2` `#2E8540` | `surface` `#FFFFFF` | 4.62 |
-| `layer2` `#2E8540` | `canvas` `#F0F0F0` | 4.05 |
-| `layer1` `#205493`, `layer3` `#4C2C92` | `canvas` `#F0F0F0` | 6.70, 8.85 |
+| Lines 334 and 373 | The two existing assertions expect `mcp_bridge.SIGN_IN_NEEDED`, not `REMOTE_UNREACHABLE` | Step 6's code change |
+| Unreadable reply, two requests in turn | Two `tools/call` requests through one bridge, each sent with `handle_line` then `drain`: one refresh call in total, both replies `-32001` with "s3 login", `stand_in.mcp_requests == []` | Step 6's latch |
+| Unreadable reply, two requests at once | Both sent with `handle_line` before one `drain`, as `test_two_requests_at_once_renew_only_once` does (line 398), and the handler waits `await asyncio.sleep(0.02)` before answering, as `StandIn.handler` does (line 88), so the second request is waiting on the lock: one refresh call in total, both answered `-32001` | Step 4 |
+| A 200 that is not JSON | `/auth/refresh` answers 200 with `content-type: text/html` and `b"<html></html>"`, two requests in turn: one refresh call in total | Step 5 |
+| A refused renewal | As `test_renewal_that_fails_sends_nothing_and_says_to_sign_in` (line 300, the stand-in's `valid_refresh_tokens = set()`), then a second request: `stand_in.refresh_calls == 1` | Step 5 |
+| Nothing is sent after the latch | Start with `signed_in("opaque")`, a token with no expiry that `StandIn(valid_tokens=set())` refuses, and `valid_refresh_tokens = set()`; two requests in turn: `len(stand_in.mcp_requests) == 1` and `stand_in.refresh_calls == 1` | Step 3 |
+| A network failure does not latch | `/auth/refresh` raises `httpx.ConnectError("down", request=request)` on its first call and behaves normally after; the first request answers `-32002`, the second renews and gets a result | Nothing: it turns red if the latch is widened to every failure |
 
-What to do:
+Measured on develop on 2026-10-06 with scratch versions of the first five new tests: each made 2 refresh calls where it should make 1, and the "nothing is sent" case sent 2 requests to `/mcp/`. In every new test also assert that no reply and no stderr line contains the access token or the refresh token's value.
 
-- The tour button: text and border both `blue`, so the pill keeps one colour. Check the focus ring (`navy`, line 466) still reads.
-- The layer 2 marker: axe measured it on the grey canvas only because card 43's long name pushed it past the white answer card (`AnswerScreen.tsx` lines 2331 to 2340). On white it is 4.62 and passes. After card 43 merges, run your 390 scan on card 43's long-name answer. If no layer 2 marker is flagged, say so in the pull request and close this half. Only if one still sits on the canvas, ask the product owner, with these options and your recommendation: a darker layer 2 shade as a new token; the marker drawn on a white surface; or `ok` `#276E34` (5.47 on the canvas) despite `theme.ts` reserving semantic colours as "never used as an accent".
+Run: `PATH="<main checkout>/venv/bin:$PATH" PYTHONPATH=src python -m pytest tests/system_03_search_agent/adapters/cli/ -q`, then the Python checks in [Checks before you push](#checks-before-you-push).
 
 Done when:
 
-- A new end-to-end spec opens the home screen at 390 and at 1280, hovers the button (`await page.getByTestId("take-the-tour").hover()`), then runs an axe scan the way `accessibility.spec.ts` does (`new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])`), scoped with `.include('[data-testid="take-the-tour"]')`, and asserts no `color-contrast` violation. Use `test.use({ contextOptions: { reducedMotion: "reduce" } })` as `accessibility.spec.ts` does (line 62), because the screen's fade makes axe misread contrast. It fails without your fix.
-- The marker half is closed with evidence, or asked as a question.
+- Every test in the table passes, and your report shows each one red with only its one property removed.
+- The change is in the client alone and works against production as it runs today. No server file changes.
+- The Python checks pass.
+
+Not in this card, named in your pull request under Not covered:
+
+- The older items in card 75's board row: an agent argument whose name contains "bearer token" makes `s3 mcp` say to log in again, and two Authorization headers or an empty "Bearer " get the wrong fixed message. They wait for the server's `data.reason` refusal field to land and reach production first, and a production release is the product owner's. Leave them.
+- The next process. The latch lives in one `s3 mcp` process, and the credential file still holds the spent refresh token. A restarted `s3 mcp`, or an `s3 ask`, run before `s3 login` would send it again. Every message says to run `s3 login` first.
+- A renewal that times out after it was sent (`httpx.ReadTimeout`), where the server may have rotated the token.
+- `s3 ask`'s own remedy for a 200 it cannot use, "Retry, or report this to the operator if it recurs." (`credentials.py` lines 731, 743 and 751), which also leads to a resend.
+
+## Card 24: the Plain language and Researcher switch on an answer
+
+Dial 2, because a click re-runs a question: the lead runs a judge and an adversary on your pull request. Branch `factory/card24-answer-depth-switch`.
+
+What the person sees today: the Plain language and Researcher choice exists only on the home page (`frontend/src/components/screens/HomeScreen.tsx` line 390, `DepthControl`). A person who reads a Plain language answer and wants the Researcher one must press New search, change the mode and type the question again.
+
+What they should see, by the product owner's decision of 2026-10-06 and decision D21 (`testing/Board_plan.md`, the decisions table):
+
+- A two-button switch, Plain language and Researcher, beside the answer's header: in the status strip directly under the question, on the right, before Show work.
+- Clicking the mode they are not reading shows the cost first and re-runs nothing. The question runs again only when they confirm.
+- The new answer joins the conversation like a follow-up, and the answer they were reading folds above it. Later follow-ups use the new mode.
+- Clicking the mode already shown does nothing.
+
+Port the built version, then add the cost. The switch was built on 2026-09-25 in commit `df7d7a2c` ("feat(web-ui): add the Plain language / Researcher toggle to the answer status strip"). Its branch, `phase/8.4-answers-worth-reading`, is gone from the remote; the commit survives under the local tag `parked/phase-8.4-2026-09-25`, which your worktree shares with the main checkout. Port that one commit and nothing else from the tag:
+
+```bash
+git cherry-pick df7d7a2c
+```
+
+What it brings:
+
+- `DepthStripToggle` and the exported `AUDIENCE_MODE_OPTIONS` in `frontend/src/components/controls/DepthControl.tsx`.
+- The `onDepthChange` and `depthValue` props on `AnswerBody` and `AnswerScreen` in `frontend/src/components/screens/AnswerScreen.tsx`, with the switch placed in the status strip.
+- `onDepthChange={(next) => void ask(searchView.question, next, true)}` in `frontend/src/App.tsx`.
+- Three test files: `App.depthToggle.test.tsx`, `AnswerScreen.depthToggle.test.tsx` and new cases in `DepthControl.test.tsx`.
+
+Its message says "Card 33", the card's number before the board was renumbered: write card 24 in anything you add.
+
+The cherry-pick stops on one conflict, checked on 2026-10-06 against develop `5cf63d6c`: the import line of `frontend/src/components/controls/DepthControl.test.tsx`. Develop imports `{ DepthControl, displayedMode }`; the commit adds `ANSWER_MODE_EXPLAINER` and `DepthStripToggle`. Resolve it to `import { DepthControl, DepthStripToggle, displayedMode } from "./DepthControl";`, and add `ANSWER_MODE_EXPLAINER` only if a test in the file still uses it. The other files merge without conflict; build and test before you change anything else.
+
+Then add the cost on click, which the ported commit lacks (it re-runs at once):
+
+- In `AnswerBody`, hold the mode the person clicked in state. `DepthStripToggle` stays as ported and calls that state's setter, never `onDepthChange` directly.
+- While a mode is held, show one line inside the status strip, below its row, where the work panel opens today (`AnswerScreen.tsx` line 1597): `Ask this question again in <mode>? It counts as one new search (<limit>).`, where `<mode>` is "Researcher" or "Plain language" and `<limit>` is the account's search standing. Give it `data-testid="answer-depth-confirm"` and `aria-live="polite"`, text in `body2` with colour `designTokens.inkMuted`.
+- Two buttons on that line. "Ask again" calls `onDepthChange` with the held mode and clears it; style it as the New search button (`AnswerScreen.tsx` lines 2452 to 2474: 12.5 px, weight 600, `designTokens.blue` fill, `designTokens.navy` on hover). "Cancel" clears it and calls nothing; style it as the Show work button (lines 1577 to 1594: 13 px, `designTokens.link`, no border).
+- `<limit>` is the string `App.tsx` already builds for the account menu: `dailyLimitLine` (line 982), from `dailyLimitPhrase` in `frontend/src/lib/guestSession.ts` (line 148). It reads "N of M searches left today" when searches are counted, "no search limit in effect yet" when they are not, and "checking your search limit…" before the count arrives. Pass it down as a new prop, `searchLimitCopy`: `App.tsx` passes `searchLimitCopy={dailyLimitLine}` beside the ported `onDepthChange`, and `AnswerScreen` hands it to the live `AnswerBody`. Never write a number of your own.
+- The switch renders only on the live, landed answer, as the ported commit does: never on the streaming preview (line 2501) or a folded previous turn (line 2263).
+
+This wording is set by this brief from D21's words. If the product owner asks for different words at retest, only the strings change.
+
+The design:
+
+- The switch: `testing/Developer/reports/2026-09-14_handover_inputs/design/Main.dc.html` lines 50 to 61 and `Researcher.dc.html` at the same lines draw it in the status strip, right-aligned, before Show work: 12.5 px, the chosen mode on `layer1Wash` with `layer1` text and weight 700, the other in `inkMuted`, a 1 px `line` border and a 4 px radius.
+- The design system's own card, `docs/build/design/design-system/components/depth-control.html` (lines 28 to 32 for the styles), draws only the control before asking, on the navy hero, with the old three modes. The prototype has the same (`docs/build/design/design-system/prototype/app.html` lines 320 to 327 and 477 to 482). Use their tokens; the two-mode list is the app's (`AUDIENCE_MODE_OPTIONS`).
+- At phone width the mockup `Mobile.dc.html` (line 46) draws the strip with no switch, and `app.html` has no rule for it. The ported strip wraps (`flexWrap: "wrap"`), so the switch drops to its own line at 390. Keep that, and list it under Design gaps with the confirmation line, which no design draws.
+
+How to test:
+
+- `frontend/src/components/screens/AnswerScreen.depthToggle.test.tsx`, from the port: add that clicking Researcher shows `answer-depth-confirm` with the limit text passed in and does not call `onDepthChange`; that "Ask again" calls it once with `"researcher"`; that "Cancel" hides the line and calls nothing. The first fails on the ported commit as it stands, because it calls `onDepthChange` at once: that is your one-property break.
+- `frontend/src/App.depthToggle.test.tsx`, from the port: its test at line 144 clicks the strip's Researcher and expects a second `createRun` with `audience_depth: "researcher"` (lines 174 to 177). Make it assert `createRun` was still called once after the click on Researcher, then twice after "Ask again".
+- A new `frontend/e2e/answer-depth-switch.spec.ts`. Copy from `frontend/e2e/answer-layout.spec.ts` the scripted answer (lines 30 to 186: `frame`, `head`, `token`, `answerTokens`, `landedStream`), `ask` (lines 188 to 212) and `noSidewaysScroll` (lines 214 to 220). Point screenshots at your own report folder, written only when `FACTORY_SHOTS=1`, as `frontend/e2e/long-variant-name.spec.ts` does (line 128). Use `test.use({ contextOptions: { reducedMotion: "reduce" } })`, and record each `POST` to `**/v1/query` with `page.on("request")`. Then, at 1280 and at 390:
+  - The switch is visible, with Plain language pressed.
+  - Clicking Researcher shows `answer-depth-confirm` and records no new `POST`.
+  - An axe scan scoped to the status strip, with the line open, finds no violation: `new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])`.
+  - The page never scrolls sideways.
+  - "Ask again" records exactly one new `POST`, whose JSON body has `audience_depth: "researcher"`.
+
+Done when:
+
+- The port, the cost line and the tests above are in, and each new test fails with its one property removed.
 - Build, unit tests, your spec and `accessibility.spec.ts` pass.
+- The report has screenshots at 1280 and 390 of the answer with the switch, and with the cost line open, beside the design's answer screen from the capture in [Checks before you push](#checks-before-you-push).
+- At most three live questions on the develop app, and none when the fake-model tests prove the change.
 
-## Card 43b: the citation number stays with the name
+## Card 100: a very long email in the top bar
 
-Dial 1. Branch `factory/card43b-marker-stays-with-name`. A follow-up to card 43, found by the lead's check of the deployed app after #181 merged. The full request is the newest comment on #181 (`gh pr view 181 --comments`).
+Dial 1. Branch `factory/card100-long-email-top-bar`.
 
-What the person sees today: when a variant name fits its line but the name plus its citation number does not, `overflow-wrap: anywhere` breaks between them, so the number sits alone on the next line and looks like a stray digit. Live on develop: citation 5 under `NM_007294.4(BRCA1):c.5243_5277+2788del` in the answer to "What does BRCA1 do?" at 390 pixels. It brings back the lone marker a word joiner fixed on 2026-09-14 (`CitationMarkers.tsx` lines 532 to 545).
+What the person sees today: between 721 and 900 pixels wide, the top bar runs off the screen when the signed-in email is very long. Above 720 pixels the account button shows the whole email, and nothing in the bar lets it give way.
+
+The lead found it on 2026-10-06 with a 50-character test email while checking cards 43 and 44. No real email that long has been tried, and nobody has measured it yet: measure develop first and put the numbers in your report.
+
+Where, in `frontend/src/components/shell/`:
+
+| What | Where |
+|---|---|
+| The account button's wrapper, `position: "relative"` | `AccountMenu.tsx` line 105 |
+| The button: accessible name is the email (line 119), pill styles from line 120 | `AccountMenu.tsx` lines 106 to 176 |
+| The initials circle, 24 px | `AccountMenu.tsx` lines 135 to 161 |
+| The visible email, hidden at 720 and below | `AccountMenu.tsx` lines 170 to 172 |
+| The email again in the open menu's header, already cut with an ellipsis | `AccountMenu.tsx` lines 198 to 211 |
+| The brand button, which today is the one part of the bar that shrinks (read its comment, lines 391 to 436) | `AppShell.tsx` lines 381 to 448 |
+| The nav, `flexShrink: 0` at line 462, holding the page buttons (lines 465 to 490), the overflow menu (line 492), the scientist chip, shown from 900 pixels up (line 494), and the account button (line 508) | `AppShell.tsx` lines 450 to 533 |
+
+The design: `docs/build/design/design-system/prototype/app.html` draws the bar (`.appbar`, line 31; `.nav` and `.who`, lines 34 to 40; the account pill `.acct .who`, lines 69 to 72; its markup with the email, line 447). At 720 and below it hides every page button but the current one (line 403) and tightens the bar (line 407). It has no rule for a long email and nothing between 721 and 900: list that under Design gaps. Keep the 720 behaviour exactly as it is: initials only, the email in the menu.
+
+What to build: the email text is the one thing in the bar that gives way. It ends in an ellipsis when the bar is short of room, and shows in full when there is room.
+
+- `AccountMenu.tsx`: the wrapper (line 105) gets `display: "flex"` and `minWidth: 0`; the button (line 120) gets `minWidth: 0` and `maxWidth: "100%"`; the initials circle gets `flex: "none"`; the email span (line 170) gets `minWidth: 0`, `overflow: "hidden"`, `textOverflow: "ellipsis"` and `whiteSpace: "nowrap"`, keeping its 720 rule; the button gets `title={email}`, so the full email shows on hover.
+- `AppShell.tsx`: the nav's `flexShrink: 0` (line 462) becomes `flexShrink: 1`, keeping `minWidth: 0`; each page button, the overflow menu and the scientist chip's box get `flexShrink: 0`, so only the account button can shrink; the brand button gets `"@media (min-width:721px)": { flexShrink: 0 }`, so above 720 the brand stays whole while it still shrinks below 720 as its comment requires.
+
+This is the recommended way, not yet run. If the spec below shows it does not hold, the done-when is the bar: say in the report what you changed instead and why.
+
+How to test: a new `frontend/e2e/long-email-top-bar.spec.ts`. Sign in through the screen as `ask` does in `frontend/e2e/answer-layout.spec.ts` (lines 192 to 208, without asking a question), with the email `e2e-long-${randomUUID().slice(0, 29)}@example.com`, which is exactly 50 characters: assert `email.length === 50`, and wait for the account button before measuring. Copy `noSidewaysScroll` (lines 214 to 220). Use `test.use({ contextOptions: { reducedMotion: "reduce" } })`. At each width, 721, 800, 900 and 1280 pixels (height 800):
+
+- The page never scrolls sideways.
+- The account button (`page.getByRole("button", { name: email })`) has its right edge inside `window.innerWidth`.
+- The header (`page.locator("header")`) has `scrollWidth <= clientWidth`.
+- "NCBI Agentic Search" shows in full: its span's `scrollWidth <= clientWidth`.
+- Search, Integrations and About are visible in the nav.
+- Opening the account button shows the menu with the email in its header.
+
+Also:
+
+- At 1280, a second sign-in with a 20-character email, `e2e-${randomUUID().slice(0, 4)}@example.com`, shows that email in full in the button: the email span's `scrollWidth <= clientWidth` and its text equals the email.
+- At 390, the button still shows the initials and no email text.
+- An axe scan of the header at 800 with the long email finds no violation.
+- Screenshots at 721, 800 and 900 when `FACTORY_SHOTS=1`, into your report folder.
 
 Done when:
 
-- In `frontend/src/components/screens/AnswerScreen.tsx`, the phone record row span (around line 1302) keeps the citation marker on the same line as the name's last characters, for example a no-wrap span around the trailing characters and `citationChips(...)`; never `word-break: break-all` on the whole row.
-- The sentence (`PROSE_SX`, around line 214) is checked for the same case and fixed the same way if it shows there.
-- `frontend/e2e/long-variant-name.spec.ts` gains a row named `NM_007294.4(BRCA1):c.5243_5277+2788del` with its marker and asserts at 390 that the marker's top is above the bottom of the name's last line. It fails on develop today; the report shows it red without your fix and green with it. The existing assertions stay.
-- Screenshots are written only when an environment variable such as `FACTORY_SHOTS=1` is set, in this spec and in `tour-button-contrast.spec.ts`, so CI never rewrites committed images.
-
-## Card 47: the design prototype's old home page
-
-Dial 1. Branch `factory/card47-prototype-light-home`. No product code changes.
-
-What is wrong: the design prototype still draws the old home page: a navy hero with white text and translucent example chips, stacked full width at 390 pixels. On 2026-09-12 the product owner replaced it in the app with a light home page: the light canvas, ink text, a bordered white search bar and white rounded example chips, centred (commit `cbb04cc`). On 2026-09-26 the owner confirmed the light page is the design and the prototype must follow it. Until then every screen check flags the live home page as wrong.
-
-Files:
-
-- The app, as the source of what the home page looks like now: `frontend/src/components/screens/HomeScreen.tsx` (search bar border at line 290, chips at line 421) and the tokens in `frontend/src/theme.ts`.
-- `docs/build/design/design-system/prototype/app.html`: the hero, stats and search bar styles at lines 118 to 133, the depth label at line 326, the phone rules at lines 397 to 419 (`.seeds{flex-direction:column}` at line 418 stacks the chips), the hero markup from line 469.
-- `docs/build/design/design-system/screens/home.html`: the search bar and chip styles at lines 46 to 51 (its chips use the grey `--surface-sunk`, the app's are white), their markup at lines 67 to 77.
-
-Done when:
-
-- Both files draw the home page as the app does, using the CSS variables the design system already defines (the same values as `theme.ts`). No new colour.
-- Only these change: the hero's ground and text colours, the stats line (white border and on-navy text today), the depth label, the search bar's border (`2px solid var(--line-strong)`, as the app's), and the example chips (white, centred, never stacked full width at 390).
-- Everything else stays, and you list it in the report for the product owner: the prototype offers three answer modes where the app offers two; a one-line search bar with a Search button where the app has a two-line field with an arrow button (the arrow is the owner's decision of 2026-09-13); no tour invitation.
-- Screenshots of the prototype's home beside the app's home at 1280 and 390, from the capture in [Checks before you push](#checks-before-you-push), in the report.
-- `python3 tracker/check_doc_drift.py --check` passes.
-
-## Card 61: command line and MCP bridge edge cases
-
-Dial 2: the lead runs a judge and an adversary on your pull request. Branch `factory/card61-cli-mcp-edges`.
-
-What it is: ten edge cases a verifier found in the command line client and the MCP bridge in build phase 8.10. The product owner merged that phase with them named, on 2026-09-27. Card 62 has since fixed two, so first check which still reproduce on `develop`.
-
-Before you change anything: the command line client and its MCP bridge are installed by people and talk to the production server, which lags `develop`. Every change in `adapters/cli/` must work against the server as it runs in production today. Never make the client depend on a server change in the same pull request: card 62's renewal fix broke exactly this way and was reverted (commit `16572df9`). Leave the renewal refusal handling alone; card 75 owns it.
-
-| Finding | What happens | Where to look |
-|---|---|---|
-| V01 | The 5 minute deadline also counts the wait for one of the 8 request slots, so a queued request can reach the server with less time than its own 240 second budget and be abandoned while the server keeps running. Probe: 9 concurrent calls at 2.0 s each against a 3.0 s deadline; the ninth errors | `adapters/cli/mcp_bridge.py`, where the deadline wraps the slot wait (`async with deadline, self._slots`, lines 473 to 475) |
-| V02 | The empty-feedback check uses `.strip()`, which keeps zero-width characters, so a comment of only U+200B is recorded and wipes the earlier rating | `adapters/mcp/server.py`, `send_answer_feedback` (the `comment.strip()` check near line 1706); tests in `tests/system_03_search_agent/adapters/mcp/test_parity_tools.py` |
-| V03 | `citations_omitted` counts every bracketed number, so `Year [2023]` or `Row [7]` counts as a missing citation | `adapters/mcp/server.py`, `_reopened_citations` (near line 1548), used by `reopen_past_answer`; same test file |
-| V04 | A credential file readable by others gives `error_class "sign_in_needed"`, the wrong class, and the JSON on stdout carries the credential file's absolute path | `adapters/cli/credentials.py` (lines 476 to 482), `main.py` (lines 1038 to 1040) |
-| V05 | A 200 event stream with no events gives `complete: false`, `error: null` and exit 1, with no reason in the JSON | `adapters/cli/sse.py`, `main.py`, and `render.py` (the JSON summary, lines 1359 to 1439, `write_json_failure`) |
-| V06 | The MCP card on the Integrations page said follow-up offers are "coming to MCP next" | Handled by card 62: `frontend/src/components/screens/IntegrationsScreen.test.tsx` lines 233 to 241 assert the page no longer says "coming". Confirm and skip |
-| V07 | A renewal reply that cannot be decoded tells the agent "Could not reach System 3 to renew your sign-in (DecodingError)", code -32002, with nothing on stderr. It still fails closed | `adapters/cli/mcp_bridge.py`, the renewal path (lines 761 to 805, the message near 797). Change only the words and add the stderr line |
-| V08 | `asked_at` in the output schemas of `list_past_searches` and `reopen_past_answer` is a string with no `maxLength`, where every array has `maxItems` | `adapters/mcp/server.py`, lines 488 and 530 |
-| V09 | The JSON-RPC-only filter refuses `"params": null`, which the MCP SDK parses as a valid request. Marked unsure | `adapters/cli/mcp_bridge.py`, near line 228 |
-| V10 | The agent configuration used the bare command `s3`, which an agent app that does not inherit the shell PATH may not find | Handled by card 62: the configuration now names a full path (`frontend/src/components/screens/InfoScreens.tsx`, `MCP_STDIO_CONFIG`, lines 227 to 233) and `IntegrationsScreen.test.tsx` lines 143 to 160 assert it. Confirm and skip |
-
-What to do:
-
-1. Write `testing/Developer/reports/<date>_factory_card61/plan.md` first: for each finding, whether it still reproduces (with the command or test that shows it), the file, the fix in one line, and its test.
-2. Build the ones that reproduce among V01 to V05, V07 and V08, one commit per finding, each with a test that fails without its fix.
-3. Leave V09 unbuilt and list it in the pull request as a question for the product owner, with what you found and your recommendation. List V06 and V10 as already handled, each with the test that shows it.
-4. Error text you change must say what to do next. Never put a credential file's absolute path in JSON output, logs or anything an agent reads; the human-readable remedy on stderr may keep naming the file the person must fix (`chmod 600 <file>`), and if you want to change that, ask first.
-
-Done when: every built finding has a red-without-fix test; the Python checks pass; the plan and the report are in the folder; V06, V09 and V10 are accounted for in the pull request.
+- The spec passes, and it fails on develop at one or more of 721, 800 and 900. Your report names which widths failed on develop and by how many pixels.
+- Nothing changes at 390 or for a short email at 1280.
+- Build, unit tests, your spec and `accessibility.spec.ts` pass.
 
 ## Not yours now
 
@@ -376,9 +448,9 @@ The board once listed these in your lane. Leave them alone until the product own
 
 | Card | Why it waits |
 |---|---|
-| 18, 23 | Their wiring is in `core/graph.py`, the answer path the lead is changing this week. 23 also waits on a product owner decision |
-| 24 | Waits on the product owner's decision of where the Plain language and Researcher toggle goes |
-| 25 | Installs a new package, the public design system base. That needs the product owner's approval and a supply-chain review first |
+| 18 | Its wiring is in `core/graph.py`, the answer path the lead is changing this week |
+| 23 | The lead builds it, by the product owner's decision of 2026-10-06: its wiring is in `core/graph.py`, the answer path |
+| 25 | Installs a new package, the public design system base. That waits on the product owner's approval and a supply-chain review first |
 
 ## When you are stuck
 
