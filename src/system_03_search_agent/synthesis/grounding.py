@@ -917,26 +917,34 @@ def synthesis_is_supported_by(
 # wrapped value, is not changed yet: see the note in `run_grounding_pass`.
 # ---------------------------------------------------------------------------
 
-# Where a record sentence may start: after the marks this pass itself ends a
-# sentence on (`_SENTENCE_BOUNDARY`: full stop, semicolon, question or
-# exclamation mark) or a colon (the label of a structured abstract,
-# "Results: ..."), then whitespace.
+# Card 101, round 4: a record sentence is what `widen_to_record_sentences`
+# calls one (`_RECORD_SENTENCE_BOUNDARY`): it runs from the value's start, or
+# from after a full stop, question or exclamation mark, whitespace and a
+# capital, quote mark or opening bracket, to the next such break or the
+# value's end. Nothing else ends or starts one, so a copy that leaves words
+# of its record sentence off is a cut and goes to the check:
 #
-# The semicolon is a deliberate, measured choice. The code-built listing and
-# findings tail split a value on it (`findings.build_structured_fallback_
-# narrative`), so an OMIM title "GLUCOKINASE; GCK" is listed as two rows, and
-# without it those rows would no longer show. The cost: a copy of the clause
-# before "; however, ..." still shows unchecked. Measured on the recorded
-# answers' records, 3 of 133 record sentences carry a semicolon and 1 puts a
-# limit after it.
-_WHOLE_SENTENCE_START = re.compile(r"[.;!?:]\s+")
-# Where a record sentence may end. A colon is not an end: what follows it is
-# the content the clause before it introduces.
-_WHOLE_SENTENCE_ENDS = (".", ";", "?", "!")
-# Quote marks and brackets that may open or close a record sentence around
-# its words; punctuation, never a word, so a copy may leave them off.
-_OPENING_MARKS = "\"'“‘(["
-_CLOSING_MARKS = "\"'”’)]"
+# - a colon is not a start: "RETRACTED: Drug X cures cancer in mice."
+#   copied as "Drug X cures cancer in mice" drops the label that reverses
+#   it, as do "Myth:", "Hypothesis:" and "Do not:" (J3-101-01, A3-101-01);
+# - a semicolon is not an end: "Drug X is safe in children; however, it
+#   caused deaths in infants." copied up to the semicolon drops the limit
+#   (J3-101-02, A3-101-06). The code-built listing, which splits a value at
+#   its semicolons, keeps its rows through its own path
+#   (`_is_code_built_row`), never through this test;
+# - a full stop inside an abbreviation, with no capital after it, is not a
+#   break: "e.g. aspirin prevents ...", "the U.S. but rose ..." (J3-101-03,
+#   A3-101-03). A capital after an abbreviation ("Dr. Smith") still breaks,
+#   as it does for the widener; such a cut reaches the screen only as the
+#   whole of what follows, and the check stays the safety for the rest.
+#
+# Measured on the 265 whole copies in 168 recorded writer drafts
+# (`testing/Developer/reports/2026-10-06_card101/build_r4.md`).
+
+
+def _record_sentences(value: str) -> list[str]:
+    """`value`'s sentences, split where `widen_to_record_sentences` splits."""
+    return [part for part in _RECORD_SENTENCE_BOUNDARY.split(value) if part.strip()]
 
 
 def _whole_form(text: str) -> str:
@@ -946,6 +954,22 @@ def _whole_form(text: str) -> str:
     so a word written differently is a different word.
     """
     return " ".join(text.split()).rstrip(" .,;:!?")
+
+
+def _ends_as_question(text: str) -> bool:
+    """Whether `text`'s trailing punctuation carries a question mark."""
+    collapsed = " ".join(text.split())
+    return "?" in collapsed[len(_whole_form(collapsed)) :]
+
+
+def _without_glue(text: str) -> str:
+    """A segment with only the separators before it removed, its words kept.
+
+    `_clean_claim` also drops a leading "and", "but", "or", "also" or
+    "then"; a record sentence that opens on one of them ("But they do not
+    improve oxygen saturation.") is still whole when copied with it.
+    """
+    return text.strip().lstrip(",;: ").strip()
 
 
 def _same_but_first_letter(claim: str, record: str) -> bool:
@@ -959,36 +983,58 @@ def _same_but_first_letter(claim: str, record: str) -> bool:
 def is_whole_record_sentence(claim_text: str, finding: SynthFinding) -> bool:
     """Whether a clause is one whole sentence of its record, word for word.
 
-    True when the clause, ignoring only the case of its first letter, its
+    True when the clause, as written or with a leading connective dropped
+    (`_clean_claim`), ignoring only the case of its first letter, its
     trailing punctuation and whitespace, either:
 
     - equals the finding as code renders it to the writer
       (`findings.render_finding_body`, its type, identifier, field name and
-      value: the code-built row the structured fallback and the findings
-      tail print), or
-    - sits in the record's value starting where a record sentence starts
-      (`_WHOLE_SENTENCE_START`, or the value's start) and ending where one
-      ends (`_WHOLE_SENTENCE_ENDS`, or the value's end).
+      value), or
+    - equals one sentence of the record's value (`_record_sentences`),
+      every quote mark and bracket included: a sentence the record puts in
+      quotes or brackets is a mention, often the claim it goes on to reject,
+      so a copy that leaves the marks off is a cut (A3-101-04).
 
-    No word list: where the words sit in the record decides, as in
-    `_starts_inside_record_sentence`.
+    A record sentence that asks a question is whole only for a copy that
+    keeps its question mark: "X prevents Y?" shown as "X prevents Y." is the
+    app's statement, not the record's (A3-101-02).
+
+    No word list: where the words sit in the record decides.
     """
-    claim = _whole_form(claim_text)
-    if not claim:
+    forms = {_whole_form(_without_glue(claim_text)), _whole_form(_clean_claim(claim_text))}
+    forms.discard("")
+    if not forms:
         return False
-    if _same_but_first_letter(claim, _whole_form(render_finding_body(finding))):
+    row = _whole_form(render_finding_body(finding))
+    if any(_same_but_first_letter(claim, row) for claim in forms):
         return True
-    value = " ".join(finding.field_value.split())
-    starts = [0] + [match.end() for match in _WHOLE_SENTENCE_START.finditer(value)]
-    for start in starts:
-        while start < len(value) and value[start] in _OPENING_MARKS and claim[0] != value[start]:
-            start += 1
-        if not _same_but_first_letter(claim, value[start : start + len(claim)]):
+    asks = _ends_as_question(claim_text)
+    for sentence in _record_sentences(" ".join(finding.field_value.split())):
+        if _ends_as_question(sentence) and not asks:
             continue
-        rest = value[start + len(claim) :].lstrip(_CLOSING_MARKS)
-        if not rest or rest.startswith(_WHOLE_SENTENCE_ENDS):
+        record = _whole_form(sentence)
+        if any(_same_but_first_letter(claim, record) for claim in forms):
             return True
     return False
+
+
+def _is_code_built_row(segment_text: str, finding: SynthFinding) -> bool:
+    """Whether a segment is a row code built for the listing, exactly.
+
+    The structured fallback, the findings tail and the repair probe
+    (`findings.build_structured_fallback_narrative`) print a finding's
+    rendered body, or each piece of its value split at this pass's own
+    sentence boundary, a semicolon included ("GLUCOKINASE; GCK" is two
+    rows). Code cut those rows, never the writer, so they stay whole on
+    this path only; a writer's copy of the same piece goes through
+    `is_whole_record_sentence` (J3-101-02).
+    """
+    segment = _whole_form(_without_glue(segment_text))
+    if not segment:
+        return False
+    rows = {_whole_form(render_finding_body(finding))}
+    rows.update(_whole_form(piece) for piece in split_into_sentences(finding.field_value))
+    return segment in rows
 
 
 def _wraps_record_value(claim_text: str, finding: SynthFinding) -> bool:
@@ -1011,6 +1057,9 @@ def _copied_record_span(claim_text: str, finding: SynthFinding) -> str:
     return widen_to_record_sentences(claim_text, finding.field_value)
 
 
+_SPACE_BEFORE_PUNCTUATION = re.compile(r"\s+([,;:])")
+
+
 def _copied_clause_candidate(
     sentence: str,
     segments: list[tuple[str, int | None, int | None]],
@@ -1018,20 +1067,24 @@ def _copied_clause_candidate(
     by_ref: dict[int, SynthFinding],
     evidence_quotes: tuple[str, ...],
 ) -> SynthesisCandidate:
-    """The check item for a copied clause that is not a whole record sentence.
+    """The check item for a copied cut, or a copied clause joined after one.
 
     The check reads the sentence as far as this clause, markers removed, the
     way a reader would see it if the sentence stopped there, so two copied
-    clauses joined into a new claim are judged joined. A strip at a
+    clauses joined into a new claim are judged joined. Once a sentence holds
+    a cut, every later copied clause, a whole record sentence or a wrapped
+    value included, is asked about the same way (round 4, J3-101-05), so the
+    last item a sentence sends is the whole shown sentence. A strip at a
     sentence's end leaves a prefix, and a strip in its middle drops the
     sentence, so whatever is shown ending at this clause is what was read.
-    Its quotes are the record text behind every clause up to here: a
-    writer's quote widened to its record sentence(s), or a copied clause's
-    own record span.
+    Its quotes are the record text behind every clause up to here, from
+    every record those clauses cite: a writer's quote widened to its record
+    sentence(s), or a copied clause's own record span.
     """
     marker_ends = [match.end() for match in _KEYED_MARKER.finditer(sentence)]
     prefix = " ".join(_KEYED_MARKER.sub(" ", sentence[: marker_ends[upto]]).split())
-    prefix = prefix.rstrip(" ,;:")
+    # As the reader sees it: no space left before a comma a marker stood at.
+    prefix = _SPACE_BEFORE_PUNCTUATION.sub(r"\1", prefix).rstrip(" ,;:")
     spans: list[str] = []
     for text, marker, quote_key in segments[: upto + 1]:
         finding = by_ref.get(marker) if marker is not None else None
@@ -1343,8 +1396,17 @@ def run_grounding_pass(
     evidence_quotes: tuple[str, ...] | None = None,
     verified_syntheses: frozenset[tuple[str, tuple[str, ...]]] | None = None,
     candidate_sink: list[SynthesisCandidate] | None = None,
+    code_built_listing: bool = False,
 ) -> GroundingResult:
     """Run Section 8.2's seven steps over one Synth narrative.
+
+    `code_built_listing` is True only when code built `narrative` itself
+    (`findings.build_structured_fallback_narrative`: the structured
+    fallback, the findings tail and the repair probe). Its rows were cut
+    from each value by code at this pass's own sentence boundary, so a row
+    that is exactly such a piece stays whole (`_is_code_built_row`), a
+    semicolon split or a sentence opening on "But" included. A writer's
+    narrative never passes it (card 101, round 4, J3-101-02 and 04).
 
     `core_ask_required` implements step 7. When True (the default, and what
     `write_node` passes for a real query), an answer that loses every one of
@@ -1438,6 +1500,15 @@ def run_grounding_pass(
         # This is what makes "was a clause stripped from the MIDDLE" decidable
         # rather than guessed at.
         segment_kept: list[bool] = []
+        # Card 101, round 4 (A3-101-07): the `segment_kept` positions of
+        # copied clauses held for the check, which develop showed. The
+        # middle-strip rule below still counts them as surviving after a
+        # clause code stripped, so a held cut never turns a sentence develop
+        # dropped whole into a shown fragment.
+        held_for_check: set[int] = set()
+        # Whether a clause of this sentence was a copied cut: every copied
+        # clause after it is then read joined to it (J3-101-05).
+        cut_in_sentence = False
         segments = _segments(sentence)
         for segment_index, (text, marker, quote_key) in enumerate(segments):
             if marker is None:
@@ -1591,21 +1662,33 @@ def run_grounding_pass(
             # names the disease, and the check held that back 3 of 3 times
             # (`testing/Developer/reports/2026-10-06_card101/build_r3.md`).
             # That trade is the owner's to decide.
-            if (
-                strict_ok
-                and not _wraps_record_value(claim_text, finding)
-                and not is_whole_record_sentence(claim_text, finding)
-            ):
-                strict_ok = False
-                held_by_code = _VERDICT_OPENER.match(claim_text) is not None
-                if not held_by_code:
-                    copied = _copied_clause_candidate(
-                        sentence, segments, segment_index, by_ref, evidence_quotes
-                    )
-                    if verified_syntheses is not None and copied.key in verified_syntheses:
-                        strict_ok = True
-                    elif candidate_sink is not None:
-                        candidate_sink.append(copied)
+            #
+            # Round 4 (J3-101-05): once a sentence holds a cut, every copied
+            # clause after it, whole or wrapped, is read joined to it too, so
+            # the check reads the whole shown sentence ("Drug X reduces
+            # mortality [1] in children [2]", record 2 only "Children").
+            # `text`, not `claim_text`, so a record sentence opening on "But"
+            # stays whole (J3-101-04).
+            held = False
+            if strict_ok:
+                is_cut = not _wraps_record_value(claim_text, finding) and not (
+                    is_whole_record_sentence(text, finding)
+                    or (code_built_listing and _is_code_built_row(text, finding))
+                )
+                if is_cut or cut_in_sentence:
+                    cut_in_sentence = True
+                    strict_ok = False
+                    held = True
+                    held_by_code = is_cut and _VERDICT_OPENER.match(claim_text) is not None
+                    if not held_by_code:
+                        copied = _copied_clause_candidate(
+                            sentence, segments, segment_index, by_ref, evidence_quotes
+                        )
+                        if verified_syntheses is not None and copied.key in verified_syntheses:
+                            strict_ok = True
+                            held = False
+                        elif candidate_sink is not None:
+                            candidate_sink.append(copied)
             if synthesized and quote is None:
                 # Carried by the quotes on the markers after it; the claim
                 # keeps the first of them as the words it rests on.
@@ -1613,6 +1696,8 @@ def run_grounding_pass(
             if not strict_ok and not synthesized:
                 # Steps 5 and 6: no similarity fallback, no partial credit.
                 stripped += 1
+                if held:
+                    held_for_check.add(len(segment_kept))
                 segment_kept.append(False)
                 continue
 
@@ -1675,8 +1760,21 @@ def run_grounding_pass(
         # never available: that means generating text AFTER the grounding
         # pass, which is the one thing that would let unverified prose reach
         # a reader.
+        #
+        # Card 101, round 4 (A3-101-07): a copied clause held for the check
+        # was shown on develop, so it still counts as surviving after a
+        # clause code stripped. Without this, a held cut turned develop's
+        # middle strip into an end strip and showed the prefix alone ("The
+        # name Adenoviral bronchiolitis [2]."). Exactly develop's drops are
+        # added back; a held clause itself is still an end strip, as when
+        # the check is asked about the last clauses of a list.
         dropped_from_middle = any(
-            not kept and any(segment_kept[later] for later in range(index + 1, len(segment_kept)))
+            not kept
+            and any(
+                segment_kept[later]
+                or (index not in held_for_check and later in held_for_check)
+                for later in range(index + 1, len(segment_kept))
+            )
             for index, kept in enumerate(segment_kept)
         )
 

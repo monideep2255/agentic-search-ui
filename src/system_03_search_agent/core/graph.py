@@ -9815,6 +9815,7 @@ def _code_built_lines_will_cite(
         synth_findings,
         core_ask_required=True,
         question=question,
+        code_built_listing=True,
     )
     cited = {claim.finding.citation_id for claim in probe.claims}
     return all(finding.citation_id in cited for finding in omitted_findings)
@@ -13216,6 +13217,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             synth_findings,
             core_ask_required=True,
             question=query.text,
+            code_built_listing=True,
         )
         if fallback_grounding.claims:
             grounding = fallback_grounding
@@ -13320,6 +13322,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             synth_findings,
             core_ask_required=True,
             question=query.text,
+            code_built_listing=True,
         )
         if tail_grounding.claims:
             merged_claims = list(grounding.claims) + list(tail_grounding.claims)

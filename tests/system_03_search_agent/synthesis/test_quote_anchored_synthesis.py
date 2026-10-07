@@ -218,7 +218,11 @@ def test_an_unpaired_quote_mark_alone_drops_the_sentence() -> None:
     value = 'enhanced endurance or resistance to fatigue". Caffeine is widely used.'
     paper = _finding(4, value)
     assert not _ground('Enhanced endurance or resistance to fatigue" [4].', [paper]).grounded
-    assert _ground("Enhanced endurance or resistance to fatigue [4].", [paper]).grounded
+    # Card 101, round 4 (A3-101-04): without its quote mark the copy is no
+    # longer the record's sentence word for word, so it goes to the sentence
+    # check, and shows once the check approves it.
+    assert not _ground("Enhanced endurance or resistance to fatigue [4].", [paper]).grounded
+    assert _ground_approved("Enhanced endurance or resistance to fatigue [4].", [paper]).grounded
 
 
 def test_a_list_continuation_goes_as_a_restatement_not_by_its_first_word() -> None:
