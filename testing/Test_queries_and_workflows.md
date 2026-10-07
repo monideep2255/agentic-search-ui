@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-10-06.
+Last updated: 2026-10-07.
 
 Every entry has the same three parts:
 
@@ -1985,6 +1985,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 102 | A reopened saved answer lists its sources, one row per page, each linking to its record | Query 107 |
 | card 22 | Every total on an answer says what it counts, and every number that says sources is the same | Query 107 |
 | card 101 | Every sentence the writer rewords is checked against its paper before you see it | Query 106 |
 | card 99 | A plain-language answer never says "children" for "young children" or drops "potentially" | Query 106 |
