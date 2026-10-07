@@ -10,6 +10,7 @@ Card 102, found by card 22's product review on deployed develop (PR-card22-02): 
 - [End to end at 1280 and 390](#end-to-end-at-1280-and-390)
 - [Gates](#gates)
 - [Found along the way](#found-along-the-way)
+- [Phone width follow-up](#phone-width-follow-up)
 
 ## Cause
 
@@ -101,3 +102,27 @@ So the 7 failures are on develop already and are not caused by this card.
 - On a phone, tapping a past search leaves the Your searches panel open over the answer, and the page behind it is hidden from screen readers until the panel is closed. Measured at 390: one open dialog and `#root` `aria-hidden` after the tap. The spec closes the panel the way a person would. Not fixed here; it is a separate card if the owner wants it.
 - `e2e/citations-and-writing.spec.ts` rewrites six committed screenshots under `testing/Developer/reports/2026-09-14_citations_and_writing/` every time it runs. They were restored, not committed.
 - The board row for card 102 points at `testing/Developer/reports/2026-10-06_card22/product_review.md`, which is still untracked in the main checkout.
+
+## Phone width follow-up
+
+The fresh verifier's finding F-102-V-05 (`verify.md`): on a phone, a saved answer's source links ran past their row, and a Pathogen Detection isolate link scrolled the page sideways. A URL has no spaces, so it never broke.
+
+- Fix: `frontend/src/components/screens/SavedAnswerScreen.tsx:190`, the row's link takes `overflowWrap: "anywhere"`, the live answer's own rule for long unbroken strings (its claim text and its phone source names in `AnswerScreen.tsx`), at every width.
+- Spec: `frontend/e2e/card102-saved-answer-sources.spec.ts` adds two pages with the longest real link shapes and fake IDs: the isolate link `_build_isolate_source_url` builds (`.../pathogens/isolates#/search/biosample_acc:SAMN99999999`) and a seven-digit ClinVar variation. It now checks every link's right edge against its row as well as the page's sideways scroll, at 1280 and 390. The trust line and rows read 18.
+
+| Width | Before the fix | After the fix |
+|---|---|---|
+| 390 | page overflow 201 px; 7 links past their row: the isolate link by 236 px, six ClinVar links by 21 to 34 px | 0 px; 0 links |
+| 1280 | 0 px; 0 links | 0 px; 0 links |
+
+- The spec went red at 390 before the fix and passes 2 of 2 after it. No link in this fixture is long enough to wrap at 1280, so the 1280 run shows no regression; the 390 run is the one that proves the wrap works.
+- Screenshots retaken: `saved_answer_1280.png` and `saved_answer_390.png`. At 390 every link wraps inside its card.
+- Not touched: the saved query 107 table's overflow, a separate item.
+
+| Gate | Tail |
+|---|---|
+| gate08 frontend | built; 60 files, 521 tests passed; license notices ok |
+| card 102 e2e spec | 2 passed, ports 5273 and 8931 free first |
+| gate03 ruff | "All checks passed!" |
+| Leak scan | "PASS: nothing to publish looks like a secret or a private value", 0 findings; both new screenshots looked at by eye, the test account masked at 1280 and not on screen at 390 |
+| check_doc_sync | "ok: the board, the done file, the test queries, the board plan, the Factory brief, the handoff and the registry agree" |
