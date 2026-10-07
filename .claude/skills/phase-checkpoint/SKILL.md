@@ -5,6 +5,7 @@ scope: project
 depends_on:
   - tracker/Living_documents.md
   - tracker/check_living_docs.py
+  - tracker/check_doc_sync.py
   - HANDOFF.md
   - docs/build/Handoff_history.md
   - requirements/Plan.md
@@ -234,6 +235,14 @@ Before the exit checklist, verify the structure of every document this checkpoin
 - Status current: the handoff, the Plan.md status table, and any progress table name the correct current phase. No finished phase is labeled "next", and no just-merged build phase is labeled "not started".
 - Titles and filenames current: a session doc or meeting note whose title or filename names fewer steps than it now covers is retitled, and the file renamed with `mv` (never `rm`) if the step span in the name is wrong.
 
+### Step 6b: the documents agree with each other (all modes)
+
+Run `python3 tracker/check_doc_sync.py`. It compares the board, the done file's "Waiting for your retest", the test queries, the board plan, the Factory brief, `HANDOFF.md` and the registry with each other, and prints each disagreement as `file:line: rule: what disagrees, and the fix`. It exists because cards 44 and 47 stayed in To do after they merged on 2026-10-06 while every per-file check was green.
+
+- Exit 1: fix every finding in this checkpoint, in the document the finding names, then rerun until it exits 0. A finding never waits for the next session.
+- Exit 2: the check could not run, because a document, section or table it reads is missing. That is never a pass. If the section moved on purpose, the registry and the check catch up first, through Step 0's decision guard.
+- Never edit the check so it passes. A rule that is wrong is reported to the product owner.
+
 ### Step 7: the two checks (all modes)
 
 - `python3 tracker/check_doc_drift.py --check`. It checks the structure of every tracked document (tables of contents, duplicate phase headings, a "Last updated" line older than a date in its own body, the two append-only tables) and its phase and pull request references, and fails on a defect or on a fact it could not compute. It compares no count and runs no tests, so it takes seconds.
@@ -275,6 +284,7 @@ Before declaring the checkpoint done, verify:
 - [ ] Every touched doc's table of contents, status, titles, and filenames are current: no missing ToC entry, no finished phase labeled "next", no title or filename naming fewer steps than the file covers.
 - [ ] All modes: every failure the session hit is a row in LEARNINGS.md.
 - [ ] All modes: no document this checkpoint touched states a test, decision or learning count as current, and no edit this checkpoint made only moved a date.
+- [ ] `python3 tracker/check_doc_sync.py` exits 0: every finding was fixed in this checkpoint.
 - [ ] `python3 tracker/check_doc_drift.py --check` exits 0.
 - [ ] `python3 tracker/check_living_docs.py --shape` exits 0, or the only red line is a shape the registry marks `unpinned` and the report says so.
 

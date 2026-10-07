@@ -44,10 +44,10 @@ Built and live on develop, waiting for the product owner's verdict, newest first
 |---|---|---|---|---|
 | 1 | Before a reworded sentence is shown, the sentence check reads it against its paper: a bronchiolitis answer no longer says "babies" where its record says children | card 101, part (#193) | 106 | Waiting for your verdict |
 | 2 | The command line and its MCP bridge: a queued agent request gets its full time once it starts and a plain "busy" message if it waits too long; Ctrl-C says you stopped the search; invisible-only feedback no longer erases a rating; credential errors name the right fix without printing the file's path | card 61 (#190, built by Factory) | none; `s3` and `s3 mcp` from the Integrations page | Waiting for your verdict |
-| 3 | On a phone, a long variant name wraps inside the answer and the page never scrolls sideways; its citation number stays on the same line as the end of the name, in the record list and in the sentence | cards 43 and 43b (#181, #187, built by Factory; checked on develop by the lead) | the answer to "What does BRCA1 do?" at phone width | Waiting for your verdict |
+| 3 | On a phone, a long variant name wraps inside the answer and the page never scrolls sideways; its citation number stays on the same line as the end of the name, in the record list and in the sentence | cards 43 and 43b (#181, #187, built by Factory; checked on develop by the lead) | 105 | Waiting for your verdict |
 | 4 | The design prototype's home page is light, like the app's, so screen checks stop flagging the live home page; closes by itself seven days after it reached Retest on 2026-10-06, unless you object (a design-file card the lead's reviewer passed at both widths) | card 47 (#188, built by Factory) | none, a design file | Closes by itself seven days after 2026-10-06 unless you object |
 | 5 | A plain-language GERD answer never says "children" where its paper says young children, or drops "potentially"; Researcher answers are unchanged. It also shows about one sentence fewer, mostly the risk-factor sentence, which card 101 works on | card 99 (#184) | 75, 68 | Waiting for your verdict |
-| 6 | The "Take the tour" button on the home page stays readable when the pointer rests on it: dark blue text and border, contrast 6.5 where it was 4.4 | card 44 (#183, built by Factory) | the home page, hover the button | Waiting for your verdict |
+| 6 | The "Take the tour" button on the home page stays readable when the pointer rests on it: dark blue text and border, contrast 6.5 where it was 4.4 | card 44 (#183, built by Factory) | 63 | Waiting for your verdict |
 | 7 | The Mediterranean question names Familial Mediterranean fever and has a written answer | card 89 (#175) | 73 | Waiting for your verdict |
 | 8 | GERD shows a written answer above its tables at both depths | card 88 (#161, #163) | 75, 68 | Waiting for your verdict |
 | 9 | A sentence that cites a record shows the record words it was checked against, even when another sentence cites the same record; seen today in the command line's `s3 --json` and the API's citation events, not yet on the web screen | card 57 (#161) | none | Waiting for your verdict |
@@ -57,15 +57,16 @@ Built and live on develop, waiting for the product owner's verdict, newest first
 | 13 | The TP53 dataset question no longer says a search did not finish, and when a search does fail the note says which and why | card 91 and 77 (#160, #169) | 25, and "Any trials for GERD?" in 76 | Waiting for your verdict |
 | 14 | "recent-onset diabetes treatment" is answered directly; GERD, BRCA1 and Marfan alone are still asked back | card 87 (#162) | 84, 76 | Waiting for your verdict |
 | 15 | Muir-Torré syndrome is spelled correctly, and no OMIM row appears twice | cards 96 and 97 (#170, #166) | 24 | Waiting for your verdict |
-| 16 | When no written summary survives, one plain line says why and the records found are listed | card 46 and decision D1 (#168) | none yet | Waiting for your verdict |
-| 17 | The Integrations page shows the command line tools' commands, the About page shows its layer cards first, and two page sentences are corrected | cards 79, 80 and 85, part (#167) | 102, 59, 60 | Waiting for your verdict |
-| 18 | Every library's license text ships with the web app | card 86 (#157) | 99 | Waiting for your verdict |
-| 19 | The MODY genes question passes its citation check; superseded by 11.20, and the board proposes closing it | card 13 | 78 | Waiting for your verdict |
-| 20 | The architecture deep dive is merged (`visualizations/System_3_deep_dive.md`); the board proposes closing it | card 39 | none | Waiting for your verdict |
-| 21 | The server address is gone from every tracked file (pull request #109); only git history holds it, and rewriting history is your call (recommendation: no). The board proposes closing it | card 41 | none | Waiting for your verdict |
-| 22 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | cards 49 and 21, phase 8.10 | 90 to 97, and 60 | Waiting for your verdict |
-| 23 | A graph search that cannot finish gives up after 30 seconds, not 90 | card 45, R-09 | 59 | Waiting for your verdict |
-| 24 | A one-to-three-word question is asked back, with choices written for its subject | 12.3 | 76 | Waiting for your verdict |
+| 16 | When the guard model sends back an empty reply, the search is retried and, if it still has no reply, the person is asked to try again, where before the search ended "failed unexpectedly"; it is rare and cannot be typed on purpose | card 98 (#166) | none, nothing to type | Waiting for your verdict |
+| 17 | When no written summary survives, one plain line says why and the records found are listed | card 46 and decision D1 (#168) | none yet | Waiting for your verdict |
+| 18 | The Integrations page shows the command line tools' commands, the About page shows its layer cards first, and two page sentences are corrected | cards 79, 80 and 85, part (#167) | 102, 59, 60 | Waiting for your verdict |
+| 19 | Every library's license text ships with the web app | card 86 (#157) | 99 | Waiting for your verdict |
+| 20 | The MODY genes question passes its citation check; superseded by 11.20, and the board proposes closing it | card 13 | 78 | Waiting for your verdict |
+| 21 | The architecture deep dive is merged (`visualizations/System_3_deep_dive.md`); the board proposes closing it | card 39 | none | Waiting for your verdict |
+| 22 | The server address is gone from every tracked file (pull request #109); only git history holds it, and rewriting history is your call (recommendation: no). The board proposes closing it | card 41 | none | Waiting for your verdict |
+| 23 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | cards 49 and 21, phase 8.10 | 90 to 97, and 60 | Waiting for your verdict |
+| 24 | A graph search that cannot finish gives up after 30 seconds, not 90 | card 45, R-09 | 59 | Waiting for your verdict |
+| 25 | A one-to-three-word question is asked back, with choices written for its subject | 12.3 | 76 | Waiting for your verdict |
 
 ## Done features at a glance
 
