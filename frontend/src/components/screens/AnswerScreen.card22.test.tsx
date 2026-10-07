@@ -320,4 +320,13 @@ describe("the trust line's info card", () => {
     expect(TRUST_LINE_EXPLAINER).toContain("two or more independent databases");
     expect(TRUST_LINE_EXPLAINER).not.toMatch(/counted by the database/);
   });
+
+  it("explains a not-yet-confirmed answer that is incomplete, not only one missing a second database", () => {
+    // J-22-08: the backend also floors an incomplete answer (a search that
+    // did not finish, more records than the answer lists) at "not yet
+    // confirmed". Mutation: revert to the one-cause sentence and this fails.
+    expect(TRUST_LINE_EXPLAINER).toContain("has not been found in a second independent database");
+    expect(TRUST_LINE_EXPLAINER).toContain("or this answer may be incomplete");
+    expect(TRUST_LINE_EXPLAINER).toContain("a search did not finish");
+  });
 });

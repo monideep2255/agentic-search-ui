@@ -91,12 +91,21 @@ export interface Claim {
  * Card 22 (2026-10-06): this used to say sources were counted by database,
  * which stopped being true for "Based on N sources" on 2026-09-23 (item
  * 12.8 made it count pages). It now states what each number counts.
+ *
+ * Card 22 fix round (J-22-08): "not yet confirmed" has two causes, and the
+ * card names both. The backend floors an answer at `ask` when it may be
+ * incomplete (a background search did not finish, more records were found
+ * than it lists, a named item went unanswered, or the written summary fell
+ * back to a list: `core/graph.py`), as well as when a high-stakes fact has
+ * only one database behind it. The sentence says what the reader gets in
+ * each case and blames no one.
  */
 export const TRUST_LINE_EXPLAINER =
   "Sources cited counts the record pages this answer cites, the same pages listed under " +
   "Sources; two links to one page count once. Confirmed means two or more independent " +
   "databases agree on the same high-stakes fact. Not yet confirmed means a high-stakes fact " +
-  "has not been found in a second independent database.";
+  "has not been found in a second independent database, or this answer may be incomplete, " +
+  "for example because a search did not finish or more records were found than it lists.";
 
 /*
  * UI fix 11.27, product owner 2026-09-14: "There is too much bold. Only the
