@@ -335,29 +335,53 @@ def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
     assert line == "Based on 3 sources cited, not yet confirmed"
 
 
+def _significance(ref_index: int, url: str, *, tool: str = "cypher_query") -> SynthFinding:
+    """A record stating one variant's clinical significance, "Pathogenic"."""
+    return SynthFinding(
+        ref_index=ref_index,
+        citation_id=f"c-{ref_index}",
+        layer="layer_1_graph" if tool == "cypher_query" else "layer_3_enrichment",
+        tool=tool,
+        field="clinical_significance",
+        field_value="Pathogenic",
+        source_url=url,
+        entity_type="Variant",
+    )
+
+
+CLINVAR_A = _significance(1, "https://www.ncbi.nlm.nih.gov/clinvar/variation/17661")
+CLINVAR_B = _significance(2, "https://www.ncbi.nlm.nih.gov/clinvar/variation/17662")
+LITVAR = _significance(
+    3, "https://www.ncbi.nlm.nih.gov/research/litvar2/docsum?variant=rs80357906", tool="litvar2_lookup"
+)
+
+
 def test_trust_line_confirmed_still_counts_independent_databases() -> None:
     """The "Confirmed by" line is a claim about corroboration, not about
     how many chips are on screen, so it must keep counting distinct
     databases even where `test_trust_line_based_on_counts_visible_
     citations_not_databases` just proved the "Based on" line does not.
-    Three distinct citations (DISEASE, other, GENE) share only two
-    databases (MedGen, NCBIGene); reporting "Confirmed by 3" would claim a
-    third, nonexistent, independent database agreed.
+    Three records state the fact, two of them in ClinVar and one in
+    LitVar2: three pages, two databases. Reporting "Confirmed by 3" would
+    claim a third, nonexistent, independent database agreed.
+
+    Card 22 fix round: rebuilt with records that actually state the same
+    fact. The old version marked a claim concordant with nothing agreeing
+    with it and still read "Confirmed by 2", because the count then ran
+    over every claim in the answer (A-22-02).
     """
-    other = _finding(3, "pancreatic cancer", curie="MedGen:C3")
-    trusts = [_trust("c-2", "high", "concordant", "answer")]
-    assert answer_trust_line("answer", trusts, _claims(DISEASE, other, GENE)) == (
-        "Confirmed by 2 independent databases"
-    )
+    trusts = [_trust("c-1", "high", "concordant", "answer")]
+    claims = _claims(CLINVAR_A, CLINVAR_B, LITVAR)
+    assert answer_trust_line("answer", trusts, claims) == "Confirmed by 2 independent databases"
 
 
 def test_trust_line_confirmed_only_on_concordance() -> None:
-    trusts = [_trust("c-2", "high", "concordant", "answer")]
-    assert answer_trust_line("answer", trusts, _claims(DISEASE, GENE)) == (
+    trusts = [_trust("c-1", "high", "concordant", "answer")]
+    assert answer_trust_line("answer", trusts, _claims(CLINVAR_A, LITVAR)) == (
         "Confirmed by 2 independent databases"
     )
-    low = [_trust("c-2", "low", "insufficient", "answer")]
-    assert answer_trust_line("answer", low, _claims(DISEASE, GENE)) == "Based on 2 sources cited"
+    low = [_trust("c-1", "low", "insufficient", "answer")]
+    assert answer_trust_line("answer", low, _claims(CLINVAR_A, LITVAR)) == "Based on 2 sources cited"
 
 
 def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:

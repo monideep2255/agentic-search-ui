@@ -13845,7 +13845,12 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             layer_calls_used=call_budget.calls_made(),
             # UI fix set 9, item 9.9: the one plain line, derived from the
             # verdicts above and nothing else; None on a refusal.
-            trust_line=answer_trust_line(trust_outcome, claim_trusts, grounding.claims),
+            # Card 22 fix round: `synth_findings` is the pool `trust_for_
+            # claims` triangulated against, so "Confirmed by N independent
+            # databases" counts the databases that agree on the same fact.
+            trust_line=answer_trust_line(
+                trust_outcome, claim_trusts, grounding.claims, all_findings=synth_findings
+            ),
             # T-6.2-08, re-keyed by UI fix set 10, item 10.1: computed from
             # the SAME capped-or-truncated signal the truncation note is
             # built from, so an answer can never offer to show more while
