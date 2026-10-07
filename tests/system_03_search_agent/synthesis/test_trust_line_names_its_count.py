@@ -22,6 +22,8 @@ from pathlib import Path
 
 import pytest
 
+from system_03_search_agent.contracts.events import CitationPayload
+from system_03_search_agent.core.graph import _cited_page_count
 from system_03_search_agent.feedback.history import _citation_count
 from system_03_search_agent.synthesis.answer_layout import answer_summary_sentence
 from system_03_search_agent.synthesis.findings import SynthFinding
@@ -289,6 +291,35 @@ def test_the_history_rail_never_merges_what_it_cannot_read() -> None:
 def test_the_history_rail_count_agrees_with_the_trust_line_on_the_evidence() -> None:
     stored = [{"source_url": citation["source_url"]} for citation in _DATA["citations"]]
     assert _citation_count(stored) == _DATA["expected_after"]["sources_cited"]
+
+
+def _payload(index: int, url: str) -> CitationPayload:
+    return CitationPayload(
+        citation_id=f"cid-{index}",
+        display_index=index,
+        source="NCBIGene",
+        source_id="NCBIGene:672",
+        source_url=url,
+        layer="layer_1_graph",
+        field="symbol",
+        claim_text="x",
+        evidence_kind="primary_assertion",
+        assertion_confidence="asserted",
+        population_ancestry_context=None,
+        license="public_domain_us_gov",
+    )
+
+
+def test_the_truncation_count_counts_pages() -> None:
+    """A-22-04: the helper both the truncation note and the "more to show"
+    count call (their call sites are held by `core/test_graph.py`'s
+    `test_truncation_note_and_more_to_show_count_record_pages_not_citations`)."""
+    citations = [
+        _payload(1, _GENE),
+        _payload(2, _GENE + "/"),
+        _payload(3, "https://www.ncbi.nlm.nih.gov/medgen/C1"),
+    ]
+    assert _cited_page_count(citations) == 2
 
 
 def test_the_opening_line_counts_one_record_per_page() -> None:

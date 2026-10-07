@@ -1573,6 +1573,62 @@ def test_truncated_answer_note_is_one_sentence_opening_with_note(
     assert ";" not in note, f"an interior semicolon fragments the note into uncited claims: {note!r}"
 
 
+@pytest.mark.asyncio
+async def test_truncation_note_and_more_to_show_count_record_pages_not_citations(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Card 22 fix round (2026-10-06, A-22-04): "truncated to N records" and
+    the "more to show" count both said records and counted numbered
+    citations, while every other total on the screen counts distinct pages.
+
+    150 rows past the display cap, where rows 0 and 1 cite one gene page,
+    once without and once with a trailing slash (the graph's and the live
+    Datasets builder's spellings of one link). The note's N and the offer's
+    remaining count must both count that page once. Mutation: pass
+    `len(citations)` again at either call site and its arm fails.
+    """
+    harness = harness_module.Harness(trace_id="test-trace-truncation-pages")
+    call = ToolCall(tool="cypher_query", call_id="call-truncation-pages", layer="layer_1_graph")
+    row_count = 150
+    rows = [_unique_citeable_row(i) for i in range(row_count)]
+    rows[1]["source_url"] = f"{rows[0]['source_url']}/"
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": rows,
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    citations = [event.payload for event in events if event.type == "citation"]
+    urls = [citation["source_url"] for citation in citations]
+    assert rows[0]["source_url"] in urls and rows[1]["source_url"] in urls, (
+        "populate-check: both spellings of the one gene page must be cited, "
+        "or a citation count and a page count cannot be told apart"
+    )
+    pages = len({url.rstrip("/") for url in urls})
+    assert pages == len(citations) - 1
+
+    note = next(
+        event.payload["text"]
+        for event in events
+        if event.type == "token" and "truncated to" in event.payload["text"]
+    )
+    assert f"truncated to {pages} of the {row_count} records" in note, note
+
+    done = next(event.payload for event in events if event.type == "done")
+    offer = done["next_step"]
+    assert offer is not None and str(row_count - pages) in offer, offer
+    assert str(row_count - len(citations)) not in offer, offer
+
+
 # ---------------------------------------------------------------------------
 # Answer quality fix (2026-09-20): the prompt bound (how many findings a
 # Synth model call may see) and the display bound (how many code-built rows
