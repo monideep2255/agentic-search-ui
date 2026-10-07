@@ -290,7 +290,7 @@ def emphasis_for(text: str, terms: list[str]) -> list[str]:
 # in `tools/cypher_templates.py` write the linked Disease CURIEs onto each
 # variant row as `clinvar_condition_ids` (and onto each gene row of the
 # disease-genes shape as `medgen_condition_ids`). The second cell shows the
-# MedGen titles those CURIEs resolve to, read live, never the CURIE.
+# MedGen titles those CURIEs resolve to, looked up from NCBI, never the CURIE.
 ISOLATE_ENTITY_TYPE = "Pathogen Detection isolate"
 
 TABLE_COLUMNS: dict[str, tuple[str, str, str]] = {
@@ -328,11 +328,13 @@ TABLE_HEADINGS: dict[str, str] = {
 # ClinicalSignificance, but the loaded SequenceVariant vertex and its
 # `has_phenotype` edge carry neither it nor the review status (read-only
 # probe, 2026-10-06), so the table cannot show it. The line says so instead
-# of implying cause.
+# of implying cause. "Looked up from NCBI", never "read live": the product
+# owner's wording decision of 2026-10-06, since a title is kept for up to a
+# week per process (`disease_names._CACHE_TTL_S`).
 VARIANT_TO_DISEASE_SOURCE_NOTE = (
     "Each row is a condition the variant's ClinVar record names; the "
     "record's classification (for example pathogenic, benign or uncertain) "
-    "is not shown here. Disease names are MedGen titles read live from NCBI."
+    "is not shown here. Disease names are MedGen titles looked up from NCBI."
 )
 
 

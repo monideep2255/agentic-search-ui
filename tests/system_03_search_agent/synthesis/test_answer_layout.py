@@ -658,7 +658,7 @@ def test_the_variant_to_disease_table_names_its_two_sources() -> None:
     assert VARIANT_TO_DISEASE_SOURCE_NOTE == (
         "Each row is a condition the variant's ClinVar record names; the "
         "record's classification (for example pathogenic, benign or uncertain) "
-        "is not shown here. Disease names are MedGen titles read live from NCBI."
+        "is not shown here. Disease names are MedGen titles looked up from NCBI."
     )
     assert variant_to_disease_source_note("SequenceVariant", True) == VARIANT_TO_DISEASE_SOURCE_NOTE
 
@@ -693,6 +693,26 @@ def test_card23_the_note_never_implies_the_variant_causes_the_disease() -> None:
         "clinvar_condition_ids": ["MedGen:C0342276"],
     }
     assert record_status_or_year("SequenceVariant", variant_row) is None
+
+
+def test_card23_the_note_makes_no_freshness_claim_about_disease_names() -> None:
+    """Card 23's fix round, the owner's wording decision of 2026-10-06
+    (J-23-02, A-23-02): a MedGen title is kept for up to a week per server
+    process (`disease_names._CACHE_TTL_S`), so a repeated question shows a
+    title looked up days earlier with no NCBI call. The line says "looked up
+    from NCBI" and never "read live", or any other word promising the name
+    was fetched for this answer.
+
+    Red when "read live" comes back (the mutation run)."""
+    from system_03_search_agent.synthesis import disease_names
+    from system_03_search_agent.synthesis.answer_layout import VARIANT_TO_DISEASE_SOURCE_NOTE
+
+    note = VARIANT_TO_DISEASE_SOURCE_NOTE.lower()
+    assert "disease names are medgen titles looked up from ncbi." in note
+    # The reason the line carries no timing word: titles are cached.
+    assert disease_names._CACHE_TTL_S > 0
+    for word in ("live", "real time", "real-time", "current", "today", "just now"):
+        assert word not in note, word
 
 
 @pytest.mark.parametrize(
