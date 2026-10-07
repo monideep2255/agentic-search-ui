@@ -563,6 +563,7 @@ What you should see:
 
 - Variant-to-disease and gene-to-disease tables over the graph's ClinVar links, in every mode.
 - The HNF1A answer shows "Variant-to-disease mapping".
+- With that table, and with no other, one line reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI." (card 23). Directly under that table, at 1280 and 390, whether more records follow it or the table ends the answer; never in the Notes list. Plain language shows no table, so no line.
 - When checked live on 2026-09-14 the table stopped at 5 rows where the reference prototype shows 13, because an answer cites at most 20 sources. Whether that ceiling is right is the product owner's call, a card in the board's To do column.
 - Why it matters: a person asking which diseases a gene's variants cause wants the variant and the disease side by side, not two lists to match up themselves.
 

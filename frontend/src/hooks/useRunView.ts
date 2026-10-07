@@ -86,6 +86,21 @@ const SYSTEM_NOTE_PREFIXES = [
 /** The findings-tail note's opening words, `_FINDINGS_TAIL_NOTE` in core/graph.py. */
 export const FINDINGS_TAIL_NOTE_PREFIX = "Note: the records below were retrieved for this question";
 
+/**
+ * The opening words of the line under the variant-to-disease table,
+ * `VARIANT_TO_DISEASE_SOURCE_NOTE` in `synthesis/answer_layout.py`.
+ *
+ * Card 23's second part (J-23-01, A-23-01, 2026-10-07): the line describes one
+ * table, so it sits directly under that table in every case. A note otherwise
+ * attaches to the claim AFTER it, and when the table ended the answer there was
+ * none, so the line fell into the answer-wide Notes list. Matched by its words
+ * because nothing else on the wire tells it apart from an answer-wide note that
+ * also follows a table (the findings-tail note, "no written summary"); those
+ * keep their places. `test_answer_layout.py` holds this prefix to the backend
+ * constant, so a reworded line fails a test rather than moving silently.
+ */
+export const VARIANT_TABLE_SOURCE_NOTE_PREFIX = "Each row lists the conditions the variant's ClinVar record names";
+
 const isSystemNote = (text: string) =>
   SYSTEM_NOTE_PREFIXES.some((prefix) => text.trimStart().startsWith(prefix));
 import type { ReasoningStep, StepName, ToolCall } from "../components/screens/RunScreen";
@@ -657,6 +672,12 @@ export function useRunView(events: AgentEvent[]): RunView {
     let pendingNotes: string[] = [];
     let pendingTableHeader: string[] | null = null;
     /*
+     * Card 23's second part: the last table row, while nothing but paragraph
+     * breaks has come after it. The variant-to-disease source line arriving
+     * then belongs under that table, whatever follows it, or nothing.
+     */
+    let openTableRow: Claim | null = null;
+    /*
      * 2026-09-14: true after the findings-tail note, until a heading. Every
      * claim in that span is a code-built record line ("Disease name: X"), so
      * the answer screen groups them into a record block instead of prose.
@@ -686,6 +707,7 @@ export function useRunView(events: AgentEvent[]): RunView {
       }
       if (kind === "heading") {
         nextParagraph();
+        openTableRow = null;
         inFindingsTail = false;
         const heading = event.payload.text.trim();
         if (heading) pendingHeading = heading;
@@ -695,13 +717,19 @@ export function useRunView(events: AgentEvent[]): RunView {
         const cells = event.payload.cells ?? [];
         // 2026-09-14: any column count; the Researcher table carries a third.
         pendingTableHeader = cells.length > 0 ? cells : null;
+        openTableRow = null;
         continue;
       }
       if (kind === "note") {
         nextParagraph();
         inFindingsTail = isFindingsTailNote(event.payload.text);
         const note = event.payload.text.trim();
-        if (note) pendingNotes.push(note);
+        if (note && openTableRow !== null && note.startsWith(VARIANT_TABLE_SOURCE_NOTE_PREFIX)) {
+          openTableRow.noteAfter = openTableRow.noteAfter ? `${openTableRow.noteAfter} ${note}` : note;
+        } else if (note) {
+          pendingNotes.push(note);
+        }
+        openTableRow = null;
         continue;
       }
       // R-08: a repeated marker_id must not produce a repeated chip.
@@ -811,6 +839,7 @@ export function useRunView(events: AgentEvent[]): RunView {
         }
         claimsInParagraph += 1;
       }
+      openTableRow = kind === "table_row" ? claim : null;
       claims.push(claim);
     }
     // Notes with no claim after them are disclosures about the whole answer.

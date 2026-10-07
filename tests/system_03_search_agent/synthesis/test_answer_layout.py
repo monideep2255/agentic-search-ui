@@ -671,6 +671,145 @@ def test_12_9_a_plain_label_is_a_title_and_never_a_code() -> None:
     )
 
 
+# ---------------------------------------------------------------- card 32
+
+
+def test_the_variant_to_disease_table_names_its_two_sources() -> None:
+    """Card 32 (2026-09-25): the note is pinned, code-built and shown only
+    under the "Variant-to-disease mapping" table."""
+    from system_03_search_agent.synthesis.answer_layout import (
+        VARIANT_TO_DISEASE_SOURCE_NOTE,
+        variant_to_disease_source_note,
+    )
+
+    assert VARIANT_TO_DISEASE_SOURCE_NOTE == (
+        "Each row lists the conditions the variant's ClinVar record names; the "
+        "record's classification (for example pathogenic, benign or uncertain) "
+        "is not shown here. Disease names are MedGen titles looked up from NCBI."
+    )
+    assert variant_to_disease_source_note("SequenceVariant", True) == VARIANT_TO_DISEASE_SOURCE_NOTE
+
+
+def test_card23_the_note_never_implies_the_variant_causes_the_disease() -> None:
+    """Card 23's fix round, A-23-05. The table lists every variant whose
+    ClinVar record names a condition, likely benign and uncertain ones
+    included (live HNF1A: c.1011C>T, Likely benign, beside "Maturity-onset
+    diabetes of the young"), and the table has no classification column. So
+    the line under it must say the classification is not shown, and must
+    not call a row an assertion or a cause.
+
+    Red when the line goes back to "ClinVar assertions" (the mutation run),
+    when it drops the "not shown" clause, or when the table starts showing a
+    variant's classification without the line being revisited."""
+    from system_03_search_agent.synthesis.answer_layout import (
+        VARIANT_TO_DISEASE_SOURCE_NOTE,
+        record_status_or_year,
+    )
+
+    note = VARIANT_TO_DISEASE_SOURCE_NOTE.lower()
+    assert "classification" in note and "is not shown here" in note
+    for word in ("assertion", "cause", "caused", "responsible for", "pathogenic variant"):
+        assert word not in note, word
+
+    # "is not shown here" stays true only while the table shows no
+    # classification for a variant row, even when a row carries one.
+    variant_row = {
+        "clinical_significance": "Likely benign",
+        "ClinicalSignificance": "Likely benign",
+        "germline_classification": "Likely benign",
+        "clinvar_condition_ids": ["MedGen:C0342276"],
+    }
+    assert record_status_or_year("SequenceVariant", variant_row) is None
+
+
+def test_card23_the_note_makes_no_freshness_claim_about_disease_names() -> None:
+    """Card 23's fix round, the owner's wording decision of 2026-10-06
+    (J-23-02, A-23-02): a MedGen title is kept for up to a week per server
+    process (`disease_names._CACHE_TTL_S`), so a repeated question shows a
+    title looked up days earlier with no NCBI call. The line says "looked up
+    from NCBI" and never "read live", or any other word promising the name
+    was fetched for this answer.
+
+    Red when "read live" comes back (the mutation run)."""
+    from system_03_search_agent.synthesis import disease_names
+    from system_03_search_agent.synthesis.answer_layout import VARIANT_TO_DISEASE_SOURCE_NOTE
+
+    note = VARIANT_TO_DISEASE_SOURCE_NOTE.lower()
+    assert "disease names are medgen titles looked up from ncbi." in note
+    # The reason the line carries no timing word: titles are cached.
+    assert disease_names._CACHE_TTL_S > 0
+    for word in ("live", "real time", "real-time", "current", "today", "just now"):
+        assert word not in note, word
+
+
+def test_card23_query_79_quotes_the_line_that_ships() -> None:
+    """Card 23's fix round: the test-queries document is the owner's gate,
+    so query 79's expected line must be the shipped text, word for word.
+    Card 23's second part (J-23-01, A-23-01) keeps the line directly under
+    its table on screen even when the table ends the answer
+    (`frontend/src/answerLayout.test.tsx`, `e2e/card23-source-note.spec.ts`),
+    so query 79 promises "directly under that table" and never the Notes list.
+
+    Red when the document quotes an older wording (the mutation run), drops
+    the placement promise, or sends the line to the Notes list again."""
+    from pathlib import Path
+
+    from system_03_search_agent.synthesis.answer_layout import VARIANT_TO_DISEASE_SOURCE_NOTE
+
+    document = Path(__file__).resolve().parents[3] / "testing" / "Test_queries_and_workflows.md"
+    text = document.read_text(encoding="utf-8")
+    start = text.index("### 79. ")
+    end = text.index("\n### ", start + 1)
+    section = text[start:end]
+    assert f'"{VARIANT_TO_DISEASE_SOURCE_NOTE}"' in section
+    assert "directly under that table" in section.lower()
+    assert "never in the notes list" in section.lower()
+    assert "shows first in the notes list" not in section.lower()
+
+
+def test_card23_the_screen_finds_the_line_by_the_words_that_ship() -> None:
+    """Card 23's second part (J-23-01, A-23-01): the web screen keeps the
+    line directly under its table by matching its opening words,
+    `VARIANT_TABLE_SOURCE_NOTE_PREFIX` in `frontend/src/hooks/useRunView.ts`,
+    because no field on the wire tells it apart from an answer-wide note.
+
+    Red when the backend line is reworded without the frontend prefix (the
+    mutation run: the old "Each row is a condition" opening), which would
+    send the line back to the Notes list when the table ends the answer."""
+    import re
+    from pathlib import Path
+
+    from system_03_search_agent.synthesis.answer_layout import VARIANT_TO_DISEASE_SOURCE_NOTE
+
+    hook = Path(__file__).resolve().parents[3] / "frontend" / "src" / "hooks" / "useRunView.ts"
+    match = re.search(
+        r'export const VARIANT_TABLE_SOURCE_NOTE_PREFIX = "([^"]+)";',
+        hook.read_text(encoding="utf-8"),
+    )
+    assert match is not None
+    prefix = match.group(1)
+    assert len(prefix) >= 40, prefix
+    assert VARIANT_TO_DISEASE_SOURCE_NOTE.startswith(prefix)
+
+
+@pytest.mark.parametrize(
+    ("entity_type", "mapped"),
+    [
+        ("SequenceVariant", False),  # a variant list with no mapping table shown
+        ("Gene", True),  # the gene-to-disease table, a different pairing
+        ("Clinical trial", True),
+        ("Pathogen Detection isolate", True),
+        ("", False),
+    ],
+)
+def test_the_variant_to_disease_note_is_silent_off_its_own_table(
+    entity_type: str, mapped: bool
+) -> None:
+    from system_03_search_agent.synthesis.answer_layout import variant_to_disease_source_note
+
+    assert variant_to_disease_source_note(entity_type, mapped) is None
+
+
 # ---------------------------------------------------------------------------
 # Card 95 (2026-10-05): a token carries at most 20 marker ids, so a lead
 # sentence writing 35 markers showed 21 to 35 as raw bracketed text. Red on

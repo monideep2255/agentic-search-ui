@@ -1,0 +1,20 @@
+M1 wiring removed: 1 failed, 11 passed, 88 deselected in 2.83s
+   red: test_card23_the_source_note_sits_directly_under_the_variant_table
+M2 note above the rows: 1 failed, 11 passed, 88 deselected in 2.25s
+   red: test_card23_the_source_note_sits_directly_under_the_variant_table
+M3 helper ignores entity_type: 5 failed, 7 passed, 88 deselected in 2.54s
+   red: test_card23_no_variant_table_no_source_note[gene_to_disease_table]
+   red: test_card23_the_source_note_sits_directly_under_the_variant_table
+   red: test_the_variant_to_disease_note_is_silent_off_its_own_table[Clinical
+   red: test_the_variant_to_disease_note_is_silent_off_its_own_table[Gene-True]
+   red: test_the_variant_to_disease_note_is_silent_off_its_own_table[Pathogen
+M4 helper ignores mapped: 2 failed, 10 passed, 88 deselected in 2.02s
+   red: test_card23_no_variant_table_no_source_note[variants_without_diseases]
+   red: test_the_variant_to_disease_note_is_silent_off_its_own_table[SequenceVariant-False]
+M5 note made answer-wide: 3 failed, 9 passed, 88 deselected in 2.21s
+   red: test_card23_no_variant_table_no_source_note[plain_language]
+   red: test_card23_no_variant_table_no_source_note[variants_without_diseases]
+   red: test_card23_the_source_note_sits_directly_under_the_variant_table
+M6 wording names LitVar2: 2 failed, 10 passed, 88 deselected in 2.23s
+   red: test_card23_the_note_names_the_sources_the_code_actually_uses
+   red: test_the_variant_to_disease_table_names_its_two_sources

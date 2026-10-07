@@ -555,6 +555,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     record_label,
     record_status_or_year,
     table_second_cell,
+    variant_to_disease_source_note,
 )
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
 from system_03_search_agent.synthesis.disease_names import (
@@ -12447,6 +12448,18 @@ def _answer_tokens(
                     else []
                 )
                 sentence_token(sentence, kind="table_row", cells=cells, extra_marker_ids=linked)
+            # Card 23 (owner, 2026-10-06): directly under the
+            # variant-to-disease table, and under no other table, one
+            # code-built line saying where its links and disease names come
+            # from. Keyed on the same `entity_type` and `mapped` that chose
+            # the table's heading above, so the note and the table it
+            # describes are shown together or not at all. A Plain language
+            # answer lists these records as titles, with no table, so it
+            # gets no note either.
+            source_note = variant_to_disease_source_note(entity_type, mapped)
+            if source_note is not None:
+                paragraph_break()
+                tokens.append(TokenPayload(text=source_note, marker_ids=[], kind="note"))
             # Each record in this group that has clinical features gets them
             # directly beneath the group that names it.
             for _, finding in entries:

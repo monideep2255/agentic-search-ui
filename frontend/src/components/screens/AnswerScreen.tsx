@@ -63,6 +63,8 @@ export interface Claim {
    *   sentence.
    * `heading`, `noteBefore`: a heading or a system note that stands directly
    *   before this claim.
+   * `noteAfter`: a note that belongs under the table this row ends (card 23's
+   *   variant-to-disease source line), shown directly after the table.
    * `cells`: the display values of a list item (one) or table row (two).
    * `emphasis`: substrings of `text` to bold, chosen in code by the backend.
    * `tableHeader`: the column labels, on the first row of a table.
@@ -78,6 +80,7 @@ export interface Claim {
   paragraph?: number;
   heading?: string;
   noteBefore?: string;
+  noteAfter?: string;
   cells?: string[];
   emphasis?: string[];
   tableHeader?: string[];
@@ -382,6 +385,7 @@ export function buildAnswerBlocks(claims: Claim[]): AnswerBlock[] {
           rows: [row],
         });
       }
+      if (claim.noteAfter) blocks.push({ type: "note", text: claim.noteAfter, key: `note-after-${index}` });
       return;
     }
     const parsed = labels[index];

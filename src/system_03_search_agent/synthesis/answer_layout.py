@@ -291,7 +291,7 @@ def emphasis_for(text: str, terms: list[str]) -> list[str]:
 # in `tools/cypher_templates.py` write the linked Disease CURIEs onto each
 # variant row as `clinvar_condition_ids` (and onto each gene row of the
 # disease-genes shape as `medgen_condition_ids`). The second cell shows the
-# MedGen titles those CURIEs resolve to, read live, never the CURIE.
+# MedGen titles those CURIEs resolve to, looked up from NCBI, never the CURIE.
 ISOLATE_ENTITY_TYPE = "Pathogen Detection isolate"
 
 TABLE_COLUMNS: dict[str, tuple[str, str, str]] = {
@@ -313,6 +313,58 @@ TABLE_HEADINGS: dict[str, str] = {
     "Gene": "Gene-to-disease mapping",
     "Pathogen Detection isolate": "Isolates and their AMR genes",
 }
+
+
+# Card 32 (2026-09-25, product owner): "The variant-to-disease table says
+# where it comes from." Pinned wording, exact, code-built and never
+# model-written: the reader is told which two systems produced the two
+# columns they are looking at, ClinVar for the variant-disease link and
+# MedGen for the disease's own name.
+#
+# Card 23's fix round (2026-10-06, A-23-05): the first wording called every
+# row a "ClinVar assertion", and beside a question about which diseases
+# variants "cause" that read as "ClinVar says this variant causes this
+# disease", under rows ClinVar classifies as likely benign or uncertain. The
+# graph keeps no classification: the System 1 parser reads ClinVar's
+# ClinicalSignificance, but the loaded SequenceVariant vertex and its
+# `has_phenotype` edge carry neither it nor the review status (read-only
+# probe, 2026-10-06), so the table cannot show it. The line says so instead
+# of implying cause. "Looked up from NCBI", never "read live": the product
+# owner's wording decision of 2026-10-06, since a title is kept for up to a
+# week per process (`disease_names._CACHE_TTL_S`).
+#
+# Card 23's second part (2026-10-07): "Each row lists the conditions", not
+# "Each row is a condition", because one row can name two conditions (live
+# HNF1A c.737T>G: "Maturity-onset diabetes of the young type 3; Monogenic
+# diabetes"). The screen keeps this line under its own table by its opening
+# words, `VARIANT_TABLE_SOURCE_NOTE_PREFIX` in `frontend/src/hooks/
+# useRunView.ts`; a test holds the two together.
+VARIANT_TO_DISEASE_SOURCE_NOTE = (
+    "Each row lists the conditions the variant's ClinVar record names; the "
+    "record's classification (for example pathogenic, benign or uncertain) "
+    "is not shown here. Disease names are MedGen titles looked up from NCBI."
+)
+
+
+def variant_to_disease_source_note(entity_type: str, mapped: bool) -> str | None:
+    """The provenance note under the variant-to-disease mapping table, or
+    None whenever that specific table is not the one on the page.
+
+    `entity_type` is the anchor row type the table was built for and
+    `mapped` is the same "does this group actually render as a mapping
+    table" flag the caller already computes before choosing between
+    `TABLE_HEADINGS[entity_type]` and the generic "records found" heading
+    (`core.graph`'s `mapped` local, built from `TABLE_COLUMNS` membership
+    and the second column actually carrying a value). Only
+    `entity_type == "SequenceVariant"` with `mapped` true is the
+    "Variant-to-disease mapping" table itself: the gene-to-disease table,
+    the trial table, the isolate table and a plain variant list all pass a
+    different value here and get None, so the note only ever sits under the
+    one table it describes.
+    """
+    if entity_type != "SequenceVariant" or not mapped:
+        return None
+    return VARIANT_TO_DISEASE_SOURCE_NOTE
 
 
 # ---------------------------------------------------------------------------
