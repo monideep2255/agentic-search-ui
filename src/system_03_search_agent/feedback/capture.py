@@ -40,17 +40,17 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.query import Query
 from system_03_search_agent.core.session_memory import _account_uuid, session_row_key
-from system_03_search_agent.feedback.contracts import InteractionRow
+from system_03_search_agent.feedback.contracts import MAX_CITATIONS_PER_ANSWER, InteractionRow
 from system_03_search_agent.feedback.coverage import coverage_tags_for
 from system_03_search_agent.feedback.rubric import rubric_outcome_for
 
 # Section 15's per-row cap on `normalized_entities`
 # (`InteractionRow.normalized_entities`, `max_length=20`) and on `citations`
-# (`max_length=50`). Enforced here too, not only left to the model
+# (`MAX_CITATIONS_PER_ANSWER`). Enforced here too, not only left to the model
 # validator, so a run that resolved or cited more than the cap is
 # truncated deterministically rather than raising at construction.
 _MAX_NORMALIZED_ENTITIES = 20
-_MAX_CITATIONS = 50
+_MAX_CITATIONS = MAX_CITATIONS_PER_ANSWER
 
 #: The stored bound on a saved answer, measured rather than picked. See
 #: `alembic/versions/0010_interactions_saved_answer.py`'s docstring for the

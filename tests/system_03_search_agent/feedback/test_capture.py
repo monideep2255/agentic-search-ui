@@ -23,6 +23,7 @@ from system_03_search_agent.core.session_memory import (
     session_row_key,
 )
 from system_03_search_agent.feedback.capture import assemble_interaction
+from system_03_search_agent.feedback.contracts import MAX_CITATIONS_PER_ANSWER
 
 _SEQ = iter(range(10_000))
 
@@ -324,21 +325,28 @@ def test_citations_are_dumped_verbatim() -> None:
     assert row.citations == [payload]
 
 
-def test_citations_are_capped_at_fifty() -> None:
-    """More than fifty citation events truncate rather than overflow the column.
+def test_a_long_answer_keeps_every_citation_it_showed() -> None:
+    """Card 54: 61 citations (the HNF1A answer) are all stored, not the first 50.
 
-    Mutation run: changed `_MAX_CITATIONS` from `50` to `1000`. The call
-    below went red (`InteractionRow` construction raised a Pydantic
-    `ValidationError`, "citations: List should have at most 50 items after
-    validation, not 60", since nothing truncated the list before it reached
-    the model's own cap). Reverted after confirming the failure.
+    Red before the fix: the row held 50 and the reopened answer lost [51] on.
     """
     events = [
-        _citation_event(citation_id=f"call-1-{i}") for i in range(60)
+        _citation_event(citation_id=f"call-1-{i}") for i in range(61)
     ] + [_done_event()]
     row = assemble_interaction(_query(), events)
     assert row is not None
-    assert len(row.citations) == 50
+    assert len(row.citations) == 61
+
+
+def test_citations_are_still_bounded_at_the_runs_own_ceiling() -> None:
+    """More than one answer can ever cite is truncated, not raised on."""
+    events = [
+        _citation_event(citation_id=f"call-1-{i}")
+        for i in range(MAX_CITATIONS_PER_ANSWER + 20)
+    ] + [_done_event()]
+    row = assemble_interaction(_query(), events)
+    assert row is not None
+    assert len(row.citations) == MAX_CITATIONS_PER_ANSWER == 100
 
 
 # ---------------------------------------------------------------------------
