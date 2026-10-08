@@ -965,3 +965,22 @@ def test_the_listing_keeps_a_row_opening_on_a_separator(value: str, field: str, 
     result = run_grounding_pass(narrative, [finding], code_built_listing=True)
     assert result.sentences == shown, result.sentences
 
+
+# --------------------------------- round 5: an unexpected failure approves nothing
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "raises", [RuntimeError("boom"), TimeoutError(), KeyError("content")], ids=["runtime", "timeout", "key"]
+)
+async def test_an_unexpected_failure_of_the_guard_call_approves_nothing(monkeypatch, raises) -> None:
+    """J4-101-08: in guard mode an exception the caller did not name
+    escaped the sentence check and failed the Write step. Now it approves
+    nothing, and the reader gets what code shows with no check.
+
+    MUTATION PROOF: removing the catch around the guard-tier call in
+    `_ground_with_sentence_check` turns every case red: the exception
+    escapes."""
+    _record_dispatch(monkeypatch, raises=raises)
+    result = await _helper(f"{WHOLE_COPY} {ASPIRIN}")
+    assert result.sentences == (WHOLE_COPY,), result.sentences

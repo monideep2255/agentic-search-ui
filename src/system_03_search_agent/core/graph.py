@@ -9726,19 +9726,31 @@ async def _ground_with_sentence_check(
         return first
 
     async def _ask_guard_tier(messages: list[dict[str, str]], guard_budget_s: float) -> str:
-        response = await _dispatch_tier_call(
-            harness,
-            trace_id,
-            "guard",
-            "write",
-            messages,
-            budget_s=guard_budget_s,
-            max_tokens=256,
-            # A checker must not read the answering agent's prefix, for the
-            # same measured reason the guardrail's classifier does not.
-            cache_prefix=None,
-        )
-        return _response_text(response)
+        try:
+            response = await _dispatch_tier_call(
+                harness,
+                trace_id,
+                "guard",
+                "write",
+                messages,
+                budget_s=guard_budget_s,
+                max_tokens=256,
+                # A checker must not read the answering agent's prefix, for the
+                # same measured reason the guardrail's classifier does not.
+                cache_prefix=None,
+            )
+            return _response_text(response)
+        except (cost_control.QueryCapExceededError, HarnessCallError):
+            raise
+        except Exception as exc:
+            # Card 101, round 5 (J4-101-08): any other failure of the
+            # guard-tier call (a bare timeout, a broken reply object)
+            # approves nothing instead of failing the Write step, as Jev
+            # mode already does. Cancellation is not an Exception and
+            # still propagates.
+            raise SentenceCheckUnreadable(
+                f"the guard-tier check call failed ({type(exc).__name__}); approve nothing"
+            ) from exc
 
     try:
         approved = await check_reworded_sentences(
