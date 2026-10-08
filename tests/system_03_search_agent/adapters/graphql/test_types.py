@@ -874,8 +874,13 @@ class _FakeRegistry:
     def resolve_owned_run(self, run_id: str, owner_id: str) -> object:
         return self.entry
 
-    def cancel_run(self, run_id: str) -> None:
+    def cancel_run(self, run_id: str) -> bool:
+        # The real `cancel_run` reports whether it cancelled (card 59): a
+        # run whose task already ended is not stopped. A run that sent
+        # `done` and is still saving is covered against the real registry
+        # in `tests/system_03_search_agent/core/test_run_registry_stop_after_done.py`.
         self.cancel_calls.append(run_id)
+        return not self.entry.task.done()
 
 
 def _stop_run(monkeypatch: pytest.MonkeyPatch, *, task_done: bool) -> Any:
@@ -892,8 +897,8 @@ class TestStopRunReportsWhatActuallyHappened:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # The accept arm. Mutation that turns this red: hardcode
-        # `stopped=False`, or invert the `not entry.task.done()` read, either
-        # of which would make the mutation useless while leaving the honesty
+        # `stopped=False`, or invert what `cancel_run` reported, either of
+        # which would make the mutation useless while leaving the honesty
         # arm below green.
         result, registry = _stop_run(monkeypatch, task_done=False)
         assert result.stopped is True
