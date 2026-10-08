@@ -15,11 +15,11 @@ Last updated: 2026-10-08.
 
 - Develop: `29d8d8a0`, the merge of #208. Both Railway services redeploy on every push to `develop`; check `gh run list --branch develop --limit 3` before trusting CI.
 - Production: `v0.2.0`, tag `cde4f592`. The changelog fix, `testing/Future.md` row 53, lands before the next release.
-- Merged on the night of 2026-10-07 to 08, each behind CI and a fresh verifier finding nothing worse than develop, then its test queries on develop at 1280 and 390: cards 71 part (#203), 54 (#202), 101 part (#204), 103 and 104 (#205), 67 (#207, no live check possible), 59 (#208), and the overnight-development skill (#206). How each was reviewed: the done file's session table.
+- Merged on the night of 2026-10-07 to 08, each behind CI and a fresh verifier finding nothing worse than develop, then its test queries on develop at 1280 and 390: cards 71 part (#203), 54 (#202), 101 part (#204), 103 and 104 (#205), 67 (#207, no live check possible), 59 (#208), and the overnight-development skill (#206). Detail: the done file's session table.
 - Not done that night: card 54's warning line for older answers, reverted for false alarms; card 67's dated first version, redone; the golden run, at the owner's choice.
-- The data engineering repository is released as `v1.1.0` (#19 to #21); its production merges used the owner's admin bypass, approved in the chat.
+- The data engineering repository is released as `v1.1.0`, through its own release workflow.
 - GitHub holds `develop`, `production` and phase 8.7's four branches (`feat/8.7-s1` to `s3`, `phase/8.7-answers-sooner`), which wait on the OpenRouter top-up.
-- Locally, besides `develop`: nine old worktrees on merged branches that could not be checked for untracked work, because iCloud evicted their files (`LEARNINGS.md`, 2026-10-08): `asu-audit`, `asu-card22`, `asu-card56`, `asu-card56-r3`, `asu-card99`, `asu-factory-43`, `asu-factory-43b`, `asu-factory-44`, `asu-factory-47`. Their local branches go with them.
+- Locally, besides `develop`: nine old worktrees on merged branches, unchecked for untracked work because iCloud evicted their files: `asu-audit`, `asu-card22`, `asu-card56`, `asu-card56-r3`, `asu-card99`, `asu-factory-43`, `asu-factory-43b`, `asu-factory-44`, `asu-factory-47`.
 - Factory did no work on 2026-10-08; its next cards stay 75, 24 and 100 (`docs/build/Factory_onboarding.md`).
 
 ## What awaits the product owner
