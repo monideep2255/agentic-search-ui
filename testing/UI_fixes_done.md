@@ -560,7 +560,7 @@ Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-
 | Card 71 (#203) | Reopened tables page ten rows and stack on a phone; the first column leads each row, merged on the owner's choice | Live, part; in Retest; query 67 passed on develop; the tag waits for a migration |
 | Cards 103 and 104 (#205) | Empty disease cells say why; a record is listed once; merged with three named edge cases on the owner's choice | Live; in Retest; queries 79 and 107 passed on develop |
 | Card 67 (#207) | A reopened outage note is in the past tense with no date; round 1's dated version failed both reviews and was redone | Live; in Retest; no live check possible |
-| Card 59 (#208) | An answer that finished before Stop stays on screen, in history and in memory; a stop failure never touches the next question | Live; in Retest; product check below |
+| Card 59 (#208) | An answer that finished before Stop stays on screen, in history and in memory; a stop failure never touches the next question | Live; in Retest; query 56 passed on develop at both widths |
 | Overnight skill (#206) | `.claude/skills/overnight-development/SKILL.md`, ending with the branch and tag end-state check | Merged on the owner's word |
 | Guardrail design | Written from the two parked branches, their reviews kept, both branches deleted | Waiting for the owner's seven answers |
 | Golden run | Started, then stopped when card 101 deployed mid-run; the owner then chose the test queries only | Not run; partial results set aside |
