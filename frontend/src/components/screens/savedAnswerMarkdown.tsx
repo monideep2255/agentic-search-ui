@@ -266,17 +266,19 @@ function SavedTable({ index, header, rows }: { index: number; header: string[]; 
               >
                 {row[0] ?? ""}
               </Box>
-              {row.slice(1).map((cell, c) =>
-                cell ? (
+              {row.slice(1).map((cell, c) => {
+                const label = header[c + 1];
+                return (
                   <Box
                     component="span"
                     key={c}
                     sx={{ fontSize: 13.5, lineHeight: 1.45, color: designTokens.inkMuted, overflowWrap: "anywhere" }}
                   >
-                    {cell}
+                    {label ? `${label}: ` : ""}
+                    {cell || "\u2013"}
                   </Box>
-                ) : null,
-              )}
+                );
+              })}
             </Box>
           ))}
         </Box>
@@ -338,7 +340,9 @@ export function SavedAnswerMarkdown({ markdown }: { markdown: string }): ReactEl
           );
         }
         if (block.kind === "table") {
-          return <SavedTable key={index} index={index} header={block.header} rows={block.rows} />;
+          // Keyed by content so a different table or answer opens on page 1.
+          const contentKey = `${index}:${block.header.join("\u241f")}:${block.rows.map((r) => r.join("\u241f")).join("\u241e")}`;
+          return <SavedTable key={contentKey} index={index} header={block.header} rows={block.rows} />;
         }
         if (block.kind === "list") {
           return (
