@@ -1074,9 +1074,9 @@ def _copied_clause_candidate(
     clauses joined into a new claim are judged joined. Once a sentence holds
     a cut, every later copied clause, a whole record sentence or a wrapped
     value included, is asked about the same way (round 4, J3-101-05), so the
-    last item a sentence sends is the whole shown sentence. A strip at a
-    sentence's end leaves a prefix, and a strip in its middle drops the
-    sentence, so whatever is shown ending at this clause is what was read.
+    last item a sentence sends is the whole shown sentence. Since round 5 a
+    sentence with any of these items held is not shown at all, so what is
+    shown is a sentence whose every item the check approved.
     Its quotes are the record text behind every clause up to here, from
     every record those clauses cite: a writer's quote widened to its record
     sentence(s), or a copied clause's own record span.
@@ -1500,11 +1500,9 @@ def run_grounding_pass(
         # This is what makes "was a clause stripped from the MIDDLE" decidable
         # rather than guessed at.
         segment_kept: list[bool] = []
-        # Card 101, round 4 (A3-101-07): the `segment_kept` positions of
-        # copied clauses held for the check, which develop showed. The
-        # middle-strip rule below still counts them as surviving after a
-        # clause code stripped, so a held cut never turns a sentence develop
-        # dropped whole into a shown fragment.
+        # Card 101: the `segment_kept` positions of copied clauses held
+        # back, by the sentence check or by code. Since round 5 any one of
+        # them drops the whole sentence (see below).
         held_for_check: set[int] = set()
         # Whether a clause of this sentence was a copied cut: every copied
         # clause after it is then read joined to it (J3-101-05).
@@ -1653,7 +1651,8 @@ def run_grounding_pass(
             # clause, needs the check's approval, read as the sentence up to
             # this clause (`_copied_clause_candidate`). Code may still hold
             # one back: a sentence opening on a bare verdict. When the check
-            # cannot run, nothing is approved and the clause is not shown.
+            # cannot run, nothing is approved and, since round 5, no part of
+            # the sentence is shown.
             #
             # NOT YET: a short record value wrapped in other words (the
             # strict path's second direction) keeps today's path. Sending it
@@ -1761,22 +1760,23 @@ def run_grounding_pass(
         # pass, which is the one thing that would let unverified prose reach
         # a reader.
         #
-        # Card 101, round 4 (A3-101-07): a copied clause held for the check
-        # was shown on develop, so it still counts as surviving after a
-        # clause code stripped. Without this, a held cut turned develop's
-        # middle strip into an end strip and showed the prefix alone ("The
-        # name Adenoviral bronchiolitis [2]."). Exactly develop's drops are
-        # added back; a held clause itself is still an end strip, as when
-        # the check is asked about the last clauses of a list.
         dropped_from_middle = any(
-            not kept
-            and any(
-                segment_kept[later]
-                or (index not in held_for_check and later in held_for_check)
-                for later in range(index + 1, len(segment_kept))
-            )
+            not kept and any(segment_kept[later] for later in range(index + 1, len(segment_kept)))
             for index, kept in enumerate(segment_kept)
         )
+        # Card 101, round 5, the owner's decision of 2026-10-07: "Try
+        # dropping the whole sentence whenever a copied cut is held back."
+        # When any copied piece of this sentence is held, by the check (it
+        # said no, timed out, could not be read, had too little time, or
+        # approved some items and not this one) or by code, the reader sees
+        # no part of the sentence. The end strip above would otherwise show
+        # what came before the held piece: a bare "Ribavirin [1].", or
+        # "Azithromycin shortens the course of bronchiolitis in infants [1]."
+        # with its "only when ... confirmed by culture" cut off, a stronger
+        # claim than the writer's (A4-101-03, J4-101-01, J4-101-02).
+        # Sentences with no held copy keep T-6.2-15's end strip unchanged.
+        if held_for_check:
+            dropped_from_middle = True
 
         if dropped_from_middle:
             # Everything this sentence would have contributed is discarded,

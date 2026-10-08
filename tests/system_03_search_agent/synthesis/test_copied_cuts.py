@@ -42,10 +42,23 @@ A3-101-01 to 07:
   it, from every record it cites.
 - A held cut never turns a sentence develop dropped whole into a fragment.
 
+Round 5 (`build_r5.md`), the owner's decision of 2026-10-07 and the review's
+findings A4-101-03 to 07, J4-101-01, 02 and 08:
+
+- When any copied piece of a sentence is held back, for any reason, no part
+  of the sentence shows: never "Ribavirin [1].", never a sentence with its
+  limit cut off.
+- An item longer than the check reads, and a cut whose record sentences
+  cannot be given to the check, are held, never approved.
+- The listing keeps a row whose piece opens on a separator, as develop.
+- An unexpected failure of the guard-tier call approves nothing.
+
 Every arm was mutation-proven; each docstring names its mutation.
 """
 
 from __future__ import annotations
+
+import json
 
 import pytest
 
@@ -457,17 +470,20 @@ def test_a_copied_clause_after_a_cut_is_read_joined_from_every_record() -> None:
     ("approve", "shown"),
     [
         ((), ()),
-        ((0,), ("Drug X reduces mortality [1].",)),
+        ((0,), ()),
         ((0, 1), ("Drug X reduces mortality [1] in children [2].",)),
     ],
     ids=["none approved", "the cut alone approved", "both approved"],
 )
 def test_only_what_the_check_read_is_shown(approve: tuple[int, ...], shown: tuple[str, ...]) -> None:
-    """Whatever is shown ending at a clause is exactly an item the check
-    approved.
+    """Whatever is shown is exactly an item the check approved, and since
+    round 5 only the whole sentence: the cut alone approved shows nothing,
+    where round 4 showed "Drug X reduces mortality [1]." without the
+    population the writer put on it.
 
     MUTATION PROOF: dropping `or cut_in_sentence` turns "the cut alone
-    approved" red: "in children" is joined on unchecked."""
+    approved" red: "in children" is joined on unchecked. Dropping the
+    round 5 whole-sentence rule turns it red too: the prefix shows."""
     narrative = "Drug X reduces mortality [1] in children [2]."
     findings = [HEART, CHILDREN]
     sink, _ = _first_pass(narrative, findings, CHILDREN_QUESTION)
@@ -501,9 +517,10 @@ def test_a_held_cut_never_leaves_a_fragment_develop_dropped(approve_all: bool) -
     is invented). Round 3 showed "Ribavirin [1]." when the check held the
     cut after it. Now nothing shows, whatever the check says.
 
-    MUTATION PROOF: counting only kept clauses in the middle-strip rule
-    (dropping the `held_for_check` term) turns both cases red: the first
-    pass, the check not yet asked, shows "Ribavirin [1]." again."""
+    MUTATION PROOF: removing the round 5 rule (a held copy drops its whole
+    sentence), which replaced round 4's `held_for_check` term in the
+    middle-strip rule, turns both cases red: the first pass, the check not
+    yet asked, shows "Ribavirin [1]." again."""
     findings = [
         _finding(1, "Ribavirin", field="name", entity="Drug"),
         _finding(2, "Palivizumab is not approved for treatment."),
@@ -635,3 +652,195 @@ def test_a_wrapped_record_value_keeps_todays_path_for_now() -> None:
     ):
         sink, result = _first_pass(narrative, [finding], question)
         assert sink == [] and result.grounded, (narrative, sink)
+
+
+# ------------------------------- round 5: a held copy takes its whole sentence
+#
+# The owner's decision of 2026-10-07: "Try dropping the whole sentence
+# whenever a copied cut is held back." When the check holds back any copied
+# piece of a writer sentence, for any reason, the reader sees no part of that
+# sentence: never a bare name, never the sentence with its limit cut off.
+
+
+def _approving_every_item_sent(monkeypatch) -> list[str]:
+    """The guard tier approving every item it is shown; returns the user
+    messages it was sent."""
+    sent: list[str] = []
+
+    async def fake_dispatch(*args, **kwargs):
+        user = args[4][1]["content"]
+        sent.append(user)
+        count = user.count("ITEM ")
+        return _Reply(json.dumps({"supported": list(range(1, count + 1))}))
+
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", fake_dispatch)
+    return sent
+
+
+async def _through_graph(narrative: str, findings, question: str, budget_s: float = 30.0):
+    rewritten, quotes = extract_evidence_quotes(narrative)
+    return await graph_module._ground_with_sentence_check(
+        rewritten,
+        findings,
+        question=question,
+        evidence_quotes=quotes,
+        harness=object(),
+        trace_id="t-card101-r5",
+        budget_s=budget_s,
+    )
+
+
+RIBAVIRIN_NAME = _finding(1, "Ribavirin", field="name", entity="Drug")
+RIBAVIRIN_LIMIT = _finding(
+    2,
+    "Ribavirin is first-line care for bronchiolitis in infants with severe heart disease, "
+    "but routine use is not recommended.",
+)
+BABIES = "How is bronchiolitis in babies treated?"
+
+
+@pytest.mark.parametrize(
+    "narrative",
+    [
+        "Ribavirin [1] is first-line care for bronchiolitis in infants [2].",
+        "In babies, ribavirin [1] is first-line care for bronchiolitis in infants [2].",
+    ],
+    ids=["a bare name left", "in babies left"],
+)
+def test_a_held_cut_shows_no_part_of_its_sentence(narrative: str) -> None:
+    """A4-101-03: round 4 showed "Ribavirin [1]." and "In babies, ribavirin
+    [1]." when the check held the cut after the name. Now nothing from the
+    sentence shows until the check approves it, and then all of it does.
+
+    MUTATION PROOF: removing the round 5 rule (a held copy drops its
+    sentence) in `run_grounding_pass` turns both cases red."""
+    findings = [RIBAVIRIN_NAME, RIBAVIRIN_LIMIT]
+    sink, first = _first_pass(narrative, findings, BABIES)
+    assert len(sink) == 1, "populate-check: the cut is asked about"
+    assert first.sentences == (), first.sentences
+    approved = run_grounding_pass(
+        narrative, findings, question=BABIES, verified_syntheses=frozenset(c.key for c in sink)
+    )
+    assert approved.sentences == (narrative,), approved.sentences
+
+
+AZITHROMYCIN_TITLE = _finding(1, "Azithromycin shortens the course of bronchiolitis in infants.", field="title")
+AZITHROMYCIN_ABSTRACT = _finding(
+    2,
+    "Azithromycin shortens the course of bronchiolitis in infants only when a bacterial "
+    "co-infection is confirmed by culture; otherwise it has no effect.",
+)
+SYMPTOMATIC = _finding(3, WHOLE)
+AZITHROMYCIN_FINDINGS = [AZITHROMYCIN_TITLE, AZITHROMYCIN_ABSTRACT, SYMPTOMATIC]
+AZITHROMYCIN = (
+    "Azithromycin shortens the course of bronchiolitis in infants [1] only when a bacterial "
+    "co-infection is confirmed by culture [2]."
+)
+AZITHROMYCIN_QUESTION = "Does azithromycin help infants with bronchiolitis?"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("reply", "raises", "budget_s"),
+    [
+        ('{"supported": []}', None, 30.0),
+        ("not json", None, 30.0),
+        (None, HarnessCallError("timed out", error_class="transient"), 30.0),
+        (
+            None,
+            cost_control.QueryCapExceededError(
+                "cap", query_cost_usd=1.0, query_cap_usd=1.0, estimated_call_cost_usd=0.1
+            ),
+            30.0,
+        ),
+        ('{"supported": [1]}', None, 3.9),
+    ],
+    ids=["holds it", "unreadable", "call failed", "cost cap", "below the time floor"],
+)
+async def test_a_held_limit_never_leaves_the_sentence_without_it(monkeypatch, reply, raises, budget_s) -> None:
+    """A4-101-03, the azithromycin case: the title is a whole record
+    sentence and the limit after it a copied cut. Round 4 showed the title
+    alone, "Azithromycin shortens the course of bronchiolitis in infants
+    [1].", whenever the check held the limit or could not run: a stronger
+    claim than the writer's. Now the sentence goes, and the rest of the
+    answer stays.
+
+    MUTATION PROOF: removing the round 5 rule turns every case red."""
+    _record_dispatch(monkeypatch, reply=reply, raises=raises)
+    result = await _through_graph(
+        f"{AZITHROMYCIN} Treatment is usually symptomatic [3].", AZITHROMYCIN_FINDINGS,
+        AZITHROMYCIN_QUESTION, budget_s=budget_s,
+    )
+    assert result.sentences == ("Treatment is usually symptomatic [1].",), result.sentences
+
+
+@pytest.mark.asyncio
+async def test_an_approved_limit_shows_the_whole_sentence(monkeypatch) -> None:
+    _approving_every_item_sent(monkeypatch)
+    result = await _through_graph(AZITHROMYCIN, AZITHROMYCIN_FINDINGS, AZITHROMYCIN_QUESTION)
+    assert result.sentences == (AZITHROMYCIN,), result.sentences
+
+
+GENE_FINDINGS = [
+    _finding(1, "BRCA1 DNA repair associated", field="name", entity="Gene"),
+    _finding(2, "Familial cancer of breast", field="name", entity="Disease"),
+    _finding(3, "Breast-ovarian cancer, familial, susceptibility to, 1", field="name", entity="Disease"),
+]
+GENE = (
+    "BRCA1 [1] is associated with familial cancer of breast [2] and breast-ovarian cancer, "
+    "familial, susceptibility to, 1 [3]."
+)
+GENE_QUESTION = "What diseases is BRCA1 associated with?"
+NAMES_FINDINGS = [
+    _finding(1, "Ribavirin aerosol therapy", field="title"),
+    _finding(2, "Palivizumab prophylaxis", field="title"),
+    _finding(3, "Several antivirals are used to treat bronchiolitis in infants."),
+]
+NAMES = "Ribavirin [1] and palivizumab [2] are used to treat bronchiolitis [3]."
+
+
+@pytest.mark.parametrize(
+    ("findings", "narrative", "question", "approve", "shown"),
+    [
+        (GENE_FINDINGS, GENE, GENE_QUESTION, (0,), ()),
+        (GENE_FINDINGS, GENE, GENE_QUESTION, (0, 1), ()),
+        (GENE_FINDINGS, GENE, GENE_QUESTION, (0, 1, 2), (GENE,)),
+        (NAMES_FINDINGS, NAMES, BABIES, (0, 1), ()),
+        (NAMES_FINDINGS, NAMES, BABIES, (0,), ()),
+        (NAMES_FINDINGS, NAMES, BABIES, (0, 1, 2), (NAMES,)),
+    ],
+    ids=[
+        "gene, name approved alone",
+        "gene, last disease held",
+        "gene, all approved",
+        "names approved, claim held",
+        "first name approved alone",
+        "names, all approved",
+    ],
+)
+def test_a_partial_verdict_shows_the_whole_sentence_or_nothing(
+    findings, narrative: str, question: str, approve: tuple[int, ...], shown: tuple[str, ...]
+) -> None:
+    """J4-101-01 and J4-101-02: round 4 showed "BRCA1 [1]." and "Ribavirin
+    [1] and palivizumab [2]." when the check approved the names and held the
+    claim joined to them. Now a partial verdict shows nothing of the
+    sentence; only every item approved shows it, whole.
+
+    MUTATION PROOF: removing the round 5 rule turns every partial case red."""
+    sink, _ = _first_pass(narrative, findings, question)
+    assert len(sink) == 3, "populate-check: one item per clause"
+    approved = frozenset(sink[index].key for index in approve)
+    result = run_grounding_pass(narrative, findings, question=question, verified_syntheses=approved)
+    assert result.sentences == shown, result.sentences
+
+
+def test_a_sentence_with_no_copied_cut_keeps_developments_end_strip() -> None:
+    """Pins the scope: a sentence whose last clause fails code's own check,
+    with no copied cut in it, still shows its first clause, as develop does
+    (T-6.2-15). Round 5 changes only sentences holding a copied piece back."""
+    findings = [_finding(1, "Drug X was well tolerated."), SYMPTOMATIC]
+    narrative = "Drug X was well tolerated [1], and drug X cures cancer [3]."
+    sink, result = _first_pass(narrative, findings)
+    assert sink == [], sink
+    assert result.sentences == ("Drug X was well tolerated [1].",), result.sentences
+
