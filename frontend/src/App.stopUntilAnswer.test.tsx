@@ -327,12 +327,22 @@ describe("card 58: Stop stays on until the answer is on screen", () => {
   });
 
   it("keeps Stop on through the writing wait, and off once the first sentence is on screen", async () => {
+    // Card 59 fix round, J-59-01: fake from the first timer. This arm used to
+    // switch to fake timers only after the run had arrived, by which point
+    // the screen's next step (the pacing's or the reveal's) was already
+    // waiting on the REAL clock, where the fake walk below cannot move it.
+    // How far the walk got before that real timer fired varied run to run:
+    // the sentence appeared at 2.8, 2.8 and 6.2 fake seconds in three runs,
+    // and past 8 the arm failed its populate-check (2 runs in 10 for the
+    // judge). Fake from the start, it appears at 2.6 every time.
+    // `shouldAdvanceTime` keeps the fake clock moving with real time, so the
+    // ask itself still runs as before; every check below is unchanged.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     await askAndLetTheWholeRunArrive();
     expect(stopButton(), "Stop was grey with no answer on screen").toBeEnabled();
 
     // Walk the screen forward. Before the first sentence Stop must be on;
     // from the first sentence it must be off or gone.
-    vi.useFakeTimers();
     const offWhileWaiting: number[] = [];
     const onWithAnswer: number[] = [];
     let at = 0;
