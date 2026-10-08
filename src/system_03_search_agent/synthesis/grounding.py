@@ -1046,8 +1046,14 @@ def _is_code_built_row(segment_text: str, finding: SynthFinding) -> bool:
     segment = _whole_form(_without_glue(segment_text))
     if not segment:
         return False
-    rows = {_whole_form(render_finding_body(finding))}
-    rows.update(_whole_form(piece) for piece in split_into_sentences(finding.field_value))
+    rows = {_whole_form(_without_glue(render_finding_body(finding)))}
+    # Round 5 (A4-101-05): a piece code cut can open on ",", ";" or ":"
+    # (". , but it did not ..."). The segment is read with its separators
+    # removed, so the piece is too, or the row is lost where develop showed it.
+    rows.update(
+        _whole_form(_without_glue(piece)) for piece in split_into_sentences(finding.field_value)
+    )
+    rows.discard("")
     return segment in rows
 
 

@@ -931,3 +931,37 @@ def test_a_cut_the_widener_cannot_place_is_held_not_sent_as_its_own_quote(value:
     assert sink == [], [(c.sentence, c.quotes) for c in sink]
     assert result.sentences == (), result.sentences
 
+
+# ------------------------------------------ round 5: the listing, as develop
+
+
+@pytest.mark.parametrize(
+    ("value", "field", "shown"),
+    [
+        (
+            "Azithromycin was given for seven days. , but it did not shorten the illness in infants.",
+            "abstract",
+            ("Azithromycin was given for seven days [1].", "It did not shorten the illness in infants [1]."),
+        ),
+        (
+            "Does azithromycin shorten bronchiolitis? : a randomised controlled trial in infants under two.",
+            "title",
+            ("Does azithromycin shorten bronchiolitis [1].", "A randomised controlled trial in infants under two [1]."),
+        ),
+    ],
+    ids=["a piece opening on a comma", "a piece opening on a colon"],
+)
+def test_the_listing_keeps_a_row_opening_on_a_separator(value: str, field: str, shown: tuple[str, ...]) -> None:
+    """A4-101-05: a code-built row whose piece opens on ",", ";" or ":" was
+    lost, because the segment was compared with its separator removed and
+    the piece with it kept. Both reproductions now show exactly what
+    develop showed.
+
+    MUTATION PROOF: comparing against the piece with its separator kept
+    (no `_without_glue` on the pieces in `_is_code_built_row`) turns both
+    cases red: the second row is lost."""
+    finding = _finding(1, value, field=field)
+    narrative = build_structured_fallback_narrative([finding])
+    result = run_grounding_pass(narrative, [finding], code_built_listing=True)
+    assert result.sentences == shown, result.sentences
+
