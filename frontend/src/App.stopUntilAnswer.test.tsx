@@ -16,6 +16,13 @@
  * Verified by mutation: restoring the `realStopEnabled` override in `App`
  * turns the first arm red at "Stop was grey with no answer on screen" and
  * the second at the same line.
+ *
+ * CARD 59 (owner decision D18): an answer that finished before Stop arrived
+ * stands. A Stop pressed after `done` has arrived now lands that answer, and
+ * `App.stopAfterAnswer.test.tsx` holds that rule. So every arm here that
+ * presses Stop keeps its run's stream OPEN at the press, the server still
+ * working, and then confirms the stop with the server's `cancelled` error,
+ * which is what these arms were always about: what a stop leaves on screen.
  */
 
 import { act, render, screen, waitFor, within } from "@testing-library/react";
@@ -64,20 +71,33 @@ const ANSWER = "BRCA1 is a tumour suppressor gene";
 type Frame = [string, Record<string, unknown>];
 
 /** Frames as server-sent events, the wire shape `useAgentRun` reads. */
-const sse = (frames: Frame[], trace = "t-58"): string =>
+const sse = (frames: Frame[], trace = "t-58", firstSeq = 0): string =>
   frames
     .map(
-      ([type, payload], seq) =>
-        `id: ${seq}\nevent: ${type}\ndata: ${JSON.stringify({
+      ([type, payload], i) =>
+        `id: ${firstSeq + i}\nevent: ${type}\ndata: ${JSON.stringify({
           type,
           version: "v1",
           trace_id: trace,
-          seq,
+          seq: firstSeq + i,
           ts: "2026-09-27T00:00:00Z",
           payload,
         })}\n\n`,
     )
     .join("");
+
+/** What `core/run_registry.py` sends when a stop lands before the run finished. */
+const CANCELLED: Frame = [
+  "error",
+  {
+    fatal: true,
+    scope: "run",
+    source: "run_registry",
+    error_class: "cancelled",
+    message: "this run was stopped before it finished",
+    retry_after_s: 0,
+  },
+];
 
 const GUARD: Frame = ["guard", { passed: true, category: "ok", reason: null }];
 const THINK: Frame = [
@@ -117,8 +137,8 @@ const answerFrames = (answer: string): Frame[] => [
   ],
 ];
 
-/** One complete run, answer and `done` included, as server-sent frames. */
-const wholeRun = sse([
+/** One complete run, answer and `done` included. */
+const wholeRunFrames: Frame[] = [
   GUARD,
   THINK,
   ["plan", { narrative: "Read the curated edges.", tool_calls: [] }],
@@ -135,7 +155,13 @@ const wholeRun = sse([
     },
   ],
   ...answerFrames(ANSWER),
-]);
+];
+
+/** The same run as server-sent frames. */
+const wholeRun = sse(wholeRunFrames);
+
+/** A run as it stands just before the server sends `done`. */
+const withoutDone = (frames: Frame[]): Frame[] => frames.filter(([type]) => type !== "done");
 
 /**
  * The whole run in one chunk, and a flag that turns true once the client has
@@ -180,6 +206,69 @@ async function advance(ms: number, step = 100, each?: () => void) {
   }
 }
 
+/**
+ * A run whose stream stays open after `body`, the server still working, as a
+ * run is at the moment a person presses Stop before it finishes. `confirmStop`
+ * sends the server's reply to that stop. `fullyRead` turns true once the
+ * client has read `body` and is waiting for more.
+ */
+function openRun(body: string, trace = "t-58"): {
+  response: Promise<Response>;
+  fullyRead: () => boolean;
+  confirmStop: () => void;
+} {
+  const queue: string[] = [body];
+  let wake: (() => void) | null = null;
+  let pulls = 0;
+  const sent = (body.match(/^event: /gm) ?? []).length;
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      pulls += 1;
+      while (queue.length === 0) {
+        await new Promise<void>((resolve) => {
+          wake = resolve;
+        });
+      }
+      controller.enqueue(new TextEncoder().encode(queue.shift()!));
+    },
+  });
+  return {
+    response: Promise.resolve(
+      new Response(stream, { status: 200, headers: { "content-type": "text/event-stream" } }),
+    ),
+    fullyRead: () => pulls >= 2,
+    confirmStop: () => {
+      queue.push(sse([CANCELLED], trace, sent));
+      const resolve: (() => void) | null = wake;
+      wake = null;
+      resolve?.();
+    },
+  };
+}
+
+/** Ask, with the run's stream left open after `body`. */
+async function askWithTheRunStillOpen(body: string): Promise<ReturnType<typeof openRun>> {
+  const run = openRun(body);
+  openEventStreamMock.mockImplementationOnce(() => run.response);
+  const user = userEvent.setup();
+  render(<App />);
+  const main = within(screen.getByRole("main"));
+  await user.type(main.getByRole("textbox", { name: /question/i }), QUESTION);
+  await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
+  await waitFor(() => expect(run.fullyRead(), "the run's stream was never read").toBe(true));
+  await screen.findByTestId("step-Guard");
+  return run;
+}
+
+/** Press Stop, then let the server confirm it. */
+async function pressStopAndConfirm(run: ReturnType<typeof openRun>, runId: string): Promise<void> {
+  const user = userEvent.setup();
+  await user.click(stopButton()!);
+  expect(stopRunMock).toHaveBeenCalledWith(runId, "guest-token-58");
+  act(() => run.confirmStop());
+  expect(await screen.findByTestId("run-stopped")).toHaveTextContent("Search stopped");
+}
+
 async function askAndLetTheWholeRunArrive(body: string = wholeRun): Promise<void> {
   const run = oneChunkRun(body);
   openEventStreamMock.mockImplementationOnce(() => run.response);
@@ -219,19 +308,14 @@ describe("card 58: Stop stays on until the answer is on screen", () => {
     vi.useRealTimers();
   });
 
-  it("offers Stop after the server finished, and Stop then discards the answer for good", async () => {
-    await askAndLetTheWholeRunArrive();
-
-    // The whole answer and `done` have arrived; the screen is still pacing
-    // through the steps, so there is nothing to read yet.
+  it("offers Stop while the answer is held back, and a confirmed Stop discards it for good", async () => {
+    // The answer has arrived but `done` has not: the server is still
+    // finishing. The screen is still pacing through the steps.
+    const run = await askWithTheRunStillOpen(sse(withoutDone(wholeRunFrames)));
     expect(answerOnScreen(), "populate-check: the answer was already on screen").toBe(false);
     expect(stopButton(), "Stop was grey with no answer on screen").toBeEnabled();
 
-    const user = userEvent.setup();
-    await user.click(stopButton()!);
-
-    expect(stopRunMock).toHaveBeenCalledWith("run-58", "guest-token-58");
-    expect(await screen.findByTestId("run-stopped")).toHaveTextContent("Search stopped");
+    await pressStopAndConfirm(run, "run-58");
 
     // No answer arrives afterwards, however long the reader waits: the
     // pacing and the reveal that were holding it are frozen by Stop.
@@ -323,18 +407,19 @@ const threeHelperSearch: Frame[] = [
  * answer sentence, no error event and no trust signal, so the reveal has
  * nothing to hold back and nothing flushes the pacing early.
  */
-const capRun = sse([
+const capRunFrames: Frame[] = [
   ...threeHelperSearch,
   ["token", { text: CAP_NOTE, marker_ids: [] }],
   ["done", { total_cost_usd: 0.05, total_tool_calls: 3, elapsed_ms: 20000, trust_outcome: "flag" }],
-]);
+];
+const capRun = sse(capRunFrames);
 
 /** An answer sentence that also carries the cap note. */
-const answerWithCapNoteRun = sse([
+const answerWithCapNoteFrames: Frame[] = [
   ...threeHelperSearch,
   ["token", { text: CAP_NOTE, marker_ids: [] }],
   ...answerFrames(ANSWER),
-]);
+];
 
 const pageText = () => document.body.textContent ?? "";
 const resultPage = () => document.querySelector('[data-tour="answer"]');
@@ -366,15 +451,12 @@ describe("card 58 fix round: what a Stop before the answer leaves on screen", ()
   }, 30_000);
 
   it("F-58-J02: Stop on the cap result, which has no sentences, shows Search stopped and never the result page", async () => {
-    await askAndLetTheWholeRunArrive(capRun);
-
-    // `done` has arrived; the pacing still holds it, so nothing is on screen.
+    // The note has arrived and `done` has not; the pacing holds the note.
+    const run = await askWithTheRunStillOpen(sse(withoutDone(capRunFrames)));
     expect(resultPage(), "populate-check: the result page was already showing").toBeNull();
     expect(stopButton(), "Stop was grey with nothing on screen").toBeEnabled();
 
-    const user = userEvent.setup();
-    await user.click(stopButton()!);
-    expect(stopRunMock).toHaveBeenCalledWith("run-58", "guest-token-58");
+    await pressStopAndConfirm(run, "run-58");
 
     vi.useFakeTimers();
     await advance(10_000);
@@ -395,13 +477,11 @@ describe("card 58 fix round: what a Stop before the answer leaves on screen", ()
     // holds both, so no notice is on screen; the view below never lands,
     // because the reveal holds the sentence, which keeps this arm about the
     // notice alone.
-    await askAndLetTheWholeRunArrive(answerWithCapNoteRun);
+    const run = await askWithTheRunStillOpen(sse(withoutDone(answerWithCapNoteFrames)));
     expect(screen.queryByTestId("cap-notice"), "populate-check: the cap notice was already showing").toBeNull();
     expect(stopButton(), "Stop was grey with nothing on screen").toBeEnabled();
 
-    const user = userEvent.setup();
-    await user.click(stopButton()!);
-    expect(await screen.findByTestId("run-stopped")).toHaveTextContent("Search stopped");
+    await pressStopAndConfirm(run, "run-58");
 
     vi.useFakeTimers();
     await advance(10_000);
@@ -439,14 +519,15 @@ describe("card 58 fix round: Stop on a follow-up in the same thread, F-58-J03", 
    * `stopEnabled={false}` on the inline `RunProgress`, this is where every
    * arm goes red.
    */
-  async function landTurnOneThenFollowUpWith(body: string): Promise<ReturnType<typeof userEvent.setup>> {
+  async function landTurnOneThenFollowUpWith(body: string): Promise<ReturnType<typeof openRun>> {
     await askAndLetTheWholeRunArrive();
     expect(
       await screen.findByTestId("source-1", {}, LAND_CEILING),
       "populate-check: turn one never landed",
     ).toBeInTheDocument();
 
-    const second = oneChunkRun(body);
+    // Turn two's stream stays open: the server is still working on it.
+    const second = openRun(body, "t-58-2");
     openEventStreamMock.mockImplementationOnce(() => second.response);
     const user = userEvent.setup();
     await user.type(screen.getByLabelText(/ask a follow-up question/i), FOLLOW_UP);
@@ -457,24 +538,23 @@ describe("card 58 fix round: Stop on a follow-up in the same thread, F-58-J03", 
     expect(resultPage(), "populate-check: the follow-up left the answer screen").not.toBeNull();
     expect(screen.queryByTestId("trust-line"), "populate-check: turn two's trust line was already showing").toBeNull();
     expect(stopButton(), "Stop was grey on a follow-up with no answer on screen").toBeEnabled();
-    return user;
+    return second;
   }
 
-  /** Press Stop on turn two, then wait ten seconds for anything to appear. */
-  async function stopTurnTwo(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-    await user.click(stopButton()!);
-    expect(stopRunMock).toHaveBeenCalledWith("run-58-2", "guest-token-58");
+  /** Press Stop on turn two, let the server confirm it, then wait ten seconds for anything to appear. */
+  async function stopTurnTwo(second: ReturnType<typeof openRun>): Promise<void> {
+    await pressStopAndConfirm(second, "run-58-2");
     vi.useFakeTimers();
     await advance(10_000);
   }
 
   it("offers Stop on the follow-up until its answer is on screen, and Stop keeps that answer off it", async () => {
-    const user = await landTurnOneThenFollowUpWith(
-      sse([...threeHelperSearch, ...answerFrames(SECOND_ANSWER)], "t-58-2"),
+    const second = await landTurnOneThenFollowUpWith(
+      sse(withoutDone([...threeHelperSearch, ...answerFrames(SECOND_ANSWER)]), "t-58-2"),
     );
     expect(screen.queryByText(new RegExp(SECOND_ANSWER)), "populate-check: turn two was already on screen").toBeNull();
 
-    await stopTurnTwo(user);
+    await stopTurnTwo(second);
 
     expect(screen.getByTestId("run-stopped")).toHaveTextContent("Search stopped");
     expect(screen.queryByText(new RegExp(SECOND_ANSWER)), "turn two's answer appeared after Stop").toBeNull();
@@ -484,18 +564,11 @@ describe("card 58 fix round: Stop on a follow-up in the same thread, F-58-J03", 
   }, 30_000);
 
   it("F-58-J02 on a follow-up: Stop on the cap result keeps Search stopped inline, never the result", async () => {
-    const user = await landTurnOneThenFollowUpWith(
-      sse(
-        [
-          ...threeHelperSearch,
-          ["token", { text: CAP_NOTE, marker_ids: [] }],
-          ["done", { total_cost_usd: 0.05, total_tool_calls: 3, elapsed_ms: 20000, trust_outcome: "flag" }],
-        ],
-        "t-58-2",
-      ),
+    const second = await landTurnOneThenFollowUpWith(
+      sse([...threeHelperSearch, ["token", { text: CAP_NOTE, marker_ids: [] }]], "t-58-2"),
     );
 
-    await stopTurnTwo(user);
+    await stopTurnTwo(second);
 
     expect(
       screen.queryByTestId("run-stopped"),

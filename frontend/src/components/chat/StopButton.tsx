@@ -122,6 +122,52 @@ export function deriveStopOffered(events: AgentEvent[], shown: StopScreenState):
   return deriveStopEnabled(events);
 }
 
+/**
+ * What a pressed Stop turned out to mean, card 59.
+ *
+ *   - `none`: Stop has not been pressed on this run.
+ *   - `pending`: pressed, and the server has not said yet whether it stopped
+ *     the run or had already finished it.
+ *   - `stopped`: the stop landed first. The server ends the stream with its
+ *     `cancelled` fatal error, records no answer and remembers no turn.
+ *   - `answered`: the server finished first. Its `done` is the answer it
+ *     recorded and remembered, so the answer stands (owner decision D18).
+ *
+ * WHY THE SERVER DECIDES. The screen lags the stream by up to 13 seconds
+ * (card 58's measurements), so a person often presses Stop on an answer the
+ * server has already finished, saved to history and kept in the
+ * conversation's memory. When the screen decided on its own it said "Search
+ * stopped" about an answer that history and memory still held. The stream's
+ * terminal event is the one fact all three can agree on: `done` and the
+ * `cancelled` error are mutually exclusive, and the server sends exactly one.
+ *
+ * `events` is the ARRIVED stream. `streamEnded` is true once the connection
+ * closed or was aborted without either terminal event, which happens when
+ * the stop request itself failed or no reply came in time: the screen then
+ * falls back to "stopped", today's behaviour, rather than waiting for ever.
+ */
+export type StopVerdict = "none" | "pending" | "stopped" | "answered";
+
+/** How long Stop waits for the server's reply before treating the run as stopped. */
+export const STOP_CONFIRM_TIMEOUT_MS = 5_000;
+
+export function deriveStopVerdict(
+  events: AgentEvent[],
+  pressed: boolean,
+  { streamEnded }: { streamEnded: boolean },
+): StopVerdict {
+  if (!pressed) {
+    return "none";
+  }
+  const terminal = events.find(
+    (event) => event.type === "done" || (event.type === "error" && event.payload.fatal === true),
+  );
+  if (terminal !== undefined) {
+    return terminal.type === "done" ? "answered" : "stopped";
+  }
+  return streamEnded ? "stopped" : "pending";
+}
+
 export function StopButton({ events, runId, token, stop }: StopButtonProps) {
   // Tracks a click on this specific run, independent of `events`. Clicking
   // stop closes the local connection immediately (see the handler below),

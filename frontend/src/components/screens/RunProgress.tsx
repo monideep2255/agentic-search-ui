@@ -360,6 +360,12 @@ export interface RunProgressProps {
    */
   stopEnabled?: boolean;
   /**
+   * Stop was pressed and the server has not yet said whether it stopped the
+   * run or had already finished it (card 59). Stop reads "Stopping…" and
+   * stays off; nothing else on the screen claims either outcome yet.
+   */
+  stopping?: boolean;
+  /**
    * When this run started, as `Date.now()`. Drives the elapsed counter
    * (T-6.2-05). Null before a run starts and after it lands, which is what
    * stops the counter rather than a separate flag.
@@ -416,6 +422,7 @@ export function RunProgress({
   stopped = false,
   onRunAgain,
   stopEnabled = true,
+  stopping = false,
   startedAt = null,
   refusal = null,
   capMessage = null,
@@ -498,7 +505,7 @@ export function RunProgress({
           <>
             <Button
               onClick={onStop}
-              disabled={!stopEnabled}
+              disabled={!stopEnabled || stopping}
               sx={{
                 fontSize: 12.5,
                 color: designTokens.inkMuted,
@@ -507,7 +514,7 @@ export function RunProgress({
                 py: 0.6,
               }}
             >
-              Stop
+              {stopping ? "Stopping…" : "Stop"}
             </Button>
             {/* Set 2, R12: filled blue with white text, the design system's `.btn`, so it reads apart from Stop. */}
             {showNewSearch ? (
