@@ -1552,10 +1552,10 @@ def _reopened_citations(
       valid as a `CitationPayload`, as before;
     - a marker in `answer_markdown` with no stored entry at all (build
       phase 8.10's fix round, F-8.10-J02 and A02). Capture stores at most
-      50 citations (`feedback/capture.py`'s `_MAX_CITATIONS`), so a
-      60-marker answer came back pointing [51] to [60] at nothing while
-      this said 0. That cap is card 54's; this only stops the count from
-      hiding it.
+      100 citations (`feedback/contracts.py`'s `MAX_CITATIONS_PER_ANSWER`,
+      raised from 50 by card 54), so a row stored before that, or an
+      answer past 100, can still point a marker at nothing while this
+      said 0. This only stops the count from hiding it.
 
     A marker whose entry was stored but left out is counted by the first
     rule and not again by the second."""
