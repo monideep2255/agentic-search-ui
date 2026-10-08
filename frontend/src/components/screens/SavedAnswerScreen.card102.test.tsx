@@ -122,3 +122,45 @@ describe("a reopened saved answer, from the stored citations", () => {
     expect(unknown).not.toHaveTextContent(/graph|live|literature/i);
   });
 });
+
+describe("card 54: an answer saved with fewer sources than its markers", () => {
+  async function reopenWithOmitted(omitted: number | undefined) {
+    const [gene] = FIXTURE.citations;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            trace_id: "card54",
+            question: "Which genes does HNF1A regulate?",
+            asked_at: "2026-10-07T04:00:00Z",
+            depth: "researcher",
+            answer_markdown: "HNF1A regulates many genes [1] and more [77].",
+            citations: [{ ...stored(gene), display_index: 50 }],
+            trust_signal: "answer",
+            trust_line: "Based on 61 sources cited",
+            ...(omitted === undefined ? {} : { citations_omitted: omitted }),
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    const answer = await fetchHistoryAnswer("token-test", "card54", { baseUrl: "https://api.test" });
+    render(
+      <SavedAnswerScreen question={answer.question} loading={false} answer={answer} onRunAgain={() => undefined} />,
+    );
+  }
+
+  it("says plainly that markers above the kept sources have none listed", async () => {
+    // Red before the change: the screen showed no line at all.
+    await reopenWithOmitted(60);
+    expect(screen.getByTestId("saved-answer-omitted-sources")).toHaveTextContent(
+      "This answer was saved when only its first 50 sources were kept, so markers above [50] have no source listed.",
+    );
+  });
+
+  it("shows no line when nothing is omitted or the backend sends no count", async () => {
+    await reopenWithOmitted(0);
+    expect(screen.queryByTestId("saved-answer-omitted-sources")).toBeNull();
+  });
+});

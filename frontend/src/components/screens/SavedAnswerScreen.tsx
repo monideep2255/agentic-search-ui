@@ -97,6 +97,18 @@ export interface SavedSourceRow {
 }
 
 /**
+ * Card 54: the one calm line under the sources when the saved answer's text
+ * carries markers with no stored source (`citations_omitted` from the
+ * endpoint, counted from the row's own data, never from a date).
+ */
+export function omittedSourcesLine(citations: HistoryAnswerCitation[]): string {
+  const kept = citations.reduce((most, c) => Math.max(most, c.display_index), 0);
+  return kept > 0
+    ? `This answer was saved when only its first ${kept} sources were kept, so markers above [${kept}] have no source listed.`
+    : "This answer was saved without its sources, so its markers have no source listed.";
+}
+
+/**
  * A saved answer's citations, one row per record page.
  *
  * Card 22 fix round (2026-10-06, J-22-04, A-22-05): this screen listed one
@@ -362,6 +374,17 @@ export function SavedAnswerScreen({
                   ))}
                 </Box>
               </Box>
+            ) : null}
+
+            {(answer.citations_omitted ?? 0) > 0 ? (
+              <Typography
+                component="p"
+                role="note"
+                data-testid="saved-answer-omitted-sources"
+                sx={{ mt: 1.5, mb: 0, fontSize: 12.5, color: designTokens.inkMuted }}
+              >
+                {omittedSourcesLine(answer.citations)}
+              </Typography>
             ) : null}
           </Box>
         )}

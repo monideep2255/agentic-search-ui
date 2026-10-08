@@ -47,6 +47,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from datetime import UTC, datetime
 
 import pytest
@@ -185,7 +186,9 @@ async def test_the_owner_gets_the_whole_wire_shape(fake_saved) -> None:
         "citations",
         "trust_signal",
         "trust_line",
+        "citations_omitted",
     }
+    assert body["citations_omitted"] == 0
     assert body["trace_id"] == "trace-abc"
     assert body["question"] == "What does TP53 do?"
     assert body["depth"] == "researcher"
@@ -372,6 +375,48 @@ async def test_a_long_saved_answer_returns_every_citation(fake_saved) -> None:
 
     assert response.status_code == 200
     assert len(response.json()["citations"]) == 61
+
+
+@pytest.mark.asyncio
+async def test_citations_come_back_in_the_stored_order(fake_saved) -> None:
+    """A-54-06: the reply keeps the stored (live) order, numbers 1 to 61.
+    Mutation: reversing or sorting the list in the endpoint turns this red."""
+    caller = _account_principal()
+    _set_caller(caller)
+    many = [{**_citation(), "citation_id": f"call-1-{i}", "display_index": i} for i in range(1, 62)]
+    fake_saved.seed(caller.owner_id, _saved("trace-order", citations=many))
+
+    async with _client() as client:
+        response = await client.get(_path("trace-order"))
+
+    assert [c["display_index"] for c in response.json()["citations"]] == list(range(1, 62))
+
+
+@pytest.mark.asyncio
+async def test_an_answer_saved_with_fewer_sources_than_its_markers_says_so(fake_saved) -> None:
+    """J-54-01 and A-54-02: 50 stored citations under text that cites [1] to
+    [61] reports 11 omitted, from the row's own data. A complete answer
+    reports 0. Red before the fix: the field did not exist."""
+    caller = _account_principal()
+    _set_caller(caller)
+    text = " ".join(f"Claim [{i}]." for i in range(1, 62))
+    short = [{**_citation(), "citation_id": f"c-{i}", "display_index": i} for i in range(1, 51)]
+    whole = [{**_citation(), "citation_id": f"c-{i}", "display_index": i} for i in range(1, 62)]
+    fake_saved.seed(
+        caller.owner_id,
+        replace(_saved("trace-short", citations=short), answer_markdown=text),
+    )
+    fake_saved.seed(
+        caller.owner_id,
+        replace(_saved("trace-whole", citations=whole), answer_markdown=text),
+    )
+
+    async with _client() as client:
+        short_body = (await client.get(_path("trace-short"))).json()
+        whole_body = (await client.get(_path("trace-whole"))).json()
+
+    assert short_body["citations_omitted"] == 11
+    assert whole_body["citations_omitted"] == 0
 
 
 @pytest.mark.asyncio

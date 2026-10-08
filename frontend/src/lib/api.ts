@@ -577,6 +577,12 @@ export interface HistoryAnswerResponse {
    * it as `null`.
    */
   trust_line: string | null;
+  /**
+   * Card 54: how many of the answer's `[n]` markers have no stored citation
+   * (an answer saved when only its first 50 sources were kept). `0` when
+   * the backend sends none. Additive within v1.
+   */
+  citations_omitted?: number;
 }
 
 /**
@@ -634,6 +640,10 @@ export async function fetchHistoryAnswer(
       .filter((citation): citation is HistoryAnswerCitation => citation !== null),
     trust_signal: typeof body.trust_signal === "string" ? body.trust_signal : "",
     trust_line: typeof body.trust_line === "string" ? body.trust_line : null,
+    citations_omitted:
+      typeof body.citations_omitted === "number" && body.citations_omitted > 0
+        ? body.citations_omitted
+        : 0,
   };
 }
 
