@@ -805,10 +805,10 @@ class TestReopeningIsYoursAlone:
         assert content["citations_omitted"] == 0
 
     @pytest.mark.asyncio
-    async def test_a_sixty_marker_answer_says_ten_of_its_markers_point_at_nothing(self) -> None:
+    async def test_a_110_marker_answer_says_ten_of_its_markers_point_at_nothing(self) -> None:
         # Fix round, F-8.10-J02: the judge's `probe_capture60.py`, end to end.
         # The answer goes through the real capture and the real writer, which
-        # keep 50 of its 60 citations (card 54's cap), and comes back through
+        # keep 100 of its 110 citations (card 54's ceiling), and comes back through
         # the real tool. Mutation that turns this red: count only stored
         # entries left out again -> `citations_omitted` is 0.
         from system_03_search_agent.feedback.capture import assemble_interaction
@@ -817,18 +817,18 @@ class TestReopeningIsYoursAlone:
         a_id, a_headers = await _new_account()
         trace = f"paritytest-{uuid.uuid4().hex}"
         items: list[tuple[str, Any]] = [_GUARD_OK]
-        for index in range(1, 61):
+        for index in range(1, 111):
             items.append(
                 ("token", TokenPayload(text=f"Record {index} is relevant [{index}]. ", marker_ids=[f"c{index}"]))
             )
-        items.extend(("citation", _citation(index)) for index in range(1, 61))
+        items.extend(("citation", _citation(index)) for index in range(1, 111))
         items.append(("trust_signal", _answer_trust("answer")))
         items.append(("done", _done("answer", trust_line=_TRUST_LINE)))
         events = [_event(kind, trace, seq, payload) for seq, (kind, payload) in enumerate(items)]
         row = assemble_interaction(
             Query(
-                text="Sixty records",
-                session_id="s-sixty",
+                text="110 records",
+                session_id="s-110",
                 trace_id=trace,
                 user_id=None,
                 owner_id=f"user:{a_id}",
@@ -836,14 +836,14 @@ class TestReopeningIsYoursAlone:
             ),
             events,
         )
-        assert len(row.citations) == 50, "populate check: capture keeps 50 of the 60"
+        assert len(row.citations) == 100, "populate check: capture keeps 100 of the 110"
         await write_interaction(row)
 
         result = await _call(a_headers, "reopen_past_answer", {"trace_id": trace})
 
         assert result.is_error is False
         content = result.structured_content
-        assert len(content["citations"]) == 50
+        assert len(content["citations"]) == 100
         assert content["citations_omitted"] == 10
 
     @pytest.mark.asyncio

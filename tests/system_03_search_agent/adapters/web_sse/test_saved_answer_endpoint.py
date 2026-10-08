@@ -358,6 +358,36 @@ async def test_an_unreadable_citation_is_dropped_not_fatal(fake_saved) -> None:
     assert body["answer_markdown"] == _ANSWER
 
 
+@pytest.mark.asyncio
+async def test_a_long_saved_answer_returns_every_citation(fake_saved) -> None:
+    """Card 54: a reopened answer with 61 citations returns all 61, so [61]
+    points at a row. Red before the fix: the reply stopped at 50."""
+    caller = _account_principal()
+    _set_caller(caller)
+    many = [{**_citation(), "citation_id": f"call-1-{i}", "display_index": i} for i in range(1, 62)]
+    fake_saved.seed(caller.owner_id, _saved("trace-long", citations=many))
+
+    async with _client() as client:
+        response = await client.get(_path("trace-long"))
+
+    assert response.status_code == 200
+    assert len(response.json()["citations"]) == 61
+
+
+@pytest.mark.asyncio
+async def test_a_saved_answer_above_the_ceiling_is_still_bounded(fake_saved) -> None:
+    caller = _account_principal()
+    _set_caller(caller)
+    many = [{**_citation(), "citation_id": f"c-{i}"} for i in range(130)]
+    fake_saved.seed(caller.owner_id, _saved("trace-huge", citations=many))
+
+    async with _client() as client:
+        response = await client.get(_path("trace-huge"))
+
+    assert response.status_code == 200
+    assert len(response.json()["citations"]) == 100
+
+
 # ---------------------------------------------------------------------------
 # `has_saved_answer` on the list endpoint.
 # ---------------------------------------------------------------------------
@@ -449,6 +479,6 @@ def test_the_response_model_bounds_every_field() -> None:
     assert _max_length("trace_id") == 64
     assert _max_length("question") == 2000
     assert _max_length("answer_markdown") == 32000
-    assert _max_length("citations") == 50
+    assert _max_length("citations") == 100
     assert _max_length("trust_signal") == 20
     assert _max_length("trust_line") == 200
