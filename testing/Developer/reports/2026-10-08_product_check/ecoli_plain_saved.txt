@@ -1,0 +1,28 @@
+I found 20 pathogen samples and 1 organism related to Escherichia coli [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20].
+
+The isolates are C236-11 [1], 11-3677 [2], 11-4404 [3], 11-4522 [4], 11-4623 [5], 11-4632 C1 [6], 11-4632 C2 [7], 11-4632 C3 [8], 11-4632 C4 [9], 11-4632 C5 [10], C227-11 [11], Ec11-4988 [12], Ec11-5603 [13], Ec11-6006 [14], 11-02030 [15], 11-02033-1 [16], 11-02092 [17], 11-02093 [18], 2011C-3493 [19], and NA114 [20].
+
+ISOLATES AND THEIR AMR GENES
+ISOLATE	IDENTIFIER	AMR GENES	COLLECTED
+C236-11 [1]	SAMN00715300	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-3677 [2]	SAMN00715303	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4404 [3]	SAMN00715305	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4522 [4]	SAMN00715306	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4623 [5]	SAMN00715307	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4632 C1 [6]	SAMN00715308	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4632 C2 [7]	SAMN00715309	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4632 C3 [8]	SAMN00715310	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4632 C4 [9]	SAMN00715311	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4632 C5 [10]	SAMN00715312	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+Showing 1–10 of 20
+‹ Previous
+Page 1 of 2
+Next ›
+WHERE THIS ANSWER COMES FROM
+Escherichia coli[21]
+
+Pathogen Detection lists 141,088 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown.
+
+Searching Escherichia coli isolates in Pathogen Detection for AMR genotypes starting blaCTX-M; blaTEM and blaSHV alleles were not searched: most are not ESBLs and the name alone cannot tell an ESBL allele from a narrow-spectrum one, so listing them would show isolates that do not carry an ESBL.
+
+This is a research summary, not medical advice.

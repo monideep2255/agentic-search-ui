@@ -1,0 +1,42 @@
+? Answered25.1s · 13 tool calls · 21 sources cited from 2 layers
+
+Show work ▾
+
+I found 4 conditions related to BRCA1.⁠1–4
+
+The diseases associated with BRCA1 are familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4 BRCA1 is a gene that makes a protein helping keep a cell's genetic material stable and acting as a safeguard against tumors.⁠5 Changes in this gene account for roughly 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers.⁠5
+
+WHERE THIS ANSWER COMES FROM
+Familial cancer of breast	⁠1
+Familial breast-ovarian cancer susceptibility 1	⁠2
+Pancreatic cancer susceptibility 4	⁠3
+Fanconi anemia complementation group S	⁠4
+BRCA1	⁠6, 10
+BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing.	⁠7
+NM_007294.4(BRCA1):c.5243_5277+2788del	⁠8
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	⁠9
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer	⁠11
+BRCA1: An Endocrine and Metabolic Regulator.	⁠12
+Showing 1–10 of 21
+‹ Previous
+Page 1 of 3
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+21
+Based on 21 sources cited, not yet confirmed
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

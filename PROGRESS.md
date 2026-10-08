@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-10-07.
+Last updated: 2026-10-08.
 
 ## Table of contents
 
@@ -56,6 +56,19 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+### 8 October
+
+NEW ON 8 OCTOBER, on the practice site, each change checked by fresh reviewers and then tried on the site itself:
+
+- When the checker cannot confirm part of a sentence copied from a paper, the whole sentence is left out, so you never see a cut-off claim such as a treatment "shortens the illness" without the paper's "only when an infection is confirmed".
+- A long past answer you reopen keeps every source it cited, up to 100, where it used to stop at 50.
+- A reopened answer's tables show ten rows at a time, like the answer you first read, and on a phone each row fits the screen with its column names beside each value.
+- Under a table of variants and diseases, an empty disease cell now says why it is empty, for example that the variant's record names no condition.
+- A gene, variant or paper is listed once in an answer's tables, with all its reference numbers on one row.
+- A reopened answer written while an NCBI database was down no longer says it is down "right now"; it says the database was not answering when the answer was written.
+- If you press Stop after the search had already finished, you get the answer rather than "Search stopped", and your list of past searches and the conversation agree with what you saw.
+- The data pipelines project was released as version 1.1.0.
 
 ### 6 and 7 October
 
@@ -270,6 +283,21 @@ All six live-government-API connections the plan called for are now built. That 
 - Give it a stretch of chromosome coordinates with the genome build, and it names the genes under that stretch without being told them, then lists the structural and clinical variants recorded there, each with a link. Leave the build out and it asks which one, rather than guessing. On the practice site since the night of 22 September, waiting for the product owner to try it.
 
 ## What does not work yet
+
+### 8 October
+
+THE HONEST HEADLINE AS OF 8 OCTOBER, in one sentence:
+
+- a sentence copied from a paper can still slip through unchecked when the paper uses an abbreviation such as "S. Typhimurium" or "U.S. FDA",
+- answers still take about 20 to 35 seconds from the click,
+- and a virus typed in an unusual way, such as "SARS CoV-2" with a space, can still be answered about the wrong thing.
+
+What the night found, in plain words:
+
+- A past answer saved before 8 October still reopens with at most 50 sources, and does not say that some are missing. A note saying so was built, but it fired wrongly on genetic names such as "CAG[40]", so it was taken out.
+- Simple answers about heartburn or bronchiolitis often leave out symptoms, causes or risk factors.
+- If our user database ever hangs, a search can freeze while it saves; this was already true and needs its own fix.
+- The new gatekeeper design is written and waits for the product owner's answers; the stronger writer still waits on topping up the model account.
 
 ### 7 October
 

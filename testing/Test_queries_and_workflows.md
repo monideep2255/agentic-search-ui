@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-10-07.
+Last updated: 2026-10-08.
 
 Every entry has the same three parts:
 
@@ -565,6 +565,7 @@ What you should see:
 - The HNF1A answer shows "Variant-to-disease mapping".
 - With that table, and with no other, one line reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI." (card 23). Directly under that table, at 1280 and 390, whether more records follow it or the table ends the answer; never in the Notes list. Plain language shows no table, so no line.
 - When checked live on 2026-09-14 the table stopped at 5 rows where the reference prototype shows 13, because an answer cites at most 20 sources. Whether that ceiling is right is the product owner's call, a card in the board's To do column.
+- No disease cell is blank without a reason: a row whose ClinVar record names only a placeholder reads "None named: the ClinVar record says not provided" (or "not specified", or "gives only a placeholder"), and a row whose disease name could not be looked up reads "Name could not be looked up" (card 103).
 - Why it matters: a person asking which diseases a gene's variants cause wants the variant and the disease side by side, not two lists to match up themselves.
 
 ### 87. No stray sentence about a record's clinical features (card 1, T-8.6-06)
@@ -1100,6 +1101,8 @@ What you should see:
 - Run again does a fresh search, charged to you as a normal search.
 - On the search asked in the same tab, it does NOT search again: the source count and the text must match what you just read. The product owner reported on 2026-09-23 that clicking a past search re-ran it instead of showing the saved answer; a search asked in the same tab never got marked as saved, and the second search showed 22 sources against the original 23.
 - Guests do not get this. The account is what stores the answer, and deleting the account deletes it with them.
+- A reopened table longer than ten rows shows ten at a time, with the same "Showing 1–10 of N" bar and page controls as the live answer. On a phone each row stacks: the first value leads the row and every other value carries its column name, and nothing runs past the screen edge (card 71).
+- A long answer reopens with every source it cited, up to 100: its "Based on N sources cited" line, its Sources rows and the history list's count agree, and every marker points at a listed source. An answer saved before 2026-10-08 still reopens with at most 50 (card 54).
 - Why it matters: clicking your own earlier question, being charged a second search for it, and waiting thirty seconds to read something you already read is the kind of small dishonesty that makes a history rail feel like decoration rather than a record.
 
 ### 100. A "not yet confirmed" answer reopens too (card 63)
@@ -1115,6 +1118,7 @@ What you should see:
 - Its trust line still reads "not yet confirmed", with no check mark beside it, and any note that was under the answer is still there.
 - A guest's search still is not saved.
 - Only during an NCBI outage, which cannot be triggered on demand: the note reads, for example, "PubMed is down at NCBI right now, so this answer may be missing papers from it. Try again later." It never says the answer "has no papers", and never "Ask again to retry". A timeout or any other failure still says "Ask again to retry".
+- Only on an answer saved during an NCBI outage: when reopened, its note is in the past tense, for example "When this answer was written, NCBI's PubMed was not answering, so this answer may be missing papers from it. Ask the question again to search afresh." It never says "right now"; the saved answer's header says when it was asked (card 67).
 - Why it matters: before card 63, about six answered searches in ten could not be reopened at all, and during an outage the note sent people straight back into it.
 
 ## 8. Stop, feedback and the connection
@@ -1134,6 +1138,9 @@ What you should see:
 - Clicking "Run again" asks the same question again from the start.
 - Clicking "New search" returns to the home page.
 - No answer appears from the stopped search.
+- Pressed while the search is still working, the button reads "Stopping…" for a moment, then "Search stopped"; after a reload the search is not listed as answered, and a follow-up such as "what about it?" does not refer to it.
+- Pressed after the search had already finished but while its answer is still appearing, the whole answer shows at once, with its sources and trust line, and history and the conversation keep that same answer (card 59).
+- Pressing Stop and asking a new question straight away answers the new question normally.
 - Why it matters: a person who changes their mind mid-search should not have to wait out a search they no longer want.
 
 ### 98. Stop works until the answer appears (card 58)
@@ -1455,6 +1462,7 @@ What you should see:
 - When one page is cited both from the knowledge graph and from a live lookup, it is still one card, and the card names both layers ("L1 · graph, L2 · live"). It sits under Knowledge graph, the Live NCBI APIs group still shows and names it, and the line under the question counts both layers.
 - The opening line counts one record per page ("Found 4 disease records for BRCA1" at Researcher, "I found 4 conditions related to BRCA1" at Plain language): it counts the records that answer the question, which is a different thing from sources.
 - After a reload, YOUR SEARCHES shows the same search as "S sources cited", the same S. Open it: the saved answer lists S source rows under its "Based on S sources cited" line, the gene page once.
+- A record appears once in the answer's tables and in the Plain language list, with every citation number on its row, for example "BRCA1 NCBIGene:672 [6, 7]" (card 104).
 - Why it matters: a number that says "sources" should be the number of sources you can open and count, wherever it appears.
 
 ### 75. A papers list reads as clean prose, with no record repeated (12.12)
@@ -1730,7 +1738,7 @@ What you should see:
 - Reopening shows the answer that search already gave, with its citations, its trust line and the depth it was asked at, and runs no new search.
 - A search with no saved answer is not reopened: the agent is told "no saved answer for this search; ask it again to get a fresh one".
 - Known: feedback sent the moment an answer arrives can be told to retry in a few seconds, while the answer is still being saved.
-- Known: a long answer reopens with at most 50 of its citations, and the result counts how many markers point at nothing (card 54).
+- Known: an answer saved before 2026-10-08 reopens with at most 50 of its citations, and the result counts how many markers point at nothing; one saved since keeps up to 100 (card 54).
 - Why it matters: an agent asked what you found last week should read the answer you already got, not pay for a second search, and a rating sent through an agent should count like one sent on the web.
 
 ### 96. A guest gets no more than the web gives a guest (T-8.10-05)
@@ -1986,6 +1994,13 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
+| card 67 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now" | Query 100 |
+| card 104 | An answer lists one record once in its tables and Plain language list | Query 107 |
+| card 103 | No disease cell under the variant-to-disease table is blank without a reason | Query 79 |
+| card 101 | A sentence whose copied piece the sentence check holds back is dropped whole, never shown cut | Query 106 |
+| card 54 | A reopened long answer keeps every source it cited, up to 100 | Query 67 |
+| card 71 | A reopened answer's tables page ten rows at a time and fit a phone | Query 67 |
 | card 102 | A reopened saved answer lists its sources, one row per page, each linking to its record | Query 107 |
 | card 22 | Every total on an answer says what it counts, and every number that says sources is the same | Query 107 |
 | card 101 | Every sentence the writer rewords is checked against its paper before you see it | Query 106 |

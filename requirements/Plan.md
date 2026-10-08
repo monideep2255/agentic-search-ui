@@ -1050,6 +1050,18 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-08. THE UI FIX LOOP, THE NIGHT OF 2026-10-07 TO 08: PULL REQUESTS #202 TO #208 MERGED. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
+
+- What landed, by what a person notices:
+  - A sentence whose copied piece the sentence check holds back is dropped whole (card 101, part, #204).
+  - A reopened long answer keeps every source up to 100 (card 54, #202); its reopened tables page and fit a phone (card 71, part, #203).
+  - Empty disease cells say why, and a record is listed once in an answer's tables (cards 103 and 104, #205).
+  - A reopened outage answer is in the past tense (card 67, #207); an answer that finished before Stop stands on screen, in history and in memory (card 59, #208).
+  - The overnight-development skill (#206).
+- Held or reverted: card 54's warning line for older answers, reverted before merge after its verifier found false alarms; card 67's first, dated version, failed by both reviews and redone.
+- Checks: every merge behind CI and a fresh verifier finding nothing worse than develop, then the test queries on develop at 1280 and 390; the golden run was not run, at the owner's choice.
+- Also: the guardrail design written and its two parked branches deleted; four finished tags deleted; the data engineering repository released as v1.1.0. Decisions: `DECISIONS.md`, rows dated 2026-10-08.
+
 2026-10-07. THE UI FIX LOOP, 2026-10-06 AND THE NIGHT AFTER: PULL REQUESTS #179 TO #199 MERGED; CARD 101'S COPIED-CUT FIX PARKED. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
 
 - What landed, by what a person notices:

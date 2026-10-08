@@ -1,0 +1,36 @@
+Showing 11–20 of 38
+VARIANT	IDENTIFIER	ASSOCIATED DISEASE(S)	
+NM_000545.8(HNF1A):c.1108-6del	ClinVar:1108836	None named: the ClinVar record says not provided	⁠17
+NM_000545.8(HNF1A):c.1108-15G>A	ClinVar:1108874	None named: the ClinVar record says not provided	⁠18
+NM_000545.8(HNF1A):c.245C>T (p.Thr82Met)	ClinVar:1120099	None named: the ClinVar record says not provided and not specified	⁠19
+NM_000545.8(HNF1A):c.1011C>T (p.Ser337=)	ClinVar:1134661	Maturity-onset diabetes of the young	⁠20, 2
+NM_000545.8(HNF1A):c.1719_1720inv (p.Ser574Gly)	ClinVar:1148460	None named: the ClinVar record says not provided	⁠21
+NM_000545.8(HNF1A):c.956-8C>T	ClinVar:1158429	None named: the ClinVar record says not provided	⁠22
+NM_000545.8(HNF1A):c.1345_1346insG (p.Ile449fs)	ClinVar:1172848	Maturity-onset diabetes of the young	⁠23, 2
+NM_000545.8(HNF1A):c.787C>G (p.Arg263Gly)	ClinVar:1172902	None named: the ClinVar record says not specified	⁠24
+NM_000545.8(HNF1A):c.737T>G (p.Val246Gly)	ClinVar:1173962	Maturity-onset diabetes of the young type 3; Monogenic diabetes	⁠25, 6, 9
+NM_000545.8(HNF1A):c.1369_1384dup (p.Val462fs)	ClinVar:1173963	Maturity-onset diabetes of the young type 3	⁠26, 6
+----
+Showing 21–30 of 38
+VARIANT	IDENTIFIER	ASSOCIATED DISEASE(S)	
+NM_000545.8(HNF1A):c.1310-2A>G	ClinVar:1179147	None named: the ClinVar record says not provided	⁠27
+NM_000545.8(HNF1A):c.361T>C (p.Ser121Pro)	ClinVar:1187378	None named: the ClinVar record says not provided	⁠28
+NM_000545.8(HNF1A):c.-89T>C	ClinVar:1203907	None named: the ClinVar record says not provided and not specified	⁠29
+NM_000545.8(HNF1A):c.-96T>G	ClinVar:1204628	None named: the ClinVar record says not provided and not specified	⁠30
+NM_000545.8(HNF1A):c.1309+26C>T	ClinVar:1207870	None named: the ClinVar record says not provided	⁠31
+NM_000545.8(HNF1A):c.1502-147A>G	ClinVar:1211421	None named: the ClinVar record says not provided	⁠32
+NM_000545.8(HNF1A):c.1501+65G>C	ClinVar:1215166	None named: the ClinVar record says not provided	⁠33
+NM_000545.8(HNF1A):c.526+53C>G	ClinVar:1218569	None named: the ClinVar record says not provided	⁠34
+NM_000545.8(HNF1A):c.1768+44C>T	ClinVar:1224743	None named: the ClinVar record says not provided	⁠35
+NM_000545.8(HNF1A):c.1108-42G>T	ClinVar:1228030	None named: the ClinVar record says not provided	⁠36
+----
+Showing 31–38 of 38
+VARIANT	IDENTIFIER	ASSOCIATED DISEASE(S)	
+NM_000545.8(HNF1A):c.327-91G>A	ClinVar:1232183	None named: the ClinVar record says not provided	⁠37
+NM_000545.8(HNF1A):c.1769-159_1769-158insTT	ClinVar:1249732	None named: the ClinVar record says not provided	⁠38
+NM_000545.8(HNF1A):c.526+66G>C	ClinVar:1253208	None named: the ClinVar record says not provided	⁠39
+NM_000545.8(HNF1A):c.1080_1081dup (p.Ser361fs)	ClinVar:1256569	None named: the ClinVar record says not provided	⁠40
+NM_000545.8(HNF1A):c.1502-19CT[2]	ClinVar:1256570	None named: the ClinVar record says not provided and not specified	⁠41
+NM_000545.8(HNF1A):c.1641_1642del (p.Glu548fs)	ClinVar:1256571	None named: the ClinVar record says not provided	⁠42
+NM_000545.8(HNF1A):c.17G>T (p.Ser6Ile)	ClinVar:1256572	None named: the ClinVar record says not provided	⁠43
+NM_000545.8(HNF1A):c.401_406dup (p.Asp135_Thr136insIleAsp)	ClinVar:1256573	None named: the ClinVar record says not provided	⁠44

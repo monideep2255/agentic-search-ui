@@ -2,7 +2,7 @@
 
 The current state a fresh session needs, and nothing else. `/phase-checkpoint` rewrites it in place at every session end and keeps it to about 4 KB. Earlier versions, and the setup steps for a new laptop, are in `docs/build/Handoff_history.md`.
 
-Last updated: 2026-10-07.
+Last updated: 2026-10-08.
 
 ## Table of contents
 
@@ -13,26 +13,30 @@ Last updated: 2026-10-07.
 
 ## What is live
 
-- Develop: `fde37ddf`, the merge of #199. Both Railway services redeploy on every push to `develop`; check `gh run list --branch develop --limit 3` before trusting CI.
-- Production: `v0.2.0`, tag `cde4f592`, released 2026-09-20. Nothing since is on it. The changelog fix, `testing/Future.md` row 53, lands before the next release.
-- The overnight run of 2026-10-06 to 07 merged the readability pass (#196) and cards 22, 23 and 102 (#197 to #199), each behind CI and a fresh verifier. What it did and why: the done file's session table and `DECISIONS.md` rows dated 2026-10-06 and 2026-10-07.
-- Factory works every day from `docs/build/Factory_onboarding.md`; its next cards are 75, then 24, then 100. Paste-in prompt: "Read docs/build/Factory_onboarding.md in full, then build card 75, one pull request; then card 24, then card 100." The lead verifies each pull request before merging.
-- Kept on GitHub: `fix/card101-copied-cuts` (card 101, parked); `feat/8.7-s1` to `s3` and `phase/8.7-answers-sooner` (phase 8.7); `fix/card72-r10-guardrail` and `fix/card84-r10-sound-parts` (guardrail reference).
-- Fourteen local worktrees wait for the morning clean-up, each on a merged or pushed branch (`git worktree list`): tonight's six and eight from 2026-10-06. Check each for uncommitted work before removing it. GitHub holds only develop, production and the kept branches.
+- Develop: `29d8d8a0`, the merge of #208. Both Railway services redeploy on every push to `develop`; check `gh run list --branch develop --limit 3` before trusting CI.
+- Production: `v0.2.0`, tag `cde4f592`. The changelog fix, `testing/Future.md` row 53, lands before the next release.
+- Merged on the night of 2026-10-07 to 08, each behind CI and a fresh verifier finding nothing worse than develop, then its test queries on develop at 1280 and 390: cards 71 part (#203), 54 (#202), 101 part (#204), 103 and 104 (#205), 67 (#207, no live check possible), 59 (#208), and the overnight-development skill (#206). Detail: the done file's session table.
+- Not done that night: card 54's warning line for older answers, reverted for false alarms; card 67's dated first version, redone; the golden run, at the owner's choice.
+- The data engineering repository is released as `v1.1.0`, through its own release workflow.
+- GitHub holds `develop`, `production` and phase 8.7's four branches (`feat/8.7-s1` to `s3`, `phase/8.7-answers-sooner`), which wait on the OpenRouter top-up.
+- Locally, besides `develop`: nine old worktrees on merged branches, unchecked for untracked work because iCloud evicted their files: `asu-audit`, `asu-card22`, `asu-card56`, `asu-card56-r3`, `asu-card99`, `asu-factory-43`, `asu-factory-43b`, `asu-factory-44`, `asu-factory-47`.
+- Factory did no work on 2026-10-08; its next cards stay 75, 24 and 100 (`docs/build/Factory_onboarding.md`).
 
 ## What awaits the product owner
 
-- Retests: "Waiting for your retest" in `testing/UI_fixes_done.md`, newest first, cards 102, 23 and 22 on top. Product checks on develop passed them, except that an answer over 50 citations reopens with only 50 (card 54).
-- Card 101: whether to try dropping the whole sentence whenever a copied cut is held back, on its parked branch (`DECISIONS.md`, 2026-10-07).
-- The decisions the lead took on your behalf overnight, each a `DECISIONS.md` row: the readability merge bar, the withdrawn board-cell move, the last rounds of cards 22 and 101, and card 102.
-- Card 40: the itemized list of hook and always-loaded rule changes, each for your yes or no. Nothing in the security layer changed overnight.
-- From before: decisions D5 to D21 in `testing/Board_plan.md` (taken as recommended unless you object), the OpenRouter top-up phase 8.7 waits on, the MedGen encoding note to NCBI, and the privacy hooks and `railway link` on the second laptop.
+- Retests: "Waiting for your retest" in `testing/UI_fixes_done.md`, newest first, cards 59, 67, 103 and 104, 101 part, 54 and 71 part on top.
+- The guardrail design's seven yes or no questions: `testing/Developer/reports/2026-10-08_guardrail_design/design.md`.
+- The "High-risk claim" tag on a reopened answer (card 71): approved, a migration built in a daytime session with you present.
+- Card 40: the itemized hook and always-loaded rule changes, now with one git-workflow line (tags count, every session end, both repositories).
+- The decisions taken for you overnight: `DECISIONS.md`, rows dated 2026-10-08.
+- The nine evicted worktrees above: once iCloud restores them, the lead checks each and removes what clears all three checks.
+- From before: decisions D5 to D21 in `testing/Board_plan.md`, the OpenRouter top-up, the privacy hooks and `railway link` on the second laptop.
 
 ## The one next action
 
-Ask the owner card 101's question, then build from the board's To do column top down: card 56's remaining cases with a design agreed first, per `testing/UI_fixes_done.md`, "Next, in order". Review Factory's pull requests as they arrive.
+Read the night's loose ends in `testing/UI_fixes_done.md` ("Where we stopped"), then build from the board's To do column top down: card 94's remaining isolate work next, since card 56 waits on a design with you.
 
-How to start a session: read this file, then `git status --short` and `git worktree list`, then "Waiting for your retest" and the board's To do column. At the end, run `/phase-checkpoint`, then `/ship`.
+How to start a session: read this file, then `git status --short` and `git worktree list`, then "Waiting for your retest" and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
 
 ## Where the facts live
 
