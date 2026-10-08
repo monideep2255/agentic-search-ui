@@ -490,7 +490,7 @@ def test_the_placeholder_count_is_the_real_number_of_excluded_links() -> None:
     assert placeholder_link_count(rows, _NAMES) == 2
     assert placeholder_links_note(2) == (
         "2 variant links to ClinVar placeholder conditions "
-        "('not provided', 'not specified' or 'see cases') are not listed."
+        "('not provided', 'not specified' or 'see cases') are not listed as diseases."
     )
     assert placeholder_links_note(0) is None
 

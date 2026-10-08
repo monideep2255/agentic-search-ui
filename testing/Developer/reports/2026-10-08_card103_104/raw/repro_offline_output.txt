@@ -1,0 +1,30 @@
+========================================================================
+Card 103: variant-to-disease table, placeholder-only variants
+  heading       Variant-to-disease mapping  markers=[]
+  table_header  ['Variant', 'Identifier', 'Associated disease(s)']  markers=[]
+  table_row     ['variant ClinVar:1048822', 'ClinVar:1048822', '']  markers=['cq-1-1']
+  table_row     ['variant ClinVar:1051750', 'ClinVar:1051750', '']  markers=['cq-1-2']
+  table_row     ['variant ClinVar:1098821', 'ClinVar:1098821', '']  markers=['cq-1-3']
+  table_row     ['variant ClinVar:1104934', 'ClinVar:1104934', '']  markers=['cq-1-4']
+  table_row     ['variant ClinVar:1105252', 'ClinVar:1105252', '']  markers=['cq-1-5']
+  table_row     ['variant ClinVar:2000001', 'ClinVar:2000001', 'Maturity-onset diabetes of the young']  markers=['cq-1-6']
+  note          Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pat  markers=[]
+  Notes-list line built later in write_node: 6 variant links to ClinVar placeholder conditions ('not provided', 'not specified' or 'see cases') are not listed.
+  A link whose name lookup failed is counted by the note as: 0
+========================================================================
+Card 104 case A: graph link + live link with slash; Sources page keys = ['https://www.ncbi.nlm.nih.gov/gene/672']
+  heading       Gene records found  markers=[]
+  table_header  ['Gene', 'Identifier']  markers=[]
+  table_row     ['BRCA1', 'NCBIGene:672']  markers=['cq-g-8']
+  table_row     ['BRCA1', 'NCBIGene:672']  markers=['nd-g-12']
+========================================================================
+Card 104 case B: one exact link, two labels; Sources page keys = ['https://www.ncbi.nlm.nih.gov/gene/672']
+  heading       Gene records found  markers=[]
+  table_header  ['Gene', 'Identifier']  markers=[]
+  table_row     ['BRCA1 DNA repair associated', 'NCBIGene:672']  markers=['cq-g-8']
+  table_row     ['BRCA1', 'NCBIGene:672']  markers=['nd-g-12']
+========================================================================
+Control: one exact link, one label; Sources page keys = ['https://www.ncbi.nlm.nih.gov/gene/672']
+  heading       Gene records found  markers=[]
+  table_header  ['Gene', 'Identifier']  markers=[]
+  table_row     ['BRCA1', 'NCBIGene:672']  markers=['cq-g-8']
