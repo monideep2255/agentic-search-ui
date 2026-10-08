@@ -74,3 +74,11 @@ async def test_the_export_is_still_bounded_above_the_ceiling(_caller, monkeypatc
     assert response.status_code == 200
     assert len(response.json()) == MAX_CITATIONS_PER_ANSWER
     assert response.headers["x-citations-export-truncated"] == "true"
+
+
+@pytest.mark.asyncio
+async def test_the_export_keeps_the_live_order_and_its_first_hundred(_caller, monkeypatch) -> None:
+    """A-54-06: numbers 1 to 100, in order, when 120 were emitted. Mutation:
+    reversing the events or keeping the last 100 turns this red."""
+    response = await _export(monkeypatch, MAX_CITATIONS_PER_ANSWER + 20)
+    assert [c["display_index"] for c in response.json()] == list(range(1, 101))

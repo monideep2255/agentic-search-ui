@@ -89,10 +89,15 @@ def _cost_event(*, trace_id: str = "trace-1", model_tier: str = "plan"):
     )
 
 
-def _citation_payload(*, citation_id: str = "call-1-1", claim_text: str = "BRCA1 is a gene."):
+def _citation_payload(
+    *,
+    citation_id: str = "call-1-1",
+    claim_text: str = "BRCA1 is a gene.",
+    display_index: int = 1,
+):
     return {
         "citation_id": citation_id,
-        "display_index": 1,
+        "display_index": display_index,
         "source": "NCBIGene",
         "source_id": "NCBIGene:672",
         "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
@@ -351,6 +356,21 @@ def test_citations_are_still_bounded_at_the_runs_own_ceiling() -> None:
 
 # ---------------------------------------------------------------------------
 # rubric_outcome and the one deterministic hard-fail check.
+def test_citations_keep_the_live_answers_order_and_its_first_hundred() -> None:
+    """A-54-06: the stored citations are the live answer's, in its order.
+
+    120 citations arrive numbered 1 to 120. The row must hold numbers 1 to
+    100 in that order, so markers [1] to [100] have rows. Mutation: storing
+    `reversed(events)`, or keeping the last 100, turns this red.
+    """
+    events = [
+        _citation_event(citation_id=f"call-1-{i}", display_index=i) for i in range(1, 121)
+    ] + [_done_event()]
+    row = assemble_interaction(_query(), events)
+    assert row is not None
+    assert [c["display_index"] for c in row.citations] == list(range(1, 101))
+
+
 # ---------------------------------------------------------------------------
 
 

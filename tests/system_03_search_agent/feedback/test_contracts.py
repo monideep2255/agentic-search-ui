@@ -449,12 +449,12 @@ class TestCitationsBound:
             _row(citations=[_citation_payload(claim_text="x" * 1001)])
 
     def test_a_full_ceiling_of_citations_at_claim_texts_max_still_validate(self) -> None:
-        """The large-but-legitimate case: 50 citations (`InteractionRow.
-        citations`'s own list `max_length`), each with `claim_text` at
+        """The large-but-legitimate case: `MAX_CITATIONS_PER_ANSWER` (100)
+        citations (`InteractionRow.citations`'s own list `max_length`), each with `claim_text` at
         `CitationPayload`'s real 1000-character maximum. Mutation: lowering
-        `InteractionRow.citations`'s list `max_length` from 50 to 49 makes
-        this fail even though `feedback.capture._MAX_CITATIONS` is 50 and
-        a run citing 50 sources is a real, expected shape for a
+        `InteractionRow.citations`'s list `max_length` by one makes
+        this fail even though `feedback.capture._MAX_CITATIONS` is
+        `MAX_CITATIONS_PER_ANSWER` and a run citing that many sources is a real, expected shape for a
         multi-hop query. Applied, confirmed red, reverted."""
         entry = _citation_payload(claim_text="x" * 1000)
         row = _row(citations=[entry] * MAX_CITATIONS_PER_ANSWER)

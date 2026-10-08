@@ -183,8 +183,8 @@ MAX_ANSWER_LENGTH = 8000
 # per display slot, capped at `core/graph.py`'s `_MAX_FINDINGS_FOR_DISPLAY`
 # (the planned graph call's own row limit, 100). A bound still exists, and
 # the fold still discloses anything cut at it. `adapters/web_sse/app.py`'s
-# `_MAX_CITATIONS_PER_RUN` (the REST citations export) is still 50; that
-# route is outside this phase's GraphQL and MCP fence.
+# `_MAX_CITATIONS_PER_RUN` (the REST citations export) is also 100 now
+# (`MAX_CITATIONS_PER_ANSWER`, card 54).
 MAX_CITATIONS = 100
 
 # This surface's own bound, since neither REST nor MCP carries a Disclosures
@@ -417,7 +417,7 @@ class RunResult:
 # J-06, premise clause C5). This export used to carry `export_truncated`
 # alone, a bare boolean that says SOMETHING was dropped and never why, so a
 # citation dropped for failing validation was indistinguishable from one
-# dropped at the 50-citation cap, and a caller reading a short export could
+# dropped at the 100-citation cap, and a caller reading a short export could
 # not tell a data-quality problem from a volume one. A defaulted field would
 # have been worse than no field: every existing construction site would keep
 # compiling while reporting "nothing to disclose" about an export that had
