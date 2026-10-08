@@ -1887,8 +1887,15 @@ async def post_v1_query_stop(
     # already-cancelled run is a no-op, never an error, so this endpoint
     # always returns 200 once ownership is established, regardless of
     # whether the run was still in flight.
-    default_registry.cancel_run(run_id)
-    return StopRunResponse(stopped=True)
+    #
+    # Card 59, A-59-03: `stopped` reports what happened, as GraphQL's
+    # `stopRun` does, rather than the fixed `True` it used to be. A run that
+    # had already finished, including one that sent `done` and is still
+    # saving its answer (D18: that answer stands), reads `stopped: false`,
+    # which the command line prints as "run was already finished". Same
+    # one-field shape; the web client does not read the body.
+    stopped = default_registry.cancel_run(run_id)
+    return StopRunResponse(stopped=stopped)
 
 
 # ---------------------------------------------------------------------------

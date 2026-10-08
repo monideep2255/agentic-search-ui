@@ -1210,6 +1210,10 @@ class TestStopCommand:
             ["stop", "run-123"], stdin=io.StringIO(""), stdout=out, stderr=err, http_client=object()
         )
         assert exit_code == 0
+        # Card 59, A-59-03: the server now answers `stopped: false` for a run
+        # that had already finished, including one still saving its answer,
+        # and the person is told so rather than "run stopped".
+        assert out.getvalue() == "run was already finished\n"
 
     @pytest.mark.asyncio
     async def test_stopping_someone_elses_run_renders_403_and_exits_nonzero(

@@ -25,6 +25,16 @@ Arms:
 - B: stop before `done`, during the writing call. Today's behaviour exactly:
   no `done`, the `cancelled` error, no memory write, a `refuse` row.
 
+The fix round (judge and adversary round 1):
+
+- C1, J-59-02: the abandonment timer fires while the memory write after
+  `done` is in progress (the browser closes its stream on `done`, so a
+  finished run is always unwatched then). The write completes, as for a
+  stop.
+- C2 and C3, A-59-01 and A-59-03: GraphQL `stopRun` and the REST stop
+  endpoint on a run that already sent `done` answer `stopped: false`, "it
+  had already finished", never `stopped: true` for a run the server kept.
+
 Each write is parked on a gate so the stop provably lands inside it, rather
 than racing a fast offline run.
 """
@@ -32,10 +42,14 @@ than racing a fast offline run.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 
+import system_03_search_agent.adapters.graphql.schema as graphql_schema_module
+import system_03_search_agent.adapters.web_sse.app as web_app_module
 import system_03_search_agent.core.run as run_module
 import system_03_search_agent.feedback as feedback_module
 from system_03_search_agent.contracts.events import DonePayload, Event
@@ -96,10 +110,16 @@ async def _wait_for_task(entry: RunEntry) -> None:
 
 
 async def _stop_after_done_while(
-    parked: _ParkedWrite, *, owner_id: str
-) -> tuple[RunRegistry, str]:
-    """Start a real run, wait until it sent `done` and `parked` is in progress, stop it."""
-    registry = RunRegistry()
+    parked: _ParkedWrite,
+    *,
+    owner_id: str,
+    registry: RunRegistry | None = None,
+    stop: Callable[[RunRegistry, str], object] | None = None,
+) -> tuple[RunRegistry, str, object]:
+    """Start a real run, wait until it sent `done` and `parked` is in
+    progress, stop it with `stop` (the registry's own `cancel_run` unless a
+    surface is named), and return what the stop answered."""
+    registry = registry if registry is not None else RunRegistry()
     run_id = registry.create_run(_query(), _context(), owner_id=owner_id)
     entry = registry.get_run(run_id)
 
@@ -112,12 +132,14 @@ async def _stop_after_done_while(
     )
     assert not entry.task.done(), "populate-check failed: the run had already ended."
 
-    registry.cancel_run(run_id)
+    answer = (stop or (lambda reg, rid: reg.cancel_run(rid)))(registry, run_id)
+    if asyncio.iscoroutine(answer):
+        answer = await answer
     for _ in range(5):
         await asyncio.sleep(0)
     parked.release.set()
     await _wait_for_task(entry)
-    return registry, run_id
+    return registry, run_id, answer
 
 
 @pytest.mark.asyncio
@@ -131,8 +153,12 @@ async def test_a1_a_stop_after_done_lets_the_memory_write_finish(
     capture = AsyncMock(return_value=None)
     monkeypatch.setattr(feedback_module, "capture_run", capture)
 
-    registry, run_id = await _stop_after_done_while(memory, owner_id="guest:stop-after-done-1")
+    registry, run_id, stopped = await _stop_after_done_while(
+        memory, owner_id="guest:stop-after-done-1"
+    )
     entry = registry.get_run(run_id)
+    # The fix round, A-59-01: `cancel_run` says it stopped nothing.
+    assert stopped is False, "cancel_run claimed to stop a run it left alone."
 
     # The real order: memory is written after `done`, history after memory.
     assert memory.events[-1].type == "done"
@@ -166,7 +192,9 @@ async def test_a2_a_stop_after_done_lets_the_history_write_finish(
     history = _ParkedWrite()
     monkeypatch.setattr(feedback_module, "capture_run", history)
 
-    registry, run_id = await _stop_after_done_while(history, owner_id="guest:stop-after-done-2")
+    registry, run_id, _stopped = await _stop_after_done_while(
+        history, owner_id="guest:stop-after-done-2"
+    )
 
     assert len(remembered) == 1, "populate-check failed: memory was not written before history."
     assert history.finished == 1 and not history.cancelled, (
@@ -206,3 +234,120 @@ async def test_b_a_stop_before_done_still_stops_and_records_nothing_answered(
     assert capture.await_count == 1
     _query_arg, captured = capture.await_args.args
     assert DonePayload.model_validate(captured[-1].payload).trust_outcome == "refuse"
+
+
+@pytest.mark.asyncio
+async def test_c1_the_abandonment_timer_lets_the_memory_write_after_done_finish(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """J-59-02. The browser closes its stream the moment `done` arrives, so
+    the run is unwatched while it saves its answer, and the abandonment
+    timer runs out inside that save.
+
+    Mutation: give `_cancel_if_still_abandoned` back its own
+    `entry.task.cancel()` instead of the shared guard. The timer then
+    cancels the parked memory write and this arm goes red.
+    """
+    memory = _ParkedWrite()
+    monkeypatch.setattr(run_module, "_remember_turn", memory)
+    capture = AsyncMock(return_value=None)
+    monkeypatch.setattr(feedback_module, "capture_run", capture)
+
+    grace = 0.2
+    registry = RunRegistry(abandon_grace_seconds=grace)
+    run_id = registry.create_run(_query(), _context(), owner_id="guest:abandon-after-done")
+    entry = registry.get_run(run_id)
+
+    # A reader that stops at `done`, the way the browser does.
+    seen: list[str] = []
+    async for event in registry.subscribe(run_id):
+        seen.append(event.type)
+    await asyncio.wait_for(memory.started.wait(), timeout=_WAIT_SECONDS)
+    assert seen[-1] == "done", f"populate-check failed: the reader ended on {seen[-1:]}"
+    assert entry.subscriber_count == 0, "populate-check failed: the reader is still attached."
+    assert entry.abandonment_check is not None, (
+        "populate-check failed: no abandonment timer was started after the reader left."
+    )
+
+    # Let the timer run out, with room to spare, while the save is parked.
+    await asyncio.wait_for(entry.abandonment_check, timeout=_WAIT_SECONDS)
+    await asyncio.sleep(grace)
+    assert not entry.task.done(), (
+        "the abandonment timer ended the run while it was saving an answer "
+        "the reader already has."
+    )
+    memory.release.set()
+    await _wait_for_task(entry)
+
+    assert memory.finished == 1 and not memory.cancelled, (
+        "the abandonment timer cut the memory write after `done` short, so the "
+        "conversation forgets an answer the screen shows."
+    )
+    assert capture.await_count == 1
+    assert not entry.cancelled, "a run that finished was marked cancelled by the timer."
+    assert entry.events[-1].type == "done", (
+        f"events after done: {[event.type for event in entry.events]}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_c2_graphql_stop_run_after_done_says_it_had_already_finished(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-59-01, through the real `stopRun` resolver and a real registry.
+
+    Mutation: restore the resolver's `stopped = not entry.task.done()`
+    read. It then answers `stopped: true` for a run the server kept, and
+    this arm goes red.
+    """
+    memory = _ParkedWrite()
+    monkeypatch.setattr(run_module, "_remember_turn", memory)
+    monkeypatch.setattr(feedback_module, "capture_run", AsyncMock(return_value=None))
+    registry = RunRegistry()
+    monkeypatch.setattr(graphql_schema_module, "default_registry", registry)
+    info = SimpleNamespace(context=SimpleNamespace(principal=SimpleNamespace(id="gql-59")))
+
+    def _stop(_registry: RunRegistry, run_id: str) -> object:
+        return graphql_schema_module.Mutation().stop_run(info, run_id)
+
+    registry, run_id, result = await _stop_after_done_while(
+        memory, owner_id="user:gql-59", registry=registry, stop=_stop
+    )
+
+    assert result.run_id == run_id
+    assert result.stopped is False, (
+        "stopRun said stopped for a run whose answer the server kept in history and memory."
+    )
+    assert memory.finished == 1
+    assert not registry.get_run(run_id).cancelled
+
+
+@pytest.mark.asyncio
+async def test_c3_rest_stop_after_done_says_it_had_already_finished(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-59-03, through the real `POST /v1/query/{run_id}/stop` handler.
+
+    Mutation: restore the fixed `StopRunResponse(stopped=True)`. It then
+    answers `stopped: true`, which the command line prints as "run
+    stopped", for a run the server kept, and this arm goes red.
+    """
+    memory = _ParkedWrite()
+    monkeypatch.setattr(run_module, "_remember_turn", memory)
+    monkeypatch.setattr(feedback_module, "capture_run", AsyncMock(return_value=None))
+    registry = RunRegistry()
+    monkeypatch.setattr(web_app_module, "default_registry", registry)
+    caller = SimpleNamespace(owner_id="guest:rest-59")
+
+    def _stop(_registry: RunRegistry, run_id: str) -> object:
+        return web_app_module.post_v1_query_stop(run_id, caller)
+
+    registry, run_id, response = await _stop_after_done_while(
+        memory, owner_id="guest:rest-59", registry=registry, stop=_stop
+    )
+
+    assert response.stopped is False, (
+        "the REST stop said stopped for a run whose answer the server kept."
+    )
+    assert memory.finished == 1
+    assert not registry.get_run(run_id).cancelled
