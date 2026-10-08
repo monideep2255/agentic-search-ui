@@ -1069,8 +1069,18 @@ class RunRegistry:
                 above).
         """
         entry = self.get_run(run_id)
-        if not entry.task.done():
-            entry.task.cancel()
+        if entry.task.done():
+            return
+        # Card 59, owner decision D18: an answer that finished before Stop
+        # arrived stands. `run_streaming` sends `done` to readers FIRST and
+        # only then writes session memory and the history row, so the task
+        # is still running after a reader already has the answer. Cancelling
+        # it there cut those writes short: the screen showed the answer while
+        # memory and history lost it. Once `done` is on the read path the
+        # run is finished for every purpose, and the stop is a no-op.
+        if any(event.type == "done" for event in entry.events):
+            return
+        entry.task.cancel()
 
     async def subscribe(self, run_id: str, *, after_seq: int = -1) -> AsyncIterator[Event]:
         """Yield every event `run_id` has produced with `seq > after_seq`,
