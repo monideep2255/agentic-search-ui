@@ -78,7 +78,7 @@ The first row agrees. The second is the card, and it is the common one because o
 
 ## A narrow window left on the server
 
-Outside this card's fence, so reported rather than changed.
+Outside this card's fence when diagnosed. The lead then widened the fence to `core/run_registry.py` and it is fixed: see `build.md`, last section.
 
 - After `run_streaming` yields `done`, the drain task still runs: the graph loop winds down, then `_remember_turn`, then capture in the `finally`.
 - A stop that reaches the server in that window (the browser pressed Stop less than one round trip before `done` arrived) still cancels the task. The browser shows the answer, since `done` reached it, but the cancellation can skip `_remember_turn` and can interrupt the capture write.
