@@ -1,0 +1,37 @@
+baseline: 0 failed
+R1 no whole-sentence drop for a held copy: 15 failed
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_only_what_the_check_read_is_shown[the cut alone approved]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_held_cut_never_leaves_a_fragment_develop_dropped[check holds]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_held_cut_never_leaves_a_fragment_develop_dropped[check approves]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_held_cut_shows_no_part_of_its_sentence[a bare name left]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_held_cut_shows_no_part_of_its_sentence[in babies left]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_held_limit_never_leaves_the_sentence_without_it[holds it]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_held_limit_never_leaves_the_sentence_without_it[unreadable]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_held_limit_never_leaves_the_sentence_without_it[call failed]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_held_limit_never_leaves_the_sentence_without_it[cost cap]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_held_limit_never_leaves_the_sentence_without_it[below the time floor]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_partial_verdict_shows_the_whole_sentence_or_nothing[gene, name approved alone]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_partial_verdict_shows_the_whole_sentence_or_nothing[gene, last disease held]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_partial_verdict_shows_the_whole_sentence_or_nothing[names approved, claim held]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_partial_verdict_shows_the_whole_sentence_or_nothing[first name approved alone]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_joined_item_longer_than_the_check_reads_is_held
+R2 no length filter, every item sent: 4 failed
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_joined_item_longer_than_the_check_reads_is_held
+    tests/system_03_search_agent/synthesis/test_sentence_check.py::test_an_item_longer_than_the_check_reads_is_never_sent_or_approved[guard]
+    tests/system_03_search_agent/synthesis/test_sentence_check.py::test_an_item_longer_than_the_check_reads_is_never_sent_or_approved[jev]
+    tests/system_03_search_agent/synthesis/test_sentence_check.py::test_a_check_with_only_oversized_items_asks_no_model
+R3 a cut with no run falls back to the cut as its quote: 2 failed
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_cut_the_widener_cannot_place_is_held_not_sent_as_its_own_quote[no evidence, a long run of sentences]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_cut_the_widener_cannot_place_is_held_not_sent_as_its_own_quote[one long sentence]
+R4 listing pieces compared with their separators kept: 2 failed
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_the_listing_keeps_a_row_opening_on_a_separator[a piece opening on a comma]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_the_listing_keeps_a_row_opening_on_a_separator[a piece opening on a colon]
+R5 no catch around the guard-tier call: 3 failed
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_an_unexpected_failure_of_the_guard_call_approves_nothing[runtime]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_an_unexpected_failure_of_the_guard_call_approves_nothing[timeout]
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_an_unexpected_failure_of_the_guard_call_approves_nothing[key]
+R6 the length filter reads the sentence only: 4 failed
+    tests/system_03_search_agent/synthesis/test_copied_cuts.py::test_a_joined_item_longer_than_the_check_reads_is_held
+    tests/system_03_search_agent/synthesis/test_sentence_check.py::test_an_item_longer_than_the_check_reads_is_never_sent_or_approved[guard]
+    tests/system_03_search_agent/synthesis/test_sentence_check.py::test_an_item_longer_than_the_check_reads_is_never_sent_or_approved[jev]
+    tests/system_03_search_agent/synthesis/test_sentence_check.py::test_a_check_with_only_oversized_items_asks_no_model
