@@ -27,39 +27,40 @@ Built and live on develop, waiting for the product owner's verdict, newest first
 
 | # | What to check, in plain words | Item | Queries | Retest |
 |---|---|---|---|---|
-| 1 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now"; only on an answer saved during an outage, so it cannot be tried on demand | card 67 (#207) | 100 | Waiting for your verdict |
-| 2 | No disease cell under the variant-to-disease table is blank without a reason ("None named: the ClinVar record says not provided", "Name could not be looked up"), and an answer lists one record once in its tables, for example "BRCA1 NCBIGene:672 [6, 7]" | cards 103 and 104 (#205) | 79, 107 | Waiting for your verdict |
-| 3 | A sentence whose copied piece the sentence check holds back is dropped whole: no bare name like "Ribavirin [1]." and no sentence with its limit cut off | card 101, part (#204) | 106 | Waiting for your verdict |
-| 4 | A reopened long answer keeps every source it cited, up to 100, so its "Based on N sources cited" line, its Sources rows and the history count agree; answers saved before 2026-10-08 still keep at most 50 | card 54 (#202) | 67, 107 | Waiting for your verdict |
-| 5 | A reopened answer's table shows ten rows at a time with the live answer's "Showing 1–10 of N" bar, and on a phone each row stacks with its column names and fits the screen | card 71, part (#203) | 67 | Waiting for your verdict |
-| 6 | A reopened saved answer lists its sources again, one row per page under its "Based on N sources cited" line, and long links wrap inside their row on a phone | card 102 (#199) | 107 | Waiting for your verdict |
-| 7 | Under the variant-to-disease table the note reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI.", directly under its table at 1280 and 390, also when the table ends the answer | card 23 (#198) | 79 | Waiting for your verdict |
-| 8 | One sources count everywhere: the line under the question, the trust line, the Sources heading, the history list after a reload and a reopened saved answer show the same number of pages; a page cited from the graph and from live NCBI is one card naming both layers, "from 2 layers"; "Confirmed by N independent databases" counts only cited databases that state the fact | card 22 (#197) | 107 | Waiting for your verdict |
-| 9 | Before a reworded sentence is shown, the sentence check reads it against its paper: a bronchiolitis answer no longer says "babies" where its record says children | card 101, part (#193) | 106 | Waiting for your verdict |
-| 10 | The command line and its MCP bridge: a queued agent request gets its full time once it starts and a plain "busy" message if it waits too long; Ctrl-C says you stopped the search; invisible-only feedback no longer erases a rating; credential errors name the right fix without printing the file's path | card 61 (#190, built by Factory) | none; `s3` and `s3 mcp` from the Integrations page | Waiting for your verdict |
-| 11 | On a phone, a long variant name wraps inside the answer and the page never scrolls sideways; its citation number stays on the same line as the end of the name, in the record list and in the sentence | cards 43 and 43b (#181, #187, built by Factory; checked on develop by the lead) | 105 | Waiting for your verdict |
-| 12 | The design prototype's home page is light, like the app's, so screen checks stop flagging the live home page; closes by itself seven days after it reached Retest on 2026-10-06, unless you object (a design-file card the lead's reviewer passed at both widths) | card 47 (#188, built by Factory) | none, a design file | Closes by itself seven days after 2026-10-06 unless you object |
-| 13 | A plain-language GERD answer never says "children" where its paper says young children, or drops "potentially"; Researcher answers are unchanged. It also shows about one sentence fewer, mostly the risk-factor sentence, which card 101 works on | card 99 (#184) | 75, 68 | Waiting for your verdict |
-| 14 | The "Take the tour" button on the home page stays readable when the pointer rests on it: dark blue text and border, contrast 6.5 where it was 4.4 | card 44 (#183, built by Factory) | 63 | Waiting for your verdict |
-| 15 | The Mediterranean question names Familial Mediterranean fever and has a written answer | card 89 (#175) | 73 | Waiting for your verdict |
-| 16 | GERD shows a written answer above its tables at both depths | card 88 (#161, #163) | 75, 68 | Waiting for your verdict |
-| 17 | A sentence that cites a record shows the record words it was checked against, even when another sentence cites the same record; seen today in the command line's `s3 --json` and the API's citation events, not yet on the web screen | card 57 (#161) | none | Waiting for your verdict |
-| 18 | A question about one paper's linked data lists the records NCBI links to it, or says plainly there are none | card 74 (#172) | 104 | Waiting for your verdict |
-| 19 | E. coli isolates show their resistance genes in Plain language, the colistin search finds mcr carriers, and the answer says which gene families were searched | card 94, part (#158, #165, #169, #174) | 33 to 37 | Waiting for your verdict |
-| 20 | A chromosome window lists its dbVar records, and its first sentence shows no raw bracketed numbers | cards 92 and 95 (#158, #164) | 27, 29 | Waiting for your verdict |
-| 21 | The TP53 dataset question no longer says a search did not finish, and when a search does fail the note says which and why | card 91 and 77 (#160, #169) | 25, and "Any trials for GERD?" in 76 | Waiting for your verdict |
-| 22 | "recent-onset diabetes treatment" is answered directly; GERD, BRCA1 and Marfan alone are still asked back | card 87 (#162) | 84, 76 | Waiting for your verdict |
-| 23 | Muir-Torré syndrome is spelled correctly, and no OMIM row appears twice | cards 96 and 97 (#170, #166) | 24 | Waiting for your verdict |
-| 24 | When the guard model sends back an empty reply, the search is retried and, if it still has no reply, the person is asked to try again, where before the search ended "failed unexpectedly"; it is rare and cannot be typed on purpose | card 98 (#166) | none, nothing to type | Waiting for your verdict |
-| 25 | When no written summary survives, one plain line says why and the records found are listed | card 46 and decision D1 (#168) | none yet | Waiting for your verdict |
-| 26 | The Integrations page shows the command line tools' commands, the About page shows its layer cards first, and two page sentences are corrected | cards 79, 80 and 85, part (#167) | 102, 59, 60 | Waiting for your verdict |
-| 27 | Every library's license text ships with the web app | card 86 (#157) | 99 | Waiting for your verdict |
-| 28 | The MODY genes question passes its citation check; superseded by 11.20, and the board proposes closing it | card 13 | 78 | Waiting for your verdict |
-| 29 | The architecture deep dive is merged (`visualizations/System_3_deep_dive.md`); the board proposes closing it | card 39 | none | Waiting for your verdict |
-| 30 | The server address is gone from every tracked file (pull request #109); only git history holds it, and rewriting history is your call (recommendation: no). The board proposes closing it | card 41 | none | Waiting for your verdict |
-| 31 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | cards 49 and 21, phase 8.10 | 90 to 97, and 60 | Waiting for your verdict |
-| 32 | A graph search that cannot finish gives up after 30 seconds, not 90 | card 45, R-09 | 59 | Waiting for your verdict |
-| 33 | A one-to-three-word question is asked back, with choices written for its subject | 12.3 | 76 | Waiting for your verdict |
+| 1 | An answer that finished before you pressed Stop stays on screen with its sources and trust line, and history and the conversation keep it; Stop pressed while the search is still working shows "Stopping…" then "Search stopped" and records nothing | card 59 (#208) | 56 | Waiting for your verdict |
+| 2 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now"; only on an answer saved during an outage, so it cannot be tried on demand | card 67 (#207) | 100 | Waiting for your verdict |
+| 3 | No disease cell under the variant-to-disease table is blank without a reason ("None named: the ClinVar record says not provided", "Name could not be looked up"), and an answer lists one record once in its tables, for example "BRCA1 NCBIGene:672 [6, 7]" | cards 103 and 104 (#205) | 79, 107 | Waiting for your verdict |
+| 4 | A sentence whose copied piece the sentence check holds back is dropped whole: no bare name like "Ribavirin [1]." and no sentence with its limit cut off | card 101, part (#204) | 106 | Waiting for your verdict |
+| 5 | A reopened long answer keeps every source it cited, up to 100, so its "Based on N sources cited" line, its Sources rows and the history count agree; answers saved before 2026-10-08 still keep at most 50 | card 54 (#202) | 67, 107 | Waiting for your verdict |
+| 6 | A reopened answer's table shows ten rows at a time with the live answer's "Showing 1–10 of N" bar, and on a phone each row stacks with its column names and fits the screen | card 71, part (#203) | 67 | Waiting for your verdict |
+| 7 | A reopened saved answer lists its sources again, one row per page under its "Based on N sources cited" line, and long links wrap inside their row on a phone | card 102 (#199) | 107 | Waiting for your verdict |
+| 8 | Under the variant-to-disease table the note reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI.", directly under its table at 1280 and 390, also when the table ends the answer | card 23 (#198) | 79 | Waiting for your verdict |
+| 9 | One sources count everywhere: the line under the question, the trust line, the Sources heading, the history list after a reload and a reopened saved answer show the same number of pages; a page cited from the graph and from live NCBI is one card naming both layers, "from 2 layers"; "Confirmed by N independent databases" counts only cited databases that state the fact | card 22 (#197) | 107 | Waiting for your verdict |
+| 10 | Before a reworded sentence is shown, the sentence check reads it against its paper: a bronchiolitis answer no longer says "babies" where its record says children | card 101, part (#193) | 106 | Waiting for your verdict |
+| 11 | The command line and its MCP bridge: a queued agent request gets its full time once it starts and a plain "busy" message if it waits too long; Ctrl-C says you stopped the search; invisible-only feedback no longer erases a rating; credential errors name the right fix without printing the file's path | card 61 (#190, built by Factory) | none; `s3` and `s3 mcp` from the Integrations page | Waiting for your verdict |
+| 12 | On a phone, a long variant name wraps inside the answer and the page never scrolls sideways; its citation number stays on the same line as the end of the name, in the record list and in the sentence | cards 43 and 43b (#181, #187, built by Factory; checked on develop by the lead) | 105 | Waiting for your verdict |
+| 13 | The design prototype's home page is light, like the app's, so screen checks stop flagging the live home page; closes by itself seven days after it reached Retest on 2026-10-06, unless you object (a design-file card the lead's reviewer passed at both widths) | card 47 (#188, built by Factory) | none, a design file | Closes by itself seven days after 2026-10-06 unless you object |
+| 14 | A plain-language GERD answer never says "children" where its paper says young children, or drops "potentially"; Researcher answers are unchanged. It also shows about one sentence fewer, mostly the risk-factor sentence, which card 101 works on | card 99 (#184) | 75, 68 | Waiting for your verdict |
+| 15 | The "Take the tour" button on the home page stays readable when the pointer rests on it: dark blue text and border, contrast 6.5 where it was 4.4 | card 44 (#183, built by Factory) | 63 | Waiting for your verdict |
+| 16 | The Mediterranean question names Familial Mediterranean fever and has a written answer | card 89 (#175) | 73 | Waiting for your verdict |
+| 17 | GERD shows a written answer above its tables at both depths | card 88 (#161, #163) | 75, 68 | Waiting for your verdict |
+| 18 | A sentence that cites a record shows the record words it was checked against, even when another sentence cites the same record; seen today in the command line's `s3 --json` and the API's citation events, not yet on the web screen | card 57 (#161) | none | Waiting for your verdict |
+| 19 | A question about one paper's linked data lists the records NCBI links to it, or says plainly there are none | card 74 (#172) | 104 | Waiting for your verdict |
+| 20 | E. coli isolates show their resistance genes in Plain language, the colistin search finds mcr carriers, and the answer says which gene families were searched | card 94, part (#158, #165, #169, #174) | 33 to 37 | Waiting for your verdict |
+| 21 | A chromosome window lists its dbVar records, and its first sentence shows no raw bracketed numbers | cards 92 and 95 (#158, #164) | 27, 29 | Waiting for your verdict |
+| 22 | The TP53 dataset question no longer says a search did not finish, and when a search does fail the note says which and why | card 91 and 77 (#160, #169) | 25, and "Any trials for GERD?" in 76 | Waiting for your verdict |
+| 23 | "recent-onset diabetes treatment" is answered directly; GERD, BRCA1 and Marfan alone are still asked back | card 87 (#162) | 84, 76 | Waiting for your verdict |
+| 24 | Muir-Torré syndrome is spelled correctly, and no OMIM row appears twice | cards 96 and 97 (#170, #166) | 24 | Waiting for your verdict |
+| 25 | When the guard model sends back an empty reply, the search is retried and, if it still has no reply, the person is asked to try again, where before the search ended "failed unexpectedly"; it is rare and cannot be typed on purpose | card 98 (#166) | none, nothing to type | Waiting for your verdict |
+| 26 | When no written summary survives, one plain line says why and the records found are listed | card 46 and decision D1 (#168) | none yet | Waiting for your verdict |
+| 27 | The Integrations page shows the command line tools' commands, the About page shows its layer cards first, and two page sentences are corrected | cards 79, 80 and 85, part (#167) | 102, 59, 60 | Waiting for your verdict |
+| 28 | Every library's license text ships with the web app | card 86 (#157) | 99 | Waiting for your verdict |
+| 29 | The MODY genes question passes its citation check; superseded by 11.20, and the board proposes closing it | card 13 | 78 | Waiting for your verdict |
+| 30 | The architecture deep dive is merged (`visualizations/System_3_deep_dive.md`); the board proposes closing it | card 39 | none | Waiting for your verdict |
+| 31 | The server address is gone from every tracked file (pull request #109); only git history holds it, and rewriting history is your call (recommendation: no). The board proposes closing it | card 41 | none | Waiting for your verdict |
+| 32 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | cards 49 and 21, phase 8.10 | 90 to 97, and 60 | Waiting for your verdict |
+| 33 | A graph search that cannot finish gives up after 30 seconds, not 90 | card 45, R-09 | 59 | Waiting for your verdict |
+| 34 | A one-to-three-word question is asked back, with choices written for its subject | 12.3 | 76 | Waiting for your verdict |
 
 ## Done features at a glance
 
@@ -228,6 +229,12 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 22 | One sources count everywhere, each total naming what it counts; a page cited from two layers is one card naming both | Live, awaiting your retest | 107 |
 | card 23 | The note under the variant-to-disease table says what its rows are and that the classification is not shown, directly under its table | Live, awaiting your retest | 79 |
 | card 102 | A reopened saved answer lists its sources, one row per page | Live, awaiting your retest | 107 |
+| card 71, part | A reopened answer's tables page ten rows at a time and stack on a phone with their column names | Live, awaiting your retest | 67 |
+| card 54 | A reopened long answer keeps every source it cited, up to 100 | Live, awaiting your retest | 67, 107 |
+| card 101, part | A sentence whose copied piece the sentence check holds back is dropped whole, never shown cut | Live, awaiting your retest | 106 |
+| cards 103 and 104 | No disease cell is blank without a reason, and an answer lists one record once in its tables | Live, awaiting your retest | 79, 107 |
+| card 59 | An answer that finished before Stop was pressed stands on screen, in history and in memory | Live, awaiting your retest | 56 |
+| card 67 | A reopened outage answer says the database was not answering when it was written, never "right now" | Live, awaiting your retest | 100 |
 
 ## What is done, in summary
 
@@ -269,17 +276,17 @@ What the Waiting on column means:
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-10-07. THE ONE THING TO KNOW:
+LAST UPDATED 2026-10-08. THE ONE THING TO KNOW:
 
-- Cards 22, 23 and 102 merged overnight (#197, #198, #199), each after a fresh verifier passed it, and wait for your retest
-- Four documents were restructured for reading (#196): this file's closed history now sits in `testing/UI_fixes_archive.md`
-- Card 101's copied-cut fix did not merge: it is parked on its branch for your decision
+- Seven cards merged overnight, each behind CI and a fresh verifier, and wait for your retest: 71 part (#203), 54 (#202), 101 part (#204), 103 and 104 (#205), 67 (#207) and 59 (#208)
+- The overnight-development skill landed (#206); the guardrail design is written for your yes or no, and its two parked branches are gone
+- The data engineering repository is released as v1.1.0, its changelog on both branches
 
 `HANDOFF.md` says what to do next.
 
 What is live on develop:
 
-- Every card in "Waiting for your retest" above, newest first: cards 102, 23 and 22 on top. Each is one row in "Done features at a glance", with its query number.
+- Every card in "Waiting for your retest" above, newest first: cards 59, 67, 103 and 104, 101 part, 54 and 71 part on top. Each is one row in "Done features at a glance", with its query number.
 - Card 98 (an empty guard reply asks the person to try again) is live with no query to type.
 - Develop's API carries `CLASSIFIER_PROVIDER=jev` and `SYSTEM_DAILY_CAP_USD=25`. Both Railway services redeploy on every push to `develop`.
 - What each numbered phase delivered and what stays open: its ledger, `tracker/phase_N.M.md`. Phase 8.7's ledger says where each builder stopped.
@@ -301,14 +308,10 @@ This section is also the shared plan.
     - Decisions are taken
     - The resume plan is `testing/Developer/reports/2026-10-05_phase_8.7_resume/plan.md`
     - Each builder's branch is in `HANDOFF.md`.
-  - The guardrail design (cards 84 and 72): waits on a fuller day of guard-call logs.
-    - Today's sample: Jev decides in 0.12 to 0.29 seconds, and the guard model's on-topic check takes 1.3 to 7.3 seconds across five upstream hosts.
-    - Develop's guardrail stays as it is
-    - The parked branches are `fix/card72-r10-guardrail` and `fix/card84-r10-sound-parts`.
-  - Card 101's copied-cut fix (2026-10-06 to 07): parked on `fix/card101-copied-cuts`, pushed.
-    - Its last round's judge passed it; its adversary found that when the sentence check times out or its reply cannot be read, a sentence can show with its limit cut off, where develop shows the whole sentence.
-    - The owner approved one last round only, so it did not merge (DECISIONS.md, 2026-10-07).
-    - The fix the adversary found closes it: drop the whole sentence whenever a cut is held.
+  - The guardrail design (cards 84 and 72): written 2026-10-08 for the owner's yes or no, `testing/Developer/reports/2026-10-08_guardrail_design/design.md`.
+    - Develop's guardrail stays as it is until the owner answers its seven questions
+    - The two parked branches are deleted; every commit is described in the design's appendix and their reviews sit in `testing/Developer/reports/2026-09-29_card72/` and `2026-09-29_card84/`.
+  - Card 71's "High-risk claim" tag on a reopened answer: needs its tier stored, a new column, which is a migration; the owner said yes on 2026-10-08, built in a daytime session with the owner present.
 - Older work parked at tags: `parked/phase-8.4-2026-09-25`, `parked/phase-8.8-snippets-2026-09-25` and `parked/verify-facts-118-2026-09-27`.
 - THE ARCHITECTURE WORK IS NOT PARKED.
   - The product owner will build it, so its six cards, 8 to 13 in the board's To do, wait on nobody.
@@ -322,12 +325,12 @@ This section is also the shared plan.
 
 ### What is waiting on the product owner
 
-- "Waiting for your retest" above, newest first, cards 102, 23 and 22 at the top; each row names its queries in `testing/Test_queries_and_workflows.md`.
-- Card 101: whether to try dropping the whole sentence whenever a cut is held, on its parked branch.
-- Card 40: the itemized list of proposed hook and always-loaded rule changes, each approved or refused on its own; nothing in the security layer changed overnight.
-- The overnight decisions taken on the owner's behalf, each a DECISIONS.md row dated 2026-10-06 or 2026-10-07: the readability merge bar, the withdrawn board-cell move, cards 22 and 101 last rounds, card 102.
+- "Waiting for your retest" above, newest first, cards 59, 67, 103 and 104, 101 part, 54 and 71 part at the top; each row names its queries in `testing/Test_queries_and_workflows.md`.
+- The guardrail design's seven yes or no questions (cards 84 and 72).
+- Card 40: the itemized list of proposed hook and always-loaded rule changes, now including one line in the git-workflow rule (tags count, every session end, both repositories); nothing in the security layer changed overnight.
+- The decisions taken on the owner's behalf overnight, each a DECISIONS.md row dated 2026-10-08.
 - Decisions D5 to D21 in `testing/Board_plan.md`: each carries the lead's recommended default, taken unless the owner objects.
-- The OpenRouter top-up that phase 8.7 waits on.
+- The OpenRouter top-up that phase 8.7 and its four branches wait on.
 - The privacy pre-commit hooks on the second laptop, and `railway link` there so deploys can be confirmed.
 
 Carried from 2026-09-29 and not re-checked today:
@@ -341,13 +344,21 @@ Carried from 2026-09-29 and not re-checked today:
 
 ### Loose ends, named rather than left
 
+- FROM THE NIGHT OF 2026-10-07 TO 08, found by the reviews and product checks and not filed as cards (each report under `testing/Developer/reports/2026-10-08_*`):
+  - Card 54: an answer saved before 2026-10-08 still reopens with at most 50 sources and no word that some are missing; the warning line was reverted because it fired on bracketed numbers in record data such as "CAG[40]" (VF-54-01). The locked technical specification still says 50 in Section 13.2.
+  - Cards 103 and 104: a merged BRCA1 row's text reads "BRCA1, identified by the gene symbol BRCA1 and gene name BRCA1." (product check PR-01); the Notes line counts 39 placeholder links against 33 cells and says "listed below" for records above; three edge cases on hand-built inputs (VF-103-01 to 03); a gene listed under two different names stays as two rows.
+  - Card 67: no live check is possible without an NCBI outage; two test gaps (VF-67-01, 02).
+  - Card 59: the user database sets no statement or connect timeout and its writes run on the event loop, so a hung write freezes a worker, as on develop (VF-59-01); three comments, one in `frontend/src/lib/api.ts`, still describe the old stop contract.
+  - Answers: Plain language GERD and bronchiolitis answers often name no symptom, cause or risk factor; on a phone the searches panel stays open over a reopened answer; click to answer has a median of 23 seconds (`2026-10-08_product_check/product_review.md`).
+  - Process: `/ship` Step 3 still says `-D` and `--force` where the git-workflow rule says `-d`, and `bossman-mode` still calls the golden run blocking; both are under `.claude/`, for the owner.
+  - Nine old local worktrees on merged branches could not be checked for untracked work: iCloud evicted their files (`LEARNINGS.md`, 2026-10-08), and the permission layer refused comparing card 22's untracked reports with develop.
 - FROM THE NIGHT OF 2026-10-06 TO 07, found by the product checks and fresh verifiers on develop, none filed as a card yet (`testing/Developer/reports/2026-10-06_card22/product_review.md`, `testing/Developer/reports/2026-10-07_card102/product_review.md`):
-  - Card 23's line sits above five rows with an empty disease cell on HNF1A's first page; the cell drops a condition whose name lookup fails and cuts off at 500 characters.
-  - A reopened answer's tables run past a phone's screen edge, though the page does not scroll sideways; the saved query 107 table is 33 px too wide at 390.
+  - Card 23's line sits above five rows with an empty disease cell on HNF1A's first page. Closed 2026-10-08 by card 103 (#205): every cell now says why it is empty.
+  - A reopened answer's tables run past a phone's screen edge. Closed 2026-10-08 by card 71 (#203): reopened tables stack on a phone.
   - The Sources group badges can add to one more than the Sources heading in the two-layer case; the group's line explains it.
-  - A gene page can appear twice in the gene record tables while Sources lists it once.
+  - A gene page can appear twice in the gene record tables while Sources lists it once. Closed 2026-10-08 by card 104 (#205), for rows that match in every cell.
   - Answers take 31 to 36 seconds on screen from click to trust line, against 15 to 25 on the app's own timer.
-  - The golden run is owed for cards 22 and 23, which change what an answer says.
+  - The golden run owed for cards 22 and 23 was not run: on 2026-10-08 the owner chose the test queries as the only check (DECISIONS.md).
   - Card 22's per-claim check still compares tools, not databases, and agreement does not check that two records are about the same variant; both are candidates for a card.
 - L-01 is MEASURED, its two causes are READ, and the reader is now TOLD: a lost search is disclosed under the answer and a question the product could not read is answered with a request for a name (`10f6a46`).
   - What is NOT fixed is the cause itself: the deterministic half is a Think gap and the variance half is the act budget, both below.
@@ -438,15 +449,15 @@ board on 2026-09-24.
 
 ### Next, in order
 
-- Rewritten 2026-10-07 in the order of the board's To do column, top to bottom, one line per card.
+- Rewritten 2026-10-08 in the order of the board's To do column, top to bottom, one line per card.
 - The board is the order; this list gives each card's reason or a pointer to its detail.
 - `testing/Board_plan.md` holds the dependencies and the waves, and the order work is built in.
 
 1. Card 56: Smallest fix live (#186): the plain SARS-CoV-2 question no longer binds the disease SARS. Still open, for a design with the owner first: "SARS CoV-2" with a space, a remembered gene after a missed question, and the leukaemia and "Illumina" cases on the board.
-2. Card 101: Part live (#193): every reworded sentence goes to the sentence check. The copied-cut fix is parked on `fix/card101-copied-cuts` after its last round; the owner decides whether to try dropping the whole sentence whenever a cut is held (DECISIONS.md, 2026-10-07).
+2. Card 101: Part live (#193, #204): every reworded sentence goes to the sentence check, and a sentence whose copied piece the check holds back is dropped whole. Still open: an abbreviation followed by a capital, sentences inside a quotation, and a writer quoting its own copied words beside a long record passage (`testing/Developer/reports/2026-10-06_card101/judge_r5.md`).
 3. Card 94: Part live. Still open: the place and accession columns, a follow-up such as "from 2023", and a single-isolate lookup (wave 4 of `testing/Board_plan.md`).
-4. Card 84: Parked on `fix/card84-r10-sound-parts`; returns only as a design agreed with the owner first, from the logs.
-5. Card 72: Logging live (#159); the guardrail design with card 84 waits on a fuller day of logs.
+4. Card 84: The guardrail design is written for the owner's yes or no (`testing/Developer/reports/2026-10-08_guardrail_design/design.md`); its parked branch is deleted.
+5. Card 72: Logging live (#159); its fix is the guardrail design with card 84, waiting on the owner's answers.
 6. Card 75: Factory's next card (`docs/build/Factory_onboarding.md`): the command line's MCP bridge latches after a refused or unreadable sign-in renewal, so it never resends a spent token.
 7. Card 85: Part live. Still open: the facts checker's remaining gaps and three logging gaps.
 8. Card 2: Phase 8.7 with card 50; waiting on the OpenRouter top-up. Design: `testing/Developer/reports/2026-09-26_phase_8.7/design.md`.
@@ -481,12 +492,9 @@ board on 2026-09-24.
 37. Card 50: Nobody waits in silence: records within seconds, sentences one by one; phase 8.7 with card 2.
 38. Card 51: Part live (#156). Still open: the page claims the checker does not yet check.
 39. Card 52: Every answer ends by offering the next useful step; designed in `testing/Developer/reports/2026-09-26_conversation_next_steps/design.md`, a numbered phase after 8.7 and 8.9.
-40. Card 54: Reopening a long answer loses citations after the fiftieth; needs a diagnosis of the capture bound first.
-41. Card 55: The test queries document is the gate; the golden run is an alarm only (decision D4).
-42. Card 59: A stopped question reads as answered after a reload; the run record and session memory must learn about the stop.
-43. Card 67: A reopened outage answer still says the database is down "right now"; decide whether the note is dated or reworded.
-44. Card 71: A reopened answer does not look like the one read; first, which is right about the "could not be verified" note.
-45. Card 100: Factory's card after 24, low priority: a very long signed-in email pushes the top bar off screen between 721 and 900 pixels.
+40. Card 55: The test queries document is the gate; the golden run is an alarm only (decision D4).
+41. Card 71: Part live (#203): reopened tables page and fit a phone. Still open: the "High-risk claim" tag, a migration the owner approved for a daytime session; a question listed once after asking twice, not reproduced.
+42. Card 100: Factory's card after 24, low priority: a very long signed-in email pushes the top bar off screen between 721 and 900 pixels.
 
 Not on this list, deliberately: the explanation half of item 11.31.
 
@@ -496,13 +504,13 @@ Not on this list, deliberately: the explanation half of item 11.31.
 ### How to start the next session
 
 1. Read `HANDOFF.md`, "The one next action" (the lead rewrites it at each checkpoint, so read the current one), then "Where we stopped" above, then the session tables under "Session history" below, newest first.
-2. Run `git status` and `git worktree list`. Local carries `develop` alone and the parked branches `HANDOFF.md` lists are on GitHub, listed by `git branch -r`.
+2. Run `git status` and `git worktree list`. Local carries `develop` plus the old worktrees `HANDOFF.md` names (iCloud evicted them, so they could not be checked); GitHub carries `develop`, `production` and phase 8.7's four parked branches, listed by `git branch -r`.
 3. Read "What is parked, and why" before picking anything up. OMIM is live WITH its title filter; the two ship together and neither is re-enabled or removed without the other.
 4. Retests: "Waiting for your retest" at the top of this file.
-   - Its newest cards are 102, 23 and 22, then 101 part, 61, 43 and 43b, and the older rows below them.
+   - Its newest cards are 59, 67, 103 and 104, 101 part, 54 and 71 part, then 102, 23 and 22, and the older rows below them.
    - Each names its queries in `testing/Test_queries_and_workflows.md`.
 5. Then build from `testing/Board_plan.md` wave by wave, as `HANDOFF.md` says, taking the board's To do column from the top.
-   - Golden runs and test queries sign in with fresh test accounts made on develop, never committed.
+   - Test queries sign in with throwaway accounts made on develop only with the owner's yes, their details kept in the scratchpad and never committed; the golden run is an alarm, run only when the owner asks (2026-10-08).
    - The call ceiling is measured and stays at twenty.
 
 ## Detail for items on the board
@@ -538,6 +546,26 @@ Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-
 | 12.17 | A good question sometimes fails at the think step and shows a refusal | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it | Seen twice in about forty live runs over 2026-09-23 and 2026-09-24: `Does coffee help make exercise more effective?` and `is there a trial recruiting for melanoma`, both at researcher depth, each failing with "the plan tier's response did not match the think classification schema". Neither question reaches 12.3's ask-back, which only reads one to three words, so tonight's work did not cause it. The reader sees a refusal for a question the product answers on every other run. Evidence: `testing/Developer/reports/2026-09-24_no_hardcoding/live_runs/` |
 
 ## Session history
+
+### The night of 2026-10-07 to 08, in one table
+
+- The lead ran the board overnight under the owner's approval; every merge waited for CI and a fresh verifier, and the owner answered each new decision in the chat
+- Seven cards merged; card 54's warning line was reverted before merge, and every card got a product check on develop where one was possible
+- Branches and tags were cleaned on both repositories, and the data engineering repository was released
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| Card 101 (#204) | Last round on the owner's yes: a held copied piece drops the whole sentence; a fresh judge and adversary both found nothing worse than develop | Live, part; in Retest; query 106 passed on develop |
+| Card 54 (#202) | A saved answer keeps up to 100 citations, code only; the fix round's warning line for older answers was reverted after its verifier found false alarms | Live; in Retest; query 107 passed on develop |
+| Card 71 (#203) | Reopened tables page ten rows and stack on a phone; the first column leads each row, merged on the owner's choice | Live, part; in Retest; query 67 passed on develop; the tag waits for a migration |
+| Cards 103 and 104 (#205) | Empty disease cells say why; a record is listed once; merged with three named edge cases on the owner's choice | Live; in Retest; queries 79 and 107 passed on develop |
+| Card 67 (#207) | A reopened outage note is in the past tense with no date; round 1's dated version failed both reviews and was redone | Live; in Retest; no live check possible |
+| Card 59 (#208) | An answer that finished before Stop stays on screen, in history and in memory; a stop failure never touches the next question | Live; in Retest; product check below |
+| Overnight skill (#206) | `.claude/skills/overnight-development/SKILL.md`, ending with the branch and tag end-state check | Merged on the owner's word |
+| Guardrail design | Written from the two parked branches, their reviews kept, both branches deleted | Waiting for the owner's seven answers |
+| Golden run | Started, then stopped when card 101 deployed mid-run; the owner then chose the test queries only | Not run; partial results set aside |
+| Branches and tags | Merged worktrees and branches removed; four finished tags deleted; the data engineering repository's two merged branches deleted | GitHub: develop, production and phase 8.7's four branches |
+| Data engineering release | v1.1.0 released by its workflow; the changelog carried to production (#19, #20, #21) | Done |
 
 ### 2026-10-06 and the night to 2026-10-07, in one table
 

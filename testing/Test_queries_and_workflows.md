@@ -1138,6 +1138,9 @@ What you should see:
 - Clicking "Run again" asks the same question again from the start.
 - Clicking "New search" returns to the home page.
 - No answer appears from the stopped search.
+- Pressed while the search is still working, the button reads "Stopping…" for a moment, then "Search stopped"; after a reload the search is not listed as answered, and a follow-up such as "what about it?" does not refer to it.
+- Pressed after the search had already finished but while its answer is still appearing, the whole answer shows at once, with its sources and trust line, and history and the conversation keep that same answer (card 59).
+- Pressing Stop and asking a new question straight away answers the new question normally.
 - Why it matters: a person who changes their mind mid-search should not have to wait out a search they no longer want.
 
 ### 98. Stop works until the answer appears (card 58)
@@ -1991,6 +1994,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
 | card 67 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now" | Query 100 |
 | card 104 | An answer lists one record once in its tables and Plain language list | Query 107 |
 | card 103 | No disease cell under the variant-to-disease table is blank without a reason | Query 79 |
