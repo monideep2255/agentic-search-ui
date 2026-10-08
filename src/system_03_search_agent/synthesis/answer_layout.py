@@ -815,38 +815,72 @@ def table_second_cell(
     return value.strip()[:500]
 
 
+#: A ClinVar variant record's own page, the only source whose placeholder
+#: condition the cell may attribute to "the ClinVar record" (card 103 fix
+#: round, J-103-02).
+_CLINVAR_VARIANT_PAGE = re.compile(
+    r"^https://www\.ncbi\.nlm\.nih\.gov/clinvar/variation/[^/?#]+/?$"
+)
+
+#: The placeholder titles a cell quotes in the record's own words. Any other
+#: placeholder ("see cases") reads as an instruction when quoted bare, so it
+#: gets the generic wording instead (J-103-09, A-103-05).
+_QUOTED_PLACEHOLDERS: tuple[str, ...] = ("not provided", "not specified")
+
+EMPTY_CELL_LOOKUP_FAILED = "Name could not be looked up"
+EMPTY_CELL_ONLY_PLACEHOLDER = "None named: the ClinVar record gives only a placeholder"
+
+
 def empty_cell_reason(
     entity_type: str,
     row_fields: dict[str, Any] | None,
     condition_names: dict[str, str | None] | None,
+    source_url: str | None = None,
 ) -> str:
-    """Card 103: why a mapping cell shows no disease name, in the record's
-    own words, so a cell under "each row lists the conditions" is never
-    blank without a reason.
+    """Card 103: why a mapping cell shows no disease name, so a cell under
+    "each row lists the conditions" is never blank without a reason.
 
-    A placeholder-only row reads "None named: the ClinVar record says not
-    provided" (or "not specified", or both, whatever the record's own
-    placeholder titles are). A row whose condition name could not be looked
-    up reads "Name could not be looked up". A row with both says both. A row
-    with no linked condition at all stays empty: nothing was linked.
+    - Any linked condition whose name could not be looked up: "Name could
+      not be looked up", alone. The record does link a condition there, so
+      the cell never says "None named" beside it (J-103-01).
+    - Otherwise, only on a ClinVar variant record's own row (a
+      `SequenceVariant` whose `source_url` is a ClinVar variation page):
+      placeholders "not provided" and "not specified" are quoted, "None
+      named: the ClinVar record says not provided" (or "not specified", or
+      both). Any other placeholder reads "None named: the ClinVar record
+      gives only a placeholder".
+    - A gene or any other row whose links are all placeholders, and a row
+      with no linked condition at all, stay empty: the cell never names a
+      source its own citation does not open (J-103-02, A-103-01).
     """
     curies = condition_ids_for_row(entity_type, row_fields)
-    words: list[str] = []
-    unresolved = 0
+    words: set[str] = set()
+    other_placeholder = False
+    unresolved = False
     for curie in curies:
         title = (condition_names or {}).get(curie)
         if not isinstance(title, str) or not title.strip():
-            unresolved += 1
+            unresolved = True
         elif is_placeholder_condition_title(title):
             word = title.strip().casefold()
-            if word not in words:
-                words.append(word)
-    parts: list[str] = []
-    if words:
-        parts.append(f"None named: the ClinVar record says {' and '.join(words)}")
+            if word in _QUOTED_PLACEHOLDERS:
+                words.add(word)
+            else:
+                other_placeholder = True
     if unresolved:
-        parts.append("Name could not be looked up")
-    return "; ".join(parts)
+        return EMPTY_CELL_LOOKUP_FAILED
+    clinvar_record = entity_type == "SequenceVariant" and bool(
+        _CLINVAR_VARIANT_PAGE.match((source_url or "").strip())
+    )
+    if not clinvar_record:
+        return ""
+    if other_placeholder:
+        return EMPTY_CELL_ONLY_PLACEHOLDER
+    if words:
+        # Each placeholder said once, in a fixed order.
+        said = " and ".join(word for word in _QUOTED_PLACEHOLDERS if word in words)
+        return f"None named: the ClinVar record says {said}"
+    return ""
 
 
 def placeholder_link_count(
@@ -873,7 +907,7 @@ def placeholder_links_note(count: int) -> str | None:
     links = "link" if count == 1 else "links"
     return (
         f"{count} variant {links} to ClinVar placeholder conditions "
-        "('not provided', 'not specified' or 'see cases') are not listed."
+        "('not provided', 'not specified' or 'see cases') are not listed as diseases."
     )
 
 

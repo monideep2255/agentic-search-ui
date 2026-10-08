@@ -12175,31 +12175,99 @@ def _answer_tokens(
             )
         )
 
-    def record_merge_key(
-        finding: SynthFinding, identifier: str, label: str
-    ) -> tuple[str, str, str]:
-        # Card 104: one row per record, keyed the way Sources keys a page
-        # (`source_page_key`, trailing slash ignored) plus the identifier
-        # cell. A row with no identifier also needs the same label, so two
-        # different records on one page never merge on a blank.
+    @dataclass
+    class ListedRow:
+        # A row already shown, with what it shows: its cells and, for a
+        # mapping row, the record fields its disease cell was built from.
+        token: TokenPayload
+        cells: list[str]
+        fields: dict[str, Any] | None = None
+
+    def record_merge_key(finding: SynthFinding, identifier: str) -> tuple[str, str]:
+        # Card 104: a candidate repeat is the same page, keyed the way
+        # Sources keys a page (`source_page_key`, trailing slash ignored),
+        # with the same identifier cell. Whether it merges is then decided
+        # by `merged_cells`: every shown cell, the name included, must agree.
         page = source_page_key(finding.source_url) or finding.citation_id
-        return (page, identifier, "" if identifier else label)
+        return (page, identifier)
+
+    def merged_cells(shown: list[str], later: list[str]) -> list[str] | None:
+        # Card 104 fix round (J-103-03, A-103-02, A-103-06): two rows merge
+        # only when every cell agrees. A blank cell on one row may take the
+        # other row's value; two different values, the name included, keep
+        # two rows, so a merge never hides anything a row showed. The name
+        # is never taken from the other row: with no identifier it is the
+        # only thing that tells two records on one page apart.
+        if len(shown) != len(later) or not shown or shown[0] != later[0]:
+            return None
+        out: list[str] = []
+        for first, second in zip(shown, later, strict=True):
+            if first == second or not second:
+                out.append(first)
+            elif not first:
+                out.append(second)
+            else:
+                return None
+        return out
+
+    def in_citation_order(ids: list[str]) -> list[str]:
+        return sorted(
+            ids,
+            key=lambda marker: (
+                citation_by_id[marker].display_index if marker in citation_by_id else 10**9
+            ),
+        )
 
     def merge_into(
-        listed: dict[tuple[str, str, str], TokenPayload],
-        key: tuple[str, str, str],
+        listed: dict[tuple[str, str], list[ListedRow]],
+        key: tuple[str, str],
         sentence: str,
-        extra_marker_ids: list[str] | None = None,
+        cells: list[str],
+        mapping: tuple[str, int, dict[str, Any] | None, str | None] | None = None,
     ) -> bool:
-        # A repeat of a listed record adds its citation numbers to the
-        # first row, in order, and shows no second row.
-        first = listed.get(key)
-        if first is None:
-            return False
-        for marker in [*marker_ids(sentence), *(extra_marker_ids or [])]:
-            if marker not in first.marker_ids and len(first.marker_ids) < 20:
-                first.marker_ids.append(marker)
-        return True
+        # A repeat of a shown record joins the first row it agrees with:
+        # every citation number of both rows, ascending, none dropped by a
+        # cap, and both grounded sentences in the row's text, so a surface
+        # that prints the text (the command line) still prints every number.
+        # When the merge cannot keep all of that, the repeat stays its own
+        # row, as before card 104.
+        for first in listed.get(key, []):
+            merged = merged_cells(first.cells, cells)
+            if merged is None:
+                continue
+            fields = first.fields
+            linked: list[str] = []
+            if mapping is not None:
+                # The disease cell is recomputed from both rows' linked
+                # conditions together, and must read what the rows showed,
+                # so the cell and the disease chips beside it always agree.
+                entity_type, at, later_fields, url = mapping
+                fields = merged_mapping_fields(entity_type, first.fields, later_fields)
+                if mapping_cell(entity_type, fields, url) != merged[at]:
+                    continue
+                linked = linked_disease_ids(entity_type, fields)
+            ids = list(first.token.marker_ids)
+            for marker in [*marker_ids(sentence), *linked]:
+                if marker not in ids:
+                    ids.append(marker)
+            text = first.token.text + (sentence if sentence.endswith(" ") else sentence + " ")
+            if len(ids) > 20 or len(text) > 1000:
+                continue
+            first.token.marker_ids = in_citation_order(ids)
+            first.token.text = text
+            first.token.cells = merged
+            first.cells = merged
+            first.fields = fields
+            return True
+        return False
+
+    def remember(
+        listed: dict[tuple[str, str], list[ListedRow]],
+        key: tuple[str, str],
+        cells: list[str],
+        fields: dict[str, Any] | None = None,
+    ) -> None:
+        listed.setdefault(key, []).append(ListedRow(tokens[-1], list(cells), fields))
 
     # A cited Disease finding per CURIE, so a mapping row can carry the
     # marker of every disease its cell names beside its own record's.
@@ -12207,6 +12275,49 @@ def _answer_tokens(
     for prepared in synth_findings:
         if prepared.entity_type == "Disease" and prepared.curie:
             disease_citation_by_curie.setdefault(prepared.curie, prepared.citation_id)
+
+    def linked_disease_ids(entity_type: str, row_fields: dict[str, Any] | None) -> list[str]:
+        # The cited Disease records a mapping row's cell names.
+        return [
+            disease_citation_by_curie[curie]
+            for curie in condition_ids_for_row(entity_type, row_fields)
+            if curie in disease_citation_by_curie
+        ]
+
+    def mapping_cell(
+        entity_type: str, row_fields: dict[str, Any] | None, source_url: str | None
+    ) -> str:
+        # Card 103: an empty cell says why, so no cell under the line is
+        # blank without a reason.
+        return table_second_cell(entity_type, row_fields, condition_names) or empty_cell_reason(
+            entity_type, row_fields, condition_names, source_url
+        )
+
+    def merged_mapping_fields(
+        entity_type: str, first: dict[str, Any] | None, later: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        # Both rows' mapping values together: a fold's condition ids are
+        # joined in order, a single value is kept from the first row that
+        # has one.
+        spec = TABLE_COLUMNS.get(entity_type)
+        if spec is None:
+            return first
+        field = spec[0]
+        fields = dict(first or {})
+        first_value = (first or {}).get(field)
+        later_value = (later or {}).get(field)
+        if isinstance(first_value, list) or isinstance(later_value, list):
+            fields[field] = list(
+                dict.fromkeys(
+                    [
+                        *condition_ids_for_row(entity_type, first),
+                        *condition_ids_for_row(entity_type, later),
+                    ]
+                )
+            )
+        elif not (isinstance(first_value, str) and first_value.strip()) and later_value is not None:
+            fields[field] = later_value
+        return fields
 
     def identifier_for(finding: SynthFinding) -> str:
         # The record's own identifier, read from its row and, for a live
@@ -12299,7 +12410,7 @@ def _answer_tokens(
         # both walk the same `sentences`.
         sentences, feature_blocks = split_feature_sentences(sentences)
         heading(PLAIN_SOURCES_HEADING)
-        listed_records: dict[tuple[str, str, str], TokenPayload] = {}
+        listed_records: dict[tuple[str, str], list[ListedRow]] = {}
         for sentence in sentences:
             ids = marker_ids(sentence)
             finding = finding_by_citation_id.get(ids[0]) if ids else None
@@ -12311,11 +12422,11 @@ def _answer_tokens(
             # One row per record: two claims about the same record (its title
             # and its symbol) are one row, not two identical ones. Card 104:
             # keyed on the page, as Sources is, with citations merged.
-            record_key = record_merge_key(finding, identifier, label)
-            if merge_into(listed_records, record_key, sentence):
+            record_key = record_merge_key(finding, identifier)
+            if merge_into(listed_records, record_key, sentence, [label]):
                 continue
             sentence_token(sentence, kind="list_item", cells=[label])
-            listed_records[record_key] = tokens[-1]
+            remember(listed_records, record_key, [label])
         # Beneath the one list, so the list itself stays one list: each
         # disease's features under a heading that names the disease.
         for entries in feature_blocks.values():
@@ -12436,7 +12547,7 @@ def _answer_tokens(
                 )
             else:
                 heading(records_heading)
-            listed_records: dict[tuple[str, str, str], TokenPayload] = {}
+            listed_records: dict[tuple[str, str], list[ListedRow]] = {}
             for (sentence, finding), row_fields, second, identifier, extra in zip(
                 entries, row_fields_by_entry, second_cells, identifiers, extras, strict=True
             ):
@@ -12445,14 +12556,17 @@ def _answer_tokens(
                     continue
                 label = record_label(finding, row_fields)
                 cells = [label]
+                mapping_at: int | None = None
                 if as_table:
                     if has_identifier:
                         cells.append(identifier)
                     if mapped:
-                        # Card 103: an empty cell says why, in the record's
-                        # own words, so no cell under the line is blank.
+                        mapping_at = len(cells)
                         cells.append(
-                            second or empty_cell_reason(entity_type, row_fields, condition_names)
+                            second
+                            or empty_cell_reason(
+                                entity_type, row_fields, condition_names, finding.source_url
+                            )
                         )
                     if extra_label is not None:
                         cells.append(
@@ -12462,27 +12576,25 @@ def _answer_tokens(
                         )
                 # One row per record: two claims about the same record (its
                 # title and its symbol) are one row, not two identical ones.
-                # Card 104: keyed on the page, as Sources is, with the later
-                # row's citations added to the first row.
-                record_key = record_merge_key(finding, identifier, label)
+                # Card 104: a repeat of the same page and identifier whose
+                # cells agree joins the first row with every citation.
+                record_key = record_merge_key(finding, identifier)
                 if not as_table:
-                    if not merge_into(listed_records, record_key, sentence):
-                        sentence_token(sentence, kind="list_item", cells=[label])
-                        listed_records[record_key] = tokens[-1]
+                    if not merge_into(listed_records, record_key, sentence, cells):
+                        sentence_token(sentence, kind="list_item", cells=cells)
+                        remember(listed_records, record_key, cells)
                     continue
-                linked = (
-                    [
-                        disease_citation_by_curie[curie]
-                        for curie in condition_ids_for_row(entity_type, row_fields)
-                        if curie in disease_citation_by_curie
-                    ]
-                    if mapped
-                    else []
+                mapping = (
+                    (entity_type, mapping_at, row_fields, finding.source_url)
+                    if mapping_at is not None
+                    else None
                 )
-                if merge_into(listed_records, record_key, sentence, linked):
+                if merge_into(listed_records, record_key, sentence, cells, mapping):
                     continue
+                linked = linked_disease_ids(entity_type, row_fields) if mapped else []
                 sentence_token(sentence, kind="table_row", cells=cells, extra_marker_ids=linked)
-                listed_records[record_key] = tokens[-1]
+                remember(listed_records, record_key, cells, row_fields)
+
             # Card 23 (owner, 2026-10-06): directly under the
             # variant-to-disease table, and under no other table, one
             # code-built line saying where its links and disease names come
