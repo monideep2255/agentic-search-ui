@@ -1,0 +1,4 @@
+rows 100 total_available 100
+first 38 variant rows: 8 distinct condition CURIEs (lookup cap 25)
+first 50 variant rows: 14 distinct condition CURIEs (lookup cap 25)
+first 100 variant rows: 14 distinct condition CURIEs (lookup cap 25)

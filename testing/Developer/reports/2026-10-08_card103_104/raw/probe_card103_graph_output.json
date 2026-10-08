@@ -1,0 +1,37 @@
+{
+ "ClinVar:1048822": [
+  {
+   "curie": "MedGen:C3661900",
+   "title": "not provided",
+   "placeholder": true
+  }
+ ],
+ "ClinVar:1051750": [
+  {
+   "curie": "MedGen:C3661900",
+   "title": "not provided",
+   "placeholder": true
+  }
+ ],
+ "ClinVar:1098821": [
+  {
+   "curie": "MedGen:CN169374",
+   "title": "not specified",
+   "placeholder": true
+  }
+ ],
+ "ClinVar:1104934": [
+  {
+   "curie": "MedGen:C3661900",
+   "title": "not provided",
+   "placeholder": true
+  }
+ ],
+ "ClinVar:1105252": [
+  {
+   "curie": "MedGen:C3661900",
+   "title": "not provided",
+   "placeholder": true
+  }
+ ]
+}
