@@ -844,3 +844,40 @@ def test_a_sentence_with_no_copied_cut_keeps_developments_end_strip() -> None:
     assert sink == [], sink
     assert result.sentences == ("Drug X was well tolerated [1].",), result.sentences
 
+
+# ------------------------------------ round 5: the check never approves unread text
+
+LONG_TITLES = [
+    _finding(
+        ref,
+        f"Nebulised hypertonic saline was compared with normal saline in trial {name} of infants "
+        "admitted to hospital with a first episode of acute viral bronchiolitis.",
+        field="title",
+    )
+    for ref, name in ((4, "one"), (5, "two"), (6, "three"), (7, "four"), (8, "five"))
+]
+
+
+@pytest.mark.asyncio
+async def test_a_joined_item_longer_than_the_check_reads_is_held(monkeypatch) -> None:
+    """A4-101-04: past 600 characters the check was shown the same cut-off
+    sentence for every later item and approved clauses it never read. Now an
+    item longer than the check reads is not sent, counts as held, and its
+    sentence goes; the rest of the answer stays.
+
+    MUTATION PROOF: sending every item again (no length filter in
+    `check_reworded_sentences`) turns this red: the whole long sentence is
+    shown on an approval of its first 600 characters."""
+    sent = _approving_every_item_sent(monkeypatch)
+    clauses = ", and ".join(
+        f"{finding.field_value[0].lower()}{finding.field_value[1:-1]} [{finding.ref_index}]"
+        for finding in LONG_TITLES
+    )
+    long_sentence = f"Drug X reduces mortality [1], and {clauses}."
+    assert len(long_sentence) > 700, "populate-check: the later items pass the cap"
+    findings = [HEART, *LONG_TITLES, SYMPTOMATIC]
+    result = await _through_graph(
+        f"{long_sentence} Treatment is usually symptomatic [3].", findings, CHILDREN_QUESTION
+    )
+    assert len(sent) == 1 and "ITEM 1" in sent[0], "populate-check: the short items were asked"
+    assert result.sentences == ("Treatment is usually symptomatic [1].",), result.sentences
