@@ -831,17 +831,31 @@ def widen_to_record_sentences(
     `_quote_is_valid` finds it, in `_quote_form`. A quote not found, or a run
     longer than `max_chars`, comes back unchanged.
     """
+    widened = record_sentence_run(quote, record, max_chars)
+    return quote if widened is None else widened
+
+
+def record_sentence_run(
+    quote: str, record: str, max_chars: int = MAX_WIDENED_QUOTE_CHARS
+) -> str | None:
+    """`widen_to_record_sentences`' run of whole record sentences, or None
+    when the quote is not found or the run is longer than `max_chars`.
+
+    Card 101, round 5 (A4-101-07): a copied cut needs the run itself. Its
+    fallback, the writer's own words, would show the check the cut as the
+    record text behind it, so a cut with no run is held instead.
+    """
     target = _quote_form(quote)
     if not target or not record:
-        return quote
+        return None
     starts = [0] + [match.end() for match in _RECORD_SENTENCE_BOUNDARY.finditer(record)]
     ends = [match.start() for match in _RECORD_SENTENCE_BOUNDARY.finditer(record)] + [len(record)]
     for width in range(1, len(starts) + 1):
         for first in range(len(starts) - width + 1):
             span = record[starts[first] : ends[first + width - 1]].strip()
             if target in _quote_form(span):
-                return span if len(span) <= max_chars else quote
-    return quote
+                return span if len(span) <= max_chars else None
+    return None
 
 
 def synthesis_key(claim_text: str, quotes: list[str] | tuple[str, ...]) -> tuple[str, tuple[str, ...]]:
@@ -1044,17 +1058,23 @@ def _wraps_record_value(claim_text: str, finding: SynthFinding) -> bool:
     return bool(value) and value in claim and claim not in value
 
 
-def _copied_record_span(claim_text: str, finding: SynthFinding) -> str:
+def _copied_record_span(claim_text: str, finding: SynthFinding) -> str | None:
     """The record text a copied clause rests on, as the sentence check reads it.
 
-    A cut: the whole record sentence(s) it sits in (`widen_to_record_
-    sentences`, card 89), so the check sees the clause it dropped. A wrapped
-    value: the finding as the writer was shown it (`render_finding_body`),
-    which is all the record says.
+    A cut: the whole record sentence(s) it sits in (`record_sentence_run`,
+    card 89), so the check sees the clause it dropped. A wrapped value: the
+    finding as the writer was shown it (`render_finding_body`), which is all
+    the record says.
+
+    None when a cut's run cannot be found or is longer than the check reads
+    (round 5, A4-101-07). Before, the widener's fallback gave back the cut
+    itself, the check read the writer's words as their own source and
+    approved "Azithromycin shortened the illness ..." from "There was no
+    evidence that ...". Such a clause is held, never sent.
     """
     if _wraps_record_value(claim_text, finding):
         return render_finding_body(finding)
-    return widen_to_record_sentences(claim_text, finding.field_value)
+    return record_sentence_run(claim_text, finding.field_value)
 
 
 _SPACE_BEFORE_PUNCTUATION = re.compile(r"\s+([,;:])")
@@ -1066,7 +1086,7 @@ def _copied_clause_candidate(
     upto: int,
     by_ref: dict[int, SynthFinding],
     evidence_quotes: tuple[str, ...],
-) -> SynthesisCandidate:
+) -> SynthesisCandidate | None:
     """The check item for a copied cut, or a copied clause joined after one.
 
     The check reads the sentence as far as this clause, markers removed, the
@@ -1080,6 +1100,10 @@ def _copied_clause_candidate(
     Its quotes are the record text behind every clause up to here, from
     every record those clauses cite: a writer's quote widened to its record
     sentence(s), or a copied clause's own record span.
+
+    None when a copied clause's record span cannot be given to the check
+    (`_copied_record_span`): the clause is then held, and with it the
+    sentence (round 5).
     """
     marker_ends = [match.end() for match in _KEYED_MARKER.finditer(sentence)]
     prefix = " ".join(_KEYED_MARKER.sub(" ", sentence[: marker_ends[upto]]).split())
@@ -1099,7 +1123,10 @@ def _copied_clause_candidate(
         if quote is not None and _quote_is_valid(quote, finding):
             spans.append(widen_to_record_sentences(quote, finding.field_value))
         elif _asserts_something(claim) and ground_claim(claim, finding.field_value):
-            spans.append(_copied_record_span(claim, finding))
+            span = _copied_record_span(claim, finding)
+            if span is None:
+                return None
+            spans.append(span)
     quotes = tuple(dict.fromkeys(spans))
     return SynthesisCandidate(
         key=synthesis_key(prefix, quotes), sentence=prefix, quotes=quotes
@@ -1683,7 +1710,12 @@ def run_grounding_pass(
                         copied = _copied_clause_candidate(
                             sentence, segments, segment_index, by_ref, evidence_quotes
                         )
-                        if verified_syntheses is not None and copied.key in verified_syntheses:
+                        # Round 5 (A4-101-07): None means no record text
+                        # the check could read for this clause, so it stays
+                        # held and is never sent.
+                        if copied is None:
+                            pass
+                        elif verified_syntheses is not None and copied.key in verified_syntheses:
                             strict_ok = True
                             held = False
                         elif candidate_sink is not None:

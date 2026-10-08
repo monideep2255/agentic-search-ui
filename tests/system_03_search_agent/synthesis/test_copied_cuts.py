@@ -881,3 +881,53 @@ async def test_a_joined_item_longer_than_the_check_reads_is_held(monkeypatch) ->
     )
     assert len(sent) == 1 and "ITEM 1" in sent[0], "populate-check: the short items were asked"
     assert result.sentences == ("Treatment is usually symptomatic [1].",), result.sentences
+
+
+NO_EVIDENCE_RUN = (
+    "There was no evidence that azithromycin shortened the illness in infants with bronchiolitis. "
+    "142 infants were enrolled at six sites over three winters and followed for 21 days by parents "
+    "using daily symptom diaries. 95% of diaries were returned complete and were scored blind by two "
+    "investigators who did not know the allocation. p values were adjusted for the number of "
+    "comparisons made across the secondary outcomes reported in the trial. 16 serious adverse events "
+    "occurred, none judged related to the study drug by the independent safety board. 3 infants were "
+    "withdrawn by their parents before the end of the study."
+)
+ONE_LONG_SENTENCE = (
+    "Among 142 infants enrolled at six sites over three winters, randomised in blocks of four "
+    "stratified by site, age band and oxygen need at entry, given a five-day course of oral suspension "
+    "or matching placebo, and followed by parents using daily symptom diaries that research nurses "
+    "collected weekly and two investigators who did not know the allocation scored blind, with "
+    "disagreements settled by a third investigator and missing days carried forward from the last "
+    "observation, azithromycin shortened the illness by two days, but only in the small subgroup with "
+    "a bacterial co-infection confirmed by culture, and not in the infants overall."
+)
+
+
+@pytest.mark.parametrize(
+    ("value", "narrative"),
+    [
+        (NO_EVIDENCE_RUN, "Azithromycin shortened the illness in infants with bronchiolitis [1]."),
+        (ONE_LONG_SENTENCE, "Azithromycin shortened the illness by two days [1]."),
+    ],
+    ids=["no evidence, a long run of sentences", "one long sentence"],
+)
+def test_a_cut_the_widener_cannot_place_is_held_not_sent_as_its_own_quote(value: str, narrative: str) -> None:
+    """A4-101-07: when the record sentences around a cut ran past 600
+    characters, the widener gave back the cut itself, the check read the
+    writer's words as their own quote, and approved "Azithromycin shortened
+    the illness ..." from "There was no evidence that ..." 3 of 3 live. Now
+    such a cut is held: never sent, never shown.
+
+    MUTATION PROOF: falling back to the cut as its quote again
+    (`_copied_record_span` returning `widen_to_record_sentences(...)`
+    unchecked) turns both cases red: the item is collected."""
+    finding = _finding(1, value)
+    claim = narrative.rsplit(" [", 1)[0]
+    assert grounding.ground_claim(claim, value), "populate-check: it is copied"
+    assert grounding.widen_to_record_sentences(claim, value) == claim, (
+        "populate-check: the run around it is longer than the check reads"
+    )
+    sink, result = _first_pass(narrative, [finding], "Does azithromycin help bronchiolitis?")
+    assert sink == [], [(c.sentence, c.quotes) for c in sink]
+    assert result.sentences == (), result.sentences
+
