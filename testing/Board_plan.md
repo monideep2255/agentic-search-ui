@@ -1,6 +1,10 @@
 # Board plan
 
-The order in which every card on the board gets built, what blocks what, and what the owner decides up front. Written 2026-10-05 from six read-only scout reports and seven diagnoses, all in `testing/Developer/reports/2026-10-05_board_plan/` and `testing/Developer/reports/2026-10-05_card*/`.
+- The order in which every card on the board gets built
+- What blocks what
+- What the owner decides up front
+
+Written 2026-10-05 from six read-only scout reports and seven diagnoses, all in `testing/Developer/reports/2026-10-05_board_plan/` and `testing/Developer/reports/2026-10-05_card*/`.
 
 The test every step is ranked against, in the owner's words: a person types a question in natural language and gets an answer. A card that stops that comes before a card that degrades it, and both come before a card about a screen.
 
@@ -20,12 +24,20 @@ The test every step is ranked against, in the owner's words: a person types a qu
 
 Newest first.
 
+- 2026-10-07, overnight: cards 22, 23 and 102 are live and wait for the owner's retest (#197 to #199); card 102 (a saved answer listed no sources) was found by card 22's product review and built the same night. Card 101's copied-cut fix is parked on `fix/card101-copied-cuts` for the owner's decision. Factory's next cards are 75, 24 and 100 (`DECISIONS.md`, 2026-10-07).
+- 2026-10-06: cards 43, 43b, 44, 47 and 61 (Factory), 99 and part of 101 went live and wait for retest; card 56's smallest fix is live and the card stays open (#181 to #193).
 - 2026-10-06: Factory resumes with a written brief, `docs/build/Factory_onboarding.md`: cards 43, 44 and 47, then 61, one at a time; cards 18, 23, 24 and 25 leave its lane (`DECISIONS.md`, 2026-10-06).
 - 2026-10-06: card 56's remaining miss diagnosed (develop's plan model names nothing on some runs) and its fix built; card 99 measured on the full set and the owner said build it (`DECISIONS.md`, 2026-10-06).
 - 2026-10-05, night: the Factory trial is paused. Its lane is provisional and its eight cards are pending, not being built, until the owner gives renewed instructions; its trial worktree and branch were removed with no work in them (`DECISIONS.md`, 2026-10-05).
 - 2026-10-05, final test run: 9 of 10 passed on develop; card 56 (SARS-CoV-2) failed live although it passed locally, so it is back in To do for a diagnosis (`testing/Developer/reports/2026-10-05_final_test_queries/results.md`).
 - 2026-10-05, late: a second development agent, Factory, takes the screen and wording lane: cards 43, 44, 18, 23, 24, 25, 47 and the rest of 61, each in its own worktree on a `factory/` branch. The lead keeps the answer path, this plan, the board and the merge queue (`DECISIONS.md`, 2026-10-05).
-- 2026-10-05, evening: waves 0 and 1 and most of wave 2 are live on develop, plus wave 3's first steps, in pull requests #155 to #175 (21 merged). In Retest: cards 46, 74, 79, 80, 86 to 89, 91, 92, the part of card 94 for the colistin search, the Plain language table and the searched-families note, 95 to 97, and the page sentences of 85. Card 13 is proposed for closing. New card 99 (dropped qualifiers) waits on a measurement. Phase 8.7 waits on an OpenRouter top-up (about $38.50 left against its $60). The guardrail design (cards 84 and 72) waits on a fuller day of guard-call logs. D9 is decided: organisms resolve through NCBI Taxonomy, no semantic search.
+- 2026-10-05, evening: waves 0 and 1 and most of wave 2 are live on develop, plus wave 3's first steps, in pull requests #155 to #175 (21 merged).
+  - In Retest: cards 46, 74, 79, 80, 86 to 89, 91, 92, the part of card 94 for the colistin search, the Plain language table and the searched-families note, 95 to 97, and the page sentences of 85.
+  - Card 13 is proposed for closing.
+  - New card 99 (dropped qualifiers) waits on a measurement.
+  - Phase 8.7 waits on an OpenRouter top-up (about $38.50 left against its $60).
+  - The guardrail design (cards 84 and 72) waits on a fuller day of guard-call logs.
+  - D9 is decided: organisms resolve through NCBI Taxonomy, no semantic search.
 
 ## The answer in numbers
 
@@ -73,7 +85,15 @@ The 64 cards are not 64 pieces of work. Sixteen root causes account for nearly a
 | 15. The citation chip on a phone and its contrast | 43, 44, then 25 | S |
 | 16. No model judge for answer quality, so the test queries cannot gate | 9, 55, 42, 40 | M |
 
-Cards outside these causes: 86 (license text, S), 18 and 23 (record list rows and the provenance note, S, after root cause 1), 24 (mode switch, S), 29 (the answering sentence from an abstract, M, after root cause 1), 75 and the rest of 61 (command line and agent bridge, M, needs a production release first), 52 (follow-up offers, M, after phase 8.7), and the two architecture discussions, 6 and 7.
+Cards outside these causes:
+
+- 86 (license text, S)
+- 18 and 23 (record list rows and the provenance note, S, after root cause 1)
+- 24 (mode switch, S)
+- 29 (the answering sentence from an abstract, M, after root cause 1)
+- 75 and the rest of 61 (command line and agent bridge, M, needs a production release first)
+- 52 (follow-up offers, M, after phase 8.7)
+- The two architecture discussions, 6 and 7
 
 ## Dependencies
 
@@ -205,7 +225,11 @@ Needed before wave 4, recommendations taken unless the owner objects:
 | D20 | Card 47: edit the local copy of the design prototype | Yes |
 | D21 | Card 24: switching the mode on an answer re-runs the question and uses one of the day's questions, with that cost shown | Yes |
 
-Later, each when its wave opens: a production release for card 75's server field, the spend cap for card 55's first baseline run, and whether to rewrite git history for card 41 (recommendation: no).
+Later, each when its wave opens:
+
+- A production release for card 75's server field
+- The spend cap for card 55's first baseline run
+- Whether to rewrite git history for card 41 (recommendation: no)
 
 ## Keeping the list from growing back
 

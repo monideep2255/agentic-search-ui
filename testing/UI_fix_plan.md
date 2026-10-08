@@ -6,15 +6,19 @@ progress when someone starts it. Once it is live on develop it moves to
 closes it.
 
 This board is the source of truth for what gets worked on: an item is written
-here before it is built. A review finding goes on this board only if a person
-using the product would notice it; anything else is fixed in that review round
-or recorded in the phase ledger (`DECISIONS.md`, 2026-10-05). Engineering work
-no user would notice lives in `testing/Future.md`. The order every card is
-built in, and what blocks what, is `testing/Board_plan.md`. The detail behind the architecture cards sits under
-To do, below its table. Every other item's detail, every closed item and every
-note behind the board are in `testing/UI_fixes_done.md`.
+here before it is built.
 
-Last updated: 2026-10-06.
+- A review finding goes on this board only if a person using the product would
+  notice it; anything else is fixed in that review round or recorded in the
+  phase ledger (`DECISIONS.md`, 2026-10-05).
+- Engineering work no user would notice lives in `testing/Future.md`.
+- The order every card is built in, and what blocks what, is
+  `testing/Board_plan.md`.
+- The detail behind the architecture cards sits under To do, below its table.
+- Every other item's detail, every closed item and every note behind the board
+  are in `testing/UI_fixes_done.md`.
+
+Last updated: 2026-10-07.
 
 ## To do
 
@@ -23,7 +27,7 @@ In priority order.
 | # | Feature, in plain words | Item | Waiting on |
 |---|---|---|---|
 | 56 | A question about SARS-CoV-2 is answered about the disease SARS, so a person gets a confident wrong record and no sequencing runs | Card 56 diagnosis (`testing/Developer/reports/2026-10-05_card56/diagnosis.md`); the fix (#173) passed 3 of 3 local Think and Plan runs but failed on develop on 2026-10-05 (`testing/Developer/reports/2026-10-05_final_test_queries/results.md`) | Part live once merged (#186 or the next number): the plain SARS-CoV-2 question no longer binds the SARS disease (0 of 20 live runs, 5 of 26 before). Still open, for a design with you first: "SARS CoV-2" typed with a space still binds SARS; after a gene in the same conversation a missed SARS-CoV-2 question uses the remembered gene; "SRA runs from AML-derived cell lines" can lose its leukaemia match; the "Illumina" refusal (7 of 20 runs). Evidence: `testing/Developer/reports/2026-10-06_card56/` |
-| 101 | A reworded sentence can reach the screen without passing the sentence check: a bronchiolitis answer said "For babies with severe bronchiolitis" where its record says children, and that sentence was never among the check's candidates. Re-aimed 2026-10-06 from card 99's sentence cost, whose writer line measured no gain | `testing/Developer/reports/2026-10-06_card101/fix_round.md`, "For the owner" | Part live once merged: every sentence the writer rewords now goes to the sentence check ("babies" for "children" 0 of 5 live runs). Still open, live on develop and production: a copied cut can drop a clause such as "There is no evidence that" and show the paper's opposite with no check; two copied clauses can be joined into a new claim; a record title wrapped in the question's words shows unchecked; and production runs the older checker mode without card 99's pair check. Evidence: `testing/Developer/reports/2026-10-06_card101/adversary_r2.md` |
+| 101 | A reworded sentence can reach the screen without passing the sentence check: a bronchiolitis answer said "For babies with severe bronchiolitis" where its record says children, and that sentence was never among the check's candidates. Re-aimed 2026-10-06 from card 99's sentence cost, whose writer line measured no gain | `testing/Developer/reports/2026-10-06_card101/fix_round.md`, "For the owner" | Part live: every sentence the writer rewords goes to the sentence check (#193). The copied-cut fix is built and NOT merged, parked on branch `fix/card101-copied-cuts` after its last round (your choice of 2026-10-06): its judge passed it, but its adversary found that when the check times out or its reply cannot be read, a sentence can show with its limit cut off ("only when ... confirmed by culture") where develop shows the whole sentence. Your call: try the fix the adversary found closes it, dropping the whole sentence whenever a cut is held. Still open on develop and production: a copied cut can drop "There is no evidence that" and show the opposite unchecked; joined clauses; wrapped record names; long sentences past 600 characters; production runs the older checker mode without card 99's pair check. Evidence: `testing/Developer/reports/2026-10-06_card101/judge_r4.md` and `adversary_r4.md` on that branch |
 | 94 | Isolate questions answer with a table of isolates and their resistance genes: the default mode often shows names without genes, the blaCTX-M note is missing, a colistin question returns a suspicious zero, and a single-isolate answer lacks its details (queries 33, 35, 36, 44 and the isolate workflow); some counts differ only because the snapshot is newer | G-035; failed the batch retest of 2026-09-29 (`testing/Developer/reports/2026-09-29_retest/`) | Part live, 2026-10-05: the colistin search matches mcr genes (#158), the isolate table shows in Plain language beside the organism record (#165, #174) and the answer says which gene families were searched (#169); in Retest. Still open: the place and accession columns, a follow-up such as "from 2023", and a single-isolate lookup (wave 4 of `testing/Board_plan.md`) |
 | 84 | R-10's guardrail fixes on their own | Built, then stopped at the owner's choice on 2026-09-29 after its adversary found an off-topic question and a disguised injection admitted when the provider rate-limits (F-84-A05, A07); parked on `fix/card84-r10-sound-parts` at 5a0adc02, records in `testing/Developer/reports/2026-09-29_card84/` | Returns only as a design written and agreed with the owner first; develop's guardrail stays as it is |
 | 72 | A search fails with "a temporary error" because the guard model did not answer in time, twice: 4 of 150 golden runs on 2026-09-29. The first hedged design lost searches in a slow spell and let an off-topic question through on the relevancy check (F-72-V08), and was not merged | Diagnosis: `testing/Developer/reports/2026-09-29_card72/diagnosis.md`; the parked branch's verifier: F-72-V06 and V08 | Part live, 2026-10-05: one log line per guard and Jev call (#159). Today's logs: Jev decides in 0.12 to 0.29 seconds, the guard model's on-topic check takes 1.3 to 7.3 seconds across five upstream hosts. Next: the guardrail design with card 84, from a fuller day of logs |
@@ -45,8 +49,6 @@ In priority order.
 | 18 | A record with several sentences shows as several list rows under one heading, and no test covers it | Where we stopped, loose ends; a helper is on the 8.4 branch, its wiring in `core/graph.py` is not built | Out of Factory's lane on 2026-10-06: its wiring is in `core/graph.py`, the lead's lane, which card 56 is changing. Before: Nobody on it |
 | 19 | The paced handoff may show a false writing step on some other path, and nobody has checked | 11.28 | Nobody on it |
 | 20 | An isolate search can filter only by gene prefix | Shipped days, 2026-09-22; year from the question built on the 8.4 branch, location needs the plan step | Nobody on it |
-| 22 | One answer shows several different totals and never says which is which | D-2, Shipped days, 2026-09-20; the screen half is on the 8.4 branch, the backend wording is not built; phase 8.10's product review, PR-8.10-08: one Researcher screen says "Found 4 disease records", 18 sources in the meta line and "Based on 17 sources" in the trust line | Your decision of 2026-10-06: every total says what it counts ("4 disease records found", "18 sources searched", "17 sources cited"). The lead builds it |
-| 23 | The provenance note under the variant-to-disease table | Where we stopped, waiting on the product owner; a helper is on the 8.4 branch, its wiring in `core/graph.py` is not built | Your decision of 2026-10-06: show the one-line source note under the table. The lead builds it, from the helper on the 8.4 branch |
 | 24 | Where the Plain language and Researcher toggle goes | Where we stopped, waiting on the product owner; built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop | Your decision of 2026-10-06: the switch sits beside the answer's header, its cost shown on click (D21). Factory's card after 75 (`docs/build/Factory_onboarding.md`, card 24): it ports the switch built in commit `df7d7a2c`, kept under the local tag `parked/phase-8.4-2026-09-25` since the branch left the remote, and adds the cost shown on click |
 | 25 | Install the public USWDS package, the base of the NCBI design system: yes or no | 2.13; decided 2026-09-25, not built | Out of Factory's lane on 2026-10-06: a new package needs your approval and a supply-chain review first. Before: Nobody on it |
 | 29 | Under each cited paper, show the one sentence of its own abstract that answers the question, quoted and cited (replaces the LitSense route, closed 2026-09-25: LitSense cannot be pointed at a paper) | [13.1](#detail-131), DECISIONS.md 2026-09-25 | Built: the sentence finder and the source card, parked on the local tag `parked/phase-8.8-snippets-2026-09-25`; wired into answers after phase 8.6 |
@@ -63,7 +65,7 @@ In priority order.
 | 50 | Nobody waits in silence: an answer shows its records within seconds, then its sentences one by one as each passes its check, and most answers finish near 20 seconds without giving up a correct one. Twenty seconds is a guide, not a hard limit (`DECISIONS.md`) | The product owner, 2026-09-26: "at most, it should take in my opinion 20 seconds" (`DECISIONS.md`). The re-land's golden run: median 17.1 s, p90 24.9 s, worst 31.3 s, and the answer text appears all at once at the end (F-8.6-P11). Follows card 3; phase 8.10's product review, PR-8.10-14: the web showed each answer at about 30 seconds while its own meta line said about 11, and `s3` and MCP took 14 to 15 | Diagnosed, 2026-09-26: `testing/Developer/reports/2026-09-26_answer_speed/report.md`. Being built in phase 8.7 with card 2, next after 8.6's follow-up (`DECISIONS.md`). A writer bench of frontier and open models runs beside it, up to 30 dollars. Found by card 58's builder, 2026-09-27: the screen lags the stream itself. Replaying 11 saved develop streams through the pacing rules, the first sentence shows up to 13 s after the server finished (G-013: server done at 17.3 s, first word on screen at 30.1 s). Phase 8.7's answer-screen ticket takes that lag out |
 | 51 | Nothing the app tells people about itself goes stale as the backend changes: the About, Architecture, Integrations and home pages, the tour and the access notes, and the reference documents that repeat the same facts | The product owner, 2026-09-26: "the information that we are providing on the UI is not stale and it reflects the current uh, updates ... this could just be part of the verify skill" (`DECISIONS.md`). Extends card 42 | Part live, 2026-10-05: the facts checker's two patterns broken by the 2026-10-04 rewording (#156). Still open: the page claims it does not yet check |
 | 52 | Every answer, whatever the question, ends by offering the next useful step, decided from that answer's own context and never from a template or a topic list. For example "Would you like the clinical trials recruiting for GERD, or the genes linked to it?", and a click continues the same conversation with its context. Today an answer ends on its table, and the only offer is "go deeper" into records it left out | The product owner, 2026-09-26, after asking "GERD" beside a general AI search answer that ended "Would you like me to put together a sample 1-day meal plan ... or would you prefer a list of safe ingredient swaps": "It is beautiful orchestration of continuing the discussion and searching for the next thing or guiding the user in the conversation. Ideally my ai agent system needs to be able to do this. This will help with the follow up too." Then: "GERD was an example of the follow up, do not hard code." Builds on the next-step offer of 2026-09-01 and 2026-09-13 (`DECISIONS.md`) and sits beside card 48 | Designed, 2026-09-26: `testing/Developer/reports/2026-09-26_conversation_next_steps/design.md`. The writing model proposes at most three follow-up questions from the answer's own findings, code checks each is answerable and names a record the answer found, and Jev decides it asks what records hold, not advice. No fixed menu. A numbered phase after 8.6's follow-up, 8.7 and 8.9, at dial position 3 (event schema). Five decisions for you when it opens, the lead recommending yes to each |
-| 54 | Reopening a long past answer loses every citation after the fiftieth, so markers such as [77] point at nothing; the REST citations export stops at 50 the same way | Builder Q of phase 8.10, 2026-09-26: the answer capture and the REST export both cap at 50, while one run can emit up to 100 (`_MAX_FINDINGS_FOR_DISPLAY`). MCP and GraphQL were raised to 100 in 8.10 | Nobody on it: it touches how an answer is stored, so it needs a diagnosis of the capture's bound and its database column first |
+| 54 | Reopening a long past answer loses every citation after the fiftieth, so markers such as [77] point at nothing; the REST citations export stops at 50 the same way | Builder Q of phase 8.10, 2026-09-26: the answer capture and the REST export both cap at 50, while one run can emit up to 100 (`_MAX_FINDINGS_FOR_DISPLAY`). MCP and GraphQL were raised to 100 in 8.10 | Nobody on it: it touches how an answer is stored, so it needs a diagnosis of the capture's bound and its database column first. Seen on develop 2026-10-07 after card 102 made saved sources visible: a reopened HNF1A answer says "Based on 61 sources cited" above 49 rows, and the history list reads 49 (`testing/Developer/reports/2026-10-07_card102/product_review.md`) |
 | 55 | Work counts as done when the test queries document passes, run automatically by the team, not when the golden count holds: every feature's "what you should see" is checked, and an expert checks the facts in a few key answers | The product owner, 2026-09-26: "what we should be actually trusting ... is running the test queries and workflow document that should be the barrier that needs to pass" (`DECISIONS.md`) | Being designed, 2026-09-26: how each entry becomes checks, the runner, the cost and the first baseline run. Then built on a branch, since it changes `.claude/`. The golden run stays the blocking gate until this one has run once. The expert review is the owner's to arrange; the lead prepares the answers to check |
 | 59 | A question stopped after the server had already finished shows "Search stopped" on screen, yet comes back as answered in history after a reload, and the conversation remembers it | Card 58's builder, 2026-09-27: the server records the run as answered, and the screen, which lags the stream, discards it on Stop; card 58's verifier, F-58-V02: the same stop also leaves the turn in session memory, so it can decide what the next "it" refers to, and the history rail can show the answer without a reload (F-58-A05) | Nobody on it: it needs the run's record and session memory to learn about a stop that came after the answer, in `feedback/` and `core/session_memory.py` |
 | 67 | A reopened "not yet confirmed" answer written during an NCBI outage still says the database is down "right now" and to try again later, with no date, so a person reopening it days later reads a stale warning as current | Card 63's adversary, F-63-A03 (`testing/Developer/reports/2026-09-27_card63/adversary.md`) | Nobody on it: decide whether a saved answer's outage note is dated or reworded when reopened |
@@ -108,24 +110,28 @@ knowledge-graph model?
 Status: Discussion, not started
 
 Raised 2026-09-20. A DISCUSSION ITEM, deliberately not a build item, and it
-needs its own session rather than a slot in the fix loop. Three things are worth
-settling before it opens. FIRST, most of the premise is not this repository's to
-decide: "everything is in the graph" is Systems 1 and 2, which live in a
-separate repository, and `.claude/rules/file-protection.md` forbids this
-repository writing into the graph at all, by direction of data flow.
+needs its own session rather than a slot in the fix loop.
 
-System 3 can only read. SECOND, vector embeddings, RAG pipelines and
-knowledge-graph federation sit on the v1 out-of-scope and fast-follow lists in
-`.claude/rules/v1-scope-boundary.md`; external non-NCBI federation has NO named
-trigger at all, so it stops and asks by rule. Discussing is free, building is
-not. THIRD, the multi-hop half is already real and measured rather than
-hypothetical: the live graph rejects edge alternation, `[:a|b|c]` fails with
-SyntaxError, so the broad search traverses `participates_in` alone and GO
-molecular activities and cellular components are not reached
-(`2026-09-19_breadth_wiring/build.md`).
+Three things are worth settling before it opens.
 
-That is a soft-edge limitation sitting in the product today, and it costs one
-graph call per edge to widen . THE PRODUCT OWNER'S OWN FRAMING, given 2026-09-20
+- FIRST, most of the premise is not this repository's to decide: "everything
+  is in the graph" is Systems 1 and 2, which live in a separate repository, and
+  `.claude/rules/file-protection.md` forbids this repository writing into the
+  graph at all, by direction of data flow. System 3 can only read.
+- SECOND, vector embeddings, RAG pipelines and knowledge-graph federation sit
+  on the v1 out-of-scope and fast-follow lists in
+  `.claude/rules/v1-scope-boundary.md`; external non-NCBI federation has NO
+  named trigger at all, so it stops and asks by rule. Discussing is free,
+  building is not.
+- THIRD, the multi-hop half is already real and measured rather than
+  hypothetical: the live graph rejects edge alternation, `[:a|b|c]` fails with
+  SyntaxError, so the broad search traverses `participates_in` alone and GO
+  molecular activities and cellular components are not reached
+  (`2026-09-19_breadth_wiring/build.md`). That is a soft-edge limitation
+  sitting in the product today, and it costs one graph call per edge to
+  widen .
+
+THE PRODUCT OWNER'S OWN FRAMING, given 2026-09-20
 when asked whether the product fails because the data is absent or because we
 cannot find the path between things that are present: BOTH, and the headline
 verdict is blunter than either: "the answers all look surface level and most
@@ -158,28 +164,33 @@ seven tools and their transports, so under `.claude/rules/v1-scope-boundary.md`
 it is scoped against that section and signed off before any work starts, never
 the other way round.
 
-Two questions to settle when it is scoped, neither decided here. Whether an
-internal MCP server is a TRANSPORT SWAP underneath the existing seven tools,
-which would leave every tool schema and call site unchanged the way build phase
-4.11's HTTPS graph service did, or a RE-CUT of what the tools are, which is a
-contract-version event under `system-design-patterns` pattern 10. And what it
-buys over the direct calls the tools make today, since
-`.claude/rules/supply-chain-security.md` treats every MCP server as an execution
-surface running with the app's own credentials, so the answer has to be worth
-that.
+Two questions to settle when it is scoped, neither decided here.
+
+- Whether an internal MCP server is a TRANSPORT SWAP underneath the existing
+  seven tools, which would leave every tool schema and call site unchanged the
+  way build phase 4.11's HTTPS graph service did, or a RE-CUT of what the tools
+  are, which is a contract-version event under `system-design-patterns`
+  pattern 10.
+- And what it buys over the direct calls the tools make today, since
+  `.claude/rules/supply-chain-security.md` treats every MCP server as an
+  execution surface running with the app's own credentials, so the answer has
+  to be worth that.
 
 ANSWERED 2026-09-22, when the product owner asked directly whether wrapping
 Layer 2 and Layer 3 in MCP would be faster and more reliable. The honest answer
 splits their question in two, because the valuable half is not the MCP half.
 
-On speed, no, and this is measured rather than argued. MCP is a protocol for one
-process to offer tools to another. It does not change what NCBI returns or how
-fast NCBI returns it, so wrapping our own calls in it adds a hop rather than
-removing one. Item 11.4 measured where the wait actually is: the searches take
-about a second, and the wait was the writing step. Item 11.8 then cut the median
-answer from 26.5 to 19.7 seconds by working on that step, not on the transport.
-Under `.claude/rules/attack-the-constraint.md`, the transport is not the
-constraint, so optimising it buys nothing a person would feel.
+On speed, no, and this is measured rather than argued.
+
+- MCP is a protocol for one process to offer tools to another.
+- It does not change what NCBI returns or how fast NCBI returns it, so
+  wrapping our own calls in it adds a hop rather than removing one.
+- Item 11.4 measured where the wait actually is: the searches take about a
+  second, and the wait was the writing step.
+- Item 11.8 then cut the median answer from 26.5 to 19.7 seconds by working on
+  that step, not on the transport.
+- Under `.claude/rules/attack-the-constraint.md`, the transport is not the
+  constraint, so optimising it buys nothing a person would feel.
 
 On reliability, yes, and the product owner's instinct is right, but the thing
 that buys it is the half of their sentence that does not mention MCP:
@@ -255,12 +266,14 @@ third is writing, and Jev cannot do it at all.
 | Writing the answer | The Synth tier writes prose with inline citations | NO. It emits no free-form text. Not a candidate, at any price |
 
 ON "ZERO HALLUCINATIONS", which is on the vendor's front page and should be read
-carefully rather than quoted. The honest version of that claim is structural: a
-decision constrained to a fixed option set cannot return an option outside the
-set. That is real and it is worth something here, since this product's failures
-include the model reading MODY as an organism (item 11.19). It is NOT a claim
-that the chosen option is correct, and it must never be repeated to a user as
-though it were.
+carefully rather than quoted.
+
+- The honest version of that claim is structural: a decision constrained to a
+  fixed option set cannot return an option outside the set.
+- That is real and it is worth something here, since this product's failures
+  include the model reading MODY as an organism (item 11.19).
+- It is NOT a claim that the chosen option is correct, and it must never be
+  repeated to a user as though it were.
 
 WHY THE INSTINCT IS SOUND, independently of which model it turns out to be. The
 loop currently makes three decisions that are taken as if certain and are not:
@@ -275,23 +288,31 @@ A calibrated confidence turns each of those from a silent guess into a number
 that can be acted on, and the third one is the trust moat: a product that can
 say "I am not sure" honestly is worth more than one that is fluent and wrong.
 
-WHAT IS CHEAP AND WHAT IS NOT, since these are usually conflated. A CORRECTION
-FIRST, recorded rather than quietly fixed: on the night of 2026-09-22 the
-assistant said trying this model would be a config change under
-`system-design-patterns` pattern 11, reversible in one edit. That was said
-before the model was identified and it is WRONG for this model. Jev answers on
-its own `/api/alpha/decisions` endpoint, not on chat completions, so
-`resolve_model()` pointing a tier at it does nothing. A trial needs a new client
-path in the harness, which is a small build rather than a config edit. The cost
-estimate moves with it.
+WHAT IS CHEAP AND WHAT IS NOT, since these are usually conflated.
 
-What remains cheap: the trial is still bounded and reversible, because the two
-candidate call sites are decisions with closed option sets, and either can fall
-back to today's path on any error. Output tokens being free makes a
-side-by-side shadow run, where Jev decides in parallel and its answer is only
-recorded rather than acted on, unusually affordable. That shadow run is the
-right first step, because it produces this product's own calibration data
-instead of a vendor benchmark.
+A CORRECTION FIRST, recorded rather than quietly fixed:
+
+- on the night of 2026-09-22 the assistant said trying this model would be a
+  config change under `system-design-patterns` pattern 11, reversible in one
+  edit.
+- That was said before the model was identified and it is WRONG for this
+  model.
+- Jev answers on its own `/api/alpha/decisions` endpoint, not on chat
+  completions, so `resolve_model()` pointing a tier at it does nothing.
+- A trial needs a new client path in the harness, which is a small build
+  rather than a config edit.
+- The cost estimate moves with it.
+
+What remains cheap:
+
+- the trial is still bounded and reversible, because the two candidate call
+  sites are decisions with closed option sets, and either can fall back to
+  today's path on any error.
+- Output tokens being free makes a side-by-side shadow run, where Jev decides
+  in parallel and its answer is only recorded rather than acted on, unusually
+  affordable.
+- That shadow run is the right first step, because it produces this product's
+  own calibration data instead of a vendor benchmark.
 
 What is NOT cheap: ACTING on a confidence number. A threshold anywhere in the
 loop is a new control with its own failure modes, it must be calibrated against
@@ -377,16 +398,18 @@ kept separate from the quote above:
 - Point b), NCBI APIs and enrichment calls as MCP-style functions: item 11.32,
   parked as a discussion that precedes a build.
 - THE MODEL CHECK: a decision point added on 2026-09-23 under items 12.9 and
-  12.10, approved by the product owner the same evening. A guard-tier model
-  decides whether a sentence the answer model REWORDED says anything more than
-  the exact record words it quotes, after code has verified the quote is in
-  the record character for character, the numbers are in the quote and the
-  negation matches. It fails closed. It is exactly the kind of yes-or-no
-  decision point point c) names, and a candidate for Jev's Bool question type
-  once a shadow run has calibrated it. It amends the first constraint above
-  (the cite-or-refuse gate stays deterministic) for that one bounded case: the
-  rule text changes in pull request #101, and the reasoning is in DECISIONS.md
-  on 2026-09-23.
+  12.10, approved by the product owner the same evening.
+  - A guard-tier model decides whether a sentence the answer model REWORDED
+    says anything more than the exact record words it quotes, after code has
+    verified the quote is in the record character for character, the numbers
+    are in the quote and the negation matches.
+  - It fails closed.
+  - It is exactly the kind of yes-or-no decision point point c) names, and a
+    candidate for Jev's Bool question type once a shadow run has calibrated
+    it.
+  - It amends the first constraint above (the cite-or-refuse gate stays
+    deterministic) for that one bounded case: the rule text changes in pull
+    request #101, and the reasoning is in DECISIONS.md on 2026-09-23.
 
 ONE STANDING RULE TO HOLD AGAINST IT, `system-design-patterns` pattern 11 again:
 on a recurring failure, iterate the harness first and swap the model second. So

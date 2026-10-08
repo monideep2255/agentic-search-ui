@@ -188,8 +188,9 @@ test("the answer reports the tools that ran, never zero", async ({ page }) => {
     `the answer reports no tools on a run that ran two. This is exactly what ` +
       `the product owner saw on the deployed demo: "0 tools" beside five ` +
       `sources from two layers. Saw: ${text}`,
-  ).not.toMatch(/\b0 tools\b/);
-  expect(text).toMatch(/\b2 tools\b/);
+  ).not.toMatch(/\b0 tool calls\b/);
+  // Card 22: the figure reads "tool calls", which is what it counts.
+  expect(text).toMatch(/\b2 tool calls\b/);
 });
 
 test("a citation chip never repeats its own source", async ({ page }) => {

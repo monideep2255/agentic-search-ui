@@ -484,6 +484,7 @@ from system_03_search_agent.contracts.events import (
     ToolStartPayload,
     TrustOutcome,
     TrustSignalPayload,
+    source_page_key,
 )
 from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import SessionMemorySummary
@@ -554,6 +555,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     record_label,
     record_status_or_year,
     table_second_cell,
+    variant_to_disease_source_note,
 )
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
 from system_03_search_agent.synthesis.disease_names import (
@@ -10270,6 +10272,23 @@ def _renumber_markers(narrative: str, offset: int) -> str:
     return _MARKER_PATTERN.sub(lambda m: f"[{int(m.group(1)) + offset}]", narrative)
 
 
+def _cited_page_count(citations: list[CitationPayload]) -> int:
+    """How many record pages an answer's citations point at.
+
+    Card 22 fix round (2026-10-06, finding A-22-04): the truncation note
+    ("truncated to N records") and the "more to show" count both used
+    `len(citations)`, the number of numbered citations, while every other
+    total on the screen counts distinct pages under `source_page_key`. Two
+    citations of one record (a title and an abstract, or one gene page with
+    and without a trailing slash) are one record, so they count once here
+    too. A citation with no page counts on its own id, never merged, the
+    same fallback the trust line uses.
+    """
+    return len(
+        {source_page_key(citation.source_url) or citation.citation_id for citation in citations}
+    )
+
+
 def _build_truncated_answer_note(
     shown: int,
     total_available: int | None,
@@ -12433,6 +12452,18 @@ def _answer_tokens(
                     else []
                 )
                 sentence_token(sentence, kind="table_row", cells=cells, extra_marker_ids=linked)
+            # Card 23 (owner, 2026-10-06): directly under the
+            # variant-to-disease table, and under no other table, one
+            # code-built line saying where its links and disease names come
+            # from. Keyed on the same `entity_type` and `mapped` that chose
+            # the table's heading above, so the note and the table it
+            # describes are shown together or not at all. A Plain language
+            # answer lists these records as titles, with no table, so it
+            # gets no note either.
+            source_note = variant_to_disease_source_note(entity_type, mapped)
+            if source_note is not None:
+                paragraph_break()
+                tokens.append(TokenPayload(text=source_note, marker_ids=[], kind="note"))
             # Each record in this group that has clinical features gets them
             # directly beneath the group that names it.
             for _, finding in entries:
@@ -13552,7 +13583,8 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     truncation_note: str | None = None
     if truncated_ok_finding and trust_outcome != "refuse":
         truncation_note = _build_truncated_answer_note(
-            shown=len(citations),
+            # Records, as the note says: distinct pages, not citations.
+            shown=_cited_page_count(citations),
             total_available=_known_total_available(findings),
             retrieval_limited=_ok_finding_was_truncated(findings),
             retrieved=_known_retrieved_count(findings),
@@ -13826,12 +13858,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     # path. "More to show" now means what it should have meant all along:
     # records exist BEYOND what was prepared for this answer, either because
     # `build_synth_findings` capped the list or because the tool's own row
-    # limit cut the graph result. The count is the known total less what
-    # this answer cited, when the total is known.
+    # limit cut the graph result. The count is the known total less the
+    # records this answer cited (card 22: distinct pages, not citations, so
+    # a record cited twice is not subtracted twice), when the total is known.
     more_records_exist = findings_capped or _ok_finding_was_truncated(findings)
     known_total = _known_total_available(findings)
     remaining_records = (
-        known_total - len(citations) if known_total is not None else None
+        known_total - _cited_page_count(citations) if known_total is not None else None
     )
     next_step_offer = _build_next_step_offer(
         synth_findings,
@@ -13851,6 +13884,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             layer_calls_used=call_budget.calls_made(),
             # UI fix set 9, item 9.9: the one plain line, derived from the
             # verdicts above and nothing else; None on a refusal.
+            # Card 22 last round (V-22-01): only the grounded claims, the
+            # records the reader can open, so "Confirmed by N independent
+            # databases" never counts an uncited finding.
             trust_line=answer_trust_line(trust_outcome, claim_trusts, grounding.claims),
             # T-6.2-08, re-keyed by UI fix set 10, item 10.1: computed from
             # the SAME capped-or-truncated signal the truncation note is

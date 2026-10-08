@@ -1050,6 +1050,18 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-07. THE UI FIX LOOP, 2026-10-06 AND THE NIGHT AFTER: PULL REQUESTS #179 TO #199 MERGED; CARD 101'S COPIED-CUT FIX PARKED. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
+
+- What landed, by what a person notices:
+  - Every sources total on an answer counts the same pages and says what it counts; a page cited from two layers is one card naming both (card 22, #197).
+  - The variant-to-disease note says what its rows are and that the classification is not shown, directly under its table (card 23, #198).
+  - A reopened saved answer lists its sources again, with long links wrapping on a phone (card 102, #199).
+  - The SARS-CoV-2 question no longer binds the disease SARS (card 56, part, #186); a sentence that drops a limit its record sets is held back (card 99, #184); every reworded sentence goes to the sentence check (card 101, part, #193).
+  - Factory's cards: long variant names wrap on a phone (#181, #187), the tour button stays readable (#183), the prototype home is light (#188), and ten command line and MCP edge cases (#190).
+- What changed in how the work runs: Factory works every day from `docs/build/Factory_onboarding.md`; the Retest list lives in `testing/UI_fixes_done.md`; `tracker/check_doc_sync.py` checks the key documents agree at every checkpoint and push; four documents were restructured for reading with no fact lost (#196), closed history moving to `testing/UI_fixes_archive.md`.
+- Held: card 101's copied-cut fix, parked on `fix/card101-copied-cuts` because its last adversary found a limit cut when the sentence check fails; the owner decides the next step.
+- Decisions: the DECISIONS.md rows dated 2026-10-06 and 2026-10-07, including those the lead took on the owner's behalf overnight. The Phase 6 status row is unchanged: a fix set is not a build phase.
+
 2026-10-05. TWENTY-ONE PULL REQUESTS MERGED (#155 TO #175); PHASE 8.7, THE GUARDRAIL DESIGN AND CARD 56 HELD. What awaits the owner and the next action: `HANDOFF.md`. The day's facts: `testing/Developer/reports/2026-10-05_board_plan/day_facts.md`.
 
 - What landed, by what a person notices:

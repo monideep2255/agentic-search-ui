@@ -66,6 +66,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from system_03_search_agent.contracts.events import source_page_key
 from system_03_search_agent.core.next_step import entity_type_noun
 from system_03_search_agent.synthesis.disease_names import (
     is_placeholder_condition_title,
@@ -290,7 +291,7 @@ def emphasis_for(text: str, terms: list[str]) -> list[str]:
 # in `tools/cypher_templates.py` write the linked Disease CURIEs onto each
 # variant row as `clinvar_condition_ids` (and onto each gene row of the
 # disease-genes shape as `medgen_condition_ids`). The second cell shows the
-# MedGen titles those CURIEs resolve to, read live, never the CURIE.
+# MedGen titles those CURIEs resolve to, looked up from NCBI, never the CURIE.
 ISOLATE_ENTITY_TYPE = "Pathogen Detection isolate"
 
 TABLE_COLUMNS: dict[str, tuple[str, str, str]] = {
@@ -312,6 +313,58 @@ TABLE_HEADINGS: dict[str, str] = {
     "Gene": "Gene-to-disease mapping",
     "Pathogen Detection isolate": "Isolates and their AMR genes",
 }
+
+
+# Card 32 (2026-09-25, product owner): "The variant-to-disease table says
+# where it comes from." Pinned wording, exact, code-built and never
+# model-written: the reader is told which two systems produced the two
+# columns they are looking at, ClinVar for the variant-disease link and
+# MedGen for the disease's own name.
+#
+# Card 23's fix round (2026-10-06, A-23-05): the first wording called every
+# row a "ClinVar assertion", and beside a question about which diseases
+# variants "cause" that read as "ClinVar says this variant causes this
+# disease", under rows ClinVar classifies as likely benign or uncertain. The
+# graph keeps no classification: the System 1 parser reads ClinVar's
+# ClinicalSignificance, but the loaded SequenceVariant vertex and its
+# `has_phenotype` edge carry neither it nor the review status (read-only
+# probe, 2026-10-06), so the table cannot show it. The line says so instead
+# of implying cause. "Looked up from NCBI", never "read live": the product
+# owner's wording decision of 2026-10-06, since a title is kept for up to a
+# week per process (`disease_names._CACHE_TTL_S`).
+#
+# Card 23's second part (2026-10-07): "Each row lists the conditions", not
+# "Each row is a condition", because one row can name two conditions (live
+# HNF1A c.737T>G: "Maturity-onset diabetes of the young type 3; Monogenic
+# diabetes"). The screen keeps this line under its own table by its opening
+# words, `VARIANT_TABLE_SOURCE_NOTE_PREFIX` in `frontend/src/hooks/
+# useRunView.ts`; a test holds the two together.
+VARIANT_TO_DISEASE_SOURCE_NOTE = (
+    "Each row lists the conditions the variant's ClinVar record names; the "
+    "record's classification (for example pathogenic, benign or uncertain) "
+    "is not shown here. Disease names are MedGen titles looked up from NCBI."
+)
+
+
+def variant_to_disease_source_note(entity_type: str, mapped: bool) -> str | None:
+    """The provenance note under the variant-to-disease mapping table, or
+    None whenever that specific table is not the one on the page.
+
+    `entity_type` is the anchor row type the table was built for and
+    `mapped` is the same "does this group actually render as a mapping
+    table" flag the caller already computes before choosing between
+    `TABLE_HEADINGS[entity_type]` and the generic "records found" heading
+    (`core.graph`'s `mapped` local, built from `TABLE_COLUMNS` membership
+    and the second column actually carrying a value). Only
+    `entity_type == "SequenceVariant"` with `mapped` true is the
+    "Variant-to-disease mapping" table itself: the gene-to-disease table,
+    the trial table, the isolate table and a plain variant list all pass a
+    different value here and get None, so the note only ever sits under the
+    one table it describes.
+    """
+    if entity_type != "SequenceVariant" or not mapped:
+        return None
+    return VARIANT_TO_DISEASE_SOURCE_NOTE
 
 
 # ---------------------------------------------------------------------------
@@ -860,11 +913,18 @@ def drop_record_restatements(
     if not grounding.sentences or not grounding.claims:
         return grounding, 0
     claims = list(grounding.claims)
-    shown_by_url = {
-        (finding.source_url or "").strip(): finding
-        for finding in one_finding_per_record(synth_findings)
-        if (finding.source_url or "").strip()
-    }
+    # Keyed by `source_page_key` (card 22), the one page key every count
+    # uses, so a cited link with a trailing slash still finds its record.
+    # Every listed row on a page is kept (card 22 last round, V-22-02):
+    # `one_finding_per_record` groups by exact link, so the graph's gene
+    # row and the live Datasets gene row are two rows on one page, and a
+    # sentence is a restatement when it restates ANY of them. Keeping only
+    # the last one written compared the sentence against the wrong row.
+    shown_by_page: dict[str, list[SynthFinding]] = {}
+    for finding in one_finding_per_record(synth_findings):
+        page = source_page_key(finding.source_url)
+        if page:
+            shown_by_page.setdefault(page, []).append(finding)
     cursor = 0
     kept: list[tuple[str, int, list[GroundedClaim]]] = []
     dropped = 0
@@ -875,11 +935,13 @@ def drop_record_restatements(
         own = claims[cursor : cursor + marker_count]
         cursor += marker_count
         cited = [claim.finding for claim in own]
-        shown = shown_by_url.get((cited[0].source_url or "").strip()) if cited else None
+        shown_rows: list[SynthFinding | None] = (
+            list(shown_by_page.get(source_page_key(cited[0].source_url), [])) if cited else []
+        ) or [None]
         if (
             own
             and not any(claim.evidence_quote for claim in own)
-            and is_record_restatement(sentence, cited, shown)
+            and any(is_record_restatement(sentence, cited, shown) for shown in shown_rows)
         ):
             dropped += 1
             continue
@@ -1012,13 +1074,16 @@ def answer_summary_sentence(
     # Items 12.9 and 12.10 (2026-09-23), measured live: once the prose could
     # cite a paper's abstract as well as its title, "Found 10 pubmed records"
     # sat above a list of 5 papers, because two citations of one paper were
-    # counted as two records. One record per page, keyed by exact
-    # `source_url` as the list and the trust line key it, keeping the
-    # finding that NAMES the record (its title) when there is one.
+    # counted as two records. One record per page, keeping the finding that
+    # NAMES the record (its title) when there is one. Card 22 (2026-10-06):
+    # keyed by `source_page_key`, the key the Sources list, the meta line and
+    # the trust line all use, so the graph's gene link and the live Datasets
+    # gene link (which adds a trailing slash) are one record here too, and
+    # "Found 2 gene records" can no longer sit above one gene card (A-22-03).
     by_page: dict[str, SynthFinding] = {}
     unkeyed: list[SynthFinding] = []
     for finding in sorted(counted, key=lambda f: display_slots[f.citation_id]):
-        page = (finding.source_url or "").strip()
+        page = source_page_key(finding.source_url)
         if not page:
             unkeyed.append(finding)
             continue

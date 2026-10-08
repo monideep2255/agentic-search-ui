@@ -264,8 +264,12 @@ function nextLocalHistoryId(): string {
 function formatHistoryMeta(item: HistoryItem): string | undefined {
   const parts: string[] = [];
   if (item.citation_count !== undefined && item.citation_count !== null) {
+    // Card 22 fix round (J-22-05, A-22-06): the server counts the distinct
+    // record pages the answer cited (`feedback/history.py`,
+    // `_citation_count`), the number the live item's line called "sources
+    // cited", so a reload keeps the same count and the same words.
     const count = item.citation_count;
-    parts.push(`${count} source${count === 1 ? "" : "s"}`);
+    parts.push(`${count} source${count === 1 ? "" : "s"} cited`);
   }
   if (item.asked_at) {
     const askedAt = new Date(item.asked_at);

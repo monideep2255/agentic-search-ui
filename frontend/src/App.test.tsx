@@ -575,7 +575,9 @@ describe("F-4.13-A-10: a restored row renders something asked_at makes possible"
     // renders (F-4.13-A-10's own description: "arrives on screen as bare
     // question text with no date and no meta").
     expect(item.textContent).not.toBe("What is BRCA1?");
-    expect(item.textContent).toMatch(/3 source/i);
+    // Card 22 fix round: the count is the answer's sources cited, named as
+    // the live item names it, so a reload keeps the same words.
+    expect(item.textContent).toMatch(/3 sources cited/i);
   });
 
   it("does not render 'Invalid Date' for a restored row with a malformed asked_at", async () => {

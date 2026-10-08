@@ -44,6 +44,26 @@ export type ToolName =
 
 export type Layer = "layer_1_graph" | "layer_2_api" | "layer_3_enrichment";
 
+/**
+ * The wire's layer strings, mapped to the design system's 1, 2, 3.
+ *
+ * Lives beside `Layer` so the live answer (`hooks/useRunView.ts`) and a
+ * reopened saved answer (`lib/api.ts`'s `fetchHistoryAnswer`) read a
+ * citation's layer through the one mapping. Card 102: the saved-answer
+ * parser had its own numeric check instead, and every stored citation,
+ * which carries the wire string, was dropped.
+ */
+export function layerNumber(layer: Layer): 1 | 2 | 3 {
+  switch (layer) {
+    case "layer_1_graph":
+      return 1;
+    case "layer_2_api":
+      return 2;
+    default:
+      return 3;
+  }
+}
+
 export type TrustOutcome = "answer" | "flag" | "ask" | "refuse";
 
 // ---------------------------------------------------------------------------
@@ -361,7 +381,7 @@ function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === "string";
 }
 
-function isLayer(value: unknown): value is Layer {
+export function isLayer(value: unknown): value is Layer {
   return value === "layer_1_graph" || value === "layer_2_api" || value === "layer_3_enrichment";
 }
 
