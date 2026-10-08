@@ -78,7 +78,11 @@ import { useAgentRun } from "./hooks/useAgentRun";
 import { useRunView, EMPTY_RUN_VIEW } from "./hooks/useRunView";
 import { useAnswerReveal } from "./hooks/useAnswerReveal";
 import { usePacedEvents } from "./hooks/usePacedEvents";
-import { deriveStopOffered } from "./components/chat/StopButton";
+import {
+  STOP_CONFIRM_TIMEOUT_MS,
+  deriveStopOffered,
+  deriveStopVerdict,
+} from "./components/chat/StopButton";
 import { AuthGate } from "./components/auth/AuthGate";
 import { AppShell } from "./components/shell/AppShell";
 import { useScreenRoute } from "./lib/routing";
@@ -493,8 +497,17 @@ export function App() {
    * it state would re-run the effect on every ask for no benefit.
    */
   const activeEntryId = useRef<string | null>(null);
-  /** True while a stopped run should stay stopped (F-4.8-A-10). */
-  const [stopped, setStopped] = useState(false);
+  /**
+   * Stop was pressed on the run in flight (F-4.8-A-10), and how many events
+   * had arrived at that moment.
+   *
+   * Card 59: pressing Stop no longer decides "stopped" on its own. What it
+   * turned out to mean is `deriveStopVerdict`'s job, read off the server's
+   * stream below. `mark` is what the screen keeps showing while that reply
+   * is awaited, and after a confirmed stop: the run as it stood when the
+   * person pressed Stop, nothing that arrived afterwards.
+   */
+  const [stopPress, setStopPress] = useState<{ mark: number } | null>(null);
   // T-6.2-05. When the current run started, client-side, driving the
   // elapsed counter on the run screen. Deliberately NOT `view.elapsedMs`,
   // which comes from the server's `done` payload and therefore only
@@ -755,7 +768,6 @@ export function App() {
       cancelled = true;
       controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -815,7 +827,7 @@ export function App() {
     // cannot silently refuse the restore.
     restoreStarted.current = false;
     setRunId(null);
-    setStopped(false);
+    setStopPress(null);
     setThread([]);
     setHistory([]);
     setFlagged([]);
@@ -840,7 +852,6 @@ export function App() {
     // including Integrations and About (Docs folded into Integrations, fix set 5).
     setScreen("search");
     setSearchView({ name: "home" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -909,7 +920,6 @@ export function App() {
         // cleared above, so there is nothing left to clean up.
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -1006,7 +1016,49 @@ export function App() {
   // run screen sat with five pending steps and Stop disabled, silently, for
   // ever. F-4.8-J-12 closed exactly this hole for createRun and left the
   // identical one a single call downstream.
-  const { events, status, error: streamError, stop } = useAgentRun(runId, authToken);
+  const {
+    events,
+    status: streamStatus,
+    error: rawStreamError,
+    stop,
+  } = useAgentRun(runId, authToken);
+  /*
+   * Card 59, owner decision D18: an answer that finished before Stop arrived
+   * stands. The server's stream says which happened (`deriveStopVerdict`):
+   * `done` means the answer stands and is shown at once, in full; the
+   * `cancelled` error means the stop landed first and "Search stopped" is
+   * shown. Until one arrives the run is `stopping`: Stop reads "Stopping…"
+   * and the screen holds where it was, claiming neither.
+   *
+   * The `cancelled` error is the server confirming the stop the person asked
+   * for, not a failure, so a confirmed stop reads as a stream that ended
+   * normally and carries no error text. Every consumer below reads `status`
+   * and `streamError`, so none of them can mistake it for one.
+   */
+  const stopVerdict = deriveStopVerdict(events, stopPress !== null, {
+    streamEnded: streamStatus === "done" || streamStatus === "error",
+  });
+  const stopped = stopVerdict === "stopped";
+  const stopping = stopVerdict === "pending";
+  const answerStood = stopVerdict === "answered";
+  const status = stopped && streamStatus === "error" ? "done" : streamStatus;
+  const streamError = stopped ? null : rawStreamError;
+  const shownEvents = useMemo(
+    () => (stopPress !== null && (stopped || stopping) ? events.slice(0, stopPress.mark) : events),
+    [events, stopPress, stopped, stopping],
+  );
+  /*
+   * A stop that gets no reply, because the request failed or the stream
+   * hung, must not leave Stop reading "Stopping…" for ever. After
+   * `STOP_CONFIRM_TIMEOUT_MS` the stream is closed and the run reads as
+   * stopped, which is the pre-card-59 behaviour. `stop` is not a dependency:
+   * it is a new function each render and only reads the hook's own ref.
+   */
+  useEffect(() => {
+    if (!stopping) return;
+    const timer = setTimeout(() => stop(), STOP_CONFIRM_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [stopping, runId]);
   /*
    * UI fix 11.28, 2026-09-14. Events arrive in bursts, so the screen raced
    * through the lead starting, the handoff, each helper's search and the
@@ -1018,10 +1070,12 @@ export function App() {
    * error or a refusal. Everything below derives from the paced prefix.
    */
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)", { noSsr: true });
-  const pacedEvents = usePacedEvents(events, {
+  const pacedEvents = usePacedEvents(shownEvents, {
     runKey: runId,
-    stopped,
-    flush: status === "error",
+    // Any press flushes, as before card 59: a stop shows at once what had
+    // arrived, and an answer that stood shows at once in full.
+    stopped: stopPress !== null,
+    flush: status === "error" || answerStood,
     reducedMotion,
   });
   const pacedView = useRunView(pacedEvents);
@@ -1047,8 +1101,10 @@ export function App() {
    */
   const revealedView = useAnswerReveal(liveView, {
     runKey: runId,
-    stopped,
-    flush: status === "error",
+    // Frozen while the server's reply is awaited, so no sentence appears
+    // under a Stop that may yet be confirmed.
+    stopped: stopped || stopping,
+    flush: status === "error" || answerStood,
     reducedMotion,
   });
   /*
@@ -1062,17 +1118,18 @@ export function App() {
    * answer at any point of time until the answer pops out."
    *
    * So Stop is offered until the first sentence is on screen or the view
-   * lands (`deriveStopOffered` has the full rule). Pressing it after the
-   * server finished discards the held answer, which is what the reader
-   * asked for; the server's record of that run is a known gap, carried in
-   * the card 58 report. The discarding is `useAnswerReveal`'s
-   * `withholdAnswer`, which holds for every shape of run, including one with
-   * no sentences at all (F-58-J02). Gated on `runId` because `useAgentRun`
-   * keeps the previous run's events until a new run replaces them
-   * (F-4.8-J-03).
+   * lands (`deriveStopOffered` has the full rule). A confirmed stop
+   * discards the held answer through `useAnswerReveal`'s `withholdAnswer`,
+   * which holds for every shape of run, including one with no sentences at
+   * all (F-58-J02). Card 59 changed what a press after the server finished
+   * means: that answer stands and lands at once (D18), so the screen, the
+   * history and the memory all hold the same answer. Gated on `runId`
+   * because `useAgentRun` keeps the previous run's events until a new run
+   * replaces them (F-4.8-J-03), and off once pressed.
    */
   const stopOffered =
     runId !== null &&
+    stopVerdict === "none" &&
     deriveStopOffered(events, {
       landed: revealedView.landed,
       claimsShown: revealedView.claims.length,
@@ -1357,7 +1414,7 @@ export function App() {
         ]);
       }
       setRunId(null);
-      setStopped(false);
+      setStopPress(null);
       setRunStartedAt(Date.now());
       /*
        * UI FIX SET 7 (R22). The product owner: "it goes to a new page, which
@@ -1524,17 +1581,40 @@ export function App() {
    * of this would be two chances for one of them to stop the browser without
    * stopping the server.
    *
-   * A-10. `deriveStopEnabled` only goes false on a terminal event, and
-   * stopping ABORTS the stream so no terminal event ever arrives: Stop
-   * stayed enabled forever and the stepper kept asserting live work.
-   * `StopButton` solved this with local `hasStopped` state; reusing its
-   * derive helper without its state reused half the answer. This latches
-   * the other half.
+   * A-10. Stop stayed enabled forever once pressed, because the stream was
+   * aborted and no terminal event ever arrived. This latches the press,
+   * once per run, and `stopOffered` goes off with it.
    */
   const stopCurrentRun = () => {
-    setStopped(true);
-    stop();
-    if (runId && authToken) void stopRun(runId, authToken).catch(() => undefined);
+    if (stopPress !== null) return;
+    setStopPress({ mark: events.length });
+    /*
+     * Card 59, D18. The server already sent `done`: the answer it saved and
+     * remembered stands, and lands at once. No stop is sent, because there
+     * is nothing left to stop and a cancel reaching the server while it is
+     * still filing that answer could cut the filing short.
+     */
+    if (events.some((event) => event.type === "done")) return;
+    /*
+     * Otherwise the stream stays open: the server's reply on it, `done` or
+     * the `cancelled` error, decides what the screen shows. A stop request
+     * that fails gets no reply, so it closes the stream and the run reads
+     * as stopped, as it did before card 59.
+     *
+     * The fix round, J-59-04 and A-59-02: only for the run it was sent for.
+     * `stop` closes whichever stream is current WHEN it is called, and a
+     * failed stop can come back long after the person moved on and asked a
+     * new question; closing that one froze the new question's screen while
+     * the server answered and remembered it. `askSeq` moves the instant a
+     * new question (or a sign-out) starts, before any render, so a reply
+     * for an older run is dropped.
+     */
+    if (runId && authToken) {
+      const pressedOn = askSeq.current;
+      void stopRun(runId, authToken).catch(() => {
+        if (askSeq.current === pressedOn) stop();
+      });
+    } else stop();
   };
 
   /**
@@ -1628,6 +1708,7 @@ export function App() {
                   personaAbout={persona?.about ?? null}
                   personaWikipedia={persona?.wikipedia ?? null}
                   stopEnabled={view.stopEnabled}
+                  stopping={stopping}
                   refusal={view.refusal}
                   capMessage={view.capMessage}
                   failure={streamError}
@@ -1658,6 +1739,7 @@ export function App() {
             personaAbout={persona?.about ?? null}
             personaWikipedia={persona?.wikipedia ?? null}
             stopEnabled={view.stopEnabled && !stopped}
+            stopping={stopping}
             refusal={view.refusal}
             capMessage={view.capMessage}
             failure={streamError}
@@ -1697,6 +1779,7 @@ export function App() {
             personaAbout={persona?.about ?? null}
             personaWikipedia={persona?.wikipedia ?? null}
             stopEnabled={view.stopEnabled && !stopped}
+            stopping={stopping}
             refusal={view.refusal}
             capMessage={view.capMessage}
             failure={streamError}

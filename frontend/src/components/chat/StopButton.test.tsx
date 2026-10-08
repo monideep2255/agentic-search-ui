@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentEvent, ErrorPayload, GuardPayload } from "../../lib/events";
-import { deriveStopEnabled, deriveStopOffered, StopButton } from "./StopButton";
+import { deriveStopEnabled, deriveStopOffered, deriveStopVerdict, StopButton } from "./StopButton";
 
 // `lib/api.ts`'s `stopRun` is mocked at the module level (rather than
 // stubbing global `fetch`, which is how `useAgentRun.test.ts` covers the
@@ -154,6 +154,36 @@ describe("deriveStopOffered", () => {
   it("is off after a fatal error even with nothing on screen, and stays on after a non-fatal one", () => {
     expect(deriveStopOffered([guardPassedEvent, fatalErrorEvent], nothingShown)).toBe(false);
     expect(deriveStopOffered([guardPassedEvent, nonFatalErrorEvent], nothingShown)).toBe(true);
+  });
+});
+
+describe("deriveStopVerdict, card 59", () => {
+  const cancelledEvent = envelope("error", { ...FATAL_ERROR, source: "run_registry", error_class: "cancelled" }, 2);
+  const open = { streamEnded: false };
+
+  it("is none until Stop is pressed, whatever has arrived", () => {
+    expect(deriveStopVerdict([guardPassedEvent, doneEvent], false, open)).toBe("none");
+  });
+
+  it("is answered when the server sent done: the answer stands (D18)", () => {
+    expect(deriveStopVerdict([guardPassedEvent, trustSignalEvent, doneEvent], true, open)).toBe("answered");
+  });
+
+  it("is stopped when the server confirmed the stop with its cancelled error", () => {
+    expect(deriveStopVerdict([guardPassedEvent, cancelledEvent], true, open)).toBe("stopped");
+  });
+
+  it("is pending while neither has arrived, so the screen claims neither", () => {
+    expect(deriveStopVerdict([guardPassedEvent, nonFatalErrorEvent], true, open)).toBe("pending");
+  });
+
+  it("follows the FIRST terminal event, the only one the server's stream delivers", () => {
+    expect(deriveStopVerdict([guardPassedEvent, doneEvent, cancelledEvent], true, open)).toBe("answered");
+    expect(deriveStopVerdict([guardPassedEvent, cancelledEvent, doneEvent], true, open)).toBe("stopped");
+  });
+
+  it("falls back to stopped when the stream ended with no reply, never leaving neither", () => {
+    expect(deriveStopVerdict([guardPassedEvent], true, { streamEnded: true })).toBe("stopped");
   });
 });
 
