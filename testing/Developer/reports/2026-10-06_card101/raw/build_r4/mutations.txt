@@ -1,0 +1,48 @@
+M1 a colon starts a record sentence: 5 red | 5 failed, 75 passed in 3.59s
+    test_a_copy_after_a_colon_label_goes_to_the_check[faithful results label]
+    test_a_copy_after_a_colon_label_goes_to_the_check[hypothesis]
+    test_a_copy_after_a_colon_label_goes_to_the_check[myth]
+    test_a_copy_after_a_colon_label_goes_to_the_check[retracted]
+    test_a_verbatim_abstract_excerpt_grounds_and_cites_its_own_paper
+M2 a semicolon ends a record sentence: 3 red | 3 failed, 77 passed in 3.01s
+    test_a_copy_up_to_a_semicolon_goes_to_the_check[a listing row, copied by the writer]
+    test_a_copy_up_to_a_semicolon_goes_to_the_check[aspirin]
+    test_a_copy_up_to_a_semicolon_goes_to_the_check[however]
+M3 no capital needed after a full stop: 5 red | 5 failed, 75 passed in 3.26s
+    test_a_cut_at_an_abbreviation_goes_to_the_check[U.S.]
+    test_a_cut_at_an_abbreviation_goes_to_the_check[approx.]
+    test_a_cut_at_an_abbreviation_goes_to_the_check[e.g.]
+    test_a_cut_at_an_abbreviation_goes_to_the_check[vs.]
+    test_a_cut_at_an_abbreviation_goes_to_the_check[yrs.]
+M4 a record question counts as a statement: 2 red | 2 failed, 78 passed in 3.49s
+    test_a_record_question_copied_as_a_statement_goes_to_the_check[question in an abstract]
+    test_a_record_question_copied_as_a_statement_goes_to_the_check[question title]
+M5 quote marks and brackets stripped from a record sentence: 2 red | 2 failed, 78 passed in 3.14s
+    test_a_copy_with_its_quote_marks_or_brackets_left_off_goes_to_the_check[bracketed sentence]
+    test_a_copy_with_its_quote_marks_or_brackets_left_off_goes_to_the_check[quoted sentence]
+M6 the listing flag ignored: 1 red | 1 failed, 79 passed in 3.79s
+    test_the_code_built_listing_still_grounds_whole
+M7 only the claim after its connective is tested: 1 red | 1 failed, 79 passed in 3.56s
+    test_a_writers_copy_of_a_sentence_opening_on_but_is_whole
+M7b the listing row tested after its connective: 0 red | 80 passed in 3.38s
+M7c both tested after the connective: 5 red | 5 failed, 75 passed in 3.43s
+    test_a_writers_copy_of_a_sentence_opening_on_but_is_whole
+    test_the_listing_keeps_a_record_sentence_opening_on_a_connective[And]
+    test_the_listing_keeps_a_record_sentence_opening_on_a_connective[But]
+    test_the_listing_keeps_a_record_sentence_opening_on_a_connective[Or]
+    test_the_listing_keeps_a_record_sentence_opening_on_a_connective[Then]
+M8 clauses after a cut not read joined: 4 red | 4 failed, 76 passed in 2.89s
+    test_a_copied_clause_after_a_cut_is_read_joined_from_every_record
+    test_a_whole_record_sentence_after_a_cut_is_read_joined
+    test_only_what_the_check_read_is_shown[both approved]
+    test_only_what_the_check_read_is_shown[the cut alone approved]
+M9 the joined item keeps only the last record's text: 1 red | 1 failed, 79 passed in 3.06s
+    test_a_copied_clause_after_a_cut_is_read_joined_from_every_record
+M10 held clauses not counted by the middle-strip rule: 2 red | 2 failed, 78 passed in 3.06s
+    test_a_held_cut_never_leaves_a_fragment_develop_dropped[check approves]
+    test_a_held_cut_never_leaves_a_fragment_develop_dropped[check holds]
+M11 a verdict-opening cut not held by code: 1 red | 1 failed, 79 passed in 2.90s
+    test_a_cut_opening_on_a_bare_verdict_is_held_by_code
+M12 the whole-sentence match ignores case: 1 red | 1 failed, 79 passed in 2.90s
+    test_the_whole_sentence_match_is_case_sensitive
+restored byte for byte: True

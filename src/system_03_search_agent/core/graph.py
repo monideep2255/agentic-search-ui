@@ -9669,11 +9669,12 @@ def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
 #: measure: skipping is free, timing out is not.
 _WRITE_REPAIR_MIN_BUDGET_S = 5.0
 
-# Items 12.9 and 12.10 (2026-09-23): the model check on reworded sentences
-# runs only with at least this much of the write budget left, and is itself
-# capped, so it can never be the reason an answer times out. Below the floor
-# it is skipped, which approves nothing: the answer is what code alone
-# accepts, exactly as before the check existed.
+# Items 12.9 and 12.10 (2026-09-23): the sentence check runs only with at
+# least this much of the write budget left, and is itself capped, so it can
+# never be the reason an answer times out. Below the floor it is skipped,
+# which approves nothing: no reworded sentence and no copied cut is shown,
+# only what code shows with no check (a whole record sentence, a wrapped
+# record value). Card 101 (2026-10-06).
 _SENTENCE_CHECK_MIN_BUDGET_S = 4.0
 _SENTENCE_CHECK_MAX_BUDGET_S = 12.0
 
@@ -9688,15 +9689,17 @@ async def _ground_with_sentence_check(
     trace_id: str,
     budget_s: float,
 ) -> GroundingResult:
-    """Ground a reply, asking a model about reworded sentences.
+    """Ground a reply, asking a model about reworded sentences and copied cuts.
 
     Decided by the product owner on 2026-09-23 (items 12.9 and 12.10; the
     reasoning is in `synthesis/sentence_check.py`). Two grounding passes over
     the same reply:
 
-    1. The ordinary pass, collecting every reworded sentence that passed all
-       of code's exact checks (quote in the record, numbers, negation) and
-       failed only the word check.
+    1. The ordinary pass, collecting the check's items: every reworded
+       sentence that passed all of code's exact checks (quote in the
+       record, numbers, negation), and, since card 101 (2026-10-06), every
+       copied clause that is not a whole record sentence, read as the
+       sentence up to it (`grounding._copied_clause_candidate`).
     2. When there are any, ONE model check about all of them, then the
        pass again, accepting exactly the sentences the model approved with
        exactly those quotes. Which model is `sentence_check.
@@ -9708,7 +9711,7 @@ async def _ground_with_sentence_check(
 
     Fails closed at every step: no candidates, too little budget, the cost
     cap, a failed or timed-out call, or an unreadable reply all return the
-    first pass unchanged, which is what code alone accepts.
+    first pass unchanged, which shows none of the items.
     """
     candidates: list[SynthesisCandidate] = []
     first = run_grounding_pass(
@@ -9723,19 +9726,31 @@ async def _ground_with_sentence_check(
         return first
 
     async def _ask_guard_tier(messages: list[dict[str, str]], guard_budget_s: float) -> str:
-        response = await _dispatch_tier_call(
-            harness,
-            trace_id,
-            "guard",
-            "write",
-            messages,
-            budget_s=guard_budget_s,
-            max_tokens=256,
-            # A checker must not read the answering agent's prefix, for the
-            # same measured reason the guardrail's classifier does not.
-            cache_prefix=None,
-        )
-        return _response_text(response)
+        try:
+            response = await _dispatch_tier_call(
+                harness,
+                trace_id,
+                "guard",
+                "write",
+                messages,
+                budget_s=guard_budget_s,
+                max_tokens=256,
+                # A checker must not read the answering agent's prefix, for the
+                # same measured reason the guardrail's classifier does not.
+                cache_prefix=None,
+            )
+            return _response_text(response)
+        except (cost_control.QueryCapExceededError, HarnessCallError):
+            raise
+        except Exception as exc:
+            # Card 101, round 5 (J4-101-08): any other failure of the
+            # guard-tier call (a bare timeout, a broken reply object)
+            # approves nothing instead of failing the Write step, as Jev
+            # mode already does. Cancellation is not an Exception and
+            # still propagates.
+            raise SentenceCheckUnreadable(
+                f"the guard-tier check call failed ({type(exc).__name__}); approve nothing"
+            ) from exc
 
     try:
         approved = await check_reworded_sentences(
@@ -9817,6 +9832,7 @@ def _code_built_lines_will_cite(
         synth_findings,
         core_ask_required=True,
         question=question,
+        code_built_listing=True,
     )
     cited = {claim.finding.citation_id for claim in probe.claims}
     return all(finding.citation_id in cited for finding in omitted_findings)
@@ -13247,6 +13263,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             synth_findings,
             core_ask_required=True,
             question=query.text,
+            code_built_listing=True,
         )
         if fallback_grounding.claims:
             grounding = fallback_grounding
@@ -13351,6 +13368,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             synth_findings,
             core_ask_required=True,
             question=query.text,
+            code_built_listing=True,
         )
         if tail_grounding.claims:
             merged_claims = list(grounding.claims) + list(tail_grounding.claims)
