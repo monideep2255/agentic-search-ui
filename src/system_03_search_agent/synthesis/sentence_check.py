@@ -109,6 +109,9 @@ logger = logging.getLogger(__name__)
 
 # Bounds on what one check call may carry, per `production-standards`'
 # bounded-context rule. Sentences beyond the cap are simply not approved.
+# Card 101, round 5 (A4-101-04): an item whose sentence or any quote is
+# longer than its cap is not sent at all (`_read_whole`), so the check never
+# approves words it was not shown.
 MAX_CANDIDATES = 30
 MAX_SENTENCE_CHARS = 600
 MAX_QUOTE_CHARS = 600
@@ -178,6 +181,22 @@ def _json_text(text: str) -> str:
     for char, escape in _LINE_BREAKS.items():
         out = out.replace(char, escape)
     return out
+
+
+def _read_whole(candidate: SynthesisCandidate) -> bool:
+    """Whether the check is shown all of this item: its sentence within
+    `MAX_SENTENCE_CHARS` and every quote within `MAX_QUOTE_CHARS`.
+
+    Card 101, round 5 (A4-101-04). An item past either cap used to be sent
+    cut short, so a joined item past 600 characters showed the checker the
+    same sentence as the item before it and was approved on words it never
+    read ("... and ribavirin halved mortality [8] in children [9]", 3 of 3
+    live). Such an item is not sent and so not approved; for a copied
+    clause, `grounding.run_grounding_pass` then drops its sentence.
+    """
+    return len(candidate.sentence) <= MAX_SENTENCE_CHARS and all(
+        len(quote) <= MAX_QUOTE_CHARS for quote in candidate.quotes
+    )
 
 
 def _item_block(number: int, candidate: SynthesisCandidate) -> str:
@@ -734,15 +753,30 @@ async def check_reworded_sentences(
       answer outside the two options, the cost cap, anything unexpected)
       nothing is approved and no other model is asked (F-8.6-A01, J14).
 
+    Only items the check can read whole are sent (`_read_whole`, card 101
+    round 5): an item longer than either cap is never approved, and when no
+    item is left neither model is asked.
+
     Fails closed. Raises, and so approves nothing, on: the cost cap
     (`QueryCapExceededError`), a failed guard call in guard mode
     (`HarnessCallError`, from `ask_guard`), an unreadable reply, or any Jev
     failure in Jev mode (`SentenceCheckUnreadable`). The caller catches
     exactly those three, as it did before this function existed.
     """
+    readable = [candidate for candidate in candidates if _read_whole(candidate)]
+    if len(readable) < len(candidates):
+        # Counts only, no text.
+        logger.info(
+            "sentence check (trace %s): %d of %d items longer than the check reads, not sent",
+            trace_id,
+            len(candidates) - len(readable),
+            len(candidates),
+        )
+    candidates = readable
     if not candidates:
         # Nothing to judge, so nothing to ask either model. `core.graph`
-        # already skips the check here; this keeps the library honest too.
+        # already skips the check when it has no items; this keeps the
+        # library honest too, and covers items too long to read.
         return frozenset()
     if not jev_decides():
         reply = await ask_guard(build_sentence_check_messages(candidates), budget_s)

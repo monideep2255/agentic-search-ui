@@ -1,0 +1,18 @@
+168 distinct recorded writer drafts, replayed offline with no model call (replay_r4.py).
+Sentences shown: none = the check approves nothing; all = it approves every item.
+dev: none 59, all 59, items 0
+r3: none 53, all 59, items 31
+r4: none 52, all 59, items 34
+whole copies on round 3: 265; still whole on round 4: 265; moved to the check: 0; newly whole: 0
+drafts where develop shows prose and round 4 shows none: 0
+drafts where round 4 shows a sentence develop does not: 0
+draft | develop | round 3 none/all/items | round 4 none/all/items
+develop_control/cm4/37 | 4 | 2/4/2 | 2/4/2
+develop_control/cr1/51 | 3 | 2/3/1 | 2/3/1
+out/hb1/82 | 4 | 3/4/2 | 3/4/2
+out/hb2/85 | 2 | 1/2/2 | 1/2/2
+out/hb4/91 | 2 | 3/2/3 | 2/2/3
+live/gp1/107 | 0 | 0/0/1 | 0/0/2
+live/br2/125 | 2 | 1/2/4 | 1/2/4
+live/br3/130 | 2 | 1/2/4 | 1/2/5
+live/br1/157 | 3 | 3/3/1 | 3/3/2

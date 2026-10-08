@@ -365,7 +365,7 @@ async def test_variant_records_become_a_variant_to_disease_table(monkeypatch) ->
     and the summary clause, from one folded graph result (2026-09-14).
 
     Populate-checked: the fixture's second variant links ONLY to the
-    placeholder "not provided", so its cell is empty and the disclosure
+    placeholder "not provided", so its cell says why (card 103) and the disclosure
     counts two excluded links (one per variant). Mutation-proven by hand
     before this test was kept: removing `_apply_fold`'s effect (a fixture
     with no `clinvar_condition_ids`) turns the table into a list and the
@@ -396,7 +396,8 @@ async def test_variant_records_become_a_variant_to_disease_table(monkeypatch) ->
     (_, disease_rows), (_, variant_rows) = tables
     assert [t["cells"] for t in variant_rows] == [
         ["variant number 1", "ClinVar:1", "Maturity-onset diabetes of the young"],
-        ["variant number 2", "ClinVar:2", ""],
+        # Card 103: the placeholder-only row says why its cell has no name.
+        ["variant number 2", "ClinVar:2", "None named: the ClinVar record says not provided"],
     ]
     # Every row cites its own record; the first row also cites the disease
     # its cell names, and no mapping cell carries a raw code: the disease is
@@ -1128,3 +1129,765 @@ def test_card23_the_note_names_the_sources_the_code_actually_uses() -> None:
     assert "MedGen titles" in note
     for other in ("LitVar", "PubTator", "dbSNP", "OMIM"):
         assert other not in note, other
+
+
+# ---------------------------------------------------------------------------
+# Cards 103 and 104 (2026-10-08): no blank disease cell, no repeated record.
+# ---------------------------------------------------------------------------
+
+_HNF1A_VARIANTS = [
+    ("ClinVar:1048822", ["MedGen:C3661900"]),
+    ("ClinVar:1051750", ["MedGen:C3661900"]),
+    ("ClinVar:1098821", ["MedGen:CN169374"]),
+    ("ClinVar:1104934", ["MedGen:C3661900"]),
+    ("ClinVar:1105252", ["MedGen:C3661900"]),
+    ("ClinVar:2000001", ["MedGen:C0342276"]),
+    ("ClinVar:2000002", ["MedGen:C9999999"]),
+]
+_HNF1A_TITLES = {
+    "MedGen:C3661900": "not provided",
+    "MedGen:CN169374": "not specified",
+    "MedGen:C0342276": "Maturity-onset diabetes of the young",
+    "MedGen:C9999999": None,
+}
+
+
+def _variant_row(curie: str, conditions: list[str]) -> dict:
+    return {
+        "node_or_edge_type": "SequenceVariant",
+        "curie": curie,
+        "fields": {"name": f"variant {curie}", "clinvar_condition_ids": conditions},
+        "source_url": f"https://www.ncbi.nlm.nih.gov/clinvar/variation/{curie.split(':')[1]}/",
+        "graph_snapshot_version": "v1",
+    }
+
+
+@pytest.mark.asyncio
+async def test_no_disease_cell_is_blank_without_a_reason(monkeypatch) -> None:
+    """Card 103. Five HNF1A variants whose only ClinVar condition is a
+    placeholder, one with a real name, one whose name lookup failed.
+    Red before the change: the five placeholder cells and the failed-lookup
+    cell were all ''. Mutation: make `empty_cell_reason` return '' and the
+    assertions go red again."""
+
+    async def _resolve(concept_ids):
+        return {cid: _HNF1A_TITLES.get(cid) for cid in concept_ids}
+
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _resolve)
+    _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
+    rows = [_variant_row(curie, conds) for curie, conds in _HNF1A_VARIANTS]
+    tokens = _tokens(await graph_module.write_node(_state("researcher", rows=rows)))
+    ((header, table_rows),) = _tables(tokens)
+    assert header == ["Variant", "Identifier", "Associated disease(s)"]
+    cells = {t["cells"][1]: t["cells"][2] for t in table_rows}
+    none_provided = "None named: the ClinVar record says not provided"
+    for curie in ("ClinVar:1048822", "ClinVar:1051750", "ClinVar:1104934", "ClinVar:1105252"):
+        assert cells[curie] == none_provided, cells
+    assert cells["ClinVar:1098821"] == "None named: the ClinVar record says not specified"
+    assert cells["ClinVar:2000001"] == "Maturity-onset diabetes of the young"
+    assert cells["ClinVar:2000002"] == "Name could not be looked up"
+    assert all(c.strip() for c in cells.values()), cells
+
+
+_CLINVAR_PAGE = "https://www.ncbi.nlm.nih.gov/clinvar/variation/9/"
+
+
+def test_empty_cell_reason_names_both_placeholders_and_a_failed_lookup() -> None:
+    from system_03_search_agent.synthesis.answer_layout import empty_cell_reason
+
+    titles = {"a": "not provided", "b": "not specified", "c": None}
+    fields = {"clinvar_condition_ids": ["a", "b"]}
+    assert empty_cell_reason("SequenceVariant", fields, titles, _CLINVAR_PAGE) == (
+        "None named: the ClinVar record says not provided and not specified"
+    )
+    assert empty_cell_reason("SequenceVariant", {"clinvar_condition_ids": []}, titles) == ""
+
+
+def test_a_failed_lookup_beside_a_placeholder_never_says_none_named() -> None:
+    """J-103-01: the record links a condition we could not name, so the cell
+    says only that. Red before the fix round: 'None named: the ClinVar
+    record says not provided; Name could not be looked up'."""
+    from system_03_search_agent.synthesis.answer_layout import empty_cell_reason
+
+    titles = {"a": "not provided", "c": None}
+    both = {"clinvar_condition_ids": ["a", "c"]}
+    assert empty_cell_reason("SequenceVariant", both, titles, _CLINVAR_PAGE) == (
+        "Name could not be looked up"
+    )
+
+
+def test_only_a_clinvar_variant_row_is_told_the_clinvar_record_says() -> None:
+    """J-103-02, A-103-01: a gene row, or a variant row whose page is not a
+    ClinVar variant record, never cites 'the ClinVar record'. Red before
+    the fix round: the gene row read 'None named: the ClinVar record says
+    not provided'."""
+    from system_03_search_agent.synthesis.answer_layout import empty_cell_reason
+
+    titles = {"a": "not provided", "c": None}
+    gene = {"medgen_condition_ids": ["a"]}
+    assert empty_cell_reason("Gene", gene, titles, "https://www.ncbi.nlm.nih.gov/gene/675") == ""
+    variant = {"clinvar_condition_ids": ["a"]}
+    dbsnp = "https://www.ncbi.nlm.nih.gov/snp/rs80357906"
+    assert empty_cell_reason("SequenceVariant", variant, titles, dbsnp) == ""
+    assert empty_cell_reason("SequenceVariant", variant, titles, _CLINVAR_PAGE) == (
+        "None named: the ClinVar record says not provided"
+    )
+    # A failed lookup is true of any row, and names no source.
+    assert empty_cell_reason("Gene", {"medgen_condition_ids": ["c"]}, titles) == (
+        "Name could not be looked up"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_gene_row_in_the_table_is_not_told_the_clinvar_record_says(monkeypatch) -> None:
+    """J-103-02 through the real `write_node`: BRCA2's only linked condition
+    is the placeholder 'not provided'. Its cell stays empty, as on develop,
+    and never names a ClinVar record its own chip does not open."""
+
+    async def _resolve(concept_ids):
+        titles = {"MedGen:C0677776": "Hereditary breast ovarian cancer syndrome"}
+        titles["MedGen:C3661900"] = "not provided"
+        return {cid: titles.get(cid) for cid in concept_ids}
+
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _resolve)
+    _install(monkeypatch, lambda lines: " ".join(f"{b} [{i}]." for i, b in lines.items()))
+    rows = [
+        {
+            "node_or_edge_type": "Gene",
+            "curie": curie,
+            "fields": {"name": name, "symbol": name, "medgen_condition_ids": [condition]},
+            "source_url": f"https://www.ncbi.nlm.nih.gov/gene/{curie.split(':')[1]}",
+            "graph_snapshot_version": "v1",
+        }
+        for curie, name, condition in (
+            ("NCBIGene:672", "BRCA1", "MedGen:C0677776"),
+            ("NCBIGene:675", "BRCA2", "MedGen:C3661900"),
+        )
+    ]
+    tokens = _tokens(await graph_module.write_node(_state("researcher", rows=rows)))
+    ((header, table_rows),) = _tables(tokens)
+    assert header == ["Gene", "Identifier", "Associated disease"], header
+    cells = {t["cells"][1]: t["cells"][2] for t in table_rows}
+    assert cells["NCBIGene:672"] == "Hereditary breast ovarian cancer syndrome"
+    assert cells["NCBIGene:675"] == "", cells
+    assert not any("ClinVar" in t["cells"][2] for t in table_rows), cells
+
+
+def test_only_not_provided_and_not_specified_are_quoted() -> None:
+    """J-103-09, A-103-05: 'see cases' quoted bare reads as an instruction.
+    Red before the fix round: 'None named: the ClinVar record says see
+    cases'."""
+    from system_03_search_agent.synthesis.answer_layout import empty_cell_reason
+
+    titles = {"s": "See cases", "a": "not provided", "a2": "Not provided"}
+    see_cases = {"clinvar_condition_ids": ["s"]}
+    assert empty_cell_reason("SequenceVariant", see_cases, titles, _CLINVAR_PAGE) == (
+        "None named: the ClinVar record gives only a placeholder"
+    )
+    mixed = {"clinvar_condition_ids": ["a", "s"]}
+    assert empty_cell_reason("SequenceVariant", mixed, titles, _CLINVAR_PAGE) == (
+        "None named: the ClinVar record gives only a placeholder"
+    )
+    # The same placeholder twice is said once.
+    twice = {"clinvar_condition_ids": ["a", "a2"]}
+    assert empty_cell_reason("SequenceVariant", twice, titles, _CLINVAR_PAGE) == (
+        "None named: the ClinVar record says not provided"
+    )
+
+
+def test_the_notes_line_agrees_with_the_cells() -> None:
+    """A-103-04, J-103-07: the cells now show placeholder rows, so the Notes
+    line no longer says those links 'are not listed'. Its count stays."""
+    from system_03_search_agent.synthesis.answer_layout import placeholder_links_note
+
+    assert placeholder_links_note(4) == (
+        "4 variant links to ClinVar placeholder conditions "
+        "('not provided', 'not specified' or 'see cases') are not listed as diseases."
+    )
+    assert placeholder_links_note(1).startswith("1 variant link to ")  # type: ignore[union-attr]
+    assert placeholder_links_note(0) is None
+
+
+def _gene_row(url: str, name: str, curie: str = "NCBIGene:672") -> dict:
+    return {
+        "node_or_edge_type": "Gene",
+        "curie": curie,
+        "fields": {"name": name, "symbol": name},
+        "source_url": url,
+        "graph_snapshot_version": "v1",
+    }
+
+
+async def _gene_answer(monkeypatch, depth: str, rows: list[dict]):
+    """One graph call per row, so each row is its own citation (the shape
+    of the graph record plus a live record of one page in the evidence)."""
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    _install(monkeypatch, lambda lines: " ".join(f"{b} [{i}]." for i, b in lines.items()))
+    state = _state(depth, rows=rows[:1])
+    findings = [state["findings"][0]]
+    for index, row in enumerate(rows[1:], start=2):
+        findings.append(
+            Finding(
+                call_id=f"cq-structure-{index}",
+                tool="cypher_query",
+                layer="layer_1_graph",
+                source="structured_pass_through",
+                structured_fields={
+                    "status": "ok",
+                    "row_count": 1,
+                    "total_available": 1,
+                    "truncated": False,
+                    "rows": [row],
+                    "error": None,
+                },
+                extracted_entities=None,
+                normalized_ids=None,
+                evidence_summary=None,
+            )
+        )
+    state["findings"] = findings
+    state["findings_count"] = len(findings)
+    return await graph_module.write_node(state)
+
+
+def _numbers(result, tokens: list[dict]) -> tuple[str, str, int]:
+    """The opening line, the trust line and the count of distinct source
+    pages (the key Sources counts on)."""
+    from system_03_search_agent.contracts.events import source_page_key
+
+    done = next(e.payload for e in result["events"] if e.type == "done")
+    opening = next(t["text"] for t in tokens if t["kind"] == "claim")
+    pages = {
+        source_page_key(e.payload["source_url"])
+        for e in result["events"]
+        if e.type == "citation"
+    }
+    return opening, done["trust_line"], len(pages)
+
+
+@pytest.mark.asyncio
+async def test_one_gene_page_is_one_row_with_every_citation(monkeypatch) -> None:
+    """Card 104, case A: the graph link has no trailing slash, the live link
+    has one. Red before the change: two 'BRCA1 NCBIGene:672' rows.
+    Mutation: key on the raw link plus cells and this goes red; drop the
+    merge and the marker assertion goes red."""
+    rows = [
+        _gene_row("https://www.ncbi.nlm.nih.gov/gene/672", "BRCA1"),
+        _gene_row("https://www.ncbi.nlm.nih.gov/gene/672/", "BRCA1"),
+    ]
+    result = await _gene_answer(monkeypatch, "researcher", rows)
+    tokens = _tokens(result)
+    ((_, table_rows),) = _tables(tokens)
+    assert [t["cells"] for t in table_rows] == [["BRCA1", "NCBIGene:672"]], table_rows
+    assert table_rows[0]["marker_ids"] == ["cq-structure-1", "cq-structure-2-2"], table_rows
+    # Every number the answer states is the one the page alone would give.
+    opening, trust, pages = _numbers(result, tokens)
+    single = await _gene_answer(monkeypatch, "researcher", rows[:1])
+    opening_one, trust_one, pages_one = _numbers(single, _tokens(single))
+    assert pages == pages_one == 1
+    assert trust == trust_one
+    assert opening_one.startswith("Found 1 gene record")
+    assert opening.startswith("Found 1 gene record"), opening
+
+
+def _two_citations_one_page_tokens(label_a: str, label_b: str, depth: str):
+    """Case B and the Plain language list: two findings of one exact link,
+    two names, straight through the table builder."""
+    from types import SimpleNamespace as NS
+
+    from system_03_search_agent.contracts.events import CitationPayload
+    from system_03_search_agent.harness.coordinator_worker import Finding
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    url = "https://www.ncbi.nlm.nih.gov/gene/672"
+    labels = {"cq-g-8": label_a, "cq-g-12": label_b}
+    findings = [
+        Finding(
+            call_id=cid,
+            tool="cypher_query",
+            layer="layer_1_graph",
+            source="structured_pass_through",
+            structured_fields={
+                "status": "ok",
+                "row_count": 1,
+                "total_available": 1,
+                "truncated": False,
+                "rows": [_gene_row(url, label)],
+                "error": None,
+            },
+            extracted_entities=None,
+            normalized_ids=None,
+            evidence_summary=None,
+        )
+        for cid, label in labels.items()
+    ]
+    synth = [
+        SynthFinding(
+            ref_index=index,
+            citation_id=cid,
+            layer="layer_1_graph",
+            tool="cypher_query",
+            field="name",
+            field_value=label,
+            source_url=url,
+            entity_type="Gene",
+            curie="NCBIGene:672",
+            call_id=cid,
+        )
+        for (cid, label), index in zip(labels.items(), (8, 12), strict=True)
+    ]
+    cites = [
+        CitationPayload(
+            citation_id=s.citation_id,
+            display_index=s.ref_index,
+            source="NCBIGene",
+            source_id="NCBIGene:672",
+            source_url=url,
+            layer="layer_1_graph",
+            field="name",
+            claim_text="claim",
+            evidence_kind="database_record",
+            assertion_confidence="asserted",
+            license="public domain",
+        )
+        for s in synth
+    ]
+    return graph_module._answer_tokens(
+        audience_depth=depth,
+        question="question",
+        model_grounding=None,
+        model_layout=NS(sentence_paragraph=[], heading_before={}),
+        fallback_sentences=(f"{label_a} [8].", f"{label_b} [12]."),
+        tail_sentences=(),
+        tail_is_listing=False,
+        citations=cites,
+        synth_findings=synth,
+        findings=findings,
+        mentions=[],
+        notes=[],
+        condition_names=None,
+    )
+
+
+def test_one_page_with_two_names_stays_two_rows() -> None:
+    """Card 104, case B, after the fix round (J-103-03 to J-103-05): two
+    names for one page are two different cells, so both rows stay and
+    neither name is hidden. Red before the fix round: one row, the second
+    name gone."""
+    tokens = _two_citations_one_page_tokens("BRCA1 DNA repair associated", "BRCA1", "researcher")
+    rows = [t for t in tokens if t.kind == "table_row"]
+    assert [t.cells for t in rows] == [
+        ["BRCA1 DNA repair associated", "NCBIGene:672"],
+        ["BRCA1", "NCBIGene:672"],
+    ]
+    assert [t.marker_ids for t in rows] == [["cq-g-8"], ["cq-g-12"]]
+
+
+def test_the_plain_language_list_does_not_repeat_a_record() -> None:
+    """Card 104: the Plain language list merges the same way."""
+    tokens = _two_citations_one_page_tokens("BRCA1", "BRCA1", "plain_language")
+    items = [t for t in tokens if t.kind == "list_item"]
+    assert len(items) == 1, items
+    assert items[0].marker_ids == ["cq-g-8", "cq-g-12"], items
+
+
+@pytest.mark.asyncio
+async def test_same_page_different_identifier_stays_two_rows(monkeypatch) -> None:
+    """Two different records that share a page but differ in identifier."""
+    rows = [
+        _gene_row("https://www.ncbi.nlm.nih.gov/gene/672", "BRCA1", "NCBIGene:672"),
+        _gene_row("https://www.ncbi.nlm.nih.gov/gene/672/", "BRCA1 copy", "NCBIGene:673"),
+    ]
+    tokens = _tokens(await _gene_answer(monkeypatch, "researcher", rows))
+    ((_, table_rows),) = _tables(tokens)
+    assert [t["cells"][1] for t in table_rows] == ["NCBIGene:672", "NCBIGene:673"]
+
+
+# ---------------------------------------------------------------------------
+# Cards 103 and 104 fix round (2026-10-08): a merge never loses anything a
+# row showed, every citation number stays, and the numbers stay as develop.
+# ---------------------------------------------------------------------------
+
+_MODY = "MedGen:C0342276"
+_NOT_PROVIDED = "MedGen:C3661900"
+_TITLES = {_MODY: "Maturity-onset diabetes of the young", _NOT_PROVIDED: "not provided"}
+
+
+def _direct_tokens(depth: str, records: list[dict], condition_names=None):
+    """Straight through the table builder: one graph call per record, each
+    its own citation. A record is `{cid, n, type, curie, url, fields,
+    field, value}`; its sentence is `"<value> [n]."`."""
+    from system_03_search_agent.contracts.events import CitationPayload
+    from system_03_search_agent.harness.coordinator_worker import Finding
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    findings = [
+        Finding(
+            call_id=r["cid"],
+            tool="cypher_query",
+            layer="layer_1_graph",
+            source="structured_pass_through",
+            structured_fields={
+                "status": "ok",
+                "row_count": 1,
+                "total_available": 1,
+                "truncated": False,
+                "rows": [
+                    {
+                        "node_or_edge_type": r["type"],
+                        "curie": r["curie"],
+                        "fields": r["fields"],
+                        "source_url": r["url"],
+                        "graph_snapshot_version": "v1",
+                    }
+                ],
+                "error": None,
+            },
+            extracted_entities=None,
+            normalized_ids=None,
+            evidence_summary=None,
+        )
+        for r in records
+    ]
+    synth = [
+        SynthFinding(
+            ref_index=r["n"],
+            citation_id=r["cid"],
+            layer="layer_1_graph",
+            tool="cypher_query",
+            field=r["field"],
+            field_value=r["value"],
+            source_url=r["url"],
+            entity_type=r["type"],
+            curie=r["curie"],
+            call_id=r["cid"],
+        )
+        for r in records
+    ]
+    cites = [
+        CitationPayload(
+            citation_id=r["cid"],
+            display_index=r["n"],
+            source="graph",
+            source_id=r["curie"] or "unknown",
+            source_url=r["url"],
+            layer="layer_1_graph",
+            field=r["field"],
+            claim_text="claim",
+            evidence_kind="database_record",
+            assertion_confidence="asserted",
+            license="public domain",
+        )
+        for r in records
+    ]
+    return graph_module._answer_tokens(
+        audience_depth=depth,
+        question="question",
+        model_grounding=None,
+        model_layout=SimpleNamespace(sentence_paragraph=[], heading_before={}),
+        fallback_sentences=tuple(f"{r['value']} [{r['n']}]." for r in records),
+        tail_sentences=(),
+        tail_is_listing=False,
+        citations=cites,
+        synth_findings=synth,
+        findings=findings,
+        mentions=[],
+        notes=[],
+        condition_names=condition_names,
+    )
+
+
+def _variant(cid: str, n: int, local_id: str, conditions: list[str], slash: bool = True) -> dict:
+    url = f"https://www.ncbi.nlm.nih.gov/clinvar/variation/{local_id}" + ("/" if slash else "")
+    return {
+        "cid": cid,
+        "n": n,
+        "type": "SequenceVariant",
+        "curie": f"ClinVar:{local_id}",
+        "url": url,
+        "fields": {"name": f"variant ClinVar:{local_id}", "clinvar_condition_ids": conditions},
+        "field": "name",
+        "value": f"variant ClinVar:{local_id}",
+    }
+
+
+def _disease(cid: str, n: int, curie: str, name: str) -> dict:
+    return {
+        "cid": cid,
+        "n": n,
+        "type": "Disease",
+        "curie": curie,
+        "url": f"https://www.ncbi.nlm.nih.gov/medgen/{curie.split(':')[1]}",
+        "fields": {"name": name},
+        "field": "name",
+        "value": name,
+    }
+
+
+def _rows_of(tokens, kind: str = "table_row"):
+    return [t for t in tokens if t.kind == kind]
+
+
+def test_a_merged_row_reads_its_citations_in_ascending_order() -> None:
+    """J-103-04: one variant cited at 1 and 2, its disease at 3. Red before
+    the fix round: the merged row's chips read [1][3][2]."""
+    tokens = _direct_tokens(
+        "researcher",
+        [
+            _variant("v-1", 1, "7", [_MODY]),
+            _variant("v-2", 2, "7", [_MODY], slash=False),
+            _disease("d-3", 3, _MODY, "Maturity-onset diabetes of the young"),
+        ],
+        _TITLES,
+    )
+    variant_rows = [t for t in _rows_of(tokens) if t.cells[1] == "ClinVar:7"]
+    assert [t.cells for t in variant_rows] == [
+        ["variant ClinVar:7", "ClinVar:7", "Maturity-onset diabetes of the young"]
+    ]
+    assert variant_rows[0].marker_ids == ["v-1", "v-2", "d-3"], variant_rows
+
+
+def test_a_full_row_never_swallows_a_later_citation() -> None:
+    """J-103-03: a variant linked to 22 cited diseases is cited a second
+    time. Merging would need 23 chips on a row that holds 20, so the repeat
+    stays its own row, as on develop. Red before the fix round: citation
+    'v-24' reached no row at all."""
+    conditions = [f"MedGen:C90000{index:02d}" for index in range(22)]
+    titles = {curie: f"disease {index}" for index, curie in enumerate(conditions)}
+    diseases = [
+        _disease(f"d-{index + 2}", index + 2, curie, f"disease {index}")
+        for index, curie in enumerate(conditions)
+    ]
+    tokens = _direct_tokens(
+        "researcher",
+        [
+            _variant("v-1", 1, "9", conditions),
+            *diseases,
+            _variant("v-24", 24, "9", conditions, slash=False),
+        ],
+        titles,
+    )
+    reached = {marker for t in tokens for marker in t.marker_ids}
+    assert "v-24" in reached, "citation 24 reaches no row"
+    variant_rows = [t for t in _rows_of(tokens) if t.cells[1] == "ClinVar:9"]
+    assert len(variant_rows) == 2, [t.marker_ids for t in variant_rows]
+    assert all(len(t.marker_ids) <= 20 for t in tokens)
+
+
+def test_a_merged_disease_cell_never_contradicts_its_chips() -> None:
+    """A-103-02: one variant page reached twice, once folding only 'not
+    provided', once folding a named disease. The two cells differ, so the
+    rows stay two, each cell beside its own chips. Red before the fix
+    round: one row reading 'None named' beside the disease's chip."""
+    tokens = _direct_tokens(
+        "researcher",
+        [
+            _variant("a-1", 1, "100", [_NOT_PROVIDED]),
+            _variant("b-2", 2, "100", [_MODY], slash=False),
+            _disease("d-3", 3, _MODY, "Maturity-onset diabetes of the young"),
+        ],
+        _TITLES,
+    )
+    variant_rows = [t for t in _rows_of(tokens) if t.cells[1] == "ClinVar:100"]
+    assert [(t.cells[2], t.marker_ids) for t in variant_rows] == [
+        ("None named: the ClinVar record says not provided", ["a-1"]),
+        ("Maturity-onset diabetes of the young", ["b-2", "d-3"]),
+    ], variant_rows
+
+
+def test_a_merged_row_takes_the_disease_chip_of_the_row_that_named_it() -> None:
+    """A-103-10: the first row links no condition (a blank cell), the
+    repeat names one. The merged cell is recomputed from both rows' links
+    and carries that disease's chip. Mutation: drop the disease-chip merge
+    and 'd-3' is missing; red before the fix round: the cell stayed blank
+    beside the disease's chip."""
+    tokens = _direct_tokens(
+        "researcher",
+        [
+            _variant("a-1", 1, "101", []),
+            _variant("b-2", 2, "101", [_MODY], slash=False),
+            _disease("d-3", 3, _MODY, "Maturity-onset diabetes of the young"),
+        ],
+        _TITLES,
+    )
+    variant_rows = [t for t in _rows_of(tokens) if t.cells[1] == "ClinVar:101"]
+    assert [t.cells[2] for t in variant_rows] == ["Maturity-onset diabetes of the young"]
+    assert variant_rows[0].marker_ids == ["a-1", "b-2", "d-3"], variant_rows
+
+
+def _paper(cid: str, n: int, url: str, fields: dict) -> dict:
+    return {
+        "cid": cid,
+        "n": n,
+        "type": "Publication",
+        "curie": "PMID:123",
+        "url": url,
+        "fields": {"title": "A paper", **fields},
+        "field": "title",
+        "value": "A paper",
+    }
+
+
+def test_a_merge_keeps_a_value_only_the_later_row_carried() -> None:
+    """A-103-06: one paper reached twice, only the live row carrying its
+    year. The merged row shows the year whichever row came first. Red
+    before the fix round: with the graph row first the year was lost."""
+    graph_row = _paper("c-1", 1, "https://pubmed.ncbi.nlm.nih.gov/123", {})
+    live_row = _paper("c-2", 2, "https://pubmed.ncbi.nlm.nih.gov/123/", {"pdat": "2019 Jan 5"})
+    for records in ([graph_row, live_row], [{**live_row, "n": 1}, {**graph_row, "n": 2}]):
+        rows = _rows_of(_direct_tokens("researcher", records))
+        assert [t.cells for t in rows] == [["A paper", "PMID:123", "2019"]], rows
+        assert sorted(rows[0].marker_ids) == ["c-1", "c-2"]
+
+
+def test_two_different_values_keep_two_rows() -> None:
+    """J-103-03 to J-103-05: a merge never picks one of two shown values."""
+    first = _paper("c-1", 1, "https://pubmed.ncbi.nlm.nih.gov/123", {"pdat": "2018"})
+    second = _paper("c-2", 2, "https://pubmed.ncbi.nlm.nih.gov/123/", {"pdat": "2019"})
+    rows = _rows_of(_direct_tokens("researcher", [first, second]))
+    assert [t.cells[2] for t in rows] == ["2018", "2019"]
+
+
+def _nameless(cid: str, n: int, name: str) -> dict:
+    """A record with no identifier, cited through one shared page."""
+    return {
+        "cid": cid,
+        "n": n,
+        "type": "Gene Ontology term",
+        "curie": "",
+        "url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+        "fields": {"name": name},
+        "field": "name",
+        "value": name,
+    }
+
+
+@pytest.mark.parametrize("depth", ["researcher", "plain_language"])
+def test_two_records_with_no_identifier_merge_only_on_the_same_name(depth: str) -> None:
+    """J-103-06 (M6, M10), A-103-09: with no identifier, the name is the
+    only thing that tells two records on one page apart. Different names
+    stay two rows; the same name is one row with both citations, in the
+    Researcher list as in the Plain language list. Mutation: let a blank
+    identifier merge without comparing names, and 'second thing' is lost
+    under 'first thing'."""
+    different = _rows_of(
+        _direct_tokens(depth, [_nameless("g-1", 1, "first thing"), _nameless("g-2", 2, "second thing")]),
+        "list_item",
+    )
+    assert [t.cells for t in different] == [["first thing"], ["second thing"]], different
+    same = _rows_of(
+        _direct_tokens(depth, [_nameless("g-1", 1, "DNA repair"), _nameless("g-2", 2, "DNA repair")]),
+        "list_item",
+    )
+    assert [(t.cells, t.marker_ids) for t in same] == [(["DNA repair"], ["g-1", "g-2"])], same
+
+
+def test_a_group_of_only_placeholder_rows_gets_no_disease_column() -> None:
+    """J-103-06 (M14): the reason alone never creates a mapping column."""
+    tokens = _direct_tokens(
+        "researcher",
+        [_variant("a-1", 1, "1", [_NOT_PROVIDED]), _variant("b-2", 2, "2", [_NOT_PROVIDED])],
+        _TITLES,
+    )
+    headers = [t.cells for t in tokens if t.kind == "table_header"]
+    assert headers == [["Variant", "Identifier"]], headers
+
+
+@pytest.mark.asyncio
+async def test_the_command_line_prints_every_citation_of_a_merged_row(monkeypatch) -> None:
+    """A-103-03: the command line prints each row's text, not its chips, so
+    a merged row's text carries every grounded sentence and its number.
+    Red before the fix round: only '[1]' was printed for the BRCA1 row."""
+    import io
+
+    from system_03_search_agent.adapters.cli.render import Renderer
+
+    rows = [
+        _gene_row("https://www.ncbi.nlm.nih.gov/gene/672", "BRCA1"),
+        _gene_row("https://www.ncbi.nlm.nih.gov/gene/672/", "BRCA1"),
+    ]
+    result = await _gene_answer(monkeypatch, "researcher", rows)
+    ((_, table_rows),) = _tables(_tokens(result))
+    assert len(table_rows) == 1
+    numbers = {
+        e.payload["citation_id"]: e.payload["display_index"]
+        for e in result["events"]
+        if e.type == "citation"
+    }
+    out, err = io.StringIO(), io.StringIO()
+    renderer = Renderer(out, err, operator=False)
+    for event in result["events"]:
+        if event.type in ("token", "citation"):
+            renderer.handle(event)
+    printed = out.getvalue()
+    for marker in table_rows[0]["marker_ids"]:
+        assert f"[{numbers[marker]}]" in table_rows[0]["text"], table_rows[0]["text"]
+        assert f"[{numbers[marker]}]" in printed, printed
+
+
+async def _hnf1a_answer(monkeypatch, depth: str):
+    async def _resolve(concept_ids):
+        return {cid: _HNF1A_TITLES.get(cid) for cid in concept_ids}
+
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _resolve)
+    _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
+    rows = [_variant_row(curie, conds) for curie, conds in _HNF1A_VARIANTS]
+    return await graph_module.write_node(_state(depth, rows=rows))
+
+
+_SEVEN = "[1][2][3][4][5][6][7]"
+# Read by running exactly these inputs against develop 2182aff3's source.
+_DEVELOP_NUMBERS = {
+    ("hnf1a", "researcher"): (
+        f"Found 7 sequence variant records for BRCA1 {_SEVEN}, linked to 1 disease. ",
+        "Based on 7 sources cited",
+        7,
+    ),
+    ("hnf1a", "plain_language"): (
+        f"I found 7 genetic variants related to BRCA1 {_SEVEN}, linked to 1 condition. ",
+        "Based on 7 sources cited",
+        7,
+    ),
+    ("case_a", "researcher"): (
+        "Found 1 gene record for BRCA1: BRCA1 [1]. ",
+        "Based on 1 source cited",
+        1,
+    ),
+    ("case_a", "plain_language"): (
+        "I found 1 gene related to BRCA1 [1]. ",
+        "Based on 1 source cited",
+        1,
+    ),
+    ("case_b", "researcher"): (
+        "Found 1 gene record for BRCA1: BRCA1 DNA repair associated [1]. ",
+        "Based on 1 source cited",
+        1,
+    ),
+    ("case_b", "plain_language"): (
+        "I found 1 gene related to BRCA1 [1]. ",
+        "Based on 1 source cited",
+        1,
+    ),
+}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("depth", ["researcher", "plain_language"])
+async def test_the_stated_numbers_stay_as_on_develop(monkeypatch, depth: str) -> None:
+    """The opening 'Found N' line, the trust line and the Sources page count
+    for the diagnosis's cases, pinned to what develop 2182aff3 states for
+    the same input (read by running this input against develop)."""
+    hnf1a = await _hnf1a_answer(monkeypatch, depth)
+    assert _numbers(hnf1a, _tokens(hnf1a)) == _DEVELOP_NUMBERS[("hnf1a", depth)]
+    case_a = [
+        _gene_row("https://www.ncbi.nlm.nih.gov/gene/672", "BRCA1"),
+        _gene_row("https://www.ncbi.nlm.nih.gov/gene/672/", "BRCA1"),
+    ]
+    case_b = [
+        _gene_row("https://www.ncbi.nlm.nih.gov/gene/672", "BRCA1 DNA repair associated"),
+        _gene_row("https://www.ncbi.nlm.nih.gov/gene/672", "BRCA1"),
+    ]
+    for name, rows in (("case_a", case_a), ("case_b", case_b)):
+        result = await _gene_answer(monkeypatch, depth, rows)
+        assert _numbers(result, _tokens(result)) == _DEVELOP_NUMBERS[(name, depth)], name

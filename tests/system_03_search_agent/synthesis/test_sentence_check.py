@@ -259,8 +259,9 @@ async def test_no_candidates_means_no_call(monkeypatch) -> None:
         return _Reply('{"supported": [1]}')
 
     monkeypatch.setattr(graph_module, "_dispatch_tier_call", fake_dispatch)
+    # A whole record sentence: card 101 round 3 sends a cut to the check.
     result = await graph_module._ground_with_sentence_check(
-        "Long-term use of PPIs is associated with bone fractures [1].",
+        "Caffeine had no effect on maximal strength [1].",
         [PAPER],
         question=QUESTION,
         evidence_quotes=(),
@@ -1388,3 +1389,70 @@ def test_a_run_of_record_sentences_too_long_to_show_keeps_the_writers_quote() ->
 
 def test_a_widened_quote_is_never_cut_short_in_the_check() -> None:
     assert MAX_WIDENED_QUOTE_CHARS == sentence_check_module.MAX_QUOTE_CHARS
+
+
+# ------------------------------------------------ card 101 round 5: never approve unread text
+
+
+def _sized(name: str, sentence_chars: int, quote_chars: int) -> SynthesisCandidate:
+    sentence = (f"{name} " * 400)[:sentence_chars]
+    quote = ("hand hygiene reduced ward infection rates " * 40)[:quote_chars]
+    return SynthesisCandidate(key=(name, (quote,)), sentence=sentence, quotes=(quote,))
+
+
+class _ApproveEverythingSent:
+    """The guard tier approving every item it is shown."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    async def __call__(self, messages, budget_s):
+        user = messages[1]["content"]
+        self.calls.append(user)
+        count = user.count("ITEM ")
+        return json.dumps({"supported": list(range(1, count + 1))})
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provider", ["guard", "jev"])
+async def test_an_item_longer_than_the_check_reads_is_never_sent_or_approved(monkeypatch, provider) -> None:
+    """A4-101-04 (card 101, round 5): the check reads at most
+    `MAX_SENTENCE_CHARS` of a sentence and `MAX_QUOTE_CHARS` of a quote. An
+    item past either cap used to be sent cut short and could be approved on
+    text the checker never saw. Now it is not sent and not approved; items
+    at the cap still are.
+
+    MUTATION PROOF: removing the length filter in `check_reworded_sentences`
+    turns both cases red: the long items are approved."""
+    at_cap = _sized("cap", sentence_check_module.MAX_SENTENCE_CHARS, sentence_check_module.MAX_QUOTE_CHARS)
+    long_sentence = _sized("sentence", sentence_check_module.MAX_SENTENCE_CHARS + 1, 40)
+    long_quote = _sized("quote", 40, sentence_check_module.MAX_QUOTE_CHARS + 1)
+    candidates = [long_sentence, at_cap, long_quote]
+    guard = _ApproveEverythingSent()
+    jev_questions: list[dict] = []
+    if provider == "jev":
+
+        async def fake_jev(**kwargs):
+            jev_questions.append(kwargs)
+            return _batch_result({key: "no" for key in kwargs["questions"]})
+
+        _jev_on(monkeypatch, fake_jev)
+    else:
+        monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
+
+    approved = await _check(candidates, guard=guard)
+
+    assert approved == frozenset({at_cap.key}), approved
+    sent = guard.calls if provider == "guard" else [call["state"] for call in jev_questions]
+    assert sent, "populate-check: the item at the cap was asked about"
+    assert all(long_sentence.sentence[:200] not in text for text in sent)
+    assert all(long_quote.sentence not in text for text in sent)
+
+
+@pytest.mark.asyncio
+async def test_a_check_with_only_oversized_items_asks_no_model(monkeypatch) -> None:
+    monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
+    guard = _ApproveEverythingSent()
+    candidates = [_sized("sentence", sentence_check_module.MAX_SENTENCE_CHARS + 1, 40)]
+    assert await _check(candidates, guard=guard, harness=object()) == frozenset()
+    assert guard.calls == []

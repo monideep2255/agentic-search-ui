@@ -1,0 +1,61 @@
+== develop_control/cm4 grounding 1: dev 12 best 12 worst 10 new items 2
+   ITEM: The most common co-variant was the R202Q/M694V genotype
+   ITEM: Deleterious variants were identified in 218 distinct genes
+   LOST: The most common co-variant was the R202Q/M694V genotype.
+   LOST: Deleterious variants were identified in 218 distinct genes.
+== develop_control/cm4 grounding 2: dev 12 best 12 worst 10 new items 2
+   ITEM: The most common co-variant was the R202Q/M694V genotype
+   ITEM: Deleterious variants were identified in 218 distinct genes
+   LOST: The most common co-variant was the R202Q/M694V genotype.
+   LOST: Deleterious variants were identified in 218 distinct genes.
+== develop_control/cr1 grounding 3: dev 4 best 4 worst 3 new items 1
+   ITEM: GERD affects quality of life
+   LOST: GERD affects quality of life.
+== live/br2 grounding 0: dev 6 best 6 worst 5 new items 4
+   ITEM: The goal of therapy is to maintain adequate oxygenation and hydration
+   ITEM: Clinical trials have explored treatments such as dexamethasone , erythromycin
+   ITEM: Clinical trials have explored treatments such as dexamethasone , erythromycin , montelukast
+   ITEM: Clinical trials have explored treatments such as dexamethasone , erythromycin , montelukast , and home oxygen therapy
+   LOST: The goal of therapy is to maintain adequate oxygenation and hydration.
+== live/br2 grounding 1: dev 6 best 6 worst 5 new items 4
+   ITEM: The goal of therapy is to maintain adequate oxygenation and hydration
+   ITEM: Clinical trials have explored treatments such as dexamethasone , erythromycin
+   ITEM: Clinical trials have explored treatments such as dexamethasone , erythromycin , montelukast
+   ITEM: Clinical trials have explored treatments such as dexamethasone , erythromycin , montelukast , and home oxygen therapy
+   LOST: The goal of therapy is to maintain adequate oxygenation and hydration.
+== live/br3 grounding 3: dev 2 best 2 worst 1 new items 4
+   ITEM: A high-flow nasal cannula is becoming common for children with severe bronchiolitis
+   ITEM: Clinical trials are exploring treatments such as single versus multiple doses of dexamethasone in children with acute bronchiolitis , erythromycin in mustard-induced bronchiolitis
+   ITEM: Clinical trials are exploring treatments such as single versus multiple doses of dexamethasone in children with acute bronchiolitis , erythromycin in mustard-induced bronchiolitis , montelukast in acu
+   ITEM: Clinical trials are exploring treatments such as single versus multiple doses of dexamethasone in children with acute bronchiolitis , erythromycin in mustard-induced bronchiolitis , montelukast in acu
+   LOST: A high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+== live/br3 grounding 4: dev 2 best 2 worst 1 new items 4
+   ITEM: A high-flow nasal cannula is becoming common for children with severe bronchiolitis
+   ITEM: Clinical trials are exploring treatments such as single versus multiple doses of dexamethasone in children with acute bronchiolitis , erythromycin in mustard-induced bronchiolitis
+   ITEM: Clinical trials are exploring treatments such as single versus multiple doses of dexamethasone in children with acute bronchiolitis , erythromycin in mustard-induced bronchiolitis , montelukast in acu
+   ITEM: Clinical trials are exploring treatments such as single versus multiple doses of dexamethasone in children with acute bronchiolitis , erythromycin in mustard-induced bronchiolitis , montelukast in acu
+   LOST: A high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+folder | answer | grounding | dev shown | branch best | branch worst | lost worst | new items
+sentence_check_raw | md1 | 0 | 3 | 3 | 3 | 0 | 1
+sentence_check_raw | md1 | 1 | 3 | 3 | 3 | 0 | 1
+develop_control | cm4 | 1 | 12 | 12 | 10 | 2 | 2
+develop_control | cm4 | 2 | 12 | 12 | 10 | 2 | 2
+develop_control | cp5 | 3 | 5 | 5 | 5 | 0 | 1
+develop_control | cp5 | 4 | 5 | 5 | 5 | 0 | 1
+develop_control | cr1 | 3 | 4 | 4 | 3 | 1 | 1
+live | gp1 | 3 | 7 | 7 | 7 | 0 | 1
+live | gp1 | 4 | 7 | 7 | 7 | 0 | 1
+live | br2 | 0 | 6 | 6 | 5 | 1 | 4
+live | br2 | 1 | 6 | 6 | 5 | 1 | 4
+live | br3 | 0 | 5 | 5 | 5 | 0 | 3
+live | br3 | 1 | 5 | 5 | 5 | 0 | 3
+live | br3 | 3 | 2 | 2 | 1 | 1 | 4
+live | br3 | 4 | 2 | 2 | 1 | 1 | 4
+live | br4 | 0 | 2 | 2 | 2 | 0 | 1
+live | br4 | 1 | 2 | 2 | 2 | 0 | 1
+live | ge5 | 3 | 7 | 7 | 7 | 0 | 1
+live | ge5 | 4 | 7 | 7 | 7 | 0 | 1
+live | br1 | 0 | 3 | 3 | 3 | 0 | 1
+live | br1 | 2 | 0 | 0 | 0 | 0 | 1
+live | br1 | 3 | 0 | 0 | 0 | 0 | 1
+{"rows": 324, "dev_shown": 1066, "best_shown": 1066, "worst_shown": 1057, "lost": 9, "rows_lost": 7, "rows_emptied": 0, "new_items": 40, "rows_new_call": 1}

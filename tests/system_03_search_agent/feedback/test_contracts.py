@@ -24,6 +24,7 @@ from pydantic import ValidationError
 from system_03_search_agent.feedback.contracts import (
     MAX_CITATION_FLAG_ID_LENGTH,
     MAX_CITATION_FLAG_REASON_LENGTH,
+    MAX_CITATIONS_PER_ANSWER,
     FeedbackCitationFlag,
     FeedbackPayload,
     InteractionRow,
@@ -447,17 +448,27 @@ class TestCitationsBound:
         with pytest.raises(ValidationError):
             _row(citations=[_citation_payload(claim_text="x" * 1001)])
 
-    def test_fifty_citations_at_claim_texts_max_still_validate(self) -> None:
-        """The large-but-legitimate case: 50 citations (`InteractionRow.
-        citations`'s own list `max_length`), each with `claim_text` at
+    def test_a_full_ceiling_of_citations_at_claim_texts_max_still_validate(self) -> None:
+        """The large-but-legitimate case: `MAX_CITATIONS_PER_ANSWER` (100)
+        citations (`InteractionRow.citations`'s own list `max_length`), each with `claim_text` at
         `CitationPayload`'s real 1000-character maximum. Mutation: lowering
-        `InteractionRow.citations`'s list `max_length` from 50 to 49 makes
-        this fail even though `feedback.capture._MAX_CITATIONS` is 50 and
-        a run citing 50 sources is a real, expected shape for a
+        `InteractionRow.citations`'s list `max_length` by one makes
+        this fail even though `feedback.capture._MAX_CITATIONS` is
+        `MAX_CITATIONS_PER_ANSWER` and a run citing that many sources is a real, expected shape for a
         multi-hop query. Applied, confirmed red, reverted."""
         entry = _citation_payload(claim_text="x" * 1000)
-        row = _row(citations=[entry] * 50)
-        assert len(row.citations) == 50
+        row = _row(citations=[entry] * MAX_CITATIONS_PER_ANSWER)
+        assert len(row.citations) == MAX_CITATIONS_PER_ANSWER
+
+    def test_the_citation_ceiling_is_the_runs_own_display_bound(self) -> None:
+        """Card 54: the stored ceiling equals what one live answer can cite."""
+        from system_03_search_agent.core.graph import _MAX_FINDINGS_FOR_DISPLAY
+
+        assert MAX_CITATIONS_PER_ANSWER == _MAX_FINDINGS_FOR_DISPLAY
+
+    def test_one_over_the_ceiling_is_refused(self) -> None:
+        with pytest.raises(ValidationError):
+            _row(citations=[_citation_payload()] * (MAX_CITATIONS_PER_ANSWER + 1))
 
 
 class TestCoverageTagsBound:
@@ -592,7 +603,7 @@ class TestEveryBoundTogether:
                 ],
                 "model_tiers": ["guard", "plan", "synth"],
             },
-            citations=[_citation_payload(claim_text="x" * 1000)] * 50,
+            citations=[_citation_payload(claim_text="x" * 1000)] * MAX_CITATIONS_PER_ANSWER,
             coverage_tags=["predicate:gene_associated_with_condition"] * 25,
             user_feedback=FeedbackPayload(
                 rating="down",
@@ -608,6 +619,6 @@ class TestEveryBoundTogether:
             ).model_dump(mode="json"),
         )
         assert len(row.normalized_entities) == 20
-        assert len(row.citations) == 50
+        assert len(row.citations) == MAX_CITATIONS_PER_ANSWER
         assert len(row.coverage_tags) == 25
         assert len(row.user_feedback["citation_flags"]) == 50
