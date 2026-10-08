@@ -815,6 +815,40 @@ def table_second_cell(
     return value.strip()[:500]
 
 
+def empty_cell_reason(
+    entity_type: str,
+    row_fields: dict[str, Any] | None,
+    condition_names: dict[str, str | None] | None,
+) -> str:
+    """Card 103: why a mapping cell shows no disease name, in the record's
+    own words, so a cell under "each row lists the conditions" is never
+    blank without a reason.
+
+    A placeholder-only row reads "None named: the ClinVar record says not
+    provided" (or "not specified", or both, whatever the record's own
+    placeholder titles are). A row whose condition name could not be looked
+    up reads "Name could not be looked up". A row with both says both. A row
+    with no linked condition at all stays empty: nothing was linked.
+    """
+    curies = condition_ids_for_row(entity_type, row_fields)
+    words: list[str] = []
+    unresolved = 0
+    for curie in curies:
+        title = (condition_names or {}).get(curie)
+        if not isinstance(title, str) or not title.strip():
+            unresolved += 1
+        elif is_placeholder_condition_title(title):
+            word = title.strip().casefold()
+            if word not in words:
+                words.append(word)
+    parts: list[str] = []
+    if words:
+        parts.append(f"None named: the ClinVar record says {' and '.join(words)}")
+    if unresolved:
+        parts.append("Name could not be looked up")
+    return "; ".join(parts)
+
+
 def placeholder_link_count(
     anchor_rows: list[tuple[str, dict[str, Any] | None]],
     condition_names: dict[str, str | None] | None,

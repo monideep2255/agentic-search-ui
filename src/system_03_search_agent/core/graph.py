@@ -542,6 +542,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     condition_ids_for_row,
     drop_record_restatements,
     emphasis_for,
+    empty_cell_reason,
     first_column_label,
     grounding_input,
     heading_is_supported,
@@ -12174,6 +12175,32 @@ def _answer_tokens(
             )
         )
 
+    def record_merge_key(
+        finding: SynthFinding, identifier: str, label: str
+    ) -> tuple[str, str, str]:
+        # Card 104: one row per record, keyed the way Sources keys a page
+        # (`source_page_key`, trailing slash ignored) plus the identifier
+        # cell. A row with no identifier also needs the same label, so two
+        # different records on one page never merge on a blank.
+        page = source_page_key(finding.source_url) or finding.citation_id
+        return (page, identifier, "" if identifier else label)
+
+    def merge_into(
+        listed: dict[tuple[str, str, str], TokenPayload],
+        key: tuple[str, str, str],
+        sentence: str,
+        extra_marker_ids: list[str] | None = None,
+    ) -> bool:
+        # A repeat of a listed record adds its citation numbers to the
+        # first row, in order, and shows no second row.
+        first = listed.get(key)
+        if first is None:
+            return False
+        for marker in [*marker_ids(sentence), *(extra_marker_ids or [])]:
+            if marker not in first.marker_ids and len(first.marker_ids) < 20:
+                first.marker_ids.append(marker)
+        return True
+
     # A cited Disease finding per CURIE, so a mapping row can carry the
     # marker of every disease its cell names beside its own record's.
     disease_citation_by_curie: dict[str, str] = {}
@@ -12272,23 +12299,23 @@ def _answer_tokens(
         # both walk the same `sentences`.
         sentences, feature_blocks = split_feature_sentences(sentences)
         heading(PLAIN_SOURCES_HEADING)
-        listed_records: set[tuple[str, tuple[str, ...]]] = set()
+        listed_records: dict[tuple[str, str, str], TokenPayload] = {}
         for sentence in sentences:
             ids = marker_ids(sentence)
             finding = finding_by_citation_id.get(ids[0]) if ids else None
             if finding is None:
                 sentence_token(sentence)
                 continue
-            label = plain_record_label(
-                finding, _row_fields_for(finding, findings), identifier_for(finding)
-            )
+            identifier = identifier_for(finding)
+            label = plain_record_label(finding, _row_fields_for(finding, findings), identifier)
             # One row per record: two claims about the same record (its title
-            # and its symbol) are one row, not two identical ones.
-            record_key = ((finding.source_url or finding.citation_id).strip(), (label,))
-            if record_key in listed_records:
+            # and its symbol) are one row, not two identical ones. Card 104:
+            # keyed on the page, as Sources is, with citations merged.
+            record_key = record_merge_key(finding, identifier, label)
+            if merge_into(listed_records, record_key, sentence):
                 continue
-            listed_records.add(record_key)
             sentence_token(sentence, kind="list_item", cells=[label])
+            listed_records[record_key] = tokens[-1]
         # Beneath the one list, so the list itself stays one list: each
         # disease's features under a heading that names the disease.
         for entries in feature_blocks.values():
@@ -12409,7 +12436,7 @@ def _answer_tokens(
                 )
             else:
                 heading(records_heading)
-            listed_records: set[tuple[str, tuple[str, ...]]] = set()
+            listed_records: dict[tuple[str, str, str], TokenPayload] = {}
             for (sentence, finding), row_fields, second, identifier, extra in zip(
                 entries, row_fields_by_entry, second_cells, identifiers, extras, strict=True
             ):
@@ -12422,7 +12449,11 @@ def _answer_tokens(
                     if has_identifier:
                         cells.append(identifier)
                     if mapped:
-                        cells.append(second or "")
+                        # Card 103: an empty cell says why, in the record's
+                        # own words, so no cell under the line is blank.
+                        cells.append(
+                            second or empty_cell_reason(entity_type, row_fields, condition_names)
+                        )
                     if extra_label is not None:
                         cells.append(
                             extra[1]
@@ -12431,12 +12462,13 @@ def _answer_tokens(
                         )
                 # One row per record: two claims about the same record (its
                 # title and its symbol) are one row, not two identical ones.
-                record_key = ((finding.source_url or finding.citation_id).strip(), tuple(cells))
-                if record_key in listed_records:
-                    continue
-                listed_records.add(record_key)
+                # Card 104: keyed on the page, as Sources is, with the later
+                # row's citations added to the first row.
+                record_key = record_merge_key(finding, identifier, label)
                 if not as_table:
-                    sentence_token(sentence, kind="list_item", cells=[label])
+                    if not merge_into(listed_records, record_key, sentence):
+                        sentence_token(sentence, kind="list_item", cells=[label])
+                        listed_records[record_key] = tokens[-1]
                     continue
                 linked = (
                     [
@@ -12447,7 +12479,10 @@ def _answer_tokens(
                     if mapped
                     else []
                 )
+                if merge_into(listed_records, record_key, sentence, linked):
+                    continue
                 sentence_token(sentence, kind="table_row", cells=cells, extra_marker_ids=linked)
+                listed_records[record_key] = tokens[-1]
             # Card 23 (owner, 2026-10-06): directly under the
             # variant-to-disease table, and under no other table, one
             # code-built line saying where its links and disease names come
