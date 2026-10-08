@@ -29,7 +29,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
-from system_03_search_agent.adapters.mcp.server import _ANSWER_MARKER
 from system_03_search_agent.adapters.mcp.server import server as mcp_server
 from system_03_search_agent.adapters.mcp.server import (
     transport_security_settings as mcp_transport_security_settings,
@@ -253,9 +252,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(lifespan=_lifespan)
 app.mount("/mcp", _mcp_asgi_app)
 
-# F-4.0-J-06 (judge review, build phase 4.0): matches the MCP surface's
-# citation array bound (`MAX_CITATIONS_PER_ANSWER`, 100 since card 54;
-# Section 13.2 once said `maxItems: 50`). `production-
+# F-4.0-J-06 (judge review, build phase 4.0): matches Section 13.2's own
+# `maxItems: 50` on the MCP surface's citation array. `production-
 # standards.md`'s multi-agent pipeline gate requires a cap on every array;
 # a run's own citation count is already implicitly bounded by Section 21's
 # at-most-20-tool-calls-per-query cap, so this is defense in depth, not the
@@ -900,13 +898,6 @@ class SavedAnswerResponse(BaseModel):
     #: line` already mirrors at the write path, rather than inventing a
     #: third number for the same fact.
     trust_line: str | None = Field(None, max_length=200)
-    #: Card 54: how many of the answer's `[n]` markers have no stored
-    #: citation, counted the way the MCP reopen counts `citations_omitted`.
-    #: An answer saved before the ceiling rose to 100 holds at most 50
-    #: citations while its text still carries `[77]`; the screen reads this
-    #: to say so. Derived from the saved row's own data, never from a date.
-    #: Additive within v1: defaults to 0.
-    citations_omitted: int = Field(0, ge=0)
 
 
 class HistoryResponse(BaseModel):
@@ -1136,21 +1127,7 @@ def get_v1_history_answer(
         citations=citations[:MAX_CITATIONS_PER_ANSWER],
         trust_signal=saved.trust_signal,
         trust_line=saved.trust_line,
-        citations_omitted=_markers_without_a_citation(saved.answer_markdown, citations),
     )
-
-
-def _markers_without_a_citation(answer_markdown: str, citations: list[dict[str, Any]]) -> int:
-    """How many distinct `[n]` markers in the answer text have no stored
-    citation numbered `n`. The same count `reopen_past_answer` reports as
-    `citations_omitted` for markers, so web and MCP agree."""
-    stored = {
-        entry["display_index"]
-        for entry in citations
-        if isinstance(entry.get("display_index"), int)
-    }
-    markers = {int(number) for number in _ANSWER_MARKER.findall(answer_markdown)}
-    return len(markers - stored)
 
 
 def _guest_refund_callback(
@@ -1886,9 +1863,10 @@ async def get_v1_query_citations(
     # to what a model's own prompt could safely hold. This break is
     # REACHABLE today, exactly as anticipated, and degrades exactly as
     # designed: the header still fires, nothing here silently drops a
-    # citation with no signal. `_MAX_CITATIONS_PER_RUN` is now
-    # `MAX_CITATIONS_PER_ANSWER` (100, card 54), the same bound capture, the stored row and the saved-answer
-    # reply use, so the export and a reopened answer agree.
+    # citation with no signal. Whether `_MAX_CITATIONS_PER_RUN` and Section
+    # 13.2's `maxItems: 50` should themselves move is a separate,
+    # cross-surface decision (this endpoint, the MCP surface and its wire
+    # contract) and is left open rather than guessed at here.
     if citation_events_total > _MAX_CITATIONS_PER_RUN:
         response.headers["X-Citations-Export-Truncated"] = "true"
     return citations
