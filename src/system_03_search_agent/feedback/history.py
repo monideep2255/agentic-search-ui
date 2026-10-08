@@ -64,6 +64,7 @@ from sqlalchemy import select, update
 from system_03_search_agent.contracts.events import source_page_key
 from system_03_search_agent.data.models import Interaction
 from system_03_search_agent.data.session import session_scope
+from system_03_search_agent.feedback.outage_note import date_outage_notes
 
 __all__ = [
     "DEFAULT_LIMIT",
@@ -224,10 +225,7 @@ def _citation_count(stored: object) -> int | None:
     """
     if isinstance(stored, list):
         return len(
-            {
-                _stored_page_key(element) or f"#{position}"
-                for position, element in enumerate(stored)
-            }
+            {_stored_page_key(element) or f"#{position}" for position, element in enumerate(stored)}
         )
     return None
 
@@ -417,7 +415,7 @@ def get_saved_answer(owner_id: str, trace_id: str) -> SavedAnswer | None:
         # the database around both, and it is the product's own default
         # rather than an invented value.
         depth=row.audience_depth or "researcher",
-        answer_markdown=row.answer_markdown,
+        answer_markdown=date_outage_notes(row.answer_markdown, row.created_at),
         citations=row.citations if isinstance(row.citations, list) else [],
         trust_signal=row.trust_signal,
         trust_line=row.answer_trust_line,
