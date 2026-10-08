@@ -31,6 +31,7 @@ import { Box, Typography, useMediaQuery } from "@mui/material";
 import { designTokens, layerColour } from "../../theme";
 import type { ReasoningStep } from "./RunProgress";
 import { ReasoningLog } from "./ReasoningLog";
+import { RECORDS_PAGE_SIZE, RecordsPaginationBar } from "../answer/RecordsPaginationBar";
 import { FeedbackSurface } from "../feedback/FeedbackSurface";
 import { PersonaInfo, WritingEllipsis } from "../shell/PersonaChip";
 import {
@@ -1277,7 +1278,6 @@ export function AnswerBody({
    * since `AnswerBody` for the live turn is one long-lived component that
    * outlives any single answer.
    */
-  const RECORDS_PAGE_SIZE = 10;
   const [recordsPage, setRecordsPage] = useState<Record<string, number>>({});
   useEffect(() => {
     setRecordsPage({});
@@ -1311,69 +1311,15 @@ export function AnswerBody({
     currentPage: number,
     totalPages: number,
     totalRows: number,
-  ) => {
-    const start = currentPage * RECORDS_PAGE_SIZE + 1;
-    const end = Math.min(start + RECORDS_PAGE_SIZE - 1, totalRows);
-    const goTo = (next: number) =>
-      setRecordsPage((current) => ({ ...current, [block.key]: next }));
-    const navSx = {
-      font: "inherit",
-      fontSize: 13,
-      fontWeight: 600,
-      border: 0,
-      bgcolor: "transparent",
-      color: designTokens.link,
-      cursor: "pointer",
-      p: 0,
-      "&:disabled": { color: designTokens.inkFaint, cursor: "default" },
-    } as const;
-    return (
-      <Box
-        data-testid={`${testIdPrefix}answer-records-${number}-pagination`}
-        sx={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "8px 16px",
-          fontSize: 13,
-          color: designTokens.inkMuted,
-          m: "0 0 16px",
-          pt: "8px",
-          borderTop: `1px solid ${designTokens.line}`,
-        }}
-      >
-        <Box component="span" aria-live="polite" data-testid={`${testIdPrefix}answer-records-${number}-status`}>
-          {`Showing ${start}–${end} of ${totalRows}`}
-        </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <Box
-            component="button"
-            type="button"
-            data-testid={`${testIdPrefix}answer-records-${number}-prev`}
-            onClick={() => goTo(currentPage - 1)}
-            disabled={currentPage === 0}
-            sx={navSx}
-          >
-            {"‹ Previous"}
-          </Box>
-          <Box component="span" sx={{ color: designTokens.inkFaint, fontSize: 12.5 }}>
-            {`Page ${currentPage + 1} of ${totalPages}`}
-          </Box>
-          <Box
-            component="button"
-            type="button"
-            data-testid={`${testIdPrefix}answer-records-${number}-next`}
-            onClick={() => goTo(currentPage + 1)}
-            disabled={currentPage >= totalPages - 1}
-            sx={navSx}
-          >
-            {"Next ›"}
-          </Box>
-        </Box>
-      </Box>
-    );
-  };
+  ) => (
+    <RecordsPaginationBar
+      testIdBase={`${testIdPrefix}answer-records-${number}`}
+      currentPage={currentPage}
+      totalPages={totalPages}
+      totalRows={totalRows}
+      onGo={(next) => setRecordsPage((current) => ({ ...current, [block.key]: next }))}
+    />
+  );
 
   const renderRecords = (block: Extract<AnswerBlock, { type: "records" }>) => {
     const number = recordsNumber++;
