@@ -1600,9 +1600,21 @@ export function App() {
      * the `cancelled` error, decides what the screen shows. A stop request
      * that fails gets no reply, so it closes the stream and the run reads
      * as stopped, as it did before card 59.
+     *
+     * The fix round, J-59-04 and A-59-02: only for the run it was sent for.
+     * `stop` closes whichever stream is current WHEN it is called, and a
+     * failed stop can come back long after the person moved on and asked a
+     * new question; closing that one froze the new question's screen while
+     * the server answered and remembered it. `askSeq` moves the instant a
+     * new question (or a sign-out) starts, before any render, so a reply
+     * for an older run is dropped.
      */
-    if (runId && authToken) void stopRun(runId, authToken).catch(() => stop());
-    else stop();
+    if (runId && authToken) {
+      const pressedOn = askSeq.current;
+      void stopRun(runId, authToken).catch(() => {
+        if (askSeq.current === pressedOn) stop();
+      });
+    } else stop();
   };
 
   /**

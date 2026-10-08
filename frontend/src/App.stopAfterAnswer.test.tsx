@@ -23,9 +23,17 @@
  * based on what the browser has seen cannot get right, and the reason the
  * server decides. A watcher records every element added to the page, so
  * "Search stopped" flashing up before the answer would fail it.
+ *
+ * The fix round (judge and adversary round 1) adds:
+ *
+ *   - J-59-04, A-59-02: a stop request that fails late, after the person has
+ *     asked a new question, never closes the new question's stream.
+ *   - J-59-06: arms that go red if the 5 second fallback, the reveal freeze
+ *     while the reply is awaited, or the error suppression on a confirmed
+ *     stop is removed.
  */
 
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -174,17 +182,29 @@ function openStream(first: string): {
   response: Promise<Response>;
   push: (body: string) => void;
   firstChunkRead: () => boolean;
+  /** Ends the stream the way a real fetch body ends when its request is aborted. */
+  honour: (signal: AbortSignal | undefined) => void;
 } {
   const queue: string[] = [first];
   let wake: (() => void) | null = null;
   let pulls = 0;
+  let aborted = false;
+  const rouse = () => {
+    const resolve: (() => void) | null = wake;
+    wake = null;
+    resolve?.();
+  };
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
       pulls += 1;
-      while (queue.length === 0) {
+      while (queue.length === 0 && !aborted) {
         await new Promise<void>((resolve) => {
           wake = resolve;
         });
+      }
+      if (aborted) {
+        controller.error(new DOMException("The operation was aborted.", "AbortError"));
+        return;
       }
       controller.enqueue(new TextEncoder().encode(queue.shift()!));
     },
@@ -195,11 +215,15 @@ function openStream(first: string): {
     ),
     push: (body) => {
       queue.push(body);
-      const resolve: (() => void) | null = wake;
-      wake = null;
-      resolve?.();
+      rouse();
     },
     firstChunkRead: () => pulls >= 2,
+    honour: (signal) => {
+      signal?.addEventListener("abort", () => {
+        aborted = true;
+        rouse();
+      });
+    },
   };
 }
 
@@ -314,6 +338,12 @@ describe("card 59: an answer that finished before Stop arrived stands", () => {
     expect(screen.queryByTestId("trust-line")).toBeNull();
     // The server's own wording for the cancellation is not shown as a failure.
     expect(pageText()).not.toMatch(/stopped before it finished/i);
+    // J-59-06 (M6): nor is the stream's own failure notice. The server's
+    // `cancelled` error is the stop the person asked for, confirmed, so a
+    // confirmed stop carries no failure text. Mutation that turns this red:
+    // stop suppressing `streamError` on a confirmed stop in `App.tsx`.
+    expect(screen.queryByTestId("run-failure"), "a confirmed stop showed a failure notice").toBeNull();
+    expect(pageText()).not.toMatch(/run failed/i);
   });
 
   it("Stop while done is in flight: the answer stands, and the screen never shows both or neither", async () => {
@@ -346,5 +376,111 @@ describe("card 59: an answer that finished before Stop arrived stands", () => {
     await user.click(stopButton()!);
     expect(await screen.findByTestId("run-stopped")).toHaveTextContent("Search stopped");
     expect(answerOnScreen()).toBe(false);
+  });
+
+  it("J-59-06 (M1): a stop that gets no reply reads Stopping for 5 seconds, then Search stopped, never for ever", async () => {
+    const stream = openStream(sse(SEARCH));
+    await ask(stream);
+    expect(stopButton(), "populate-check: Stop was not offered").toBeEnabled();
+
+    // Every timer from the press on is fake, so the 5 seconds are exact.
+    vi.useFakeTimers();
+    act(() => {
+      fireEvent.click(stopButton()!);
+    });
+    expect(stopRunMock).toHaveBeenCalledWith("run-59", GUEST);
+    expect(stopButton()).toHaveTextContent("Stopping…");
+
+    // The stop request succeeded, but the server's reply never comes.
+    await advance(4_500);
+    expect(screen.queryByTestId("run-stopped"), "the fallback fired before 5 seconds").toBeNull();
+    expect(stopButton()).toHaveTextContent("Stopping…");
+
+    // Mutation that turns this red: delete the `STOP_CONFIRM_TIMEOUT_MS`
+    // effect in `App.tsx`. Stop then reads "Stopping…" for ever.
+    await advance(1_000);
+    expect(screen.queryByTestId("run-stopped"), "Stopping… never ended without a reply").not.toBeNull();
+    expect(screen.getByTestId("run-stopped")).toHaveTextContent("Search stopped");
+    expect(answerOnScreen()).toBe(false);
+  });
+
+  it("J-59-06 (M7): no sentence of the answer appears while Stopping, nor after the stop is confirmed", async () => {
+    // The answer's sentence, citation and verdict have arrived, `done` has
+    // not, and the screen is still pacing: the reveal holds the sentence.
+    const stream = openStream(sse([...SEARCH, ...ANSWER_FRAMES.slice(0, -1)]));
+    await ask(stream);
+    expect(answerOnScreen(), "populate-check: the answer was already on screen").toBe(false);
+    expect(stopButton(), "populate-check: Stop was not offered").toBeEnabled();
+
+    vi.useFakeTimers();
+    act(() => {
+      fireEvent.click(stopButton()!);
+    });
+    expect(stopButton()).toHaveTextContent("Stopping…");
+
+    // Past the writing banner's minimum, inside the 5 second wait. Mutation
+    // that turns this red: stop freezing the reveal while the reply is
+    // awaited (`stopped: stopped || stopping` in `App.tsx`). The sentence
+    // then appears under "Stopping…" and stays under "Search stopped".
+    await advance(3_000);
+    expect(answerOnScreen(), "a sentence appeared while Stop was awaiting the server").toBe(false);
+
+    act(() => stream.push(sse([CANCELLED], SEARCH.length + ANSWER_FRAMES.length - 1)));
+    await advance(5_000);
+    expect(screen.getByTestId("run-stopped")).toHaveTextContent("Search stopped");
+    expect(answerOnScreen(), "a partial answer showed under a confirmed stop").toBe(false);
+    expect(screen.queryByTestId("source-1")).toBeNull();
+  });
+
+  it("J-59-04: a stop request that fails after a new question was asked never touches the new question", async () => {
+    // Fake from the first timer, moving with real time too, so the pacing of
+    // question B's steps can be stepped through below without a timer left
+    // on the real clock.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    // Question A's stop request hangs, then fails: a slow proxy error.
+    let failStop: (reason: Error) => void = () => undefined;
+    stopRunMock.mockReset();
+    stopRunMock.mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          failStop = reject;
+        }),
+    );
+    const first = openStream(sse(SEARCH));
+    const user = await ask(first);
+    await user.click(stopButton()!);
+    expect(stopButton(), "populate-check: Stop did not show it was stopping").toHaveTextContent("Stopping…");
+
+    // Before A's stop comes back, the person asks question B.
+    const second = openStream(sse(SEARCH));
+    let secondSignal: AbortSignal | undefined;
+    openEventStreamMock.mockImplementationOnce((_runId, _token, options) => {
+      secondSignal = options?.signal;
+      second.honour(secondSignal);
+      return second.response;
+    });
+    createRunMock.mockResolvedValueOnce({ run_id: "run-59-b", persona_name: "Mendel" });
+    await user.click(screen.getByRole("button", { name: /^new search$/i }));
+    const main = within(screen.getByRole("main"));
+    await user.type(main.getByRole("textbox", { name: /question/i }), "What is TP53?");
+    await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
+    await waitFor(() => expect(second.firstChunkRead(), "B's first chunk was never read").toBe(true));
+    expect(secondSignal, "populate-check: B's stream was opened without a signal").toBeDefined();
+
+    // A's stop request now fails.
+    await act(async () => {
+      failStop(new Error("502 from the proxy"));
+      await Promise.resolve();
+    });
+    // Mutation that turns this red: drop the `askSeq` check in
+    // `stopCurrentRun`'s catch. A's failure then closes B's stream.
+    expect(secondSignal!.aborted, "A's failed stop closed question B's stream").toBe(false);
+
+    // B's answer arrives and lands, whole, with no Stop anywhere near it.
+    act(() => second.push(sse(ANSWER_FRAMES, SEARCH.length)));
+    await advance(20_000, 200);
+    expect(answerOnScreen(), "question B's answer never reached the screen").toBe(true);
+    expect(screen.getByTestId("source-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("run-stopped"), "question B read Search stopped").toBeNull();
   });
 });
