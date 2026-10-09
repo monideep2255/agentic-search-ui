@@ -155,10 +155,12 @@ JevFailureReason = str  # "timeout" | "http_error" | "malformed_reply" | "invali
 #: up to here (F-84-A06).
 MAX_JEV_COST_USD = 0.01
 
-#: What a Jev reply that came back is charged when it states no sensible
-#: cost, in US dollars: about five times Jev's measured price, so every cap
-#: still sees the call, and a hundredth of `MAX_JEV_COST_USD` (the product
-#: owner's rule of 2026-09-29, step 3a of the guardrail design).
+#: The least a Jev reply that came back is ever charged, in US dollars, and
+#: what it is charged when it states no sensible cost: about five times
+#: Jev's measured price, so every cap still sees the call, and a hundredth
+#: of `MAX_JEV_COST_USD` (the product owner's rule of 2026-09-29, step 3a of
+#: the guardrail design). A stated cost under it, Jev's real price among
+#: them, is charged this floor (fix round, J-GR-04).
 #:
 #: A reply that reached the provider is never charged $0 (F-72-J02: a
 #: usable reply stating $0 was charged $0, invisible to every cap; F-72-V03:
@@ -183,7 +185,8 @@ class JevResult(BaseModel):
     acts on it. `cost_usd` is bounded above and `probabilities` in size
     for the same reason (F-8.2-J15). As `call_jev` returns it, `cost_usd`
     is what the caller charges (`jev_charge_usd`): the stated cost when it
-    is above $0, and the `JEV_FLOOR_COST_USD` floor for a stated $0.
+    is at least the `JEV_FLOOR_COST_USD` floor, and the floor for a stated
+    cost under it, $0 included (fix round, J-GR-04).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -214,9 +217,10 @@ class JevCallError(RuntimeError):
     `billed_cost_usd` is what the question is charged for this failed call,
     in US dollars, fixed by `jev_charge_usd` (the product owner's rule of
     2026-09-29): a reply that came back but could not be used is charged
-    as any reply is, the cost it states when that is above $0 and at most
-    `MAX_JEV_COST_USD`, the ceiling when it states more, and the
-    `JEV_FLOOR_COST_USD` floor when it states $0, no cost or no amount
+    as any reply is, the cost it states when that is at least the
+    `JEV_FLOOR_COST_USD` floor and at most `MAX_JEV_COST_USD`, the ceiling
+    when it states more, and the floor when it states less, $0, no cost or
+    no amount
     (F-84-J04: usable or not makes no difference). A reply with an error
     status (a 500, 429 or 402) reached the provider, so it is charged the
     floor (F-72-V03). 0.0 only when no reply came back at all: a timeout or
@@ -264,14 +268,24 @@ def jev_charge_usd(stated_usd: float | None) -> float:
     cost it states (the product owner's rule of 2026-09-29, step 3a of the
     guardrail design):
 
-    - above $0 and at most `MAX_JEV_COST_USD`: the stated cost;
+    - at least `JEV_FLOOR_COST_USD` and at most `MAX_JEV_COST_USD`: the
+      stated cost;
     - above `MAX_JEV_COST_USD`: the ceiling, never the floor (F-84-A06);
-    - $0, no stated cost, or no amount (None, `NaN`): `JEV_FLOOR_COST_USD`.
+    - below the floor, $0, no stated cost, or no amount (None, `NaN`):
+      `JEV_FLOOR_COST_USD`.
+
+    A reply that came back is never charged less than the floor (fix round,
+    J-GR-04, A-GR-03): the owner's rule charges a stated figure "above $0",
+    and a figure such as 1e-300 is above $0 in name only, a charge every cap
+    reads as nothing, the blindness F-72-J02 ended for a stated $0. So a
+    stated cost under the floor, Jev's measured $0.0000148 to $0.0000197
+    among them, is charged the floor: about five times Jev's real price,
+    $0.0001 a reply.
 
     The same for a usable reply and an unusable one (F-84-J04). A timeout,
     where no reply came back, is charged nothing and never reaches here.
     """
-    if stated_usd is None or not stated_usd > 0.0:
+    if stated_usd is None or not stated_usd >= JEV_FLOOR_COST_USD:
         return JEV_FLOOR_COST_USD
     if stated_usd > MAX_JEV_COST_USD:
         return MAX_JEV_COST_USD
@@ -311,11 +325,13 @@ def _unusable_reply(
 
 def _charged_for_usable(subject: str, stated_usd: float) -> float:
     """A usable reply's charge, `jev_charge_usd` of its stated cost, with a
-    warning when that is not the stated cost (a stated $0 charged the floor,
-    F-72-J02)."""
+    warning when a stated $0 is charged the floor (F-72-J02). A stated cost
+    above $0 but under the floor, Jev's usual price, is raised to the floor
+    on every call, so that is logged at debug, not as a warning."""
     charged = jev_charge_usd(stated_usd)
     if charged != stated_usd:
-        logger.warning(
+        log = logger.warning if not stated_usd > 0.0 else logger.debug
+        log(
             "Jev's reply for %s stated a cost of $%.6f; it is charged $%.6f",
             subject,
             stated_usd,
@@ -617,7 +633,7 @@ async def call_jev(
         )
 
     # `cost_usd` is what the caller charges: the stated cost, or the floor
-    # for a stated $0 (F-72-J02).
+    # for a stated cost under it, $0 included (F-72-J02, J-GR-04).
     return parsed.model_copy(update={"cost_usd": _charged_for_usable(subject, parsed.cost_usd)})
 
 

@@ -7,7 +7,8 @@ The rule:
 
 | What came back | Charged |
 |---|---|
-| a reply stating a cost above $0 and at most `MAX_JEV_COST_USD` | that cost |
+| a reply stating a cost at least `JEV_FLOOR_COST_USD` and at most `MAX_JEV_COST_USD` | that cost |
+| a reply stating a cost above $0 but under the floor, Jev's real price included | `JEV_FLOOR_COST_USD` (fix round, J-GR-04) |
 | a reply stating more | `MAX_JEV_COST_USD` (F-84-A06) |
 | a reply stating $0, no cost, an unreadable amount, or a body that cannot be read | `JEV_FLOOR_COST_USD` (F-72-J02, A03) |
 | an error status, 500, 429 or 402 | `JEV_FLOOR_COST_USD` (F-72-V03) |
@@ -57,7 +58,8 @@ from system_03_search_agent.harness.jev_client import (
 from system_03_search_agent.synthesis import sentence_check as sentence_check_module
 
 _HUGE = "1" + "0" * 400  # an integer JSON parses and `float()` cannot hold
-_SENSIBLE = "0.00002"
+_SENSIBLE = "0.0003"  # at least the floor, so charged as stated
+_JEVS_PRICE = "0.00002"  # Jev's measured price, under the floor (fix round, J-GR-04)
 
 
 def _raw_json(body: dict[str, Any], raw: dict[str, str]) -> str:
@@ -126,16 +128,22 @@ async def _batch() -> Any:
 # Each case: a label, what `_post` does, the outcome ("ok" or a reason), the charge.
 _RELEVANCY = "guardrail.relevancy"
 _SINGLE_CASES: list[tuple[str, Any, str, float]] = [
-    ("usable, states a sensible cost", (200, _single_body(key=_RELEVANCY, choice="on_topic")), "ok", 0.00002),
+    ("usable, states a sensible cost", (200, _single_body(key=_RELEVANCY, choice="on_topic")), "ok", 0.0003),
+    ("usable, states Jev's price, under the floor (J-GR-04)",
+     (200, _single_body(key=_RELEVANCY, choice="on_topic", cost=_JEVS_PRICE)), "ok", JEV_FLOOR_COST_USD),
+    ("usable, states 1e-300 (J-GR-04)", (200, _single_body(key=_RELEVANCY, choice="on_topic", cost="1e-300")), "ok",
+     JEV_FLOOR_COST_USD),
+    ("unusable, states 1e-300 (J-GR-04)", (200, _single_body(key=_RELEVANCY, choice="maybe", cost="1e-300")),
+     "invalid_option", JEV_FLOOR_COST_USD),
     ("usable, states the ceiling", (200, _single_body(key=_RELEVANCY, choice="on_topic", cost="0.01")), "ok", 0.01),
     ("usable, states $0 (F-72-J02)", (200, _single_body(key=_RELEVANCY, choice="on_topic", cost="0")), "ok",
      JEV_FLOOR_COST_USD),
     ("unusable, states a sensible cost (F-84-J04)", (200, _single_body(key=_RELEVANCY, choice="maybe")),
-     "invalid_option", 0.00002),
+     "invalid_option", 0.0003),
     ("probabilities null, states a sensible cost (F-8.6-FJ01)",
-     (200, _single_body(key=_RELEVANCY, choice="on_topic", probabilities="null")), "malformed_reply", 0.00002),
+     (200, _single_body(key=_RELEVANCY, choice="on_topic", probabilities="null")), "malformed_reply", 0.0003),
     ("confidence too large for a float", (200, _single_body(key=_RELEVANCY, choice="on_topic", confidence=_HUGE)),
-     "malformed_reply", 0.00002),
+     "malformed_reply", 0.0003),
     ("unusable, states $0", (200, _single_body(key=_RELEVANCY, choice="maybe", cost="0")), "invalid_option",
      JEV_FLOOR_COST_USD),
     ("no cost stated", (200, _single_body(key=_RELEVANCY, choice="on_topic", cost=None)), "malformed_reply",
@@ -184,10 +192,13 @@ async def test_a_timeout_is_charged_nothing(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 _BATCH_CASES: list[tuple[str, Any, str, float]] = [
-    ("usable, states a sensible cost", (200, _batch_body()), "ok", 0.00002),
+    ("usable, states a sensible cost", (200, _batch_body()), "ok", 0.0003),
+    ("usable, states Jev's price, under the floor (J-GR-04)", (200, _batch_body(cost=_JEVS_PRICE)), "ok",
+     JEV_FLOOR_COST_USD),
+    ("usable, states 1e-300 (J-GR-04)", (200, _batch_body(cost="1e-300")), "ok", JEV_FLOOR_COST_USD),
     ("usable, states $0", (200, _batch_body(cost="0")), "ok", JEV_FLOOR_COST_USD),
-    ("unusable, states a sensible cost", (200, _batch_body(choice="maybe")), "invalid_option", 0.00002),
-    ("confidence too large for a float", (200, _batch_body(confidence=_HUGE)), "malformed_reply", 0.00002),
+    ("unusable, states a sensible cost", (200, _batch_body(choice="maybe")), "invalid_option", 0.0003),
+    ("confidence too large for a float", (200, _batch_body(confidence=_HUGE)), "malformed_reply", 0.0003),
     ("no cost stated", (200, _batch_body(cost=None)), "malformed_reply", JEV_FLOOR_COST_USD),
     ("states five cents", (200, _batch_body(cost="0.05")), "malformed_reply", MAX_JEV_COST_USD),
     ("a cost too large for a float", (200, _batch_body(cost=_HUGE)), "malformed_reply", MAX_JEV_COST_USD),
@@ -261,7 +272,8 @@ def jev_mode(monkeypatch: pytest.MonkeyPatch) -> None:
 # Each case: a label, the single-question reply shape, the batch reply, the charge.
 _SITE_CASES: list[tuple[str, str, float]] = [
     ("usable, states $0", "zero", JEV_FLOOR_COST_USD),
-    ("unusable, states a sensible cost", "unusable", 0.00002),
+    ("unusable, states a sensible cost", "unusable", 0.0003),
+    ("unusable, states 1e-300 (J-GR-04)", "unusable_tiny", JEV_FLOOR_COST_USD),
     ("states five cents", "five_cents", MAX_JEV_COST_USD),
     ("a body that is not JSON", "not_json", JEV_FLOOR_COST_USD),
     ("HTTP 500", "http_500", JEV_FLOOR_COST_USD),
@@ -276,10 +288,11 @@ def _site_reply(shape: str, *, key: str, choice: str, batch: bool = False) -> An
         return (500, b"oops")
     if shape == "transport":
         return httpx.ConnectError("refused")
-    cost = {"zero": "0", "unusable": _SENSIBLE, "five_cents": "0.05"}[shape]
-    pick = "maybe" if shape == "unusable" else choice
+    cost = {"zero": "0", "unusable": _SENSIBLE, "unusable_tiny": "1e-300", "five_cents": "0.05"}[shape]
+    unusable = shape.startswith("unusable")
+    pick = "maybe" if unusable else choice
     if batch:
-        return (200, _batch_body(cost=cost, choice="maybe" if shape == "unusable" else "no"))
+        return (200, _batch_body(cost=cost, choice="maybe" if unusable else "no"))
     return (200, _single_body(key=key, choice=pick, cost=cost))
 
 

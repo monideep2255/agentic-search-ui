@@ -1658,8 +1658,9 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
         # was still billed: charge `billed_cost_usd`, exactly as `decide()`'s
         # own Jev call does (fix round, F-8.6-J10). `jev_client.jev_charge_usd`
         # fixed it by the owner's rule of 2026-09-29: the stated cost, the
-        # ceiling when it states more, the floor when it states $0 or
-        # nothing; nothing for a timeout (step 3a, F-84-J04, F-72-V03).
+        # ceiling when it states more, the floor when it states less, $0 or
+        # nothing; nothing for a timeout (step 3a, F-84-J04, F-72-V03;
+        # fix round, J-GR-04).
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)
         _log_jev_injection_call(trace_id, started, call_log.jev_outcome(exc.reason))

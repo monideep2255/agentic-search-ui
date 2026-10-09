@@ -4,7 +4,8 @@ it, by the product owner's rule of 2026-09-29.
 
 | What the reply states | Charged |
 |---|---|
-| a cost above $0 and at most `MAX_JEV_COST_USD` | that cost |
+| a cost at least `JEV_FLOOR_COST_USD` and at most `MAX_JEV_COST_USD` | that cost |
+| a cost above $0 but under the floor, Jev's measured price and 1e-300 included | `JEV_FLOOR_COST_USD` (fix round, J-GR-04, A-GR-03) |
 | a cost above `MAX_JEV_COST_USD`, infinity and a number too large for a float included | `MAX_JEV_COST_USD` (F-84-A06) |
 | $0, no cost, or no amount (not a number, negative, a boolean, `NaN`) | `JEV_FLOOR_COST_USD` (F-72-J02, A03) |
 
@@ -16,7 +17,9 @@ MUTATION PROOF: `jev_charge_usd` returning the floor above the ceiling (the
 parked branch's F-84-A06) turns `test_more_stated_is_never_less_charged`
 red; returning the stated $0 turns `test_a_stated_zero_is_charged_the_floor`
 red; returning `MAX_JEV_COST_USD` for no amount (develop's rule) turns
-`test_no_amount_is_charged_the_floor` red.
+`test_no_amount_is_charged_the_floor` red; charging any stated figure above
+$0 as stated (the first build's rule) turns
+`test_a_stated_cost_under_the_floor_is_charged_the_floor` red.
 """
 
 from __future__ import annotations
@@ -43,9 +46,23 @@ def test_the_constants_are_the_owners() -> None:
     assert MAX_JEV_COST_USD == 0.01
 
 
-@pytest.mark.parametrize("raw", [0.0000148, 0.00002, 0.005, MAX_JEV_COST_USD, "0.003"])
+@pytest.mark.parametrize("raw", [JEV_FLOOR_COST_USD, 0.0003, 0.005, MAX_JEV_COST_USD, "0.003"])
 def test_a_sensible_stated_cost_is_charged_as_stated(raw: object) -> None:
     assert _charge(raw) == pytest.approx(float(raw))  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [1e-300, 5e-324, 1e-12, 0.0000148, 0.00002, 0.0000999, "0.00002"],
+    ids=["1e-300", "the smallest float", "a trillionth", "jev's measured low", "jev's measured price", "just under", "a string"],
+)
+def test_a_stated_cost_under_the_floor_is_charged_the_floor(raw: object) -> None:
+    """Fix round, J-GR-04 and A-GR-03: a reply that came back is never charged
+    less than the floor. A stated 1e-300 was charged 1e-300, which every cap
+    reads as nothing, the blindness F-72-J02 ended for a stated $0. Jev's
+    real price, about $0.00002, is under the floor too, so a usable reply is
+    charged $0.0001."""
+    assert _charge(raw) == JEV_FLOOR_COST_USD
 
 
 def test_a_stated_zero_is_charged_the_floor() -> None:
@@ -93,13 +110,12 @@ def test_more_stated_is_never_less_charged() -> None:
 
 
 def test_every_charge_is_above_zero_and_at_most_the_ceiling() -> None:
-    """Never $0 for a reply that came back, never above the ceiling. A stated
-    cost below the floor but above $0 is charged as stated, the owner's
-    words."""
+    """Never less than the floor for a reply that came back, never above the
+    ceiling (fix round, J-GR-04)."""
     raws: list[object] = [
         float("nan"), float("-inf"), float("inf"), -1.0, 0.0, 1e-12, 0.005, MAX_JEV_COST_USD,
         0.5, 999.9, 10**400, -(10**400), "abc", "0.002", True, None,
     ]
     for raw in raws:
         charged = _charge(raw)
-        assert 0.0 < charged <= MAX_JEV_COST_USD, (raw, charged)
+        assert JEV_FLOOR_COST_USD <= charged <= MAX_JEV_COST_USD, (raw, charged)

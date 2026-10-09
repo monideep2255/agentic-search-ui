@@ -63,7 +63,9 @@ async def test_call_jev_success_parses_the_confirmed_shape(monkeypatch: pytest.M
     assert isinstance(result, JevResult)
     assert result.choice == "relevant"
     assert result.confidence == 1.0
-    assert result.cost_usd == pytest.approx(1.4784e-05)
+    # The live price stated, $0.0000148, is under the floor, so the floor is
+    # what the caller charges (fix round, J-GR-04).
+    assert result.cost_usd == pytest.approx(JEV_FLOOR_COST_USD)
     assert result.input_tokens == 352
     assert result.output_tokens == 40
     assert result.latency_ms >= 0
@@ -470,7 +472,7 @@ async def test_a_batch_is_one_call_with_every_question_over_one_state(monkeypatc
             "criteria": {"yes": "It adds something.", "no": "It adds nothing."},
         }
     assert result.answers["item_1"].choice == "no" and result.answers["item_2"].choice == "yes"
-    assert result.cost_usd == pytest.approx(5.3e-05)
+    assert result.cost_usd == pytest.approx(JEV_FLOOR_COST_USD)  # $0.000053 stated, under the floor (J-GR-04)
     assert result.input_tokens == 1267
 
 

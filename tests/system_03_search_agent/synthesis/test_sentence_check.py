@@ -1144,8 +1144,11 @@ async def test_an_unusable_jev_reply_approves_nothing_and_is_charged_its_reporte
         await _check(_made_up_candidates(1), guard=guard, trace_id="j10-s", harness=harness)
 
     assert guard.calls == []
-    # Card 99: plus the one pair call beside it, which came back usable.
-    assert harness.get_query_cost_usd("j10-s") == pytest.approx(charged + _PAIR_CALL_COST)
+    # Card 99: plus the one pair call beside it, which came back usable,
+    # charged by the owner's rule: its stated cost is under the floor, so
+    # the floor (guardrail design fix round, J-GR-04).
+    pair_charge = jev_client_module.jev_charge_usd(_PAIR_CALL_COST)
+    assert harness.get_query_cost_usd("j10-s") == pytest.approx(charged + pair_charge)
 
 
 @pytest.mark.asyncio
