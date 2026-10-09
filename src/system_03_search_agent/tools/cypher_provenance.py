@@ -728,7 +728,11 @@ def _shape_entity(
     curie = str(properties.get("id") or "")
     is_edge = _is_edge_entity(entity)
 
-    fields = dict(properties)
+    # Card 32 (J-32-02, A-32-02): a vertex or edge property named like a
+    # MedGen feature field is renamed the same way as a derived column.
+    fields = dict(
+        zip(_graph_field_names(list(properties)), properties.values(), strict=True)
+    )
     if "start_id" in entity:
         fields.setdefault("_edge_start_id", entity["start_id"])
     if "end_id" in entity:
@@ -846,6 +850,35 @@ def _first_resolvable_curie(derived: dict[str, Any]) -> str | None:
     return None
 
 
+# Field names the MedGen clinical feature rows carry (`synthesis/findings.py`
+# CLINICAL_FEATURES_FIELD and `core/graph.py` _FEATURE_*_FIELD). A name check
+# on our own reserved strings, never a reading of the model's text.
+_RESERVED_FEATURE_FIELD_NAMES: frozenset[str] = frozenset(
+    {"clinical_features", "clinical_features_total", "hpo_id", "disease_title"}
+)
+
+
+def _graph_field_names(labels: list[str]) -> list[str]:
+    """Layer 1 field names for these labels, none equal to a reserved feature
+    field name and no two equal to each other.
+
+    A reserved label is prefixed with `graph_`, and the prefix is repeated
+    while the result is already a name in this row, so a second column that
+    really is called `graph_clinical_features` keeps its own name and its
+    value. No value is ever dropped by the rename.
+    """
+    taken = {label for label in labels if label not in _RESERVED_FEATURE_FIELD_NAMES}
+    names: list[str] = []
+    for label in labels:
+        if label in _RESERVED_FEATURE_FIELD_NAMES:
+            label = f"graph_{label}"
+            while label in taken:
+                label = f"graph_{label}"
+            taken.add(label)
+        names.append(label)
+    return names
+
+
 def _shape_derived_value(
     derived: dict[str, Any],
     snapshot_version: str,
@@ -882,7 +915,12 @@ def _shape_derived_value(
     # alias keeps its positional name; see `cypher_query.column_labels_for`
     # for why an unaliased expression is not paraphrased into a label.
     labels = column_labels or {}
-    fields = {labels.get(column, column): value for column, value in derived.items()}
+    # Card 32: four field names belong to MedGen's clinical feature rows
+    # (Layer 2) and every consumer downstream keys on the name alone. A graph
+    # column the model happens to alias to one of them is renamed here, where
+    # a Layer 1 field name is born, so it is never shown as MedGen's list.
+    names = _graph_field_names([labels.get(column, column) for column in derived])
+    fields = dict(zip(names, derived.values(), strict=True))
 
     projected_curie = _first_resolvable_curie(derived)
     if projected_curie:

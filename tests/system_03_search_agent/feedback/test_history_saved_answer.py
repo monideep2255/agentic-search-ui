@@ -96,6 +96,7 @@ async def _seed(
     answer_markdown: str | None = None,
     audience_depth: str | None = None,
     user_id: uuid.UUID | None = None,
+    risk_tier: str | None = None,
 ) -> str:
     """Write one real `interactions` row through the real writer."""
     from system_03_search_agent.feedback.contracts import InteractionRow
@@ -114,6 +115,7 @@ async def _seed(
             citations=[_citation_payload()],
             answer_markdown=answer_markdown,
             audience_depth=audience_depth,  # type: ignore[arg-type]
+            risk_tier=risk_tier,
         )
     )
     return trace_id
@@ -131,6 +133,21 @@ def _stored_answer(trace_id: str) -> str | None:
         with engine.connect() as conn:
             row = conn.execute(
                 sa.text("SELECT answer_markdown FROM interactions WHERE trace_id = :t"),
+                {"t": trace_id},
+            ).first()
+    finally:
+        engine.dispose()
+    assert row is not None, f"the seed for {trace_id} never reached the table"
+    return row[0]
+
+
+def _stored_tier(trace_id: str) -> str | None:
+    """Read `risk_tier` straight from the table (card 71)."""
+    engine = sa.create_engine(USER_DB_URL)
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(
+                sa.text("SELECT risk_tier FROM interactions WHERE trace_id = :t"),
                 {"t": trace_id},
             ).first()
     finally:
@@ -232,6 +249,38 @@ async def test_the_owner_gets_the_answer_they_already_had() -> None:
 
 
 @pytest.mark.asyncio
+async def test_the_stored_risk_tier_is_returned_and_an_old_row_reads_none() -> None:
+    """Card 71: a reopened answer carries the tier the live one had; a row
+    saved without one (as every row before alembic 0011) reads None."""
+    from system_03_search_agent.feedback.history import get_saved_answer
+
+    owner = _account()
+    tiered = await _seed(
+        owner_id=owner,
+        question=f"tiered {uuid.uuid4().hex[:8]}",
+        answer_markdown=_ANSWER,
+        audience_depth="researcher",
+        risk_tier="high",
+    )
+    old = await _seed(
+        owner_id=owner,
+        question=f"old {uuid.uuid4().hex[:8]}",
+        answer_markdown=_ANSWER,
+        audience_depth="researcher",
+    )
+    # POPULATE CHECK: both rows landed, so the two reads below differ because
+    # of the column and not because a seed was lost.
+    assert _stored_answer(tiered) == _ANSWER
+    assert _stored_answer(old) == _ANSWER
+
+    got = get_saved_answer(owner_id=owner, trace_id=tiered)
+    got_old = get_saved_answer(owner_id=owner, trace_id=old)
+    assert got is not None and got_old is not None
+    assert got.risk_tier == "high"
+    assert got_old.risk_tier is None
+
+
+@pytest.mark.asyncio
 async def test_the_three_causes_of_nothing_are_indistinguishable() -> None:
     """Somebody else's row, a row that does not exist, and a row with no
     saved answer all return the same `None`.
@@ -314,6 +363,7 @@ async def test_forgetting_clears_one_accounts_answers_and_nobody_elses() -> None
         answer_markdown=_ANSWER,
         audience_depth="researcher",
         user_id=leaving,
+        risk_tier="high",
     )
     kept = await _seed(
         owner_id=owner_staying,
@@ -321,18 +371,23 @@ async def test_forgetting_clears_one_accounts_answers_and_nobody_elses() -> None
         answer_markdown=_ANSWER,
         audience_depth="researcher",
         user_id=staying,
+        risk_tier="high",
     )
     # POPULATE CHECK: both accounts really had a saved answer to begin with.
     assert _stored_answer(gone) == _ANSWER
     assert _stored_answer(kept) == _ANSWER
+    assert _stored_tier(gone) == "high"
 
     cleared = forget_saved_answers_for_account(leaving)
     assert cleared == 1
 
     assert _stored_answer(gone) is None
+    # J-71T-06: the tier goes with the account's answer.
+    assert _stored_tier(gone) is None
     assert get_saved_answer(owner_id=owner_leaving, trace_id=gone) is None
     # The other account is untouched.
     assert _stored_answer(kept) == _ANSWER
+    assert _stored_tier(kept) == "high"
     assert get_saved_answer(owner_id=owner_staying, trace_id=kept) is not None
 
 

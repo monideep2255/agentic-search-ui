@@ -242,6 +242,14 @@ class Interaction(Base):
     #: saved view should show it. NULL when `answer_markdown` is NULL, and
     #: also NULL for an answered run whose `done` event carried no line.
     answer_trust_line: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: The worst risk tier of the run's `trust_signal` events (alembic 0011,
+    #: card 71), the value the live answer's "High-risk claim" tag is built
+    #: from. NULL means "not recorded" (a row saved before 0011, a guest's
+    #: row, a run that saved no answer) and a reader shows NO tag for it,
+    #: never a low-risk one. No database CHECK: the 16-character bound is
+    #: enforced in code (`feedback/capture.py`), which stores None for a tier
+    #: outside it rather than lose the row (A-71T-03, A-71T-11).
+    risk_tier: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     experiment_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     experiment_arm: Mapped[str | None] = mapped_column(Text, nullable=True)

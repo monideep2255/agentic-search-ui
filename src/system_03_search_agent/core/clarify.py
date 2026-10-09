@@ -372,6 +372,22 @@ def picked_recent_window(session_key: str, text: str) -> RecentWindow | None:
     return offers.get(text.strip())
 
 
+def is_recent_window_option(text: str) -> bool:
+    """Whether `text` is exactly the shape this product itself generates for
+    a "How far back" choice: some ask, then " from ", then one of the fixed
+    `RECENT_WINDOW_PHRASES`, then "?".
+
+    It verifies our own fixed strings and reads no free text, and it never
+    yields a window. It exists so the plan can say honestly that a click on
+    our own option could not be applied (the offer is lost on a restart).
+    """
+    stripped = text.strip()
+    return any(
+        len(stripped) > len(f" from {phrase}?") and stripped.endswith(f" from {phrase}?")
+        for phrase in RECENT_WINDOW_PHRASES
+    )
+
+
 def clear_offered_windows() -> None:
     """Forget every offer. For tests, which share one process."""
     _OFFERED.clear()

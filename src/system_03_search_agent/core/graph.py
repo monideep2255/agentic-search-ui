@@ -529,6 +529,7 @@ from system_03_search_agent.harness.jev_client import (
     call_jev,
 )
 from system_03_search_agent.harness.tiers import Tier, resolve_jev_model
+from system_03_search_agent.observability import audit
 from system_03_search_agent.synthesis.answer_layout import (
     IDENTIFIER_COLUMN_LABEL,
     ISOLATE_ENTITY_TYPE,
@@ -859,6 +860,45 @@ _GUARDRAIL_NO_USABLE_VERDICT_MESSAGE: Final[str] = (
 )
 
 
+_CAUSE_CLASS_MAX_CHARS = 60
+_CAUSE_CLASS_UNSAFE = re.compile(r"[^A-Za-z0-9._]")
+
+
+def _cause_of(exc: BaseException) -> BaseException | None:
+    """The cause the way Python's own traceback names it: the explicit cause
+    when there is one, else the implicit context unless the raise said
+    `from None`. `is not None`, never truthiness: an exception can be falsy."""
+    if exc.__cause__ is not None:
+        return exc.__cause__
+    if exc.__suppress_context__:
+        return None
+    return exc.__context__
+
+
+def _safe_class_name(cause: BaseException | None) -> str:
+    """The cause's class name stripped to letters, digits, dots and
+    underscores and cut short, so a class name carrying a newline or an escape
+    cannot forge a second log line (A-85-03)."""
+    if cause is None:
+        return "none"
+    cleaned = _CAUSE_CLASS_UNSAFE.sub("_", type(cause).__qualname__)
+    return cleaned[:_CAUSE_CLASS_MAX_CHARS] or "none"
+
+
+def _log_step_failed(step: str, error_class: object, cause: BaseException | None) -> None:
+    """The one `step failed` line, written the same way on every step failure
+    path. The trace id is the run's own, read from the audit ContextVar; a
+    caller outside a run logs `trace_id=none`. Never `str(exc)`: a provider
+    error can carry the person's own text."""
+    logger.warning(
+        "step failed trace_id=%s step=%s error_class=%s cause_class=%s",
+        audit.current_trace_id() or "none",
+        step,
+        _CAUSE_CLASS_UNSAFE.sub("_", str(error_class))[:_CAUSE_CLASS_MAX_CHARS],
+        _safe_class_name(cause),
+    )
+
+
 def _step_error_kwargs(step: str, exc: HarnessCallError) -> dict[str, Any]:
     """Build the `ErrorPayload` constructor kwargs for a step's `HarnessCallError`.
 
@@ -873,7 +913,14 @@ def _step_error_kwargs(step: str, exc: HarnessCallError) -> dict[str, Any]:
 
     `message` is deliberately NOT `str(exc)`: see the module-level note on
     `_STEP_ERROR_END_USER_MESSAGES` above (F-2.0-12).
+
+    Card 85 (F-73-J06): the failure is also logged here, once, as a warning
+    with the trace id, the step, `error_class` and the class of the cause.
+    Never `str(exc)` and never `exc_info`: a provider error can carry the
+    person's own text. The trace id is the run's own, read from the audit
+    ContextVar; a caller outside a run logs `trace_id=none`.
     """
+    _log_step_failed(step, exc.error_class, _cause_of(exc))
     return {
         "fatal": True,
         "scope": "step",
@@ -1930,6 +1977,7 @@ async def _guardrail_after_prefilter(
     # (F-2.1-B02); an attempt that failed with an error returned nothing
     # billable and is charged nothing, as everywhere else in the loop.
     classifier_verdict: GuardVerdict | None = None
+    unusable_error: Exception | None = None
     classification: classifier.InjectionClassification | None = None
     call_error: HarnessCallError | None = None
     for attempt in (1, 2):
@@ -2023,6 +2071,7 @@ async def _guardrail_after_prefilter(
             )
             break
         except classifier.ClassificationUnavailableError as exc:
+            unusable_error = exc
             call_log.log_model_call(
                 point="guardrail.classify",
                 trace_id=trace_id,
@@ -2055,6 +2104,7 @@ async def _guardrail_after_prefilter(
         # the parse error's own text, "the guard tier did not return valid JSON",
         # which named an internal part and said nothing to do. The parse
         # error itself is in the log line of each unusable attempt above.
+        _log_step_failed("guardrail", "recoverable", unusable_error)
         return {
             "step_error": {
                 "fatal": True,
@@ -3935,6 +3985,7 @@ async def _run_think_classification(
         # default, and an unparseable response is the same failure one
         # layer earlier. Mirrors `guardrail_node`'s identical handling of
         # `classifier.ClassificationUnavailableError`.
+        _log_step_failed("think", "recoverable", parse_error)
         return {
             "step_error": {
                 "fatal": True,
@@ -4889,8 +4940,21 @@ def _layer_tool_output_to_structured_fields(
 
     if tool == "litvar2_lookup":
         litvar: Litvar2LookupOutput = output
+        # A search for one rs id keeps only that rs id's own records. The
+        # autocomplete also returns variants that merely start with the same
+        # digits (rs334348 for rs334); those are different variants and are
+        # never shown as the one asked about. An exact comparison of the
+        # parsed rs number, never a text prefix. A query that is not a bare
+        # rs id (HGVS, a name) is left unfiltered.
+        asked_rsid = ""
+        if tool_input is not None and getattr(tool_input, "root", None) is not None:
+            candidate = str(getattr(tool_input.root, "query", "") or "").strip().casefold()
+            if re.fullmatch(r"rs\d+", candidate):
+                asked_rsid = candidate
         for match in litvar.variant_matches:
             if not match.source_url:
+                continue
+            if asked_rsid and str(match.rsid or "").strip().casefold() != asked_rsid:
                 continue
             rows.append(
                 _pseudo_row(
@@ -5422,7 +5486,9 @@ _CURIE_IN_TEXT_PATTERN = re.compile(
 
 # An rsID, Section 17's literal `rs\d+`. Case-sensitive: a real rsID is
 # always written with a lowercase "rs" prefix by convention, and Section
-# 17 gives the pattern exactly this way.
+# 17 gives the pattern exactly this way. Card 37's fix round tried ignoring
+# case and the verifier found "What does the RS1 gene do?" then resolved
+# the variant rs1 instead of the gene RS1, so it stays case-sensitive.
 _RSID_PATTERN = re.compile(r"\brs\d+\b")
 
 # A PMID mentioned in natural language ("PMID 21376230", "PMID: 21376230"),
@@ -6708,6 +6774,17 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # search this plan makes. Never a range read from the question's words
     # (fix round, F-8.2-A07, J01): see `_picked_publication_window`.
     publication_window = _picked_publication_window(query)
+    # Card 36: text that ends like one of our own "How far back" options,
+    # with no offer behind it (a restart, an hour, eviction, or typed words),
+    # is searched without a limit. The plan says so rather than staying
+    # silent, in words true for both cases (decided by the lead overnight, DECISIONS.md 2026-10-08). It
+    # matches our fixed option strings only, reads no other free text and
+    # never applies the window. Shown only when a paper search was planned.
+    window_lost = publication_window is None and clarify.is_recent_window_option(query.text)
+    window_lost_note = (
+        "the date range in your question could not be applied, "
+        "so papers from any year were searched"
+    )
 
     # Build phase 8.2, card 3: the literature decision Think started. Read
     # below only where it can change the plan, a question with no gene
@@ -6995,6 +7072,10 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         published = (
             f", published in {publication_window.label}" if publication_window is not None else ""
         )
+        if window_lost and any(
+            getattr(c, "purpose", "") == "pubmed_search" for c in planned_tool_calls
+        ):
+            published += f"; {window_lost_note}"
         plan_payload = PlanPayload(
             narrative=(
                 f"{why} for: " + ", ".join(topic_term.split(" AND ")) + published
@@ -7133,6 +7214,10 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             # The picked range limits the PubMed search on this path too, so
             # the narrative says so (F-8.2-J01 found it silent here).
             narrative += f"; PubMed papers published in {publication_window.label} only"
+        elif window_lost and any(
+            getattr(c, "purpose", "") == "pubmed_search" for c in planned_tool_calls
+        ):
+            narrative += f"; {window_lost_note}"
         narrative = narrative[:500]
 
         plan_payload = PlanPayload(
@@ -11795,6 +11880,16 @@ def _layer3_base_citation(
         if synth_finding.tool == "pubtator_annotate":
             return pubtator_build_citation(raw_output, display_index=display_index)
         if synth_finding.tool == "litvar2_lookup":
+            # The hedged or asserted label comes from the cited record itself
+            # (card 37), never from the first raw match, which can be a near
+            # miss the shaping step dropped.
+            own = [
+                m
+                for m in raw_output.variant_matches
+                if m.source_url and m.source_url == synth_finding.source_url
+            ]
+            if own:
+                raw_output = raw_output.model_copy(update={"variant_matches": own[:1]})
             return litvar2_build_citation(raw_output, display_index=display_index)
         if synth_finding.tool == "ncbi_dbsnp":
             return dbsnp_build_citation(raw_output, synth_finding.field, display_index=display_index)
