@@ -860,6 +860,45 @@ _GUARDRAIL_NO_USABLE_VERDICT_MESSAGE: Final[str] = (
 )
 
 
+_CAUSE_CLASS_MAX_CHARS = 60
+_CAUSE_CLASS_UNSAFE = re.compile(r"[^A-Za-z0-9._]")
+
+
+def _cause_of(exc: BaseException) -> BaseException | None:
+    """The cause the way Python's own traceback names it: the explicit cause
+    when there is one, else the implicit context unless the raise said
+    `from None`. `is not None`, never truthiness: an exception can be falsy."""
+    if exc.__cause__ is not None:
+        return exc.__cause__
+    if exc.__suppress_context__:
+        return None
+    return exc.__context__
+
+
+def _safe_class_name(cause: BaseException | None) -> str:
+    """The cause's class name stripped to letters, digits, dots and
+    underscores and cut short, so a class name carrying a newline or an escape
+    cannot forge a second log line (A-85-03)."""
+    if cause is None:
+        return "none"
+    cleaned = _CAUSE_CLASS_UNSAFE.sub("_", type(cause).__qualname__)
+    return cleaned[:_CAUSE_CLASS_MAX_CHARS] or "none"
+
+
+def _log_step_failed(step: str, error_class: object, cause: BaseException | None) -> None:
+    """The one `step failed` line, written the same way on every step failure
+    path. The trace id is the run's own, read from the audit ContextVar; a
+    caller outside a run logs `trace_id=none`. Never `str(exc)`: a provider
+    error can carry the person's own text."""
+    logger.warning(
+        "step failed trace_id=%s step=%s error_class=%s cause_class=%s",
+        audit.current_trace_id() or "none",
+        step,
+        _CAUSE_CLASS_UNSAFE.sub("_", str(error_class))[:_CAUSE_CLASS_MAX_CHARS],
+        _safe_class_name(cause),
+    )
+
+
 def _step_error_kwargs(step: str, exc: HarnessCallError) -> dict[str, Any]:
     """Build the `ErrorPayload` constructor kwargs for a step's `HarnessCallError`.
 
@@ -881,14 +920,7 @@ def _step_error_kwargs(step: str, exc: HarnessCallError) -> dict[str, Any]:
     person's own text. The trace id is the run's own, read from the audit
     ContextVar; a caller outside a run logs `trace_id=none`.
     """
-    cause = exc.__cause__ or exc.__context__
-    logger.warning(
-        "step failed trace_id=%s step=%s error_class=%s cause_class=%s",
-        audit.current_trace_id() or "none",
-        step,
-        exc.error_class,
-        type(cause).__qualname__ if cause is not None else "none",
-    )
+    _log_step_failed(step, exc.error_class, _cause_of(exc))
     return {
         "fatal": True,
         "scope": "step",
@@ -1945,6 +1977,7 @@ async def _guardrail_after_prefilter(
     # (F-2.1-B02); an attempt that failed with an error returned nothing
     # billable and is charged nothing, as everywhere else in the loop.
     classifier_verdict: GuardVerdict | None = None
+    unusable_error: Exception | None = None
     classification: classifier.InjectionClassification | None = None
     call_error: HarnessCallError | None = None
     for attempt in (1, 2):
@@ -2038,6 +2071,7 @@ async def _guardrail_after_prefilter(
             )
             break
         except classifier.ClassificationUnavailableError as exc:
+            unusable_error = exc
             call_log.log_model_call(
                 point="guardrail.classify",
                 trace_id=trace_id,
@@ -2070,6 +2104,7 @@ async def _guardrail_after_prefilter(
         # the parse error's own text, "the guard tier did not return valid JSON",
         # which named an internal part and said nothing to do. The parse
         # error itself is in the log line of each unusable attempt above.
+        _log_step_failed("guardrail", "recoverable", unusable_error)
         return {
             "step_error": {
                 "fatal": True,
@@ -3950,6 +3985,7 @@ async def _run_think_classification(
         # default, and an unparseable response is the same failure one
         # layer earlier. Mirrors `guardrail_node`'s identical handling of
         # `classifier.ClassificationUnavailableError`.
+        _log_step_failed("think", "recoverable", parse_error)
         return {
             "step_error": {
                 "fatal": True,

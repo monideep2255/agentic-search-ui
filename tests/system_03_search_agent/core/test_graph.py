@@ -3451,6 +3451,69 @@ def test_a_step_failure_log_line_never_carries_the_exceptions_message(
         assert record.exc_info is None  # a traceback would print the message
 
 
+def _wrapped(cause: BaseException | None, *, context: BaseException | None = None, suppress: bool = False):
+    """A HarnessCallError built with the given explicit cause, implicit
+    context and `from None` choice, the way Python itself would build it."""
+    try:
+        try:
+            if context is not None:
+                raise context
+        except BaseException:  # noqa: BLE001
+            if suppress:
+                raise harness_module.HarnessCallError("m", error_class="transient") from None
+            raise harness_module.HarnessCallError("m", error_class="transient") from cause
+        raise harness_module.HarnessCallError("m", error_class="transient") from cause
+    except harness_module.HarnessCallError as caught:
+        return caught
+
+
+def _logged_cause_class(exc: harness_module.HarnessCallError, caplog) -> str:
+    with caplog.at_level("WARNING", logger=graph_module.logger.name):
+        graph_module._step_error_kwargs("think", exc)
+    (line,) = [r.getMessage() for r in caplog.records if "step failed" in r.getMessage()]
+    return line.rsplit("cause_class=", 1)[1]
+
+
+class _FalsyCause(Exception):
+    def __bool__(self) -> bool:
+        return False
+
+
+def test_a_cause_raised_from_none_is_not_named(caplog: pytest.LogCaptureFixture) -> None:
+    exc = _wrapped(None, context=KeyError("x"), suppress=True)
+    assert _logged_cause_class(exc, caplog) == "none"
+
+
+def test_a_falsy_explicit_cause_is_still_the_cause(caplog: pytest.LogCaptureFixture) -> None:
+    exc = _wrapped(_FalsyCause("real"), context=ValueError("ctx"))
+    assert _logged_cause_class(exc, caplog) == "_FalsyCause"
+
+
+def test_the_implicit_context_is_named_when_nothing_suppresses_it(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    try:
+        try:
+            raise KeyError("x")
+        except KeyError:
+            raise harness_module.HarnessCallError("m", error_class="transient")
+    except harness_module.HarnessCallError as caught:
+        exc = caught
+    assert _logged_cause_class(exc, caplog) == "KeyError"
+
+
+def test_a_cause_class_name_cannot_forge_a_second_log_line(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    odd = type("Timeout\nWARNING core.graph step failed trace_id=OTHER\x1b[31m" + "C" * 400, (Exception,), {})
+    exc = _wrapped(odd("boom"))
+    cause = _logged_cause_class(exc, caplog)
+    assert "\n" not in cause and "\x1b" not in cause and " " not in cause
+    assert len(cause) <= 60
+    (record,) = [r for r in caplog.records if "step failed" in r.getMessage()]
+    assert "\n" not in record.getMessage()
+
+
 # ---------------------------------------------------------------------------
 # T-8.1-01: a Think reply that is well-formed JSON but uses a synonym key
 # for `narrative` ("why", "reason", ...) instead of failing outright, is

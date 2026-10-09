@@ -49,3 +49,32 @@ Nothing a person sees changes: this card changes log lines only. No line was add
 - The guardrail step already logs its call outcome through `call_log`; a guardrail failure now also gets this warning, so that one failure has two lines (outcome, then class). Think and Write get their first.
 - Write's failure is logged where `_write_answer` calls `_step_error_kwargs` (graph.py line 13164 region) with no edit to `_write_answer`.
 - The first attempt at a mutation check used `git checkout` on a source file and wiped its edits; they were reapplied and the full test run was repeated after.
+
+## Fix round
+
+Base: 86c30008. One round.
+
+| Finding | Status | What changed |
+|---|---|---|
+| J-85-04 | Fixed | `test_a_real_runs_think_failure_line_carries_that_runs_own_trace_id` drives `run` and `run_streaming` with a failing Think call and pins one `step failed trace_id=own-trace-85 step=think` line. Removing the run's trace binding turns it red |
+| A-85-03 | Fixed | The cause class is stripped to letters, digits, dots and underscores and cut to 60 characters; `error_class` goes through the same strip. A class name with a newline and an escape cannot forge a second line |
+| J-85-02, A-85-07 | Fixed | Think's and the guardrail's "no usable reply" step errors write the same `step failed` line (`error_class=recoverable`, cause class the parse error's) through one helper, `_log_step_failed` |
+| A-85-01, A-85-02 | Fixed | The cause is chosen the way Python reports it: explicit cause when `is not None`, else the context unless `from None` suppressed it |
+| J-85-03 | Fixed for the new lines | Every new line spells the key `trace_id=`; the lines on the unusable paths use the same helper |
+| J-85-01, A-85-05 | Open | Needs two streams advanced from one task; no caller does that (the run registry gives each run its own task). The line is no worse than develop, which logged nothing |
+| J-85-05, J-85-06 | Open | J-85-05 is now covered by the context test; J-85-06 is a wording of an old test name, no behaviour |
+| A-85-04, A-85-06, A-85-08 to A-85-12 | Open | Each is an extra on a path that develop did not log at all, or a crash-record detail card 73 already shipped. None makes a line less true than develop's |
+| `call_log` trace key (`trace=`) | Open | Out of scope; `call_log.py` untouched |
+
+Mutations, each broke one property, ran red, restored (16 selected tests, 6 + 1 + 1 + 1 + 2 + 2 failures):
+
+| Break | Result |
+|---|---|
+| Run binds no trace id | 6 failed, 10 passed |
+| Cause class not stripped | 1 failed, 15 passed |
+| `from None` ignored | 1 failed, 15 passed |
+| Truthiness instead of `is not None` | 1 failed, 15 passed |
+| Think unusable line removed | 2 failed, 14 passed |
+| Guardrail unusable line removed | 2 failed, 14 passed |
+
+Runs: `test_run.py` 66 passed; step-failure tests in `test_graph.py` 7 passed; `tests/system_03_search_agent/core` 1415 passed, 56 skipped. ruff check clean on touched files; `gate02_import_order.sh` exit 0 (bare `isort --check-only` on `graph.py` also fails on develop's own file, an existing difference between the tool's config and the gate).

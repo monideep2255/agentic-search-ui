@@ -1275,3 +1275,75 @@ def test_no_message_argument_or_local_reaches_the_record_from_any_link_or_group_
         assert _FAKE_KEY not in rendered
         assert _FAKE_PASSWORD not in rendered
     assert all(r.exc_info is None for r in caplog.records)
+
+
+# --- card 85 fix round: a real run's step failure line carries that run's id ---
+
+
+def _step_failed_lines(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [
+        r.getMessage()
+        for r in caplog.records
+        if r.name == "system_03_search_agent.core.graph" and "step failed" in r.getMessage()
+    ]
+
+
+def _install_reply(monkeypatch: pytest.MonkeyPatch, which: str, how: str) -> None:
+    """Make the guard or the think call fail (`how` is "raise") or answer with
+    text that is not JSON (`how` is "unusable"). Every other call is normal."""
+    from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
+    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+    from tests.system_03_search_agent.model_stub import (
+        COMPLIANT_GUARD_CLASSIFICATION,
+        compliant_think_classification,
+    )
+
+    marker = GUARD_SYSTEM_INSTRUCTION if which == "guard" else _THINK_SYSTEM_INSTRUCTION
+
+    async def _acompletion(*args: object, **kwargs: object):
+        messages = kwargs.get("messages") or []
+        joined = "\n".join(m.get("content") or "" for m in messages)  # type: ignore[union-attr]
+        if marker in joined:
+            if how == "raise":
+                raise RuntimeError("simulated unexpected model failure")
+            return _fake_response("not json at all")
+        if GUARD_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(COMPLIANT_GUARD_CLASSIFICATION)
+        if _THINK_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(compliant_think_classification(messages))  # type: ignore[arg-type]
+        return _fake_response()
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", _acompletion)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["run", "run_streaming"])
+async def test_a_real_runs_think_failure_line_carries_that_runs_own_trace_id(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, path: str
+) -> None:
+    _install_reply(monkeypatch, "think", "raise")
+    query = _valid_query(trace_id="own-trace-85")
+    with caplog.at_level("WARNING", logger="system_03_search_agent.core.graph"):
+        await _drain(path, query)
+    lines = _step_failed_lines(caplog)
+    assert len(lines) == 1, lines
+    assert lines[0].startswith("step failed trace_id=own-trace-85 step=think ")
+    assert "cause_class=RuntimeError" in lines[0]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["run", "run_streaming"])
+@pytest.mark.parametrize("which", ["guard", "think"])
+async def test_a_step_that_fails_on_an_unusable_reply_writes_the_same_step_failed_line(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, path: str, which: str
+) -> None:
+    _install_reply(monkeypatch, which, "unusable")
+    query = _valid_query(trace_id="unusable-85")
+    with caplog.at_level("WARNING", logger="system_03_search_agent.core.graph"):
+        events = await _drain(path, query)
+    assert any(e.type == "error" and e.payload["scope"] == "step" for e in events)
+    step = "guardrail" if which == "guard" else "think"
+    lines = _step_failed_lines(caplog)
+    assert len(lines) == 1, lines
+    assert lines[0].startswith(f"step failed trace_id=unusable-85 step={step} error_class=recoverable ")
+    assert "cause_class=" in lines[0] and "cause_class=none" not in lines[0]
