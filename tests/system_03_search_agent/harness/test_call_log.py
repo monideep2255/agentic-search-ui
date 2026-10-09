@@ -35,7 +35,7 @@ import litellm
 import pytest
 
 from system_03_search_agent.core import graph as graph_module
-from system_03_search_agent.harness import cost_control
+from system_03_search_agent.harness import call_log, cost_control
 from system_03_search_agent.harness import decide as decide_module
 from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.harness.decide import decide
@@ -434,3 +434,57 @@ def test_provider_of_only_believes_a_plain_string() -> None:
     assert call_log.provider_of(SimpleNamespace()) is None
     assert call_log.provider_of(SimpleNamespace(provider="x" * 500)) == "x" * 64
     assert json.dumps(call_log.provider_of(SimpleNamespace(provider="a")))
+
+
+@pytest.mark.parametrize(
+    ("raw", "logged"),
+    [
+        ("DeepInfra", "DeepInfra"),
+        ("Google AI Studio", "Google AI Studio"),
+        ("api.together.xyz", "api.together.xyz"),
+        ("Fireworks-2", "Fireworks-2"),
+        ("Deep\nInfra\x1b[31m", "DeepInfra31m"),
+        ("Deep\rInfra\tX", "DeepInfraX"),
+        ("name=evil; cat /etc/passwd", "nameevil cat etcpasswd"),
+        ("caf\u00e9 \u2028host", "caf host"),
+        ("\n\x1b[;\t!", None),
+        ("%s %d {}", "s d"),
+    ],
+    ids=[
+        "a plain host",
+        "a host with spaces",
+        "a host with dots",
+        "a host with a hyphen and a digit",
+        "a line break and an escape sequence",
+        "a carriage return and a tab",
+        "punctuation and slashes",
+        "letters outside ASCII and a line separator",
+        "nothing a host name needs",
+        "format characters",
+    ],
+)
+def test_provider_of_keeps_only_what_a_host_name_needs(raw: str, logged: str | None) -> None:
+    """Step 3c of the guardrail design (F-84-J07): the upstream's own name
+    field is untrusted text, so only ASCII letters, digits, dots, hyphens
+    and spaces reach the log line.
+
+    MUTATION PROOF: keeping every printable character again (develop's
+    `value.strip()`) turns every arm but the four plain hosts red."""
+    assert call_log.provider_of(SimpleNamespace(provider=raw)) == logged
+
+
+def test_provider_of_never_writes_a_line_break_into_the_log(caplog: pytest.LogCaptureFixture) -> None:
+    provider = call_log.provider_of(SimpleNamespace(provider="Host\nmodel call point=forged outcome=ok"))
+    with caplog.at_level(logging.WARNING, logger=call_log.__name__):
+        call_log.log_model_call(
+            point="guardrail.classify", trace_id="t-1", kind="guard", started=0.0, outcome="ok", provider=provider
+        )
+    assert len(caplog.records) == 1
+    assert "\n" not in caplog.records[0].getMessage()
+
+
+def test_the_line_stays_at_warning_until_host_routing_is_decided(caplog: pytest.LogCaptureFixture) -> None:
+    """Step 3c: the drop to INFO waits on step 2's ranking (F-84-A08)."""
+    with caplog.at_level(logging.DEBUG, logger=call_log.__name__):
+        call_log.log_model_call(point="p", trace_id="t", kind="guard", started=0.0, outcome="ok")
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]
