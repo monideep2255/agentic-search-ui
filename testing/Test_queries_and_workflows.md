@@ -584,6 +584,31 @@ What you should see:
 - Known: the arachnodactyly answer can name only Haim-Munk syndrome, from a paper's title, and not Marfan syndrome (F-8.6-V08, an answer-quality note for the product owner).
 - Why it matters: a sentence about a record the person never asked about reads as part of the answer. In the phase 8.1 product review's words: "It told me twice that a nurse visit has no clinical features, and never told me how many genes."
 
+### 110. A graph question with no checked search gives the same answer every time (card 15, D5)
+
+The system never writes its own graph search for a question a checked search can answer; only a true count question may still use a written one. Ask each question below three times.
+
+Queries to try:
+
+- `What conditions is ClinVar:17661 linked to?` (a variant's conditions)
+- `Tell me about NCBITaxon:562` (an organism)
+- `What is linked to Marfan syndrome?` (one disease, no kind of record named)
+- `Summarise what the knowledge graph holds on Marfan syndrome` (one disease, a summary with no count)
+- `Which genes take part in GO:0006281?` (a term the graph has no checked search for)
+- `Does PMID 11237011 discuss BRCA1?` (a paper and a gene together)
+- `Compare PMID 11237011 and PMID 11237012` (two papers)
+- `Variants in MLH1 and MSH2 causing Lynch syndrome` (two genes beside a disease)
+- `How many variants do BRCA1 and BRCA2 have?` (a true count)
+
+What you should see:
+
+- The variant question lists the conditions its ClinVar record names, each linked to its MedGen page, and the same conditions on every run.
+- The organism question and the two Marfan syndrome questions show that record's own page as a source, the same one on every run.
+- The GO term, paper-and-gene, two-paper and two-gene questions answer from the live NCBI sources, with no knowledge graph source, and the same way on every run.
+- No answer says "One of the background searches did not finish" because of a graph search; that line now means a real search failed.
+- The count question still answers with a count.
+- Why it matters: a person who asks twice and gets two different answers stops trusting both, and a search the system wrote for itself was what made them differ.
+
 ## 4. Chromosome windows and accessions
 
 ### 26. A copy number variant window, before the coordinate range feature
@@ -1858,7 +1883,7 @@ The daily shipped lists named below were folded into this document and `testing/
 |---|---|
 | 1. Basic search and answers | `Product/Product_workflows.md` tests 1, 7, 12, 13, 14; the 2026-09-22 shipped list's items 1, 6; the 2026-09-20 shipped list's retest items 1, 2, 3, 5, 6; `UI_fixes_done.md` "What is live on develop" and items 8.4, 9.12, 11.14, 11.27, 11.31, 11.34, 11.35, 11.36; the 2026-09-23 shipped list's items 3, 4, 5 |
 | 2. Follow-up questions and conversation | `Product/Product_workflows.md` test 2 |
-| 3. Genes, variants and diseases | the 2026-09-22 shipped list's items 3, 5, 7, 8, 12, 13; the 2026-09-23 shipped list's item 6; `UI_fixes_done.md` items 11.6, 11.20 and 12.14; board card 1 and `tracker/phase_8.6.md` ticket T-8.6-06 with findings F-8.6-A11 and F-8.6-V08 |
+| 3. Genes, variants and diseases | the 2026-09-22 shipped list's items 3, 5, 7, 8, 12, 13; the 2026-09-23 shipped list's item 6; `UI_fixes_done.md` items 11.6, 11.20 and 12.14; board card 1 and `tracker/phase_8.6.md` ticket T-8.6-06 with findings F-8.6-A11 and F-8.6-V08; board card 15 with decision D5 |
 | 4. Chromosome windows and accessions | the 2026-09-22 shipped list's items 2, 9, 10, 11, 14, 15, 16 |
 | 5. Pathogen isolates | `Product/queries/Isolate_search_queries_and_workflow.md` queries 1 to 12; the 2026-09-22 shipped list's items 17 to 22 |
 | 6. Refusals, off-topic and compute requests | `Product/Product_workflows.md` tests 8, 19; the 2026-09-22 shipped list's item 4; `UI_fixes_done.md` "What is live on develop" and item 12.6; `tracker/phase_8.6.md` ticket T-8.6-04, re-land ticket R-02 and findings F-8.6-A10 and F-8.6-G01, with golden rows G-043 and G-044 |
@@ -2008,6 +2033,7 @@ Every feature accounted for, in three tables:
 | cards 43 and 43b | Long variant names wrap on a phone, with their citation numbers kept beside them | Query 105 |
 | card 44 | The "Take the tour" button stays readable when the pointer rests on it | Query 63 |
 | card 56 | An organism question is never answered about a disease cut out of its name | Query 103 |
+| card 15 | A graph question no checked search fits never gets a search the system wrote itself, so it answers the same way every time; only a count may | Query 110 |
 | card 63 | A "not yet confirmed" answer reopens with its trust line and notes, and an NCBI outage is said plainly | Query 100 |
 | card 60 | The web app carries the license notices of the libraries it bundles | Query 99 |
 | card 58 | Stop can be pressed until the answer's first sentence is on screen | Query 98 |
