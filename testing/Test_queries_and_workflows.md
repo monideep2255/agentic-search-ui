@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-10-08.
+Last updated: 2026-10-09.
 
 Every entry has the same three parts:
 
@@ -990,6 +990,22 @@ What you should see:
 - No citation chips.
 - Before phase 8.6's re-land, this request got the label "Not a research question", which says nothing about what the product can do (F-8.6-G01). The follow-up's golden run gave the read-only reply in 3 of 3 passes.
 - Why it matters: a person who asks to change a record should learn that the product only reads NCBI records, not be treated as someone attacking it.
+
+### 109. When the check on a question cannot finish, the message says so plainly (cards 84 and 72)
+
+Queries to try:
+
+- `Which diseases are associated with BRCA1?`, as a new search. The failure itself cannot be triggered on demand: it shows only when the check every question passes first gets no answer in time, twice, which happens on a slow spell at the model provider, about 15 seconds after the question is sent.
+- Query 1 covers the ordinary answer to the same question.
+
+What you should see:
+
+- Only when that check could not finish: no answer, no citation chips, and the message "We could not finish checking your question, so nothing was searched. This was a problem on our side, not with your question. Try asking again."
+- It never reads "Try asking again in a moment" and never "rephrase the question" for this failure.
+- Asking the same question again a little later answers it as query 1 does.
+- When the model provider refuses the question, or the check's two replies both come back unreadable, the message still reads "This run could not be completed. Try asking again, or rephrase the question."
+- A search you stopped still reads "This run was stopped before it finished, so no answer was written."
+- Why it matters: before this, a person whose question was fine was told to rephrase it, and did not know that nothing had been searched. Saying the problem was ours, and that asking again is the fix, tells them what to do next.
 
 ## 7. Sign in, sessions and history
 
@@ -2010,6 +2026,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| cards 84 and 72 | When the check every question passes first cannot finish, the message says nothing was searched, the problem was ours, and to ask again | Query 109 |
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
 | card 67 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now" | Query 100 |
 | card 104 | An answer lists one record once in its tables and Plain language list | Query 107 |
