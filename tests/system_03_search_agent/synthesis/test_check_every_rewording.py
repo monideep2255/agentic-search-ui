@@ -261,7 +261,12 @@ def _install_repair_writer(monkeypatch, completeness) -> None:
         lines = completeness._FINDING_LINE.findall(joined)
         diseases = {int(index) for index, body in lines if "disease name number" in body}
         first = completeness._narrative_covering(joined, diseases)
-        if completeness._CORRECTION_MARKER in joined:
+        # Build phase 8.7, card 50, option B: the second draft may start
+        # beside the first, carrying "COMPLETENESS REQUIREMENT", rather than
+        # after it as the "COMPLETENESS CORRECTION" repair. Either marker
+        # names the second draft, the same test `test_write_completeness.py`
+        # uses.
+        if any(marker in joined for marker in completeness._SECOND_DRAFT_MARKERS):
             paper = next(int(index) for index, body in lines if "72%" in body)
             return completeness._fake_response(
                 f'{first} {_REWORDED_RISK} [{paper}: "{_RISK_QUOTE}"].'
