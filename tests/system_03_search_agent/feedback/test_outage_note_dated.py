@@ -271,6 +271,7 @@ def _serve(monkeypatch: pytest.MonkeyPatch, stored: str, created_at: Any) -> Any
         answer_markdown=stored,
         audience_depth="researcher",
         answer_trust_line="Based on 9 sources, not yet confirmed",
+        risk_tier=None,
     )
 
     class _Session:

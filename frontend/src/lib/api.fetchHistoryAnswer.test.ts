@@ -140,6 +140,21 @@ describe("fetchHistoryAnswer", () => {
     expect(result.trust_line).toBeNull();
   });
 
+  it("carries risk_tier through, and reads null when the body carries none (card 71)", async () => {
+    // Mutation: dropping `risk_tier` on the way through, or defaulting an
+    // absent one to "low", turns this red.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ...VALID_BODY, risk_tier: "high" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(VALID_BODY), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const tiered = await fetchHistoryAnswer("token-1", "t-1", { baseUrl: "https://api.test" });
+    const old = await fetchHistoryAnswer("token-1", "t-1", { baseUrl: "https://api.test" });
+    expect(tiered.risk_tier).toBe("high");
+    expect(old.risk_tier).toBeNull();
+  });
+
   it("throws a plain Error when the 200 body is not the documented shape", async () => {
     // Mutation: casting the body straight to the response type without
     // checking `answer_markdown`/`citations` turns this red on a

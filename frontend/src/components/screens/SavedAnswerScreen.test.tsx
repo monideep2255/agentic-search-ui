@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SavedAnswerScreen } from "./SavedAnswerScreen";
 import type { HistoryAnswerResponse } from "../../lib/api";
+import { designTokens } from "../../theme";
 
 const ANSWER: HistoryAnswerResponse = {
   trace_id: "t-1",
@@ -32,9 +33,20 @@ const ANSWER: HistoryAnswerResponse = {
       layer: 2,
     },
   ],
-  trust_signal: "Grounded, every claim cited",
+  // The stored outcome word, as the backend stores it (`answer`, `flag` or
+  // `ask`). Card 71 fix round: this was a made-up sentence, which hid that
+  // the no-trust-line fallback printed the raw word after a tick.
+  trust_signal: "answer",
   trust_line: null,
 };
+
+const NO_CHECK = "Not verified · no grounding check was recorded";
+
+function renderSaved(answer: HistoryAnswerResponse) {
+  return render(
+    <SavedAnswerScreen question={answer.question} loading={false} answer={answer} onRunAgain={() => undefined} />,
+  );
+}
 
 describe("SavedAnswerScreen", () => {
   it("renders the stored answer text, its citations and the trust signal", () => {
@@ -52,7 +64,7 @@ describe("SavedAnswerScreen", () => {
       screen.getByText("BRCA1 is a gene associated with hereditary breast cancer."),
     ).toBeInTheDocument();
     expect(within(screen.getByRole("list")).getByText(/1\.\s*BRCA1/)).toBeInTheDocument();
-    expect(screen.getByText(/Grounded, every claim cited/)).toBeInTheDocument();
+    expect(screen.getByTestId("saved-answer-trust-line")).toHaveTextContent(NO_CHECK);
   });
 
   it("links a citation whose host is on the allowed NCBI list", () => {
@@ -113,20 +125,110 @@ describe("SavedAnswerScreen", () => {
     expect(screen.getByTestId("saved-answer-trust-line")).toHaveTextContent(
       "Sources disagree on at least one claim.",
     );
-    expect(screen.queryByText(/Grounded, every claim cited/)).not.toBeInTheDocument();
+    expect(screen.queryByText(NO_CHECK)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("saved-answer-trust-fallback")).not.toBeInTheDocument();
   });
 
-  it("falls back to the plain trust_signal line when the row carries no trust_line", () => {
-    // Mutation: rendering nothing at all when `trust_line` is null, rather
-    // than falling back to the pre-existing `trust_signal` line, turns
-    // this red. `ANSWER.trust_line` is `null` in this fixture.
+  it("with no trust_line and no stored tier, says no grounding check was recorded, in the risk colour", () => {
+    // Card 71 fix round. Mutation: rendering nothing when `trust_line` is
+    // null, or the old tick plus raw outcome word, turns this red.
+    renderSaved(ANSWER);
+    const span = screen.getByTestId("saved-answer-trust-fallback");
+    expect(span).toHaveTextContent(NO_CHECK);
+    expect(span).toHaveStyle({ color: designTokens.risk });
+    expect(screen.getByTestId("saved-answer-trust-line")).not.toHaveTextContent("✓");
+  });
+
+  it("a capped answer (flag, no trust line, no tier) reopens as Not verified, never a tick and the word flag", () => {
+    // A-71T-10. The per-question cost limit ends a run with done(flag), no
+    // trust_line and no trust_signal; live shows the red NO_CHECK words.
+    // Mutation: restoring the old fallback (a tick beside `trust_signal`)
+    // turns this red.
+    renderSaved({ ...ANSWER, trust_signal: "flag", risk_tier: null });
+    const line = screen.getByTestId("saved-answer-trust-line");
+    expect(line).toHaveTextContent(NO_CHECK);
+    expect(line).not.toHaveTextContent("✓");
+    expect(line).not.toHaveTextContent(/\bflag\b/);
+    expect(screen.getByTestId("saved-answer-trust-fallback")).toHaveStyle({ color: designTokens.risk });
+  });
+
+  it.each([["flag"], ["ask"]])(
+    "an %s outcome with a stored tier and no trust_line shows no tick and no raw outcome word",
+    (outcome) => {
+      // Mutation: letting any outcome with a tier take the grounded tick
+      // turns this red. Only an "answer" outcome is a grounded answer.
+      renderSaved({ ...ANSWER, trust_signal: outcome, risk_tier: "high" });
+      const line = screen.getByTestId("saved-answer-trust-line");
+      expect(line).toHaveTextContent(`${NO_CHECK}·High-risk claim`);
+      expect(line).not.toHaveTextContent("✓");
+      expect(line).not.toHaveTextContent(new RegExp(`\\b${outcome}\\b`));
+    },
+  );
+
+  it("an answer outcome with a stored tier and no trust_line shows the live grounded words with a tick", () => {
+    // The live answer's words for a grounded run with trust signals and no
+    // trust line. Mutation: changing the words, or the tick, turns this red.
+    renderSaved({ ...ANSWER, risk_tier: "low" });
+    const span = screen.getByTestId("saved-answer-trust-fallback");
+    expect(span).toHaveTextContent("✓Grounded · every claim cited");
+    expect(span).toHaveStyle({ color: designTokens.ink });
+    expect(screen.queryByTestId("saved-answer-trust-risk")).not.toBeInTheDocument();
+  });
+
+  it("shows the High-risk claim tag for a high tier, in the risk colour, beside the trust line", () => {
+    // Card 71. Mutation: not reading `risk_tier` (the pre-card behaviour),
+    // changing the words, or dropping the tag's test id turns this red.
     render(
-      <SavedAnswerScreen question={ANSWER.question} loading={false} answer={ANSWER} onRunAgain={() => undefined} />,
+      <SavedAnswerScreen
+        question={ANSWER.question}
+        loading={false}
+        answer={{ ...ANSWER, trust_line: "Based on 2 sources cited, not yet confirmed", risk_tier: "high" }}
+        onRunAgain={() => undefined}
+      />,
     );
+    const tag = screen.getByTestId("saved-answer-trust-risk");
+    expect(tag).toHaveTextContent("High-risk claim");
+    // J-71T-08: the colour and weight are what make it stand out on the
+    // live answer. Mutation: a grey or bold tag turns this red.
+    expect(tag).toHaveStyle({ color: designTokens.risk, fontWeight: 400 });
+    expect(screen.getByTestId("saved-answer-trust-line")).toContainElement(tag);
     expect(screen.getByTestId("saved-answer-trust-line")).toHaveTextContent(
-      "Grounded, every claim cited",
+      "Based on 2 sources cited, not yet confirmed",
     );
   });
+
+  it.each([
+    ["moderate", "moderate risk claim"],
+    ["critical", "critical risk claim"],
+    ["severe", "severe risk claim"],
+  ])("shows the live words for a stored %s tier", (tier, words) => {
+    // J-71T-09: the other known tiers and a tier the live screen does not
+    // know. Mutation: returning no tag for anything but "high" turns this red.
+    renderSaved({ ...ANSWER, trust_line: "Based on 2 sources cited, not yet confirmed", risk_tier: tier });
+    const tag = screen.getByTestId("saved-answer-trust-risk");
+    expect(tag).toHaveTextContent(words);
+    expect(tag).toHaveStyle({ color: designTokens.risk, fontWeight: 400 });
+  });
+
+  it.each([[null], [undefined], [""], ["low"], ["unknown"]])(
+    "shows no risk tag when the stored tier is %s",
+    (tier) => {
+      // Card 71: an answer saved before the tier was stored shows no tag
+      // rather than a wrong one. Mutation: treating a missing tier as high
+      // (or rendering the tag unconditionally) turns this red.
+      render(
+        <SavedAnswerScreen
+          question={ANSWER.question}
+          loading={false}
+          answer={{ ...ANSWER, risk_tier: tier }}
+          onRunAgain={() => undefined}
+        />,
+      );
+      expect(screen.getByTestId("saved-answer-trust-line")).toBeInTheDocument();
+      expect(screen.queryByTestId("saved-answer-trust-risk")).not.toBeInTheDocument();
+      expect(screen.queryByText(/risk claim/i)).not.toBeInTheDocument();
+    },
+  );
 
   it("Run again is reachable by keyboard and calls onRunAgain, without starting a new search itself", async () => {
     // Mutation: Run again not being a real, focusable, native button (for

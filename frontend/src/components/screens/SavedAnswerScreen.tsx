@@ -56,6 +56,7 @@ import { LAYER_WORD, isLinkableCitationUrl } from "../answer/CitationMarkers";
 import { sourcePageKey } from "./AnswerScreen";
 import { SavedAnswerMarkdown } from "./savedAnswerMarkdown";
 import type { HistoryAnswerCitation, HistoryAnswerResponse } from "../../lib/api";
+import { riskTagLabel, savedTrustFallback } from "../../lib/riskTag";
 
 export interface SavedAnswerScreenProps {
   /** The question as it was asked, shown while the answer is still loading. */
@@ -217,6 +218,12 @@ export function SavedAnswerScreen({
   onNewSearch,
 }: SavedAnswerScreenProps) {
   const askedAt = answer ? formatAskedAt(answer.asked_at) : "";
+  const riskLabel = answer ? riskTagLabel(answer.risk_tier) : null;
+  // Card 71 fix round (A-71T-10): with no trust line, the first span is the
+  // live answer's own words for the stored facts, never a tick beside the
+  // raw outcome word.
+  const fallback =
+    answer && !answer.trust_line ? savedTrustFallback(answer.trust_signal, answer.risk_tier) : null;
   return (
     <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", my: "auto", px: { xs: 2, sm: 3 }, py: 3.5 }}>
       <Box
@@ -311,36 +318,65 @@ export function SavedAnswerScreen({
             {/*
               `trust_line` first, matching the live answer screen's own
               posture (`AnswerScreen.tsx`'s "ONE PLAIN LINE"): the sentence
-              replaces the older `trust_signal` word when the row has one.
-              A row saved before `trust_line` existed, or one whose run
-              carried none, falls back to `trust_signal` unchanged, exactly
-              as this screen behaved before tonight.
+              the person read under the original answer. A row with no
+              trust line shows `savedTrustFallback`'s span instead, the
+              words the live answer shows for the same stored facts (card
+              71 fix round, A-71T-10): before it, a capped "flag" answer
+              that read "Not verified" live reopened as a green tick and the
+              raw word "flag".
             */}
-            {answer.trust_line ? (
-              <Box
-                role="status"
-                data-testid="saved-answer-trust-line"
-                sx={{ mt: "14px", fontSize: 12.5, color: designTokens.inkMuted }}
-              >
-                {answer.trust_line.startsWith("Confirmed") ? (
-                  <Box component="span" aria-hidden="true" sx={{ color: designTokens.ok, mr: 0.5 }}>
-                    ✓
-                  </Box>
-                ) : null}
-                {answer.trust_line}
-              </Box>
-            ) : answer.trust_signal ? (
-              <Box
-                role="status"
-                data-testid="saved-answer-trust-line"
-                sx={{ mt: "14px", fontSize: 12.5, color: designTokens.inkMuted }}
-              >
-                <Box component="span" aria-hidden="true" sx={{ color: designTokens.ok, mr: 0.5 }}>
-                  ✓
+            <Box
+              role="status"
+              data-testid="saved-answer-trust-line"
+              sx={{ mt: "14px", fontSize: 12.5, color: designTokens.inkMuted }}
+            >
+              {answer.trust_line ? (
+                <>
+                  {answer.trust_line.startsWith("Confirmed") ? (
+                    <Box component="span" aria-hidden="true" sx={{ color: designTokens.ok, mr: 0.5 }}>
+                      ✓
+                    </Box>
+                  ) : null}
+                  {answer.trust_line}
+                </>
+              ) : fallback ? (
+                <Box
+                  component="span"
+                  data-testid="saved-answer-trust-fallback"
+                  sx={{
+                    fontWeight: 400,
+                    color: fallback.kind === "risk" ? designTokens.risk : designTokens.ink,
+                  }}
+                >
+                  {fallback.kind === "good" ? (
+                    <Box component="span" aria-hidden="true" sx={{ color: designTokens.ok, mr: 0.5 }}>
+                      ✓
+                    </Box>
+                  ) : null}
+                  {fallback.label}
                 </Box>
-                {answer.trust_signal}
-              </Box>
-            ) : null}
+              ) : null}
+              {/*
+                The risk tag (card 71): the live answer's own words
+                (`riskTagLabel`), the risk colour, regular weight, after a
+                middle dot, as on the live trust line. A row with no stored
+                tier shows nothing here, never a low-risk claim.
+              */}
+              {riskLabel ? (
+                <>
+                  <Box component="span" aria-hidden="true" sx={{ mx: 0.75 }}>
+                    ·
+                  </Box>
+                  <Box
+                    component="span"
+                    data-testid="saved-answer-trust-risk"
+                    sx={{ fontWeight: 400, color: designTokens.risk }}
+                  >
+                    {riskLabel}
+                  </Box>
+                </>
+              ) : null}
+            </Box>
 
             {answer.citations.length > 0 ? (
               <Box sx={{ mt: 2.5 }}>
