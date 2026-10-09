@@ -468,6 +468,14 @@ class TokenPayload(BaseModel):
 class CitationPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    # `citation_id` is the join key. F-8.7-A04, card 57 (2026-10-09): for a
+    # request that reads `placement`, the listing's citations go out before
+    # the writer, and one the summary also cites is sent again once the
+    # summary is checked: the same id, number, record and every other field,
+    # with `claim_text` grown by the words each summary sentence was checked
+    # against. A surface keeps one per id, the later in the earlier one's
+    # place (`contracts.token_order.one_per_citation_id`); a repeat that
+    # changes anything but `claim_text` is never an update.
     citation_id: str = Field(..., max_length=64)
     display_index: int = Field(..., ge=1)
     source: str = Field(..., max_length=128)

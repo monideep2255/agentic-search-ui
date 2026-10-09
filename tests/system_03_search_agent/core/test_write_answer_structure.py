@@ -44,7 +44,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from system_03_search_agent.contracts.query import Query, RequestContext
-from system_03_search_agent.contracts.token_order import in_reading_order
+from system_03_search_agent.contracts.token_order import in_reading_order, one_per_citation_id
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
@@ -198,8 +198,15 @@ def _listing_arrived_first(result) -> bool:
     return bool(tokens) and tokens[0].get("placement") == "listing"
 
 
+def _citation_payloads(result) -> list[dict]:
+    """The citations as every surface reads them (F-8.7-A04, card 57): one
+    per citation id, a listing citation sent again with its checked words in
+    the first one's place."""
+    return one_per_citation_id(e.payload for e in result["events"] if e.type == "citation")
+
+
 def _sources(result) -> list[str]:
-    return sorted(e.payload["source_id"] for e in result["events"] if e.type == "citation")
+    return sorted(payload["source_id"] for payload in _citation_payloads(result))
 
 
 def _tables(tokens: list[dict]) -> list[tuple[list[str], list[dict]]]:
@@ -735,7 +742,7 @@ def _rows(result) -> list[dict]:
 
 
 def _citation_ids(result) -> list[str]:
-    return sorted(e.payload["citation_id"] for e in result["events"] if e.type == "citation")
+    return sorted(payload["citation_id"] for payload in _citation_payloads(result))
 
 
 def _done(result) -> dict:

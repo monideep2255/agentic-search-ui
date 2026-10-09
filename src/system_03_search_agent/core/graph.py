@@ -488,6 +488,7 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import SessionMemorySummary
+from system_03_search_agent.contracts.token_order import updates_citation
 from system_03_search_agent.core import (
     accession,
     breadth_plan,
@@ -14474,13 +14475,27 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             grounding, findings, layer2_raw_outputs, layer3_raw_outputs
         )
         if listing_sent:
-            # Build phase 8.7, card 50: a citation already on screen is the
-            # one the answer keeps, exactly as it was sent. Its number
-            # cannot differ (the listing's claims lead the merged claims,
-            # see the listing merge above); the payload is kept too, so no
-            # surface is ever told two things about one chip.
+            # Build phase 8.7, card 50: a citation already on screen keeps
+            # its number, record and link exactly as they were sent. Its
+            # number cannot differ (the listing's claims lead the merged
+            # claims, see the listing merge above).
+            #
+            # F-8.7-A04, card 57: its `claim_text` may grow. A record the
+            # summary also cites carries the words each summary sentence was
+            # checked against, joined after the listing row's own words, so
+            # its chip shows what supports the sentence a reader is
+            # checking. That payload is sent again below with the same id;
+            # every surface keeps the later one in the earlier one's place
+            # (`contracts.token_order.one_per_citation_id`). Anything else
+            # that differs keeps the payload as sent, so no surface is ever
+            # told two things about one chip.
             sent_by_id = {citation.citation_id: citation for citation in listing_citations}
-            citations = [sent_by_id.get(c.citation_id, c) for c in citations]
+            citations = [
+                c
+                if c.citation_id not in sent_by_id or updates_citation(sent_by_id[c.citation_id], c)
+                else sent_by_id[c.citation_id]
+                for c in citations
+            ]
         # T-3.4-07, Section 7.2: floor a conflicted claim's outcome at
         # `flag` AFTER citations exist (it needs their `source_url` for
         # `ConflictResult`) and BEFORE the answer-level aggregate below, so
@@ -14949,11 +14964,16 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         for token in note_tokens:
             sink.emit_live("token", _with_placement(token, _PLACEMENT_LISTING, reads_placement))
 
-        # The listing's citations went out with it; only the ones the prose
-        # added are new.
-        sent_ids = {citation.citation_id for citation in listing_citations} if listing_sent else set()
+        # The listing's citations went out with it. New here: the ones the
+        # prose added, and a listing citation whose checked words the
+        # summary added to (F-8.7-A04), sent again with its own id.
+        sent_by_id = (
+            {citation.citation_id: citation for citation in listing_citations}
+            if listing_sent
+            else {}
+        )
         for citation in citations:
-            if citation.citation_id in sent_ids:
+            if sent_by_id.get(citation.citation_id) == citation:
                 continue
             sink.emit_live("citation", citation)
 

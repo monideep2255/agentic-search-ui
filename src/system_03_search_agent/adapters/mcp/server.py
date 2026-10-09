@@ -141,7 +141,7 @@ from system_03_search_agent.contracts.events import (
     TrustSignalPayload,
 )
 from system_03_search_agent.contracts.query import Query, RequestContext
-from system_03_search_agent.contracts.token_order import joined_text
+from system_03_search_agent.contracts.token_order import joined_text, one_per_citation_id
 from system_03_search_agent.core.persona import persona_for_session
 from system_03_search_agent.core.run_registry import (
     ConcurrentRunCapExceededError,
@@ -1136,6 +1136,7 @@ async def _fold_run_to_response(
     answer_parts: list[TokenPayload] = []
     citations: list[CitationPayload] = []
     citation_events_seen = 0
+    citation_ids_seen: set[str] = set()
     answer_trust_signal: TrustSignalPayload | None = None
     claim_trust_signals: list[TrustSignalPayload] = []
     terminal_trust_outcome: Literal["answer", "flag", "ask", "refuse"] | None = None
@@ -1167,9 +1168,20 @@ async def _fold_run_to_response(
                 elif event.type == "token":
                     answer_parts.append(TokenPayload(**event.payload))
                 elif event.type == "citation":
-                    citation_events_seen += 1
-                    if len(citations) < _MAX_CITATIONS:
-                        citations.append(CitationPayload(**event.payload))
+                    # F-8.7-A04, card 57: one row per citation id. A citation
+                    # the listing sent early is sent again once the summary
+                    # is checked, its checked words grown; that payload takes
+                    # the earlier one's place, so the agent reads the words
+                    # each sentence was checked against and never one source
+                    # twice. Counted once per id, for the cap's disclosure.
+                    citation = CitationPayload(**event.payload)
+                    if citation.citation_id not in citation_ids_seen:
+                        citation_ids_seen.add(citation.citation_id)
+                        citation_events_seen += 1
+                        if len(citations) < _MAX_CITATIONS:
+                            citations.append(citation)
+                    elif any(kept.citation_id == citation.citation_id for kept in citations):
+                        citations = one_per_citation_id([*citations, citation])
                 elif event.type == "trust_signal":
                     candidate = TrustSignalPayload(**event.payload)
                     if candidate.scope == "answer":

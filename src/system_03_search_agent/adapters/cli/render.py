@@ -180,6 +180,7 @@ from system_03_search_agent.contracts.events import (
 from system_03_search_agent.contracts.token_order import (
     LISTING,
     joined_text,
+    updates_citation,
 )
 
 if TYPE_CHECKING:
@@ -898,6 +899,13 @@ class Renderer:
         payload = CitationPayload.model_validate(event.payload)
         self._citations_seen += 1
         existing = self._citations.get(payload.citation_id)
+        if existing is not None and updates_citation(existing, payload):
+            # F-8.7-A04, card 57: the same citation sent again once the
+            # summary is checked, only its checked words grown. Its number,
+            # record and link are what is on screen already, so it takes the
+            # earlier one's place, with no warning.
+            self._citations[payload.citation_id] = payload
+            return
         if existing is not None and existing != payload:
             # F-4.2-A-19: a second `citation` event citing an id already
             # bound to a DIFFERENT source is a conflicting redefinition.
@@ -1351,8 +1359,12 @@ class JsonRenderer:
     def _handle_citation(self, event: Event) -> None:
         payload = CitationPayload.model_validate(event.payload)
         self._citations_seen += 1
-        # The first source for an id wins, as in `Renderer` (F-4.2-A-19).
-        self._citations.setdefault(payload.citation_id, payload)
+        # The first source for an id wins, as in `Renderer` (F-4.2-A-19),
+        # except the same citation sent again with its checked words grown
+        # (F-8.7-A04, card 57), which takes the earlier one's place.
+        existing = self._citations.get(payload.citation_id)
+        if existing is None or updates_citation(existing, payload):
+            self._citations[payload.citation_id] = payload
 
     def _handle_trust_signal(self, event: Event) -> None:
         payload = TrustSignalPayload.model_validate(event.payload)
