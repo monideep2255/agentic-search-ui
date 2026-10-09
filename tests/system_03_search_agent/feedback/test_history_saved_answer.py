@@ -141,6 +141,21 @@ def _stored_answer(trace_id: str) -> str | None:
     return row[0]
 
 
+def _stored_tier(trace_id: str) -> str | None:
+    """Read `risk_tier` straight from the table (card 71)."""
+    engine = sa.create_engine(USER_DB_URL)
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(
+                sa.text("SELECT risk_tier FROM interactions WHERE trace_id = :t"),
+                {"t": trace_id},
+            ).first()
+    finally:
+        engine.dispose()
+    assert row is not None, f"the seed for {trace_id} never reached the table"
+    return row[0]
+
+
 def _account() -> str:
     return f"user:{uuid.uuid4()}"
 
@@ -348,6 +363,7 @@ async def test_forgetting_clears_one_accounts_answers_and_nobody_elses() -> None
         answer_markdown=_ANSWER,
         audience_depth="researcher",
         user_id=leaving,
+        risk_tier="high",
     )
     kept = await _seed(
         owner_id=owner_staying,
@@ -355,18 +371,23 @@ async def test_forgetting_clears_one_accounts_answers_and_nobody_elses() -> None
         answer_markdown=_ANSWER,
         audience_depth="researcher",
         user_id=staying,
+        risk_tier="high",
     )
     # POPULATE CHECK: both accounts really had a saved answer to begin with.
     assert _stored_answer(gone) == _ANSWER
     assert _stored_answer(kept) == _ANSWER
+    assert _stored_tier(gone) == "high"
 
     cleared = forget_saved_answers_for_account(leaving)
     assert cleared == 1
 
     assert _stored_answer(gone) is None
+    # J-71T-06: the tier goes with the account's answer.
+    assert _stored_tier(gone) is None
     assert get_saved_answer(owner_id=owner_leaving, trace_id=gone) is None
     # The other account is untouched.
     assert _stored_answer(kept) == _ANSWER
+    assert _stored_tier(kept) == "high"
     assert get_saved_answer(owner_id=owner_staying, trace_id=kept) is not None
 
 

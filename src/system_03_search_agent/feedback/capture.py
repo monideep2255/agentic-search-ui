@@ -40,7 +40,11 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.query import Query
 from system_03_search_agent.core.session_memory import _account_uuid, session_row_key
-from system_03_search_agent.feedback.contracts import MAX_CITATIONS_PER_ANSWER, InteractionRow
+from system_03_search_agent.feedback.contracts import (
+    MAX_CITATIONS_PER_ANSWER,
+    MAX_RISK_TIER_CHARS,
+    InteractionRow,
+)
 from system_03_search_agent.feedback.coverage import coverage_tags_for
 from system_03_search_agent.feedback.rubric import rubric_outcome_for
 
@@ -256,28 +260,43 @@ _RISK_ORDER = ("low", "moderate", "high", "critical")
 def worst_risk_tier_from(events: list[Event]) -> str | None:
     """The worst `risk_tier` over the run's `trust_signal` events, or None.
 
-    The same reduction the live answer uses to build its "High-risk claim"
-    tag, so a reopened answer shows what the live one showed. None when the
-    run emitted no usable `trust_signal`: the stored value then means "not
-    recorded" and the saved screen shows no tag.
+    The live answer's reduction, step for step (`frontend/src/hooks/
+    useRunView.ts`, `worstRisk`), so a reopened answer shows what the live
+    one showed:
+
+    - Every `trust_signal` takes part, whatever its tier holds. Nothing is
+      filtered out first: live does not filter, so an empty tier ranks as
+      unrecognised there and here (J-71T-01, A-71T-01).
+    - A tier not in `_RISK_ORDER` outranks every known one.
+    - The first event starts the reduction and a later one replaces it only
+      when it ranks strictly higher, so of two unrecognised tiers the
+      earlier wins, as `reduce` without a seed does.
+
+    Stored as found, an empty string included (live shows no tag for it,
+    and neither does the saved screen). None when the run emitted no
+    `trust_signal`, and None when the worst tier is not a string of at most
+    `MAX_RISK_TIER_CHARS`: such a tier cannot come from a validated event,
+    and storing None loses only the tag, never the saved answer
+    (A-71T-03).
     """
     tiers = [
-        tier
-        for event in events
-        if event.type == "trust_signal"
-        for tier in [event.payload.get("risk_tier")]
-        if isinstance(tier, str) and tier
+        event.payload.get("risk_tier") for event in events if event.type == "trust_signal"
     ]
     if not tiers:
         return None
 
-    def rank(tier: str) -> int:
-        return _RISK_ORDER.index(tier) if tier in _RISK_ORDER else len(_RISK_ORDER)
+    def rank(tier: object) -> int:
+        for index, known in enumerate(_RISK_ORDER):
+            if tier == known:
+                return index
+        return len(_RISK_ORDER)
 
     worst = tiers[0]
     for tier in tiers[1:]:
         if rank(tier) > rank(worst):
             worst = tier
+    if not isinstance(worst, str) or len(worst) > MAX_RISK_TIER_CHARS:
+        return None
     return worst
 
 

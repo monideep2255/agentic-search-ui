@@ -246,7 +246,9 @@ class Interaction(Base):
     #: card 71), the value the live answer's "High-risk claim" tag is built
     #: from. NULL means "not recorded" (a row saved before 0011, a guest's
     #: row, a run that saved no answer) and a reader shows NO tag for it,
-    #: never a low-risk one. Length-bounded to 16, like the wire field.
+    #: never a low-risk one. No database CHECK: the 16-character bound is
+    #: enforced in code (`feedback/capture.py`), which stores None for a tier
+    #: outside it rather than lose the row (A-71T-03, A-71T-11).
     risk_tier: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     experiment_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
@@ -291,10 +293,6 @@ class Interaction(Base):
             "audience_depth IS NULL OR audience_depth IN "
             "('clinical_brief','researcher','deep_technical','plain_language')",
             name="ck_interactions_audience_depth",
-        ),
-        CheckConstraint(
-            "risk_tier IS NULL OR char_length(risk_tier) <= 16",
-            name="ck_interactions_risk_tier_length",
         ),
         Index("idx_interactions_created_at", "created_at"),
         Index("idx_interactions_user_id", "user_id"),

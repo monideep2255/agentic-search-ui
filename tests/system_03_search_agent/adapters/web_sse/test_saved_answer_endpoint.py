@@ -503,3 +503,8 @@ def test_the_response_model_bounds_every_field() -> None:
     assert _max_length("citations") == 100
     assert _max_length("trust_signal") == 20
     assert _max_length("trust_line") == 200
+    # J-71T-07: the wire bound matches capture's, so a tier the wire would
+    # refuse is never stored. Mutation: loosening it to 1000 turns this red.
+    from system_03_search_agent.feedback.contracts import MAX_RISK_TIER_CHARS
+
+    assert _max_length("risk_tier") == MAX_RISK_TIER_CHARS

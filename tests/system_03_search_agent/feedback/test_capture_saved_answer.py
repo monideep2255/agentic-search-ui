@@ -584,3 +584,100 @@ def test_an_unrecognised_risk_tier_outranks_the_known_ones_as_on_the_live_answer
     assert worst_risk_tier_from([_trust_signal("low"), _trust_signal("moderate")]) == "moderate"
     assert worst_risk_tier_from([_trust_signal("high"), _trust_signal("brand-new")]) == "brand-new"
     assert worst_risk_tier_from([]) is None
+
+
+# ---------------------------------------------------------------------------
+# Card 71 fix round: capture reduces tiers exactly as the live answer does.
+# ---------------------------------------------------------------------------
+
+PARITY_FIXTURE = REPO_ROOT / "frontend" / "e2e" / "fixtures" / "card71_risk_tier_parity.json"
+
+
+def _parity_cases() -> list[dict]:
+    cases = json.loads(PARITY_FIXTURE.read_text())["cases"]
+    # POPULATE CHECK: an emptied fixture would pass every arm below.
+    assert len(cases) >= 10
+    return cases
+
+
+@pytest.mark.parametrize(
+    "case", _parity_cases(), ids=lambda case: ",".join(case["tiers"]) or "none"
+)
+def test_capture_stores_the_tier_the_live_reduction_picks(case) -> None:
+    """J-71T-01, A-71T-01, A-71T-07. The same event lists the frontend's
+    `riskTag.parity.test.tsx` feeds to the live view; that test checks the
+    live screen and the saved screen agree when the saved row holds `stored`.
+
+    Mutation: restoring the `and tier` filter (an empty tier dropped before
+    the reduction) turns the `high,` and `,high` cases red.
+    """
+    from system_03_search_agent.feedback.capture import worst_risk_tier_from
+
+    events = [_trust_signal(tier) for tier in case["tiers"]]
+    assert worst_risk_tier_from(events) == case["stored"]
+
+
+def test_an_empty_tier_beside_high_stores_the_empty_tier_with_the_answer(real_run_events) -> None:
+    """A-71T-01: live shows no tag for `["high", ""]`, so the saved row must
+    not hold "high". The empty tier is stored as found, so the saved screen
+    still knows a trust check ran."""
+    row = assemble_interaction(
+        _query(_ACCOUNT), [*real_run_events, _trust_signal("high"), _trust_signal(""), _done()]
+    )
+    assert row is not None
+    assert row.answer_markdown is not None  # POPULATE CHECK
+    assert row.risk_tier == ""
+
+
+def test_an_over_long_tier_saves_the_answer_with_a_null_tier(real_run_events) -> None:
+    """A-71T-03, J-71T-07: a 17-character tier, which a validated event
+    refuses, reaches capture only through an unvalidated payload. It must
+    cost the row its tag, never the row: before the fix `assemble_interaction`
+    raised and the saved answer was lost.
+
+    Mutation: removing the length check in `worst_risk_tier_from` turns this
+    red with a ValidationError.
+    """
+    from system_03_search_agent.feedback.contracts import MAX_RISK_TIER_CHARS
+
+    long_tier = "b" * (MAX_RISK_TIER_CHARS + 1)
+    assert len(long_tier) == 17
+    unvalidated = Event.model_construct(
+        type="trust_signal",
+        version="v1",
+        trace_id="trace-saved",
+        seq=next(_SEQ),
+        ts=datetime.now(UTC),
+        payload={"outcome": "answer", "risk_tier": long_tier, "grounded": True},
+    )
+    row = assemble_interaction(_query(_ACCOUNT), [*real_run_events, unvalidated, _done()])
+    assert row is not None
+    assert row.answer_markdown is not None
+    assert row.risk_tier is None
+
+    at_bound = assemble_interaction(
+        _query(_ACCOUNT),
+        [*real_run_events, _trust_signal("c" * MAX_RISK_TIER_CHARS), _done()],
+    )
+    assert at_bound is not None
+    assert at_bound.risk_tier == "c" * MAX_RISK_TIER_CHARS
+
+
+def test_the_interaction_row_refuses_a_tier_over_the_bound() -> None:
+    """J-71T-07: the model's bound is the shared constant, and it holds."""
+    from pydantic import ValidationError
+
+    from system_03_search_agent.feedback.contracts import MAX_RISK_TIER_CHARS, InteractionRow
+
+    assert MAX_RISK_TIER_CHARS == 16
+    base = {
+        "trace_id": "t",
+        "owner_id": _ACCOUNT,
+        "query_text": "q",
+        "query_class": "lookup",
+        "trust_signal": "answer",
+        "rubric_outcome": "pass",
+    }
+    assert InteractionRow(**base, risk_tier="x" * 16).risk_tier == "x" * 16
+    with pytest.raises(ValidationError):
+        InteractionRow(**base, risk_tier="x" * 17)

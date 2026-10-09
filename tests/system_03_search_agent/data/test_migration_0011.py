@@ -7,12 +7,17 @@ check in `test_migration.py` cannot see a column-only migration.
 
 Exercised:
 
-- The column exists after `upgrade head`, TEXT, nullable, no default.
-- The database accepts a 16-character tier and refuses a 17-character one.
+- The column exists after `upgrade head`, TEXT, nullable, no default, and
+  with no CHECK constraint (card 71 fix round: the bound lives in code,
+  `feedback/capture.py`, so a long tier costs the tag and never the row).
 - A row inserted without the column is legal and reads back NULL (an old row).
-- The DOWNGRADE removes the column and its constraint, one revision, inspected
-  either side, and the round trip repeats.
-- The column the migration adds is the column the ORM declares.
+- The upgrade over a table that already holds rows keeps every row, each
+  with a NULL tier, and the downgrade over rows that hold a tier keeps
+  every row too (J-71T-05).
+- The DOWNGRADE removes the column, one revision, inspected either side, and
+  the round trip repeats.
+- The column the migration adds is the column the ORM declares, and the ORM
+  declares no constraint the migration does not add.
 
 NOT exercised: what capture stores (`feedback/test_capture_saved_answer.py`)
 and what the endpoint serves (`feedback/test_history_saved_answer.py`).
@@ -151,8 +156,9 @@ REVISION = "0011_interactions_risk_tier"
 PREVIOUS_REVISION = "0010_interactions_saved_answer"
 TABLE = "interactions"
 COLUMN = "risk_tier"
+#: The CHECK the first build added and the fix round removed. Every arm
+#: asserts it is absent, so it cannot come back unseen.
 LENGTH = "ck_interactions_risk_tier_length"
-MAX_RISK_TIER_CHARS = 16
 
 
 def _insert(engine: sa.engine.Engine, **overrides) -> None:
@@ -181,7 +187,21 @@ def test_the_revision_still_sits_directly_on_top_of_0010() -> None:
     spec.loader.exec_module(module)
     assert module.revision == REVISION
     assert module.down_revision == PREVIOUS_REVISION
-    assert module.MAX_RISK_TIER_CHARS == MAX_RISK_TIER_CHARS
+
+
+def test_the_rollback_plan_names_the_order_downgrade_first_then_the_previous_build() -> None:
+    """A-71T-05, J-71T-10: the written plan an operator follows. The previous
+    build cannot start once 0011 has run, and this build cannot serve after
+    the downgrade, so the plan must say downgrade first, then redeploy at
+    once. Mutation: restoring the first build's plan ("drops the constraint
+    and then the column ... shows no tag") turns this red."""
+    path = REPO_ROOT / "alembic" / "versions" / "0011_interactions_risk_tier.py"
+    doc = path.read_text().split('"""')[1]
+    plan = doc.split("## Rollback plan", 1)[1].split("## ", 1)[0]
+    downgrade_at = plan.index(f"alembic downgrade {PREVIOUS_REVISION}")
+    redeploy_at = plan.index("redeploy the previous build")
+    assert downgrade_at < redeploy_at
+    assert "reopening any saved answer fails" in plan
 
 
 def test_the_column_exists_after_upgrade_nullable_with_no_default(migrated_head) -> None:
@@ -193,26 +213,71 @@ def test_the_column_exists_after_upgrade_nullable_with_no_default(migrated_head)
         assert isinstance(columns[COLUMN]["type"], sa.Text)
         assert columns[COLUMN]["nullable"] is True
         assert columns[COLUMN]["default"] is None
-        assert LENGTH in _check_constraint_names(engine)
+        assert LENGTH not in _check_constraint_names(engine)
     finally:
         engine.dispose()
 
 
-def test_an_old_row_reads_null_and_the_bound_is_enforced(migrated_head) -> None:
+def test_an_old_row_reads_null_and_the_database_refuses_no_tier(migrated_head) -> None:
+    """The database holds no bound: a value over 16 characters is not a
+    reason to lose a row there. Capture never writes one (it stores NULL)."""
     engine = _fresh_engine()
     try:
         _insert(engine)  # an old-shape row: names no risk_tier
         _insert(engine, risk_tier="high")
-        _insert(engine, risk_tier="x" * MAX_RISK_TIER_CHARS)
+        _insert(engine, risk_tier="x" * 17)
         with engine.connect() as conn:
             stored = sorted(
                 (r[0] or "") for r in conn.execute(text("SELECT risk_tier FROM interactions"))
             )
         # POPULATE CHECK: all three landed, the old one as NULL.
-        assert stored == ["", "high", "x" * MAX_RISK_TIER_CHARS]
-        with pytest.raises(sa.exc.IntegrityError) as excinfo:
-            _insert(engine, risk_tier="x" * (MAX_RISK_TIER_CHARS + 1))
-        assert LENGTH in str(excinfo.value)
+        assert stored == ["", "high", "x" * 17]
+    finally:
+        engine.dispose()
+
+
+def test_the_migration_keeps_every_row_of_a_populated_table_both_ways(migrated_head) -> None:
+    """J-71T-05: upgrade over rows saved before 0011, then downgrade over
+    rows that hold a tier. No row is lost either way."""
+    cfg = migrated_head
+    command.downgrade(cfg, PREVIOUS_REVISION)
+    engine = _fresh_engine()
+    try:
+        assert COLUMN not in _columns(engine)  # POPULATE CHECK: really at 0010
+        for _ in range(3):
+            _insert(engine)  # rows saved before the column existed
+    finally:
+        engine.dispose()
+
+    command.upgrade(cfg, REVISION)
+    engine = _fresh_engine()
+    try:
+        with engine.connect() as conn:
+            tiers = [r[0] for r in conn.execute(text("SELECT risk_tier FROM interactions"))]
+        assert tiers == [None, None, None]
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "UPDATE interactions SET risk_tier = 'high' WHERE trace_id = "
+                    "(SELECT trace_id FROM interactions LIMIT 1)"
+                )
+            )
+        _insert(engine, risk_tier="moderate")
+        with engine.connect() as conn:
+            held = conn.execute(
+                text("SELECT count(*) FROM interactions WHERE risk_tier IS NOT NULL")
+            ).scalar_one()
+        assert held == 2  # POPULATE CHECK: the downgrade below drops real tiers
+    finally:
+        engine.dispose()
+
+    command.downgrade(cfg, PREVIOUS_REVISION)
+    engine = _fresh_engine()
+    try:
+        assert COLUMN not in _columns(engine)
+        with engine.connect() as conn:
+            count = conn.execute(text("SELECT count(*) FROM interactions")).scalar_one()
+        assert count == 4
     finally:
         engine.dispose()
 
@@ -233,7 +298,6 @@ def test_downgrade_removes_the_column_and_its_constraint_and_the_round_trip_repe
         after = _columns(engine)
         assert COLUMN not in after
         assert "trace_id" in after and "answer_markdown" in after
-        assert LENGTH not in _check_constraint_names(engine)
     finally:
         engine.dispose()
 
@@ -241,7 +305,7 @@ def test_downgrade_removes_the_column_and_its_constraint_and_the_round_trip_repe
     engine = _fresh_engine()
     try:
         assert COLUMN in _columns(engine)
-        assert LENGTH in _check_constraint_names(engine)
+        assert LENGTH not in _check_constraint_names(engine)
     finally:
         engine.dispose()
 
@@ -253,3 +317,8 @@ def test_the_orm_declares_the_column_the_migration_adds() -> None:
     column = Interaction.__table__.columns[COLUMN]
     assert column.nullable is True
     assert isinstance(column.type, sa.Text)
+    # The ORM declares no bound the migration does not add (J-71T-07).
+    names = {constraint.name for constraint in Interaction.__table__.constraints}
+    assert "ck_interactions_audience_depth" in names  # POPULATE CHECK
+    assert LENGTH not in names
+    assert not any("risk_tier" in str(getattr(c, "sqltext", "")) for c in Interaction.__table__.constraints)

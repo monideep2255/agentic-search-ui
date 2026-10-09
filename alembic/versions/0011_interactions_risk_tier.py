@@ -8,9 +8,9 @@ Card 71. What a person gets: an answer that showed the "High-risk claim" tag
 when it was live shows the same tag when they reopen it from history. An
 answer saved before this change shows no tag, rather than a wrong one.
 
-WHAT THIS ADDS: one nullable column and one CHECK constraint on
-`interactions`. No column is dropped, no column's meaning changes, no
-existing row is rewritten, and there is no backfill.
+WHAT THIS ADDS: one nullable column on `interactions`. No column is
+dropped, no column's meaning changes, no existing row is rewritten, and
+there is no backfill.
 
 - `risk_tier TEXT NULL`: the worst risk tier of the run's `trust_signal`
   events, the value the live answer's tag is built from
@@ -20,29 +20,44 @@ existing row is rewritten, and there is no backfill.
 
 The product owner approved this one migration on 2026-10-08.
 
-## The bound
+## The bound lives in code, not in a CHECK
 
-`ck_interactions_risk_tier_length` limits the value to 16 characters, the
-same bound `TrustSignalPayload.risk_tier` carries (`max_length=16`). It is a
-length bound and not a list of tiers on purpose. The wire field is a bare
-string, the live tag treats an unrecognised tier as the most severe, and a
-CHECK on a fixed list would make the database refuse a saved answer the day
-the backend names a new tier. Capture is best-effort, so that refusal would
-silently lose the whole saved answer. The tiers that exist today are `low`,
-`high` and `unknown`; the live code also ranks `moderate` and `critical`.
+The tier is at most 16 characters, the bound `TrustSignalPayload.risk_tier`
+carries (`max_length=16`). Capture enforces it (`feedback/capture.py`,
+`feedback/contracts.py`'s `MAX_RISK_TIER_CHARS`): a tier outside it is
+stored as NULL, so the reopened answer loses only its tag, never the saved
+answer. The first build also added a database CHECK. The fix round removed
+it for two reasons (A-71T-03, A-71T-11, J-71T-04): adding it validated
+every existing row while the ADD COLUMN's exclusive lock was held, and a
+refused value would have failed capture's best-effort write and lost the
+whole saved answer. Without it, this revision is a catalog-only ADD COLUMN
+(nullable, no default), which rewrites and scans nothing.
 
-## Rollback plan
+## Rollback plan, in this order
 
-`downgrade()` drops the constraint and then the column. The only thing lost
-is the stored tier, which no other feature reads; a reopened answer then
-shows no tag, which is exactly what it does today.
+1. Run `alembic downgrade 0010_interactions_saved_answer` from THIS build's
+   code. Only this build's tree has the 0011 file; the previous build's
+   tree cannot read revision 0011 at all.
+2. Then, at once, redeploy the previous build. Never before step 1: the
+   previous build's start command runs `alembic upgrade head`, which fails
+   on an unknown revision 0011, and the service does not start (A-71T-05).
+
+Between the two steps this build is still serving on the old schema, and
+that breaks it: reopening any saved answer fails with a server error,
+because the read selects `risk_tier`, and new searches are not saved to
+history (J-71T-10, A-71T-04). Keep that window to the minutes the redeploy
+takes, and never leave this build serving after a downgrade. `downgrade()`
+itself loses only the stored tiers.
 
 ## Expand-contract
 
-This is the EXPAND half and the whole of the change. The column is nullable
-with no server default and no backfill, so old application code against the
-new schema never names it, and new application code against the old schema
-fails only in capture's best-effort write.
+This is the EXPAND half and the whole of the change. Old application code
+against the new schema never names the column and works unchanged. New
+application code against the old schema does NOT work: it fails every
+saved-answer read and every capture write. A normal deploy never reaches
+that order, because the start command in `railway.json` runs `alembic
+upgrade head` before the server starts; only the rollback window above
+does.
 """
 
 import sqlalchemy as sa
@@ -53,24 +68,13 @@ down_revision = "0010_interactions_saved_answer"
 branch_labels = None
 depends_on = None
 
-_LENGTH = "ck_interactions_risk_tier_length"
-
-#: Mirrors `TrustSignalPayload.risk_tier`'s `max_length`.
-MAX_RISK_TIER_CHARS = 16
-
 
 def upgrade() -> None:
     op.add_column(
         "interactions",
         sa.Column("risk_tier", sa.Text(), nullable=True),
     )
-    op.create_check_constraint(
-        _LENGTH,
-        "interactions",
-        f"risk_tier IS NULL OR char_length(risk_tier) <= {MAX_RISK_TIER_CHARS}",
-    )
 
 
 def downgrade() -> None:
-    op.drop_constraint(_LENGTH, "interactions", type_="check")
     op.drop_column("interactions", "risk_tier")
