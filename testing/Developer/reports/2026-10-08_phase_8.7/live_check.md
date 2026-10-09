@@ -18,7 +18,7 @@ The small finalist check the owner asked for in place of a full bench (`DECISION
 | Records on screen sooner? | Yes, on the streaming path the web app uses: first records at a median 9.3 s (2.9 to 14.1 s), the whole answer at a median 27.3 s (14.1 to 30.9 s) |
 | Does the first sentence answer? | With the Jev classifier on, as develop runs: in 2 of 8 runs a checked sentence leads (the Marfan features question, both modes); in the other 6 the count line leads, as design C keeps it when no accepted sentence answers better |
 | Hidden instructions refused? | Yes, query 88's forged transcript, 2 of 2 |
-| Answers withdrawn? | None of 32 runs lost its summary; outcomes were answer or ask throughout, and refuse only for query 88 and query 75's ask-back |
+| Written summary kept? | Every answered run carried 2 to 8 written paragraphs beyond the count line, by a rough count over the saved answer texts; a withdrawn summary was not measured directly. Outcomes were answer or ask throughout, and refuse only for query 88 and query 75's ask-back |
 
 ## What was run
 
