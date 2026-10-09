@@ -18,8 +18,10 @@ writer run at the same time; a `proceed` pick searches even though the
 writer wrote choices; no usable pick (both models down, or the seam
 raising) searches; an `ask_back` pick whose choices could not be written
 (unparseable, schema-invalid, a failed call, a cap hit) searches, the
-fail-open rule. A four-word question and a short follow-up with session
-memory never reach the decision or the writer.
+fail-open rule. A short follow-up with session memory never reaches the
+decision or the writer. Card 48 (2026-10-09): a longer opening message
+reaches the same decision beside Think's own classification, and its
+choices are written only after an `ask_back` pick.
 
 NOT exercised: `core.clarify`'s own parsing and bounds (`test_clarify.py`
 owns that), `decide()` itself (`tests/system_03_search_agent/harness/
@@ -499,21 +501,185 @@ async def test_ask_back_with_no_usable_choices_searches(
 
 
 # ---------------------------------------------------------------------------
-# The trigger: 1 to 3 words, opening the conversation. Anything else never
-# reaches the ask_back decision or the writer at all.
+# Card 48 (owner, 2026-10-09): a longer opening message reaches the same
+# ask_back decision, beside Think's own classification, and the choices are
+# written only after the decision picks ask_back. A follow-up never reaches
+# it. Every failure searches.
 # ---------------------------------------------------------------------------
+
+_LONG_OPENING = "Tell me about the immune system."
 
 
 @pytest.mark.asyncio
-async def test_four_words_never_reach_ask_back(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_a_longer_opening_message_picked_ask_back_is_asked_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MUTATION PROOF: restoring the old gate (no decision past three
+    words) turns every arm red: the message is searched instead."""
+    _install_tools(monkeypatch)
+    dispatched = _install_models(monkeypatch, clarify_reply=_clarify_reply("the immune system"))
+    asked = _install_decide(monkeypatch, {"think.ask_back": "ask_back"})
+
+    events = await _run(_LONG_OPENING)
+    types = [event.type for event in events]
+    assert "think.ask_back" in asked, asked
+    assert "clarify" in dispatched, dispatched
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] == "What would you like to know about the immune system?"
+    assert think["clarifying_options"] and len(think["clarifying_options"]) == 4
+    assert "tool_start" not in types, types
+    plan = _payload(events, "plan")
+    assert plan is not None and plan["tool_calls"] == []
+
+
+@pytest.mark.asyncio
+async def test_a_longer_opening_message_picked_proceed_never_writes_choices(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A real question costs no writing call: `clarify_reply=None` makes
+    any writer call fail loudly, and it is never made."""
     _install_tools(monkeypatch)
     dispatched = _install_models(monkeypatch, clarify_reply=None)
-    asked = _install_decide(monkeypatch)
+    asked = _install_decide(monkeypatch, {"think.ask_back": "proceed"})
 
     events = await _run("Any trials for GERD?")
+    assert "think.ask_back" in asked, asked
     assert "clarify" not in dispatched, dispatched
-    assert "think.ask_back" not in asked, asked
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
     assert "tool_start" in [event.type for event in events]
+
+
+@pytest.mark.asyncio
+async def test_a_longer_opening_message_writes_choices_only_after_the_decision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MUTATION PROOF: starting the writer beside the decision, as the
+    one-to-three-word path does, puts "writer" before "decided" here."""
+    order: list[str] = []
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=_clarify_reply("the immune system"))
+    _install_decide(monkeypatch, {"think.ask_back": "ask_back"})
+    stubbed_decide = graph_module.decide
+
+    async def _decide(*args: Any, **kwargs: Any) -> DecisionRecord:
+        record = await stubbed_decide(*args, **kwargs)
+        if record.name == "think.ask_back":
+            order.append("decided")
+        return record
+
+    monkeypatch.setattr(graph_module, "decide", _decide)
+    real_writer = graph_module._write_clarify_choices
+
+    async def _writer(*args: Any, **kwargs: Any) -> Any:
+        order.append("writer")
+        return await real_writer(*args, **kwargs)
+
+    monkeypatch.setattr(graph_module, "_write_clarify_choices", _writer)
+
+    events = await _run(_LONG_OPENING)
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"], order
+    assert order == ["decided", "writer"], order
+
+
+@pytest.mark.asyncio
+async def test_a_longer_opening_messages_decision_runs_beside_thinks_classification(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A real question waits for no extra call. The ask_back decision below
+    refuses to answer until Think's own classification has been sent; run
+    before it, the decision would time out, read as no pick, and the
+    message would be searched instead of asked back."""
+    classification_sent = asyncio.Event()
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=_clarify_reply("the immune system"))
+    stubbed_dispatch = harness_module.litellm.acompletion
+
+    async def _dispatch(*args: Any, **kwargs: Any) -> Any:
+        messages = list(kwargs.get("messages") or [])
+        joined = "\n".join(str(message.get("content") or "") for message in messages)
+        if graph_module._THINK_SYSTEM_INSTRUCTION in joined:
+            classification_sent.set()
+        return await stubbed_dispatch(*args, **kwargs)
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", _dispatch)
+    _install_decide(monkeypatch, {"think.ask_back": "ask_back"}, gate=classification_sent)
+
+    events = await _run(_LONG_OPENING)
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("ask_back_pick", "writer_reply"),
+    [
+        (None, None),
+        (RuntimeError("seam down"), None),
+        ("ask_back", "not valid json at all"),
+        ("ask_back", HarnessCallError("simulated timeout", error_class="transient")),
+    ],
+)
+async def test_a_longer_opening_message_fails_open_to_a_search(
+    monkeypatch: pytest.MonkeyPatch, ask_back_pick: Any, writer_reply: Any
+) -> None:
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=writer_reply)
+    _install_decide(monkeypatch, {"think.ask_back": ask_back_pick})
+
+    events = await _run(_LONG_OPENING)
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] is None
+    assert "tool_start" in [event.type for event in events]
+
+
+@pytest.mark.asyncio
+async def test_a_longer_follow_up_never_reaches_ask_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The same text that is asked back as an opening message (the first
+    test above) is never asked back with an earlier turn's memory."""
+    _install_tools(monkeypatch)
+    dispatched = _install_models(monkeypatch, clarify_reply=None)
+    asked = _install_decide(monkeypatch, {"think.ask_back": "ask_back"})
+
+    events = await _run(_LONG_OPENING, memory=_memory_with_tp53())
+    assert "think.ask_back" not in asked, asked
+    assert "clarify" not in dispatched, dispatched
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+
+
+@pytest.mark.asyncio
+async def test_longer_small_talk_never_reaches_ask_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    asked = _install_decide(monkeypatch, {"think.ask_back": "ask_back"})
+
+    await _run("what can you do")
+    assert "think.ask_back" not in asked, asked
+
+
+def test_the_ask_back_criteria_cover_a_general_request_and_keep_real_questions() -> None:
+    """The criterion is the classifier's to apply; this only checks the
+    description now names both readings, so the gate's widening is not
+    asked of a decision whose own words still say "short" and "only names
+    a subject"."""
+    spec = graph_module._ASK_BACK
+    assert "short" not in spec.instructions
+    assert "in general" in spec.criteria["ask_back"]
+    assert "even when its subject is broad" in spec.criteria["proceed"]
+
+
+# ---------------------------------------------------------------------------
+# The one-to-three-word trigger is unchanged: the writer runs beside the
+# decision (above). A follow-up never reaches either.
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio

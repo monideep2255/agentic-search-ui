@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-10-08.
+Last updated: 2026-10-09.
 
 Every entry has the same three parts:
 
@@ -1501,6 +1501,25 @@ What you should see:
 - Known: a model makes the call, not a list, so a borderline word such as `MeSH` can go either way (asked back 2 times in 3).
 - Why it matters: the product owner's words, approving it on 2026-09-23: "If clarify needed -> yes approved". A two-word question like `reflux disease` could mean its symptoms, its trials or its genes, and answering one silent reading of it hides the other three from the reader.
 
+### 109. A broad opening question asks which aspect first (card 48)
+
+Queries to try:
+
+- `Tell me about the tree of life.` and `Tell me about apple trees.`, each as a new search in a fresh conversation.
+- Controls, each in a fresh conversation: `How do birds fly?` and `What genes are associated with cystic fibrosis?`.
+- After one of the first two is asked back, click one of the offered choices.
+- Inside a conversation, after any answer, type `Tell me about apple trees.` as a follow-up.
+
+What you should see:
+
+- The first two show a "What would you like to know about ...?" question with three or four clickable choices written for that subject, and no search has run yet.
+- `How do birds fly?` and the cystic fibrosis question are searched at once, with no question back: each says what it wants to know.
+- Clicking a choice runs an ordinary search on it.
+- The follow-up is answered, never asked back, since the conversation already says what it is about.
+- A real question waits no longer than before. An asked-back question takes two or three seconds more than query 76's short ones, since its choices are written only after the decision to ask.
+- Known: a model makes the call, not a list, so a borderline opening question can go either way.
+- Why it matters: a confident list of papers that sit beside the question is worse than one short question that finds out what the person wants.
+
 ## 12. The overnight build of 2026-09-25
 
 Built overnight from the board's To do column. Everything here is on develop only.
@@ -2010,6 +2029,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 48 | A broad opening question such as "Tell me about the tree of life" asks which aspect is meant; a real question still searches | Query 109 |
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
 | card 67 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now" | Query 100 |
 | card 104 | An answer lists one record once in its tables and Plain language list | Query 107 |
