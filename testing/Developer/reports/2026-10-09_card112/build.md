@@ -8,6 +8,7 @@ Diagnosis: `diagnosis.md` beside this file. In short, `ask` dropped every row wi
 - [Before and after, in the user's words](#before-and-after-in-the-users-words)
 - [Tests](#tests)
 - [Left as it is](#left-as-it-is)
+- [Fix round](#fix-round)
 
 ## What changed
 
@@ -39,3 +40,28 @@ Diagnosis: `diagnosis.md` beside this file. In short, `ask` dropped every row wi
 
 - The rail's highlighted row is found by question text, first match, so with several rows of one question the newest is highlighted. Restored history already held such rows before this change, so nothing new reaches a person.
 - Not checked on the deployed app: no live run was made for this card.
+
+## Fix round
+
+Judge: MERGE. Adversary: PASS on the goal. All changes are in the frontend; no backend change.
+
+- J-112-01, A-112-04: the stopped row's date is now taken when the stop is confirmed, not when the question was sent. The server stores its date when it saves the row after the stop, so this is closer to it. The code comment no longer claims the two are one instant; it says a reload shows the server's date.
+- J-112-02: `ask` keeps the in-tab list to `HISTORY_LIST_LIMIT` (20, the server's `DEFAULT_LIMIT` in `feedback/history.py`; the frontend had no constant, and `fetchHistory` sends no limit), dropping the oldest.
+- J-112-03, A-112-02: the rail highlight is the row's id: this ask's row for a run, the opened row for a saved answer. It no longer matches on question text.
+- J-112-04, J-112-05: new tests in `frontend/src/App.historyAfterStop.test.tsx`, through the real `fetchHistory`. Five were added, with the date and limit and highlight ones.
+
+Red and green:
+
+- On c37c5f1f's `App.tsx`: the date, limit and highlight tests fail (3 failed, 4 passed).
+- After the fix: 7 passed.
+- Failed stop: with `stopConfirmed` reduced to plain `stopped`, the failed-stop test goes red. Restored.
+- Tagging: with the tag matched on question text again, the tagging test stays green. A stray run id on an older bare row has no effect on screen (that row has no saved-answer flag and still re-asks), so no UI test can show it red. The test pins what a person sees, and the rule is held by the code comment only.
+- Whole suite 68 files, 618 tests passed; `npx tsc --noEmit -p .` clean; `npm run build` succeeds; `ruff check` from `<repo-root>` passes.
+
+Left as they are:
+
+- A-112-01: a failed re-ask keeps its bare row (develop also showed one).
+- A-112-03: duplicate trace id inside one server response (before this card).
+- A-112-05: a guest's stop before sign-in keeps a bare row until a reload.
+- A-112-06: a failed run reads like an answered one (before this card).
+- A-112-07: a Stop then a re-ask before the server replies leaves the stopped row bare until a reload.

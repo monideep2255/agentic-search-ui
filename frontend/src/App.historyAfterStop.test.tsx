@@ -50,9 +50,12 @@ vi.mock("./lib/api", async () => {
   };
 });
 
-import { openEventStream } from "./lib/api";
+import { createRun, fetchHistoryAnswer, openEventStream, stopRun } from "./lib/api";
 
 const openEventStreamMock = vi.mocked(openEventStream);
+const createRunMock = vi.mocked(createRun);
+const fetchHistoryAnswerMock = vi.mocked(fetchHistoryAnswer);
+const stopRunMock = vi.mocked(stopRun);
 
 const QUESTION = "Which diseases are associated with BRCA1?";
 
@@ -175,12 +178,27 @@ const railRows = () =>
   within(screen.getByTestId("history-rail"))
     .getAllByRole("button")
     .filter((button) => (button.textContent ?? "").startsWith(QUESTION));
+const allRailRows = () =>
+  within(screen.getByTestId("history-rail"))
+    .getAllByRole("button")
+    .filter((button) => /^(Older question|Which diseases)/.test(button.textContent ?? ""));
+/** The highlighted row is the one whose style class differs from its siblings'. */
+const highlightedIndexes = () => {
+  const classes = railRows().map((row) => row.className);
+  const count = (c: string) => classes.filter((x) => x === c).length;
+  const common = [...classes].sort((x, y) => count(y) - count(x))[0];
+  return railRows().flatMap((row, i) => (row.className === common ? [] : [i]));
+};
 
-async function signInAndAsk(run: ReturnType<typeof openRun>): Promise<void> {
+async function signInAndAsk(
+  run: ReturnType<typeof openRun>,
+  history: { items: unknown[]; count: number } = SERVER_HISTORY,
+  restoredRows = 3,
+): Promise<void> {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () =>
-      new Response(JSON.stringify(SERVER_HISTORY), { status: 200, headers: { "Content-Type": "application/json" } }),
+      new Response(JSON.stringify(history), { status: 200, headers: { "Content-Type": "application/json" } }),
     ),
   );
   openEventStreamMock.mockImplementationOnce(() => run.response);
@@ -192,7 +210,12 @@ async function signInAndAsk(run: ReturnType<typeof openRun>): Promise<void> {
   await user.click(screen.getByRole("button", { name: /^log in$/i }));
   await mainArea().findByRole("textbox", { name: /question/i });
   await screen.findByTestId("history-rail");
-  await waitFor(() => expect(railRows(), "populate-check: the restored history never arrived").toHaveLength(3));
+  await waitFor(() =>
+    expect(
+      restoredRows === 3 ? railRows() : allRailRows(),
+      "populate-check: the restored history never arrived",
+    ).toHaveLength(restoredRows),
+  );
 
   await user.type(mainArea().getByRole("textbox", { name: /question/i }), QUESTION);
   await user.click(mainArea().getByRole("button", { name: /^search the knowledge graph$/i }));
@@ -241,5 +264,119 @@ describe("card 112: earlier searches of the same question stay in the history li
 
     expect(railRows(), "an earlier row of the same question vanished").toHaveLength(4);
     expect(railRows()[0]?.textContent).not.toMatch(/No answer saved/);
+  });
+});
+
+describe("card 112 fix round", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    openEventStreamMock.mockReset();
+    createRunMock.mockReset();
+    createRunMock.mockResolvedValue({ run_id: "run-112", persona_name: "Mendel" } as never);
+    stopRunMock.mockReset();
+    stopRunMock.mockResolvedValue({ stopped: true } as never);
+    fetchHistoryAnswerMock.mockReset();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("a stop whose request failed leaves the row as it was", async () => {
+    stopRunMock.mockRejectedValueOnce(new Error("network down"));
+    const run = openRun(sse(searchAndRecords));
+    await signInAndAsk(run);
+    await userEvent.setup().click(screen.getByRole("button", { name: /^stop$/i }));
+    expect(await screen.findByTestId("run-stopped")).toHaveTextContent("Search stopped");
+    await waitFor(() => expect(stopRunMock).toHaveBeenCalled());
+    expect(railRows()[0]?.textContent, "a failed stop must not write 'No answer saved'").toBe(QUESTION);
+  });
+
+  // Honest limit: reverting the tag to match on question text does NOT turn
+  // this red. A stray run id on an older bare row has no effect on screen
+  // (that row has no saved-answer flag, so it still re-asks). The test pins
+  // what a person can see: the run's own row opens its own run, the bare one
+  // re-asks.
+  it("a run's results are tagged to its own row id, not to an older row of the same question", async () => {
+    createRunMock.mockRejectedValueOnce(new Error("network down"));
+    const run = openRun(sse(searchAndRecords));
+    openEventStreamMock.mockImplementationOnce(() => run.response);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ items: [], count: 0 }), { status: 200, headers: { "Content-Type": "application/json" } }),
+      ),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(navArea().getByRole("button", { name: /log in/i }));
+    await user.type(screen.getByLabelText(/email/i), "person@example.com");
+    await user.type(screen.getByLabelText(/password/i), "correct horse battery staple");
+    await user.click(screen.getByRole("button", { name: /^log in$/i }));
+    await mainArea().findByRole("textbox", { name: /question/i });
+    await screen.findByTestId("history-rail");
+    await user.type(mainArea().getByRole("textbox", { name: /question/i }), QUESTION);
+    await user.click(mainArea().getByRole("button", { name: /^search the knowledge graph$/i }));
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(railRows()).toHaveLength(1));
+    // Ask it again from the rail: the first, bare row stays; the new run is the second row.
+    await user.click(railRows()[0]!);
+    expect(await screen.findByText(/Alpha disease/)).toBeInTheDocument();
+    act(() => run.send(answerAndDone));
+    await screen.findByText(/BRCA1 is linked to inherited breast cancer/);
+    await waitFor(() => expect(railRows()).toHaveLength(2));
+    fetchHistoryAnswerMock.mockImplementation(() => new Promise(() => undefined));
+    // The newest row (this run) opens its saved answer under its own id.
+    await user.click(railRows()[0]!);
+    await waitFor(() => expect(fetchHistoryAnswerMock).toHaveBeenCalledWith("test-token", "run-112"));
+    expect(fetchHistoryAnswerMock).toHaveBeenCalledTimes(1);
+    // The older, bare row never carried a run id, so it re-asks instead of opening a saved answer.
+    createRunMock.mockClear();
+    createRunMock.mockRejectedValueOnce(new Error("network down"));
+    await user.click(railRows()[railRows().length - 1]!);
+    await waitFor(() => expect(createRunMock).toHaveBeenCalled());
+    expect(fetchHistoryAnswerMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("the stopped row's date is the day the stop was confirmed", async () => {
+    const run = openRun(sse(searchAndRecords));
+    await signInAndAsk(run);
+    const user = userEvent.setup();
+    const realNow = Date.now;
+    // The ask was sent on 1 Jan; the stop is confirmed on 3 Jan.
+    vi.spyOn(Date, "now").mockImplementation(() => new Date(2027, 0, 3, 12, 0, 0).getTime());
+    await user.click(screen.getByRole("button", { name: /^stop$/i }));
+    act(() => run.send([CANCELLED]));
+    await screen.findByTestId("run-stopped");
+    await waitFor(() => expect(railRows()[0]?.textContent).toBe(`${QUESTION}No answer saved · Jan 3`));
+    Date.now = realNow;
+    vi.restoreAllMocks();
+  });
+
+  it("with the server's limit of rows shown, a re-ask keeps the list at that limit and drops the oldest", async () => {
+    const items = Array.from({ length: 20 }, (_, i) => ({
+      trace_id: `t-${i}`,
+      question: i === 5 ? QUESTION : `Older question ${i}`,
+      asked_at: "2026-10-08T03:00:00Z",
+      citation_count: 3,
+      has_saved_answer: true,
+    }));
+    const run = openRun(sse(searchAndRecords));
+    await signInAndAsk(run, { items, count: 20 }, 20);
+    expect(allRailRows()).toHaveLength(20);
+    expect(screen.queryByRole("button", { name: /Older question 19/ })).not.toBeInTheDocument();
+  });
+
+  it("opening an older row of a re-asked question highlights that row, not the newest", async () => {
+    const run = openRun(sse(searchAndRecords));
+    await signInAndAsk(run);
+    act(() => run.send(answerAndDone));
+    await screen.findByText(/BRCA1 is linked to inherited breast cancer/);
+    await waitFor(() => expect(railRows()).toHaveLength(4));
+    fetchHistoryAnswerMock.mockImplementation(() => new Promise(() => undefined));
+    const user = userEvent.setup();
+    await user.click(railRows()[3]!);
+    await waitFor(() => expect(fetchHistoryAnswerMock).toHaveBeenCalledWith("test-token", "t-answered-1"));
+    await waitFor(() => expect(highlightedIndexes()).toEqual([3]));
   });
 });
