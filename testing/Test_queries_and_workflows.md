@@ -1501,7 +1501,7 @@ What you should see:
 - Known: a model makes the call, not a list, so a borderline word such as `MeSH` can go either way (asked back 2 times in 3).
 - Why it matters: the product owner's words, approving it on 2026-09-23: "If clarify needed -> yes approved". A two-word question like `reflux disease` could mean its symptoms, its trials or its genes, and answering one silent reading of it hides the other three from the reader.
 
-### 109. A broad opening question asks which aspect first (card 48)
+### 112. A broad opening question asks which aspect first (card 48)
 
 Queries to try:
 
@@ -2029,7 +2029,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
-| card 48 | A broad opening question such as "Tell me about the tree of life" asks which aspect is meant; a real question still searches | Query 109 |
+| card 48 | A broad opening question such as "Tell me about the tree of life" asks which aspect is meant; a real question still searches | Query 112 |
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
 | card 67 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now" | Query 100 |
 | card 104 | An answer lists one record once in its tables and Plain language list | Query 107 |
