@@ -113,6 +113,7 @@ What you should see:
 - During the search step, the scientist at the top says who they are handing off to, and three lines appear naming the graph, the live NCBI records and the literature and trials, each filling in a layer badge as its results arrive.
 - The answer builds on screen sentence by sentence, then settles into short paragraphs, each sentence with its numbered citation chip, plus source cards. Typically 20 to 40 seconds, never more than 90.
 - The answer never opens on a broken sentence.
+- Card 2 and F-8.7-A07: the summary opens with a sentence that answers the question when one of its first two cited sentences does, with the "Found N ... records" line after it; otherwise the "Found N" line opens it. Either way the written summary appears as soon as it is written: choosing its first sentence never holds it back by more than about a second.
 - Any note reads as a grey note after the answer, never first and never styled like a cited sentence.
 - Diseases are named in words that read naturally, such as "Familial breast-ovarian cancer susceptibility 1", never a bare code like `MedGen:C0346153` and never a garbled form like "susceptibility to, 1".
 - Clicking a citation or source link opens an ncbi.nlm.nih.gov page for that record.
@@ -1676,6 +1677,7 @@ What you should see:
 - Every marker in the answer has its line under "References:". No line starts `[unresolved: marker`.
 - No dollar amount appears anywhere.
 - With `--json`, the terminal shows one JSON object and nothing else: the answer, every citation with its source URL, the trust verdict, the trust line, the session id, and `"complete": true`.
+- Card 57 and F-8.7-A04: in the `--json` object, each citation appears once, one entry per number. A citation that a summary sentence cites carries, in its `claim_text`, the record's own row words followed by the record words that sentence was checked against. A record that only the list cites shows only its row words.
 - The capital of France prints "guard: this looks outside biomedical research. Try a gene, variant, pathogen, or paper question." and no answer and no references, the terminal's form of query 45.
 - Why it matters: a researcher who works in a terminal, or a script, should get the same evidence the web shows, cited the same way, without opening a browser.
 
@@ -2015,6 +2017,8 @@ Every feature accounted for, in three tables:
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
+| card 57, F-8.7-A04 | A citation under a summary sentence carries the record words that sentence was checked against, and each citation is listed once | Query 91 |
+| card 2, F-8.7-A07 | The written summary is never held more than about a second while the first sentence is chosen | Query 1 |
 | card 67 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now" | Query 100 |
 | card 104 | An answer lists one record once in its tables and Plain language list | Query 107 |
 | card 103 | No disease cell under the variant-to-disease table is blank without a reason | Query 79 |

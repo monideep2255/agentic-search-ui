@@ -25,7 +25,7 @@
 
 import { useMemo } from "react";
 
-import type { AgentEvent, GuardPayload } from "../lib/events";
+import type { AgentEvent, CitationPayload, GuardPayload } from "../lib/events";
 import { layerNumber } from "../lib/events";
 import { riskTagLabel } from "../lib/riskTag";
 import { deriveStopEnabled } from "../components/chat/StopButton";
@@ -107,6 +107,24 @@ const isSystemNote = (text: string) =>
 import type { ReasoningStep, StepName, ToolCall } from "../components/screens/RunScreen";
 import type { Claim, Source, TrustSignal } from "../components/screens/AnswerScreen";
 import { citedSourceCounts } from "../components/screens/AnswerScreen";
+
+/**
+ * Whether `later` is `earlier` sent again (F-8.7-A04, card 57): the same
+ * citation id and every field equal except `claim_text`, the record words the
+ * citation was checked against, which grow once the summary is checked. The
+ * server's rule, `contracts.token_order.updates_citation`.
+ */
+export function updatesCitation(earlier: CitationPayload, later: CitationPayload): boolean {
+  if (!earlier.citation_id || earlier.citation_id !== later.citation_id) return false;
+  const before = earlier as unknown as Record<string, unknown>;
+  const after = later as unknown as Record<string, unknown>;
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  keys.delete("claim_text");
+  for (const key of keys) {
+    if ((before[key] ?? null) !== (after[key] ?? null)) return false;
+  }
+  return true;
+}
 
 /**
  * How a source reads on a citation chip and a source card.
@@ -551,12 +569,27 @@ export function useRunView(events: AgentEvent[]): RunView {
     //
     // One index map, built once, used by both. A citation that cannot be
     // numbered is not usable as a citation anywhere.
+    //
+    // F-8.7-A04, card 57: one citation per id, and the same citation sent
+    // again takes the first one's place. The server sends the listing's
+    // citations before the summary is written, then sends again each one the
+    // summary also cites, with the same id, number and record and the words
+    // each summary sentence was checked against joined into `claim_text`
+    // (`updatesCitation`). Any other repeat of an id is ignored: the first
+    // stays, since its number may already be on screen.
     const usableIndexes = new Set<number>();
     const citationById = new Map<string, (typeof events)[number]>();
     for (const event of events) {
       if (event.type !== "citation") continue;
       const index = event.payload.display_index;
       if (!Number.isInteger(index) || index < 1) continue;
+      const earlier = citationById.get(event.payload.citation_id);
+      if (earlier !== undefined) {
+        if (earlier.type === "citation" && updatesCitation(earlier.payload, event.payload)) {
+          citationById.set(event.payload.citation_id, event);
+        }
+        continue;
+      }
       if (usableIndexes.has(index)) continue;
       usableIndexes.add(index);
       citationById.set(event.payload.citation_id, event);
@@ -564,13 +597,14 @@ export function useRunView(events: AgentEvent[]): RunView {
 
     const emitted = new Set<number>();
     const sources: Source[] = [];
-    for (const event of events) {
+    // The kept citations, in the order their ids first arrived (a Map keeps
+    // a key's first position when its value is replaced).
+    for (const event of citationById.values()) {
       if (event.type !== "citation") continue;
       const payload = event.payload;
       const index = payload.display_index;
-      // Same rule as the chips above, and deliberately the same set membership:
-      // a citation is either usable everywhere or nowhere.
-      if (!citationById.has(payload.citation_id)) continue;
+      // Same rule as the chips above, and deliberately the same map: a
+      // citation is either usable everywhere or nowhere.
       if (emitted.has(index)) continue;
       emitted.add(index);
       sources.push({

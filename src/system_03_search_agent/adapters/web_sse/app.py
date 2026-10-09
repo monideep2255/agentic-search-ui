@@ -51,6 +51,7 @@ from system_03_search_agent.auth.router import router as auth_router
 from system_03_search_agent.auth.router import source_hash_for_request
 from system_03_search_agent.contracts.events import CitationPayload
 from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.contracts.token_order import names_same_record, one_per_citation_id
 from system_03_search_agent.core.persona import persona_record_for_session
 from system_03_search_agent.core.run_registry import (
     CONCURRENT_RUN_CAP_RETRY_AFTER_S,
@@ -1862,21 +1863,42 @@ async def get_v1_query_citations(
     # through `CitationPayload(...).model_dump()`, so this is not expected
     # to fire; it exists so a future producer's bug degrades to "one
     # citation missing, logged" rather than "the whole export breaks".
-    citation_events_total = sum(1 for event in entry.events if event.type == "citation")
-    citations: list[CitationPayload] = []
+    #
+    # F-8.7-A04, card 57: one row per citation id. A citation the listing
+    # sent early is sent again once the summary is checked, the same
+    # citation with its checked words grown; that payload takes the earlier
+    # one's place (`contracts.token_order.one_per_citation_id`), so the
+    # export lists each source once, with the words each sentence was
+    # checked against, and counts it once against the cap.
+    parsed: list[CitationPayload] = []
     for event in entry.events:
         if event.type != "citation":
             continue
         try:
-            citations.append(CitationPayload(**event.payload))
+            parsed.append(CitationPayload(**event.payload))
         except (TypeError, ValueError):
             logger.warning(
                 "run %s produced a citation event whose payload does not "
                 "match CitationPayload; omitted from the export",
                 run_id,
             )
-        if len(citations) >= _MAX_CITATIONS_PER_RUN:
-            break
+    # A-87F-03: a repeat naming another record under an id already seen is
+    # dropped by the fold below (the first is kept, as it may already be
+    # cited), and the drop leaves a trace naming the id only, never record
+    # text. The export's rows are unchanged.
+    first_by_id: dict[str, CitationPayload] = {}
+    for citation in parsed:
+        first = first_by_id.setdefault(citation.citation_id, citation)
+        if first is not citation and not names_same_record(first, citation):
+            logger.warning(
+                "run %s repeated citation id %r naming a different record; "
+                "the repeat was dropped from the export and the first kept",
+                run_id,
+                citation.citation_id,
+            )
+    one_per_id = one_per_citation_id(parsed)
+    citation_events_total = len(one_per_id)
+    citations = one_per_id[:_MAX_CITATIONS_PER_RUN]
     # F-4.0-A-13 (adversary round 1, build phase 4.0): the local
     # `_MAX_CITATIONS_PER_RUN` break above was unreachable when this was
     # written (verified: `core/graph.py`'s own `_MAX_CITATIONS_PER_ANSWER =

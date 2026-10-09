@@ -32,9 +32,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    SerializerFunctionWrapHandler,
     ValidationError,
-    model_serializer,
     model_validator,
 )
 
@@ -385,6 +383,13 @@ class ToolResultPayload(ToolStartPayload):
     truncated: bool
 
 
+def _placement_is_absent(value: object) -> bool:
+    """True when a token carries no placement, so it is left out of the
+    serialized payload and a request that did not ask for it gets the
+    bytes it got before build phase 8.7 (F-8.7-A01)."""
+    return value is None
+
+
 class TokenPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -441,7 +446,7 @@ class TokenPayload(BaseModel):
     # command line send `POST /v1/query?reads=placement`, and the in-process
     # surfaces (MCP, GraphQL) set `RequestContext.reads_placement`. Every
     # other request gets None here, which is left OUT of the payload when it
-    # is serialized (`_omit_absent_placement`), so its stream is byte for
+    # is serialized (`_placement_is_absent`), so its stream is byte for
     # byte what it was before this phase: no `placement` key, and the
     # listing after the summary. A client built before the field, whose own
     # copy of this model forbids extra keys, therefore never meets it.
@@ -449,21 +454,28 @@ class TokenPayload(BaseModel):
     # Additive per Section 2.6 and `system-design-patterns` pattern 10: a
     # payload without the field validates, and reads as "summary", which is
     # where every token built before this phase rendered.
-    placement: Literal["listing", "summary"] | None = None
-
-    @model_serializer(mode="wrap")
-    def _omit_absent_placement(self, handler: SerializerFunctionWrapHandler) -> Any:
-        """Leave `placement` out of the serialized payload when it is None,
-        so a request that did not ask for it gets today's bytes."""
-        data = handler(self)
-        if isinstance(data, dict) and data.get("placement") is None:
-            data.pop("placement", None)
-        return data
+    #
+    # F-8.7-V01 (2026-10-09): the field leaves itself out when None through
+    # `exclude_if`, not a wrap `model_serializer`. A wrap serializer returns
+    # `Any`, so pydantic could no longer describe what a token serializes to
+    # and `model_json_schema(mode="serialization")` read `{}`. With
+    # `exclude_if` the bytes are the same and the schema is the full object.
+    placement: Literal["listing", "summary"] | None = Field(
+        None, exclude_if=_placement_is_absent
+    )
 
 
 class CitationPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    # `citation_id` is the join key. F-8.7-A04, card 57 (2026-10-09): for a
+    # request that reads `placement`, the listing's citations go out before
+    # the writer, and one the summary also cites is sent again once the
+    # summary is checked: the same id, number, record and every other field,
+    # with `claim_text` grown by the words each summary sentence was checked
+    # against. A surface keeps one per id, the later in the earlier one's
+    # place (`contracts.token_order.one_per_citation_id`); a repeat that
+    # changes anything but `claim_text` is never an update.
     citation_id: str = Field(..., max_length=64)
     display_index: int = Field(..., ge=1)
     source: str = Field(..., max_length=128)
