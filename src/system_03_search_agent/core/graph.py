@@ -529,6 +529,7 @@ from system_03_search_agent.harness.jev_client import (
     call_jev,
 )
 from system_03_search_agent.harness.tiers import Tier, resolve_jev_model
+from system_03_search_agent.observability import audit
 from system_03_search_agent.synthesis.answer_layout import (
     IDENTIFIER_COLUMN_LABEL,
     ISOLATE_ENTITY_TYPE,
@@ -873,7 +874,21 @@ def _step_error_kwargs(step: str, exc: HarnessCallError) -> dict[str, Any]:
 
     `message` is deliberately NOT `str(exc)`: see the module-level note on
     `_STEP_ERROR_END_USER_MESSAGES` above (F-2.0-12).
+
+    Card 85 (F-73-J06): the failure is also logged here, once, as a warning
+    with the trace id, the step, `error_class` and the class of the cause.
+    Never `str(exc)` and never `exc_info`: a provider error can carry the
+    person's own text. The trace id is the run's own, read from the audit
+    ContextVar; a caller outside a run logs `trace_id=none`.
     """
+    cause = exc.__cause__ or exc.__context__
+    logger.warning(
+        "step failed trace_id=%s step=%s error_class=%s cause_class=%s",
+        audit.current_trace_id() or "none",
+        step,
+        exc.error_class,
+        type(cause).__qualname__ if cause is not None else "none",
+    )
     return {
         "fatal": True,
         "scope": "step",

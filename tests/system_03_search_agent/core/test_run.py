@@ -949,9 +949,26 @@ async def test_the_first_line_of_a_crash_record_starts_with_the_whole_trace_id_a
         await _drain(path, query)
 
     first = _crash_text(caplog).splitlines()[0]
-    assert first.startswith("search crashed, trace ")
-    assert query.trace_id in first  # unbroken, on the one line
-    assert len(first) < 80, first
+    assert first.startswith("search crashed trace_id=")
+    assert f"trace_id={query.trace_id}" in first  # unbroken, on the one line
+    assert "error_class=ValueError" in first  # the reason is on the same line (card 85)
+    assert len(first) < 120, first
+
+
+def test_line_one_of_a_crash_record_names_the_trace_id_and_the_error_class(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Card 85 (F-73-V01): one read of line 1 says which search and why."""
+    text = _log_directly(caplog, KeyError("secret user text"))
+    assert text.splitlines()[0] == f"search crashed trace_id={_TRACE} error_class=KeyError"
+    assert "secret user text" not in text
+
+
+def test_a_very_long_class_name_is_cut_on_line_one(caplog: pytest.LogCaptureFixture) -> None:
+    long_class = type("C" * 500, (Exception,), {})
+    text = _log_directly(caplog, long_class())
+    assert "C" * 31 not in text.splitlines()[0]
+    assert len(text.splitlines()[0]) < 120
 
 
 def test_a_very_long_trace_id_still_leaves_a_first_line_under_eighty_characters(
@@ -961,7 +978,7 @@ def test_a_very_long_trace_id_still_leaves_a_first_line_under_eighty_characters(
 
     with caplog.at_level("ERROR", logger=_CRASH_LOGGER):
         _log_crash("t" * 5000, ValueError("x"))
-    assert len(_crash_text(caplog).splitlines()[0]) < 80
+    assert len(_crash_text(caplog).splitlines()[0]) < 120
 
 
 # --- the logger can never raise (J01, A08) ---------------------------------
@@ -988,14 +1005,14 @@ async def test_a_crash_whose_record_cannot_be_built_still_gives_the_person_the_e
     _assert_generic_pair(events)
     text = _crash_text(caplog)
     assert "crash record could not be built" in text
-    assert "trace " in text
+    assert "trace_id=" in text
 
 
 def test_a_record_that_cannot_be_built_logs_one_fallback_line_carrying_the_trace_id(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     text = _log_directly(caplog, _exception_with_no_module())
-    assert text.startswith("search crashed, trace " + _TRACE)
+    assert text.startswith("search crashed trace_id=" + _TRACE)
     assert "crash record could not be built" in text
 
 
@@ -1216,7 +1233,7 @@ def test_the_whole_record_has_a_size_ceiling_and_keeps_its_first_line(
     monkeypatch.setattr(run_module, "_CRASH_LOG_MAX_CHARS", 500)
     text = _log_directly(caplog, _raised(ValueError("x"), depth=20))
     assert len(text) <= 500 + len("\n... record cut at its size limit")
-    assert text.splitlines()[0] == "search crashed, trace " + _TRACE
+    assert text.splitlines()[0] == "search crashed trace_id=" + _TRACE + " error_class=ValueError"
     assert text.endswith("record cut at its size limit")
 
 

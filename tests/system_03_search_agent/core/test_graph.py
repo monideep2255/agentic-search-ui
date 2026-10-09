@@ -3402,6 +3402,56 @@ async def test_step_failure_on_think_routes_to_write_as_a_refusal(
 
 
 # ---------------------------------------------------------------------------
+# Card 85 (F-73-J06): a step failure leaves one log line that says which
+# search, which step and why, and never the exception's message.
+# ---------------------------------------------------------------------------
+
+
+def _step_failure(secret: str) -> harness_module.HarnessCallError:
+    try:
+        try:
+            raise TimeoutError(secret)
+        except TimeoutError as cause:
+            raise harness_module.HarnessCallError(
+                f"model call failed: {secret}", error_class="transient"
+            ) from cause
+    except harness_module.HarnessCallError as caught:
+        return caught
+
+
+def test_a_step_failure_logs_one_warning_with_the_trace_id_step_and_both_classes(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from system_03_search_agent.observability.audit import trace_id_scope
+
+    with (
+        caplog.at_level("WARNING", logger=graph_module.logger.name),
+        trace_id_scope("trace-card85"),
+    ):
+        kwargs = graph_module._step_error_kwargs("think", _step_failure("x"))
+
+    lines = [r.getMessage() for r in caplog.records if "step failed" in r.getMessage()]
+    assert lines == [
+        "step failed trace_id=trace-card85 step=think error_class=transient cause_class=TimeoutError"
+    ]
+    assert kwargs["error_class"] == "transient"  # the event the person gets is unchanged
+
+
+def test_a_step_failure_log_line_never_carries_the_exceptions_message(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    secret = "what is my private diagnosis SECRET-TEXT-123"
+    with caplog.at_level("DEBUG", logger=graph_module.logger.name):
+        graph_module._step_error_kwargs("write", _step_failure(secret))
+
+    assert caplog.records, "the failure must be logged"
+    for record in caplog.records:
+        assert secret not in record.getMessage()
+        assert "SECRET-TEXT-123" not in record.getMessage()
+        assert record.exc_info is None  # a traceback would print the message
+
+
+# ---------------------------------------------------------------------------
 # T-8.1-01: a Think reply that is well-formed JSON but uses a synonym key
 # for `narrative` ("why", "reason", ...) instead of failing outright, is
 # repaired deterministically, and a genuinely unusable reply still never
