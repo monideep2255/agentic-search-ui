@@ -79,10 +79,14 @@ Two traps from the record:
 
 - Paths hold a space. A loop that split `git worktree list` on spaces broke every path and removed nothing locally while the remote deletions went ahead (LEARNINGS, 2026-10-05). Quote every path and read `git worktree list --porcelain` line by line.
 - Remove a merged worktree the same night it merges, so none sits long enough to be evicted (LEARNINGS, 2026-10-08).
+- Downloading an evicted worktree is slow, about 1,000 files in 20 minutes, and asking iCloud for several at once drove the load average to 101 (LEARNINGS, 2026-10-08). Read one worktree's files at a time at low priority (`nice -n 19`), smallest first, and only when no builder is starting.
+- An evicted worktree can lose its index: `git ls-files` lists nothing and every file reads as deleted. Rebuild the index with `git -C <path> reset -q` (it touches no file on disk), then compare any modified file with develop before calling it work (the night of 2026-10-08 to 09, `asu-audit`).
 
 ## Step 3: before the owner sleeps
 
 Ask every foreseeable decision at once through the question tool, one question per decision, recommendation first, each option's cost in plain words, with a phone notification (`decision-cadence`). Whatever is not asked now waits for the morning.
+
+Diagnose before asking. On the night of 2026-10-08, the cards' design and cost questions surfaced only from diagnoses written after the owner slept, so cards 17, 20, 29, 30 and 48 waited until the owner woke at 01:00 and answered a second round (DECISIONS, 2026-10-09). Dispatch the diagnoses of the night's cards first; while they run, ask the questions below; then ask every design or cost choice the diagnoses name, each with its options and costs, before the owner sleeps.
 
 Always ask these:
 
@@ -92,6 +96,8 @@ Always ask these:
 | What happens if a check fails: revert, park, or keep and report? | The owner set both rules for card 101 before sleeping, so the lead never had to guess (DECISIONS, 2026-10-08) |
 | Does tonight run the golden run? The default is no | The owner chose "Test queries only" (DECISIONS, 2026-10-08); `bossman-mode` still says the golden run blocks answer-path changes, so the night's choice is the owner's, stated |
 | May throwaway test accounts be created on develop? | The permission layer refused the lead's first attempt; the owner's yes made it possible (DECISIONS, 2026-10-08) |
+| Which deployment settings may the lead change tonight, by name and value (for example `PER_QUERY_COST_CAP_USD=0.25` on develop's API)? | The permission layer refused a develop setting an earlier decision covered, and the owner's yes in their own words, given on waking, is what let it through (DECISIONS, 2026-10-09). Ask for each setting a merge will need |
+| How much may the night's live checks spend, and is a phase's ceiling separate? | Develop's questions and the build's checks draw on one account; the owner set $20 for a phase and $6, then $8, for everything else (DECISIONS, 2026-10-08 and 2026-10-09) |
 
 Record each answer as a `DECISIONS.md` row the moment it arrives. An approval in the owner's own words, on the record, is what the lead later points to.
 
@@ -117,13 +123,13 @@ Never done overnight, queued for the morning instead:
 
 Follow `bossman-mode` for the dial, the roles and the round budget. Overnight adds these steps:
 
-1. The lead makes the worktree and branch itself: `git worktree add "<path>" -b fix/cardN-short origin/develop`. Agents dispatched with isolation cannot run the project's Python, because the guard misreads the space in the project's path (the lead's practice since 2026-09-27).
+1. The lead makes the worktree and branch itself: `git worktree add "<path>" -b fix/cardN-short origin/develop`. Agents dispatched with isolation cannot run the project's Python, because the guard misreads the space in the project's path (the lead's practice since 2026-09-27). Put every new worktree outside iCloud, under a home folder with no space in its path such as `~/asu-wt/<name>`: seven new worktrees under the Desktop drove the load average to 101 within ten minutes (LEARNINGS, 2026-10-08).
 2. A diagnosis first when the cause is unknown, written to `testing/Developer/reports/<date>_cardN/diagnosis.md`, read by the lead before any builder starts (`bossman-mode`, "Behaviour at every position").
-3. A builder on the ticket, inside its file fence.
+3. A builder on the ticket, inside its file fence. Quote any owner rule the ticket depends on word for word, with its source path, and add no clause to it: a brief that paraphrased the Jev charge rule and added one clause got exactly that clause built, and it was one of three reasons the guardrail was parked (LEARNINGS, 2026-10-08). Tell the builder that a commit held by the guard is left staged and reported: every sub-agent commit was held on the night of 2026-10-08 while the lead's went through, so the lead reviews the staged diff, commits it, and runs `git status` after, since a builder's unstaged files are not in that commit (LEARNINGS, 2026-10-08).
 4. A pull request against develop. Open pull requests a few minutes apart: five at once put twenty CI jobs in the queue and the waiting ones were cancelled, which reads as a failure (LEARNINGS, 2026-10-05).
 5. A fresh judge and a fresh adversary on any card that changes runnable behaviour (`bossman-mode/reference/Review_rounds.md`). A copy or layout card runs neither at position 1, and still gets a fresh verifier before merge, because the overnight merge condition needs one.
 6. At most one fix round, then a fresh verifier.
-7. Merge only when nothing is worse than develop and the card is covered by the owner's approval from Step 3. Card 71's table part was held when its verifier found one narrow thing worse on a phone (DECISIONS, 2026-10-08).
+7. Merge only when nothing is worse than develop and the card is covered by the owner's approval from Step 3. Card 71's table part was held when its verifier found one narrow thing worse on a phone (DECISIONS, 2026-10-08). When the verifier finds something worse and the owner set that bar, the pull request stays open with two options written on it, merge with the items filed as cards or fix them first, as phase 8.7's did (DECISIONS, 2026-10-08).
 8. A regression inside the fix round means revert that fix or park the card, never a third round. Card 54 merged with its fix-round line reverted when the verifier found the line raised a false alarm (DECISIONS, 2026-10-08; `bossman-mode/reference/Review_rounds.md`, Rules 3 and 4).
 
 Never write a migration file, for the reason in Step 4. Card 54 kept its change to one constant with no schema change for exactly this reason (DECISIONS, 2026-10-08).
@@ -141,6 +147,10 @@ After each merge:
 3. Record the result in the card's report folder and the done file's retest list.
 
 The golden run is optional, run only if the owner asks (DECISIONS, 2026-10-08, "Test queries only").
+
+A live check run locally on a branch, before merge, times what a person sees only through `core.run.run_streaming()`, the path the web app uses; `core.run.run()` yields every event at the end and measures cost and content only (LEARNINGS, 2026-10-08). Read the account's credits before and after each run.
+
+A full unit suite that fails only on tests that read or write saved answers is rerun once before the failures count: the suite shares the local user database with every other worktree (LEARNINGS, 2026-10-08).
 
 Throwaway develop accounts need the owner's yes from Step 3. Their sign-in details live in a scratchpad file the script reads by path, never in a command, because the secret scanner blocks credential words in Bash text (LEARNINGS, 2026-07-28). The scratchpad is emptied when a session stops (LEARNINGS, 2026-09-26), so anything the morning needs is committed, never left there.
 
