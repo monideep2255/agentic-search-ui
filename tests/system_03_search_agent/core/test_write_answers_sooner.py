@@ -313,6 +313,74 @@ async def test_a_late_pick_leaves_the_count_line_leading(
     assert time.monotonic() - started < 1.0, "the answer must not wait for a late pick"
 
 
+def _summary_timing(monkeypatch: pytest.MonkeyPatch) -> dict[str, float]:
+    """When the writer's draft came back and when the first summary token
+    left the Write step, on the event loop's clock."""
+    marks: dict[str, float] = {}
+    original_emit_live = graph_module._EventSink.emit_live
+    original_dispatch = graph_module._dispatch_tier_call
+
+    def _emit_live(self, event_type: str, payload: object):
+        if (
+            event_type == "token"
+            and getattr(payload, "kind", None) == "claim"
+            and getattr(payload, "placement", None) in (None, "summary")
+        ):
+            marks.setdefault("first_summary_token", asyncio.get_running_loop().time())
+        return original_emit_live(self, event_type, payload)
+
+    async def _dispatch(*args: object, **kwargs: object):
+        reply = await original_dispatch(*args, **kwargs)  # type: ignore[arg-type]
+        if len(args) > 2 and args[2] == "synth":
+            marks["writer_done"] = asyncio.get_running_loop().time()
+        return reply
+
+    monkeypatch.setattr(graph_module._EventSink, "emit_live", _emit_live)
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", _dispatch)
+    return marks
+
+
+@pytest.mark.asyncio
+async def test_a_slow_pick_never_holds_the_summary_past_jevs_own_answer_time(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None, no_placement_contract: None
+) -> None:
+    """F-8.7-A07: "The written summary no longer waits up to 3.5 s on the
+    classifier's first-sentence pick." The module's own bound, not a patched
+    one, on the event loop's real clock: Jev is made far slower than it ever
+    answers (10 s against its measured 0.3 to 0.8 s), and the first summary
+    token must still leave within the 1 s bound, plus room for the step's
+    own work, of the writer's draft coming back. Before the fix it left
+    3.5 s later. Mutation that turns this red: put
+    `_LEAD_DECISION_MAX_WAIT_S` back to 4.0."""
+    _models(monkeypatch)
+    _jev(monkeypatch, choice="first", delay_s=10.0)
+    marks = _summary_timing(monkeypatch)
+
+    result = await graph_module.write_node(_write_state(audience_depth="researcher"))
+
+    assert {"writer_done", "first_summary_token"} <= set(marks), marks
+    held_s = marks["first_summary_token"] - marks["writer_done"]
+    assert held_s < 1.5, f"the summary waited {held_s:.2f} s on a slow pick"
+    assert _summary_claims(result["events"])[0].startswith(COUNT_LINE_START)
+    assert _lead_record(result["events"]) is None, "a late pick is never recorded as made"
+
+
+@pytest.mark.asyncio
+async def test_a_pick_that_arrives_in_time_still_leads(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """A pick within Jev's measured 0.3 to 0.8 s still leads. Mutation that
+    turns this red: a bound shorter than the pick, such as 0.5 s."""
+    _models(monkeypatch)
+    _jev(monkeypatch, choice="first", delay_s=0.7)
+
+    result = await graph_module.write_node(_write_state(audience_depth="researcher"))
+    claims = _summary_claims(result["events"])
+
+    assert claims[0] == LEAD, claims
+    assert claims[1].startswith(COUNT_LINE_START), claims
+
+
 @pytest.mark.asyncio
 async def test_too_little_budget_asks_nothing(
     monkeypatch: pytest.MonkeyPatch, jev_on: None

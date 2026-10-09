@@ -12612,7 +12612,15 @@ _LEAD_DECISION_MIN_BUDGET_S: Final[float] = 1.5
 #: The longest the answer waits for the lead decision. Jev answers in 0.3 to
 #: 0.8 s (answer speed report, 2026-09-26); a pick later than this is a
 #: late pick, and a late pick leaves the count line leading.
-_LEAD_DECISION_MAX_WAIT_S: Final[float] = 4.0
+#:
+#: F-8.7-A07 (2026-10-09): 4.0 s before, so a slow or failing classifier
+#: held the written summary up to 3.5 s and the count line led anyway. Now
+#: the same 1 s grace phase 8.6 gives every other decision read late
+#: (`_LATE_DECISION_GRACE_S`): Jev's own answer time with room, and no
+#: more. The guard tier stepping in for a failed Jev takes about 2 s, so
+#: its pick leads only when it is that quick; otherwise the count line
+#: leads, as it did before this decision existed.
+_LEAD_DECISION_MAX_WAIT_S: Final[float] = 1.0
 
 
 def _lead_candidates(model_grounding: GroundingResult | None) -> list[int]:
