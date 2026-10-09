@@ -1,0 +1,97 @@
+{
+ "mode": "1280",
+ "depth": "Researcher",
+ "steps": [
+  {
+   "t": "2026-10-09T05:54:40.507Z",
+   "k": "login opened via",
+   "v": "button"
+  },
+  {
+   "t": "2026-10-09T05:54:44.669Z",
+   "k": "signed in, email visible unmasked",
+   "v": false
+  },
+  {
+   "t": "2026-10-09T05:54:44.678Z",
+   "k": "bundle",
+   "v": [
+    "index-NJO4wipr.js"
+   ]
+  },
+  {
+   "t": "2026-10-09T05:54:44.791Z",
+   "k": "health",
+   "v": {
+    "status": "ok",
+    "app_env": "develop"
+   }
+  },
+  {
+   "t": "2026-10-09T05:54:44.807Z",
+   "k": "overflow landing",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 1280
+   }
+  },
+  {
+   "t": "2026-10-09T05:54:44.928Z",
+   "k": "depth pressed",
+   "v": {
+    "depth": "Researcher",
+    "pressed": "true"
+   }
+  },
+  {
+   "t": "2026-10-09T05:54:45.014Z",
+   "k": "asked",
+   "v": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?"
+  },
+  {
+   "t": "2026-10-09T05:57:45.131Z",
+   "k": "no answer within 180 s",
+   "v": null
+  },
+  {
+   "t": "2026-10-09T05:57:48.135Z",
+   "k": "answer text length",
+   "v": 13
+  },
+  {
+   "t": "2026-10-09T05:57:48.135Z",
+   "k": "tables",
+   "v": []
+  },
+  {
+   "t": "2026-10-09T05:57:48.136Z",
+   "k": "overflow after answer",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 1280
+   }
+  },
+  {
+   "t": "2026-10-09T05:57:48.136Z",
+   "k": "email visible unmasked",
+   "v": false
+  },
+  {
+   "t": "2026-10-09T05:57:48.190Z",
+   "k": "screenshot",
+   "v": "1280_answer_viewport.png"
+  },
+  {
+   "t": "2026-10-09T05:57:48.246Z",
+   "k": "screenshot",
+   "v": "1280_answer_full.png"
+  }
+ ],
+ "answer": {
+  "text": "network error",
+  "tables": [],
+  "meta": null
+ }
+}

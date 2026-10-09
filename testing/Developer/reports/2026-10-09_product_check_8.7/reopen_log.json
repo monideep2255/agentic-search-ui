@@ -1,0 +1,164 @@
+{
+ "mode": "reopen",
+ "steps": [
+  {
+   "k": "signed in, email visible unmasked",
+   "v": false
+  },
+  {
+   "k": "bundle",
+   "v": [
+    "index-BUMzWQlH.js"
+   ]
+  },
+  {
+   "k": "rail BRCA1 items",
+   "v": [
+    {
+     "i": 2,
+     "tag": "BUTTON",
+     "text": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 9"
+    },
+    {
+     "i": 3,
+     "tag": "BUTTON",
+     "text": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 9"
+    },
+    {
+     "i": 4,
+     "tag": "BUTTON",
+     "text": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 9"
+    },
+    {
+     "i": 5,
+     "tag": "BUTTON",
+     "text": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 9"
+    },
+    {
+     "i": 8,
+     "tag": "BUTTON",
+     "text": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 9"
+    },
+    {
+     "i": 9,
+     "tag": "BUTTON",
+     "text": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 8"
+    }
+   ]
+  },
+  {
+   "k": "screenshot",
+   "v": "reopen2_1280_0_rail.png"
+  },
+  {
+   "k": "rail rows",
+   "v": [
+    "0: + New search",
+    "1: ",
+    "2: Which diseases are associated with BRCA1? / 21 sources cited · Oct 9",
+    "3: Which diseases are associated with BRCA1? / 21 sources cited · Oct 9",
+    "4: Which diseases are associated with BRCA1? / 21 sources cited · Oct 9",
+    "5: Which diseases are associated with BRCA1? / 21 sources cited · Oct 9",
+    "6: Any trials for GERD? / 12 sources cited · Oct 9",
+    "7: What phenotypic features are associated with Marfan syndrome? / 12 sources cited · Oct 9",
+    "8: Which diseases are associated with BRCA1? / 21 sources cited · Oct 9",
+    "9: Which diseases are associated with BRCA1? / 21 sources cited · Oct 8",
+    "10: What is known about EGFR mutations in non-small cell lung cancer, and what trials are recr"
+   ]
+  },
+  {
+   "k": "target text",
+   "v": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 9"
+  },
+  {
+   "k": "saved answer",
+   "v": {
+    "ms": 2533,
+    "screen": true,
+    "body": "BRCA1 is associated with familial cancer of breast [1], familial breast-ovarian cancer susceptibility 1 [2], pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4].\n\nDISEASE ASSOCIATIONS AND INHERITED RISK\n\nBRCA1 mutations are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers [23]. The gene encodes a 190 kD nuclear phosphoprotein that functions as a tumor suppressor and maintains genomic stability through the BRCA1-associated genome surveillance complex [23].\n\nDISEASE RECORDS FOUND\nDISEASE\tIDENTIFIER\nFamilial cancer of breast [1]\tMedGen:C0346153\nFamilial breast-ovarian cancer susceptibility 1 [2]\tMedGen:C2676676\nPancreatic cancer susceptibility 4 [3]\tMedGen:C3280442\nFanconi anemia complementation group S [4]\tMedGen:C4554406\nGENE RECORDS FOUND\nGENE\tIDENTIFIER\nBRCA1 [5][9]\tNCBIGene:672\nPUBMED RECORDS FOUND\nPAPER\tIDENTIFIER\nBRCA1: An Endocrine and Metabolic Regulator. [6]\tPMID:35432218\nPreneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis. [11]\tPMID:36914836\nBRCA1 safeguards genome integrity by activating chromosome asynapsis checkpoint to eliminate recombination-defective oocytes. [14]\tPMID:38696471\nMechanism of BRCA1-BARD1 function in DNA end resection and DNA protection. [17]\tPMID:39261728\nTargeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors. [20]\tPMID:39265497\nCLINVAR RECORDS FOUND\nVARIANT\tIDENTIFIER\nNM_007294.4(BRCA1):c.5243_5277+2788del [7]\tVCV000267740\nNM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [12]\tVCV000267741\nNG_005905.2:g.(147057_150288)_(160933_166866)del [15]\tVCV000373892\nGRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [18]\tVCV004823850\nNM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [21]\tVCV004848411\nOMIM RECORDS FOUND\nRECORD\tIDENTIFIER\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1 [8]\tomim 113705\nCLINICAL TRIAL RECORDS FOUND\nTRIAL\tIDENTIFIER\tSTATUS\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [10]\tNCT00590109\tCOMPLETED\nBRCA1 Haploinsufficiency and Gene Expression [13]\tNCT00597987\tCOMPLETED\nStudy to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [16]\tNCT00617656\tTERMINATED\nLetrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [19]\tNCT00673335\tCOMPLETED\nRecombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [22]\tNCT00700778\tTERMINATED",
+    "blocks": [
+     {
+      "tid": "saved-answer-paragraph-0",
+      "top": 226,
+      "text": "BRCA1 is associated with familial cancer of breast [1], familial breast-ovarian cancer susceptibility 1 [2], pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. Fou"
+     },
+     {
+      "tid": "saved-answer-heading-1",
+      "top": 333,
+      "text": "Disease Associations and Inherited Risk"
+     },
+     {
+      "tid": "saved-answer-paragraph-2",
+      "top": 368,
+      "text": "BRCA1 mutations are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers [23]. The gene encodes a 190 kD nuclear phosphoprotein that "
+     },
+     {
+      "tid": "saved-answer-heading-3",
+      "top": 460,
+      "text": "Disease records found"
+     },
+     {
+      "tid": "saved-answer-table-4",
+      "top": 495,
+      "text": "DiseaseIdentifierFamilial cancer of breast [1]MedGen:C0346153Familial breast-ovarian cancer susceptibility 1 [2]MedGen:C2676676Pancreatic cancer susceptibility 4 [3]MedGen:C3280442Fanconi anemia compl"
+     },
+     {
+      "tid": "saved-answer-heading-5",
+      "top": 686,
+      "text": "Gene records found"
+     },
+     {
+      "tid": "saved-answer-table-6",
+      "top": 721,
+      "text": "GeneIdentifierBRCA1 [5][9]NCBIGene:672"
+     },
+     {
+      "tid": "saved-answer-heading-7",
+      "top": 809,
+      "text": "Pubmed records found"
+     },
+     {
+      "tid": "saved-answer-table-8",
+      "top": 844,
+      "text": "PaperIdentifierBRCA1: An Endocrine and Metabolic Regulator. [6]PMID:35432218Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis. [11]PMID:36914836BRCA1 safeguards genome integrity "
+     },
+     {
+      "tid": "saved-answer-heading-9",
+      "top": 1112,
+      "text": "Clinvar records found"
+     },
+     {
+      "tid": "saved-answer-table-10",
+      "top": 1148,
+      "text": "VariantIdentifierNM_007294.4(BRCA1):c.5243_5277+2788del [7]VCV000267740NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [12]VCV000267741NG_005905.2:g.(147057_150288)_(160933_166866)del [15]VCV00037389"
+     },
+     {
+      "tid": "saved-answer-heading-11",
+      "top": 1373,
+      "text": "Omim records found"
+     },
+     {
+      "tid": "saved-answer-table-12",
+      "top": 1408,
+      "text": "RecordIdentifierBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1 [8]omim 113705"
+     },
+     {
+      "tid": "saved-answer-heading-13",
+      "top": 1496,
+      "text": "Clinical trial records found"
+     },
+     {
+      "tid": "saved-answer-table-14",
+      "top": 1531,
+      "text": "TrialIdentifierStatusGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [10]NCT00590109COMPLETEDBRCA1 Haploinsufficiency and Gene Expression [13]NCT00597987COMPLETEDStudy to "
+     }
+    ],
+    "running": false
+   }
+  },
+  {
+   "k": "screenshot",
+   "v": "reopen2_1280_1_saved.png"
+  }
+ ]
+}

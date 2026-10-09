@@ -1,0 +1,2959 @@
+{
+ "mode": "brca1",
+ "steps": [
+  {
+   "k": "signed in, email visible unmasked",
+   "v": false
+  },
+  {
+   "k": "textbox visible after resize",
+   "v": false
+  },
+  {
+   "k": "textbox visible after Escape",
+   "v": true
+  },
+  {
+   "k": "bundle",
+   "v": [
+    "index-rs6flCQ-.js"
+   ]
+  },
+  {
+   "k": "depth pressed",
+   "v": "true"
+  },
+  {
+   "k": "asked",
+   "v": {
+    "q": "Which diseases are associated with BRCA1?",
+    "depth": "Plain language",
+    "width": 390,
+    "pt0": 5253.5999999940395
+   }
+  },
+  {
+   "k": "step change (100 ms poll)",
+   "v": {
+    "t": 0.04,
+    "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+    "chips": [],
+    "handoff": [],
+    "writing": false
+   }
+  },
+  {
+   "k": "step change (100 ms poll)",
+   "v": {
+    "t": 6.86,
+    "steps": "Guard=done Think=live Plan=pending Act=pending Write=pending",
+    "chips": [],
+    "handoff": [],
+    "writing": false
+   }
+  },
+  {
+   "k": "step change (100 ms poll)",
+   "v": {
+    "t": 7.48,
+    "steps": "Guard=done Think=done Plan=live Act=pending Write=pending",
+    "chips": [],
+    "handoff": [],
+    "writing": false
+   }
+  },
+  {
+   "k": "step change (100 ms poll)",
+   "v": {
+    "t": 8.2,
+    "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+    "chips": [],
+    "handoff": [],
+    "writing": true
+   }
+  },
+  {
+   "k": "screenshot",
+   "v": "brca1_390_2_write.png"
+  },
+  {
+   "k": "step change (100 ms poll)",
+   "v": {
+    "t": 13.29,
+    "steps": "",
+    "chips": [],
+    "handoff": [],
+    "writing": false
+   }
+  },
+  {
+   "k": "answer landed (meta shown)",
+   "v": {
+    "t": 13.29,
+    "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers"
+   }
+  },
+  {
+   "k": "verdict inputs",
+   "v": {
+    "liveSequence": [
+     "Guard",
+     "Think",
+     "Plan",
+     "Act",
+     "Write"
+    ],
+    "wentBack": false,
+    "writeLitWithOpenCalls": [],
+    "toolStartsAfterWriteLit": 0,
+    "eventCount": 125,
+    "pollCount": 149,
+    "maxOverflow": 0
+   }
+  },
+  {
+   "k": "screenshot",
+   "v": "brca1_390_3_final.png"
+  },
+  {
+   "k": "final",
+   "v": {
+    "overflow": 0,
+    "claimsStart": "BRCA1 is associated with familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4 I found 4 conditions related to BRCA1.⁠1–4\n\nThe protein it produces joins with other tumor-suppressing and DNA-sensing proteins to form a large complex that watches for DNA damage.⁠23 It plays a role in repairing double-stranded breaks in DNA and in recombination.⁠23 Changes in this gene account for roughly 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers combined.⁠23\n\nOne is double-strand break repair via homologous recombination.⁠24 Another is DNA repair.⁠25 Another is regulation of DNA repair.⁠26 Another is DNA damage tolerance.⁠27\n\nBRCA1, and its gene symbol is BRCA1.⁠8, 5\n\nWHERE THIS ANSWER COMES FROM\nFamilial cancer of breast⁠1\nFamilial breast-ovarian cancer susceptibility 1⁠2\nPancreatic cancer susceptibility 4⁠3\nFanconi anemia complementation group S⁠4\nBRCA1⁠5, 9\nBRCA1/BRCA2 gene mutations/SNPs and BRCA1 haplotypes in early-onset breast cancer patients of Indian ethnicity.⁠6\nNM_007294.4(BRCA1):c.5243_5277+2788del⁠7\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠8\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠10\nDistinct Brca1 Mutations Differentially Reduce Hematopoietic Stem Cell Function.⁠11\nShowing 1–10 of 21\n‹ Previous\nPage 1 of 3\nNext ›"
+   }
+  }
+ ],
+ "events": [
+  {
+   "t": 5.013,
+   "type": "guard",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 6.755,
+   "type": "think",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 6.76,
+   "type": "plan",
+   "cid": null,
+   "tool": null,
+   "extra": {
+    "planned": 13
+   }
+  },
+  {
+   "t": 6.793,
+   "type": "tool_start",
+   "cid": "cq-5b4dfcbe2ff4",
+   "tool": "cypher_query",
+   "extra": null
+  },
+  {
+   "t": 6.793,
+   "type": "tool_start",
+   "cid": "ne-23f05922a072",
+   "tool": "ncbi_efetch",
+   "extra": null
+  },
+  {
+   "t": 6.793,
+   "type": "tool_start",
+   "cid": "pa-668ad7f15347",
+   "tool": "pubtator_annotate",
+   "extra": null
+  },
+  {
+   "t": 6.793,
+   "type": "tool_start",
+   "cid": "ct-2b0f7bb66745",
+   "tool": "clinicaltrials_search",
+   "extra": null
+  },
+  {
+   "t": 6.793,
+   "type": "tool_start",
+   "cid": "ne-b89ee73a1dfb",
+   "tool": "ncbi_efetch",
+   "extra": null
+  },
+  {
+   "t": 6.793,
+   "type": "tool_start",
+   "cid": "ne-d16db6056d7a",
+   "tool": "ncbi_efetch",
+   "extra": null
+  },
+  {
+   "t": 6.793,
+   "type": "tool_start",
+   "cid": "ne-d7e98a1e972e",
+   "tool": "ncbi_efetch",
+   "extra": null
+  },
+  {
+   "t": 6.793,
+   "type": "tool_start",
+   "cid": "ne-6e2ef8ef5cd8",
+   "tool": "ncbi_efetch",
+   "extra": null
+  },
+  {
+   "t": 6.793,
+   "type": "tool_start",
+   "cid": "pa-9a7c85cbc333",
+   "tool": "pubtator_annotate",
+   "extra": null
+  },
+  {
+   "t": 6.793,
+   "type": "tool_start",
+   "cid": "ne-7cc0882ef02c",
+   "tool": "ncbi_efetch",
+   "extra": null
+  },
+  {
+   "t": 6.806,
+   "type": "tool_start",
+   "cid": "ne-3cad918896e9",
+   "tool": "ncbi_efetch",
+   "extra": null
+  },
+  {
+   "t": 6.806,
+   "type": "tool_start",
+   "cid": "ne-1a40479de35c",
+   "tool": "ncbi_efetch",
+   "extra": null
+  },
+  {
+   "t": 6.806,
+   "type": "tool_start",
+   "cid": "cq-118c2e058a45",
+   "tool": "cypher_query",
+   "extra": null
+  },
+  {
+   "t": 6.928,
+   "type": "tool_result",
+   "cid": "pa-668ad7f15347",
+   "tool": "pubtator_annotate",
+   "extra": {
+    "status": "ok",
+    "n": 1
+   }
+  },
+  {
+   "t": 7.039,
+   "type": "tool_result",
+   "cid": "ne-d16db6056d7a",
+   "tool": "ncbi_efetch",
+   "extra": {
+    "status": "ok",
+    "n": 10
+   }
+  },
+  {
+   "t": 7.062,
+   "type": "tool_result",
+   "cid": "ne-b89ee73a1dfb",
+   "tool": "ncbi_efetch",
+   "extra": {
+    "status": "ok",
+    "n": 5
+   }
+  },
+  {
+   "t": 7.072,
+   "type": "tool_result",
+   "cid": "ne-23f05922a072",
+   "tool": "ncbi_efetch",
+   "extra": {
+    "status": "ok",
+    "n": 1
+   }
+  },
+  {
+   "t": 7.119,
+   "type": "tool_result",
+   "cid": "ct-2b0f7bb66745",
+   "tool": "clinicaltrials_search",
+   "extra": {
+    "status": "ok",
+    "n": 5
+   }
+  },
+  {
+   "t": 7.13,
+   "type": "tool_result",
+   "cid": "ne-d7e98a1e972e",
+   "tool": "ncbi_efetch",
+   "extra": {
+    "status": "ok",
+    "n": 10
+   }
+  },
+  {
+   "t": 7.211,
+   "type": "tool_result",
+   "cid": "ne-1a40479de35c",
+   "tool": "ncbi_efetch",
+   "extra": {
+    "status": "ok",
+    "n": 1
+   }
+  },
+  {
+   "t": 7.273,
+   "type": "tool_result",
+   "cid": "cq-5b4dfcbe2ff4",
+   "tool": "cypher_query",
+   "extra": {
+    "status": "ok",
+    "n": 4
+   }
+  },
+  {
+   "t": 7.476,
+   "type": "tool_result",
+   "cid": "cq-118c2e058a45",
+   "tool": "cypher_query",
+   "extra": {
+    "status": "ok",
+    "n": 40
+   }
+  },
+  {
+   "t": 7.667,
+   "type": "tool_result",
+   "cid": "pa-9a7c85cbc333",
+   "tool": "pubtator_annotate",
+   "extra": {
+    "status": "ok",
+    "n": 5
+   }
+  },
+  {
+   "t": 7.745,
+   "type": "tool_result",
+   "cid": "ne-6e2ef8ef5cd8",
+   "tool": "ncbi_efetch",
+   "extra": {
+    "status": "ok",
+    "n": 10
+   }
+  },
+  {
+   "t": 7.776,
+   "type": "tool_result",
+   "cid": "ne-7cc0882ef02c",
+   "tool": "ncbi_efetch",
+   "extra": {
+    "status": "ok",
+    "n": 5
+   }
+  },
+  {
+   "t": 7.801,
+   "type": "tool_result",
+   "cid": "ne-3cad918896e9",
+   "tool": "ncbi_efetch",
+   "extra": {
+    "status": "ok",
+    "n": 1
+   }
+  },
+  {
+   "t": 7.808,
+   "type": "step",
+   "cid": null,
+   "tool": null,
+   "extra": {
+    "step": "write"
+   }
+  },
+  {
+   "t": 8.183,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.183,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.183,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.183,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.183,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.183,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.183,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.183,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.183,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.183,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.188,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.197,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.197,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.197,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.197,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.197,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.197,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.197,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.197,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.197,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.197,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.197,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.197,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.203,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.203,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.203,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.203,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 8.206,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.263,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "token",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "citation",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "trust_signal",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "done",
+   "cid": null,
+   "tool": null,
+   "extra": null
+  },
+  {
+   "t": 13.268,
+   "type": "__stream_end"
+  }
+ ],
+ "stepChanges": [
+  {
+   "t": 0.039,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chipsNow": [],
+   "chipsJustBefore": [],
+   "handoff": [],
+   "writing": false
+  },
+  {
+   "t": 6.76,
+   "steps": "Guard=done Think=live Plan=pending Act=pending Write=pending",
+   "chipsNow": [],
+   "chipsJustBefore": [],
+   "handoff": [],
+   "writing": false
+  },
+  {
+   "t": 7.462,
+   "steps": "Guard=done Think=done Plan=live Act=pending Write=pending",
+   "chipsNow": [],
+   "chipsJustBefore": [],
+   "handoff": [],
+   "writing": false
+  },
+  {
+   "t": 8.162,
+   "steps": "Guard=done Think=done Plan=done Act=live Write=pending",
+   "chipsNow": [
+    "cypher_queryrunning"
+   ],
+   "chipsJustBefore": [],
+   "handoff": [
+    "1:working"
+   ],
+   "writing": false
+  },
+  {
+   "t": 8.188,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chipsNow": [],
+   "chipsJustBefore": [
+    "cypher_queryrunning"
+   ],
+   "handoff": [],
+   "writing": true
+  },
+  {
+   "t": 13.284,
+   "steps": "",
+   "chipsNow": [],
+   "chipsJustBefore": [
+    "cypher_queryrunning"
+   ],
+   "handoff": [],
+   "writing": false
+  }
+ ],
+ "poll": [
+  {
+   "t": 0.04,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 0.15,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 0.25,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 0.35,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 0.46,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 0.56,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 0.67,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 0.77,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 0.87,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 0.98,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 1.08,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 1.18,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 1.28,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 1.39,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 1.49,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 1.59,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 1.7,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 1.8,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 1.9,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 2,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 2.11,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 2.21,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 2.31,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 2.42,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 2.52,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 2.62,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 2.73,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 2.83,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 2.93,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 3.03,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 3.14,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 3.25,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 3.35,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 3.45,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 3.56,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 3.66,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 3.76,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 3.87,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 3.97,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 4.07,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 4.18,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 4.28,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 4.38,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 4.49,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 4.59,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 4.69,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 4.79,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 4.9,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 5,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 5.1,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 5.21,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 5.31,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 5.41,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 5.51,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 5.61,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 5.72,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 5.82,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 5.92,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 6.03,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 6.13,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 6.23,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 6.33,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 6.43,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 6.54,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 6.65,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 6.75,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 6.86,
+   "steps": "Guard=done Think=live Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 6.96,
+   "steps": "Guard=done Think=live Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 7.06,
+   "steps": "Guard=done Think=live Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 7.17,
+   "steps": "Guard=done Think=live Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 7.27,
+   "steps": "Guard=done Think=live Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 7.37,
+   "steps": "Guard=done Think=live Plan=pending Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 7.48,
+   "steps": "Guard=done Think=done Plan=live Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 7.58,
+   "steps": "Guard=done Think=done Plan=live Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 7.68,
+   "steps": "Guard=done Think=done Plan=live Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 7.79,
+   "steps": "Guard=done Think=done Plan=live Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 7.89,
+   "steps": "Guard=done Think=done Plan=live Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 8,
+   "steps": "Guard=done Think=done Plan=live Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 8.1,
+   "steps": "Guard=done Think=done Plan=live Act=pending Write=pending",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 8.2,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 8.33,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 8.43,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 8.53,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 8.63,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 8.74,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 8.84,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 8.95,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 9.05,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 9.15,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 9.26,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 9.36,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 9.46,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 9.56,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 9.67,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 9.77,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 9.87,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 9.98,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 10.08,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 10.19,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 10.3,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 10.4,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 10.5,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 10.6,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 10.71,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 10.81,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 10.91,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 11.02,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 11.12,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 11.22,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 11.32,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 11.43,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 11.53,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 11.63,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 11.74,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 11.84,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 11.94,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 12.05,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 12.15,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 12.25,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 12.35,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 12.46,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 12.56,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 12.66,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 12.77,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 12.87,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 12.97,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 13.07,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 13.18,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "chips": [],
+   "handoff": [],
+   "writing": true,
+   "writingText": "Nirenberg is writing the answer...\nFranklin, Chase and Levi-Montalcini found 98 records",
+   "meta": null,
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 13.29,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 13.39,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 13.5,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 13.6,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 13.7,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 13.8,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 13.91,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 14.01,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 14.12,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 14.22,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 14.32,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 14.42,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 14.53,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 14.63,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 14.73,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 14.84,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 14.94,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 15.04,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 15.15,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 15.26,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  },
+  {
+   "t": 15.37,
+   "steps": "",
+   "chips": [],
+   "handoff": [],
+   "writing": false,
+   "writingText": null,
+   "meta": "? Answered13.0s · 13 tool calls · 21 sources cited from 3 layers",
+   "refusal": false,
+   "failure": null,
+   "overflow": 0
+  }
+ ],
+ "analysis": [
+  {
+   "t": 0.039,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending",
+   "started": 0,
+   "closed": 0,
+   "openCalls": [],
+   "chipsJustBefore": [],
+   "handoff": []
+  },
+  {
+   "t": 6.76,
+   "steps": "Guard=done Think=live Plan=pending Act=pending Write=pending",
+   "started": 0,
+   "closed": 0,
+   "openCalls": [],
+   "chipsJustBefore": [],
+   "handoff": []
+  },
+  {
+   "t": 7.462,
+   "steps": "Guard=done Think=done Plan=live Act=pending Write=pending",
+   "started": 13,
+   "closed": 8,
+   "openCalls": [
+    "ne-6e2ef8ef5cd8",
+    "pa-9a7c85cbc333",
+    "ne-7cc0882ef02c",
+    "ne-3cad918896e9",
+    "cq-118c2e058a45"
+   ],
+   "chipsJustBefore": [],
+   "handoff": []
+  },
+  {
+   "t": 8.162,
+   "steps": "Guard=done Think=done Plan=done Act=live Write=pending",
+   "started": 13,
+   "closed": 13,
+   "openCalls": [],
+   "chipsJustBefore": [],
+   "handoff": [
+    "1:working"
+   ]
+  },
+  {
+   "t": 8.188,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live",
+   "started": 13,
+   "closed": 13,
+   "openCalls": [],
+   "chipsJustBefore": [
+    "cypher_queryrunning"
+   ],
+   "handoff": []
+  },
+  {
+   "t": 13.284,
+   "steps": "",
+   "started": 13,
+   "closed": 13,
+   "openCalls": [],
+   "chipsJustBefore": [
+    "cypher_queryrunning"
+   ],
+   "handoff": []
+  }
+ ]
+}

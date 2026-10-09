@@ -1,0 +1,289 @@
+{
+ "mode": "390",
+ "depth": "Plain language",
+ "steps": [
+  {
+   "t": "2026-10-09T10:59:38.511Z",
+   "k": "login opened via",
+   "v": "button"
+  },
+  {
+   "t": "2026-10-09T10:59:42.588Z",
+   "k": "signed in, email visible unmasked",
+   "v": false
+  },
+  {
+   "t": "2026-10-09T10:59:42.591Z",
+   "k": "bundle",
+   "v": [
+    "index-NJO4wipr.js"
+   ]
+  },
+  {
+   "t": "2026-10-09T10:59:42.687Z",
+   "k": "health",
+   "v": {
+    "status": "ok",
+    "app_env": "develop"
+   }
+  },
+  {
+   "t": "2026-10-09T10:59:42.688Z",
+   "k": "overflow landing",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 390
+   }
+  },
+  {
+   "t": "2026-10-09T10:59:42.721Z",
+   "k": "depth pressed",
+   "v": {
+    "depth": "Plain language",
+    "pressed": "true"
+   }
+  },
+  {
+   "t": "2026-10-09T10:59:42.765Z",
+   "k": "asked",
+   "v": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?"
+  },
+  {
+   "t": "2026-10-09T11:00:03.106Z",
+   "k": "answer landed",
+   "v": {
+    "t": 20.38,
+    "table": 0,
+    "meta": "✓ Answered20.0s · 2 tool calls · 21 sources cited from 1 layer",
+    "refusal": false,
+    "streaming": false,
+    "err": false
+   }
+  },
+  {
+   "t": "2026-10-09T11:00:06.129Z",
+   "k": "answer text length",
+   "v": 2489
+  },
+  {
+   "t": "2026-10-09T11:00:06.130Z",
+   "k": "tables",
+   "v": []
+  },
+  {
+   "t": "2026-10-09T11:00:06.134Z",
+   "k": "overflow after answer",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 390
+   }
+  },
+  {
+   "t": "2026-10-09T11:00:06.136Z",
+   "k": "email visible unmasked",
+   "v": false
+  },
+  {
+   "t": "2026-10-09T11:00:06.206Z",
+   "k": "screenshot",
+   "v": "390_answer_viewport.png"
+  },
+  {
+   "t": "2026-10-09T11:00:06.319Z",
+   "k": "screenshot",
+   "v": "390_answer_full.png"
+  },
+  {
+   "t": "2026-10-09T11:00:07.462Z",
+   "k": "page 2",
+   "v": null
+  },
+  {
+   "t": "2026-10-09T11:00:07.471Z",
+   "k": "overflow on page 2",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 390
+   }
+  },
+  {
+   "t": "2026-10-09T11:00:37.941Z",
+   "k": "screenshot",
+   "v": "390_table_page2_viewport.png"
+  },
+  {
+   "t": "2026-10-09T11:00:38.034Z",
+   "k": "screenshot",
+   "v": "390_table_page2_full.png"
+  },
+  {
+   "t": "2026-10-09T11:00:39.147Z",
+   "k": "sources",
+   "v": 21
+  },
+  {
+   "t": "2026-10-09T11:00:39.150Z",
+   "k": "links inside table",
+   "v": 0
+  }
+ ],
+ "answer": {
+  "text": "✓ Answered20.0s · 2 tool calls · 21 sources cited from 1 layer\n\nShow work ▾\n\nThe isolates are C236-11, 11-3677, 11-4404, 11-4522, 11-4623, 11-4632 C1, 11-4632 C2, 11-4632 C3, 11-4632 C4, 11-4632 C5, C227-11, Ec11-4988, Ec11-5603, Ec11-6006, 11-02030, 11-02033-1, 11-02092, 11-02093, 2011C-3493, and NA114.⁠1–20 I found 20 pathogen samples and 1 organism related to Escherichia coli.⁠1–20\n\nISOLATES AND THEIR AMR GENES\nC236-11⁠1\nSAMN00715300\nacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\nNot recorded\n11-3677⁠2\nSAMN00715303\nacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\nNot recorded\n11-4404⁠3\nSAMN00715305\nacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\nNot recorded\n11-4522⁠4\nSAMN00715306\nacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\nNot recorded\n11-4623⁠5\nSAMN00715307\nacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\nNot recorded\n11-4632 C1⁠6\nSAMN00715308\nacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\nNot recorded\n11-4632 C2⁠7\nSAMN00715309\nacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\nNot recorded\n11-4632 C3⁠8\nSAMN00715310\nacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\nNot recorded\n11-4632 C4⁠9\nSAMN00715311\nacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\nNot recorded\n11-4632 C5⁠10\nSAMN00715312\nacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\nNot recorded\nShowing 1–10 of 20\n‹ Previous\nPage 1 of 2\nNext ›\nWHERE THIS ANSWER COMES FROM\nEscherichia coli⁠21\nNOTES\nPathogen Detection lists 141,360 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown.\nSearching Escherichia coli isolates in Pathogen Detection for AMR genotypes starting blaCTX-M; blaTEM and blaSHV alleles were not searched: most are not ESBLs and the name alone cannot tell an ESBL allele from a narrow-spectrum one, so listing them would show isolates that do not carry an ESBL.\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n21\nBased on 21 sources cited",
+  "tables": [],
+  "meta": "✓ Answered20.0s · 2 tool calls · 21 sources cited from 1 layer"
+ },
+ "page2": null,
+ "sources": [
+  {
+   "id": "source-1",
+   "text": "▶\n[1]\n\npathogen_detection SAMN00715300\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715300"
+   ]
+  },
+  {
+   "id": "source-2",
+   "text": "▶\n[2]\n\npathogen_detection SAMN00715303\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715303"
+   ]
+  },
+  {
+   "id": "source-3",
+   "text": "▶\n[3]\n\npathogen_detection SAMN00715305\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715305"
+   ]
+  },
+  {
+   "id": "source-4",
+   "text": "▶\n[4]\n\npathogen_detection SAMN00715306\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715306"
+   ]
+  },
+  {
+   "id": "source-5",
+   "text": "▶\n[5]\n\npathogen_detection SAMN00715307\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715307"
+   ]
+  },
+  {
+   "id": "source-6",
+   "text": "▶\n[6]\n\npathogen_detection SAMN00715308\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715308"
+   ]
+  },
+  {
+   "id": "source-7",
+   "text": "▶\n[7]\n\npathogen_detection SAMN00715309\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715309"
+   ]
+  },
+  {
+   "id": "source-8",
+   "text": "▶\n[8]\n\npathogen_detection SAMN00715310\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715310"
+   ]
+  },
+  {
+   "id": "source-9",
+   "text": "▶\n[9]\n\npathogen_detection SAMN00715311\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715311"
+   ]
+  },
+  {
+   "id": "source-10",
+   "text": "▶\n[10]\n\npathogen_detection SAMN00715312\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715312"
+   ]
+  },
+  {
+   "id": "source-11",
+   "text": "▶\n[11]\n\npathogen_detection SAMN00715316\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715316"
+   ]
+  },
+  {
+   "id": "source-12",
+   "text": "▶\n[12]\n\npathogen_detection SAMN00778958\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00778958"
+   ]
+  },
+  {
+   "id": "source-13",
+   "text": "▶\n[13]\n\npathogen_detection SAMN00778959\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00778959"
+   ]
+  },
+  {
+   "id": "source-14",
+   "text": "▶\n[14]\n\npathogen_detection SAMN00778960\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00778960"
+   ]
+  },
+  {
+   "id": "source-15",
+   "text": "▶\n[15]\n\npathogen_detection SAMN01141737\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141737"
+   ]
+  },
+  {
+   "id": "source-16",
+   "text": "▶\n[16]\n\npathogen_detection SAMN01141738\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141738"
+   ]
+  },
+  {
+   "id": "source-17",
+   "text": "▶\n[17]\n\npathogen_detection SAMN01141739\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141739"
+   ]
+  },
+  {
+   "id": "source-18",
+   "text": "▶\n[18]\n\npathogen_detection SAMN01141740\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141740"
+   ]
+  },
+  {
+   "id": "source-19",
+   "text": "▶\n[19]\n\npathogen_detection SAMN01831188\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01831188"
+   ]
+  },
+  {
+   "id": "source-20",
+   "text": "▶\n[20]\n\npathogen_detection SAMN02603711\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02603711"
+   ]
+  },
+  {
+   "id": "source-21",
+   "text": "▶\n[21]\n\ntaxonomy 562\n\nL2 · live",
+   "hrefs": [
+    "https://www.ncbi.nlm.nih.gov/taxonomy/562"
+   ]
+  }
+ ],
+ "cellLinks": []
+}
