@@ -51,3 +51,16 @@ Query 102 gained: About, "Cite or refuse" describes only what you can see on an 
 
 - The stop 5 text is a second sentence, not a rewrite of the first, to keep the facts checker green without touching `.claude/`.
 - Not changed, though the diagnosis lists them as unchecked: the other About, Architecture and Home claims. The diagnosis calls only the track sentence false, and it says "Layers 2 and 3 are stored nowhere" and the Home line "need a look", which is a judgment for the owner.
+
+## Fix round
+
+Base: 68e9d7d5. One round.
+
+| Finding | Status | What changed |
+|---|---|---|
+| V-51-01 | Fixed | Stop 5 now says "if any copied part is held back the whole sentence is dropped". The code drops a sentence whole only for a held copied piece (`held_for_check`, grounding.py), and a held reworded clause is stripped alone, so the word "copied" is the scope |
+| V-51-04 | Fixed | "A copied cut" became "A sentence that copies part of a record word for word", in the reader's words, which also stops "cut" clashing with stop 4's truncated results. The other words of the sentence match the code: copied pieces go to the same model check, and are held when it cannot run |
+| V-51-02 | Fixed | "a claim with no source" became "a line of framing with no source", so it no longer contradicts "Every claim is tied to a specific record". The text in muted ink is framing kept by grounding without a marker |
+| V-51-03 | Open | A marker spanning several layers is drawn in muted ink. It is a rare case, and naming it needs a clause the page does not otherwise carry; the sentence is true for the common single-layer case and no worse than develop, which said nothing about colour |
+
+Query 102's line was updated to the new wording. Runs: `AboutScreen.test.tsx` 12 passed; `npx tsc --noEmit -p .` clean; facts checker `facts: 80 | stale 0 | not fully checked 0 | places: PASS 225, FAIL 0, GAP 0, ERROR 0 | PASS`. No em dash, en dash, spaced hyphen or bold in any added line. No test reads these sentences, so there is no red run to show, as in the build.
