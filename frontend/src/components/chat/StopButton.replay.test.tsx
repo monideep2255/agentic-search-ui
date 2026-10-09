@@ -27,6 +27,17 @@
  * `usePacedEvents`, then `useRunView`, then `useAnswerReveal`, with Stop
  * decided by `deriveStopOffered` from the arrived events and the revealed
  * view, exactly as `App` passes them.
+ *
+ * BUILD PHASE 8.7 (2026-09-27) REMOVED THE LAG THIS REPLAY REPRODUCED. The
+ * owner's acceptance for T-8.7-03 is that no arrived text is held back, so
+ * on this stream the first word now shows the moment it arrives (17.3 s)
+ * instead of at 30.1 s, and the grey stretch card 58 fixed cannot happen on
+ * it at all. Two populate-checks asserted that lag: "the server finished
+ * before the first sentence was on screen" and "the old rule greyed Stop for
+ * at least 10 s with nothing to read". Both are restated below, with the
+ * lead's approval, as checks that the Stop arms still cover a long wait on
+ * a real stream. The two Stop arms themselves are unchanged, and a second
+ * test pins what 8.7 changed.
  */
 
 import { act, renderHook } from "@testing-library/react";
@@ -346,19 +357,20 @@ describe("card 58: Stop on the G-013 develop stream, as the screen shows it", ()
     const doneAt = G013.find((row) => row[1] === "done")![0];
     const firstSentence = samples.find((s) => s.sentences > 0);
 
-    // POPULATE-CHECKS. The replay reached a first sentence and landed, the
-    // server finished before that sentence was on screen, and the rule Stop
-    // had before card 58 greyed it over a long stretch with nothing to read.
-    // Without these the arms below could pass against a replay that never
-    // reproduced the defect.
+    // POPULATE-CHECKS. The replay reached a first sentence and landed, and
+    // the reader waited a long time for it after the guard passed, so the
+    // first arm below checks Stop at hundreds of moments, not a handful.
+    // Without these the arms below could pass against a replay too short to
+    // test anything.
+    //
+    // Restated for build phase 8.7: these used to assert that the server
+    // finished before the first sentence was on screen and that the rule
+    // Stop had before card 58 greyed it for at least 10 s with nothing to
+    // read. Both asserted the lag 8.7 removes, see the file's header.
     expect(firstSentence, "the replay never showed a sentence").toBeDefined();
     expect(samples[samples.length - 1].landed, "the replay never landed").toBe(true);
-    expect(doneAt).toBeLessThan(firstSentence!.at);
-    const greyWithNothingToRead = longestStretch(
-      samples,
-      (s) => waiting(s) && s.at >= guardAt && !stopEnabledBeforeCard58(s.arrived),
-    );
-    expect(greyWithNothingToRead).toBeGreaterThanOrEqual(10_000);
+    expect(doneAt).toBeGreaterThan(guardAt);
+    expect(longestStretch(samples, (s) => waiting(s) && s.at >= guardAt)).toBeGreaterThanOrEqual(15_000);
 
     // THE RULE. Offered at every moment after the guard passed while no
     // sentence is on screen, however long ago the server finished.
@@ -373,5 +385,33 @@ describe("card 58: Stop on the G-013 develop stream, as the screen shows it", ()
     const onWithAnswer = samples.filter((s) => s.sentences > 0 && s.offered);
     expect(onWithAnswer.map((s) => s.at), "Stop stayed on with the answer on screen").toEqual([]);
     expect(samples[samples.length - 1].offered).toBe(false);
+  });
+
+  it("build phase 8.7: shows the first word when it arrives, not after the helper narrative", async () => {
+    const samples = await replay(G013);
+    const firstTokenAt = G013.find((row) => row[1] === "token")![0];
+    const firstSentence = samples.find((s) => s.sentences > 0);
+    expect(firstSentence, "the replay never showed a sentence").toBeDefined();
+    // Populate-check: the narrative really was long enough to hold the text
+    // back. Thirteen helpers earn a lag ceiling of 26 s, and before 8.7 the
+    // first word showed at 30.1 s, 12.9 s after it arrived.
+    expect(G013.filter((row) => row[1] === "tool_start")).toHaveLength(13);
+    // The first sample at or after the first token's arrival shows it.
+    expect(
+      firstSentence!.at - firstTokenAt,
+      "arrived text was held back behind the helper narrative",
+    ).toBeLessThanOrEqual(STEP_MS);
+    // And the whole answer, not the first sentence alone, in that sample.
+    const all = G013.filter((row) => row[1] === "token" && (row[2] === "claim" || row[2] === "table_row"));
+    expect(firstSentence!.sentences).toBe(all.length);
+    // The stretch card 58 measured, 12.9 s grey with nothing to read, is
+    // gone on this stream even under the Stop rule card 58 replaced: its
+    // first trust signal now arrives after the answer is already showing.
+    const guardAt = G013.find((row) => row[1] === "guard")![0];
+    const greyWithNothingToRead = longestStretch(
+      samples,
+      (s) => s.sentences === 0 && !s.landed && s.at >= guardAt && !stopEnabledBeforeCard58(s.arrived),
+    );
+    expect(greyWithNothingToRead).toBe(0);
   });
 });
