@@ -1142,6 +1142,7 @@ What you should see:
 - No answer appears from the stopped search.
 - Pressed while the search is still working, the button reads "Stopping…" for a moment, then "Search stopped"; after a reload the search is not listed as answered, and a follow-up such as "what about it?" does not refer to it.
 - Pressed after the search had already finished but while its answer is still appearing, the whole answer shows at once, with its sources and trust line, and history and the conversation keep that same answer (card 59).
+- Card 109: press Stop after the records have appeared, then open "Your searches": that row reads "No answer saved" with its date, while an answered row still reads its source count ("N sources cited").
 - Pressing Stop and asking a new question straight away answers the new question normally.
 - Why it matters: a person who changes their mind mid-search should not have to wait out a search they no longer want.
 
