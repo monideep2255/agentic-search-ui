@@ -44,8 +44,20 @@
  *     than it would unpaced, and that bound grows only with the number of
  *     helpers the plan actually named.
  *   - Stop, a stream failure, any `error` event, a failed guard, an
- *     answer-level refusal and a clarification FLUSH: everything that
- *     arrived shows at once and the rest of the run is unpaced.
+ *     answer-level refusal, a clarification and ANY TEXT FLUSH: everything
+ *     that arrived shows at once and the rest of the run is unpaced.
+ *
+ * TEXT FLUSHES, build phase 8.7, T-8.7-03 (2026-09-27, card 50). The owner's
+ * acceptance for the phase: the screen no longer holds back what has already
+ * arrived. Before it, a `token` had no dwell of its own but queued behind
+ * the helper narrative, so on develop, with twelve or thirteen helpers, the
+ * first word showed 9 to 13 seconds after the server had sent the whole
+ * answer (`testing/Developer/reports/2026-09-27_card58_stop/builder.md`,
+ * the G-013 replay: server done at 17.3 s, first word on screen at 30.1 s).
+ * Now the first token releases everything that arrived before it, in order,
+ * in the same render. The narrative is still paced while nothing a person
+ * can read has arrived, which is what the owner asked to watch in 11.28;
+ * once there is text to read, the text wins.
  *   - Under `prefers-reduced-motion` the order is kept and the dwells drop to
  *     `REDUCED_PACING`'s minimum.
  *   - A new `runKey`, or an event array that no longer starts with the events
@@ -150,8 +162,8 @@ export function dwellAfter(event: AgentEvent, next: AgentEvent, timing: PacingTi
       // `useAnswerReveal`, so the gap is only between two completions.
       return next.type === "tool_result" ? timing.helperGapMs : 0;
     default:
-      // Tokens, citations, trust signals and `done` change nothing a reader
-      // watches while the run is live, so they never hold the queue.
+      // Tokens, citations, trust signals and `done` never hold the queue.
+      // A token also flushes it (`isFlushEvent`): text is never held back.
       return 0;
   }
 }
@@ -160,6 +172,9 @@ export function dwellAfter(event: AgentEvent, next: AgentEvent, timing: PacingTi
 export function isFlushEvent(event: AgentEvent): boolean {
   switch (event.type) {
     case "error":
+      return true;
+    // Build phase 8.7: any text, the record listing or the written summary.
+    case "token":
       return true;
     case "guard":
       return event.payload.passed === false;
