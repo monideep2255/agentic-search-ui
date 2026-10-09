@@ -288,6 +288,13 @@ _HOPS: Final[dict[tuple[str, str], _Hop]] = {
     ("Gene", "articles"): _Hop("mentioned_in", "Article", "out"),
     ("Disease", "genes"): _Hop("gene_associated_with_condition", "Gene", "in"),
     ("Article", "mesh"): _Hop("has_mesh_annotation", "OntologyClass", "out"),
+    # Card 15, D5 (2026-10-08): the conditions a ClinVar variant's record
+    # names, the measured `has_phenotype` edge the fold templates already
+    # walk from the gene side. Before this row a variant's conditions
+    # question had only the model-written search. Measured read-only on the
+    # live graph: ClinVar:17661 returns 12 Disease rows in 0.42 s, the
+    # count form 0.48 s, two variants through the IN list 15 rows in 5.2 s.
+    ("SequenceVariant", "diseases"): _Hop("has_phenotype", "Disease", "out"),
 }
 
 # Shapes a given anchor label can be asked about. A keyword from another

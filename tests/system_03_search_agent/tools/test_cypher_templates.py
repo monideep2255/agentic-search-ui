@@ -481,6 +481,31 @@ def test_one_article_with_no_hop_word_takes_the_linked_records_template(
     assert template.cypher.count("ORDER BY") == 3
 
 
+@pytest.mark.parametrize(
+    ("intent", "entities", "query_class", "expected_name"),
+    [
+        # Card 15, D5: a ClinVar variant's conditions through the measured
+        # `has_phenotype` edge, never a model-written search.
+        ("What conditions is ClinVar:17661 linked to?", ["ClinVar:17661"], "multi_hop",
+         "sequencevariant_diseases_one"),
+        ("Which diseases are associated with rs334?", ["ClinVar:17661"], "single_hop",
+         "sequencevariant_diseases_one"),
+        ("Which diseases are ClinVar:17661 and ClinVar:12345 linked to?",
+         ["ClinVar:17661", "ClinVar:12345"], "single_hop", "sequencevariant_diseases_many"),
+        ("How many conditions is ClinVar:17661 linked to?", ["ClinVar:17661"], "lookup",
+         "sequencevariant_diseases_one_count"),
+    ],
+)
+def test_a_variant_conditions_question_takes_the_checked_has_phenotype_hop(
+    intent: str, entities: list[str], query_class: str, expected_name: str
+) -> None:
+    template = _select(intent, entities, query_class)
+    assert template is not None and template.name == expected_name
+    assert template.edge_label == "has_phenotype"
+    assert "(a:SequenceVariant" in template.cypher
+    assert "-[:has_phenotype]->(x:Disease)" in template.cypher
+
+
 def test_article_linked_records_template_passes_the_validator() -> None:
     template = _select("What is linked to PMID 11237011?", [PMID], "multi_hop")
     assert template is not None

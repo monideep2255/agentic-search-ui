@@ -297,7 +297,7 @@ async def test_a_question_no_checked_search_fits_runs_no_written_search(
 @pytest.mark.parametrize(
     ("intent", "query_class", "curie", "expected_template", "label"),
     [
-        ("What conditions is ClinVar:17661 linked to?", "multi_hop", "ClinVar:17661",
+        ("Tell me about ClinVar:17661", "multi_hop", "ClinVar:17661",
          "sequencevariant_record_one", "SequenceVariant"),
         ("Tell me about NCBITaxon:9606", "single_hop", "NCBITaxon:9606",
          "organismtaxon_record_one", "OrganismTaxon"),
