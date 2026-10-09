@@ -5433,10 +5433,10 @@ _CURIE_IN_TEXT_PATTERN = re.compile(
 # confirmation call) is also reused, now called from `think_node`'s model-
 # extraction confirmation step instead of from a regex-token guess.
 
-# An rsID, Section 17's literal `rs\d+`. Case-sensitive: a real rsID is
-# always written with a lowercase "rs" prefix by convention, and Section
-# 17 gives the pattern exactly this way.
-_RSID_PATTERN = re.compile(r"\brs\d+\b")
+# An rsID, Section 17's literal `rs\d+`. Case-insensitive (card 37): a
+# person who types "RS334" means the same variant as "rs334". Every use
+# lowercases the matched text before it becomes an identifier.
+_RSID_PATTERN = re.compile(r"\brs\d+\b", re.IGNORECASE)
 
 # A PMID mentioned in natural language ("PMID 21376230", "PMID: 21376230"),
 # distinct from the verbatim-CURIE form `_CURIE_IN_TEXT_PATTERN` already
@@ -5510,7 +5510,7 @@ def resolve_exact_identifiers(query_text: str) -> list[EventResolvedEntity]:
 
     # 2. rsID.
     for match in _RSID_PATTERN.finditer(query_text):
-        _add(match.group(0), f"dbSNP:{match.group(0)}", match.span())
+        _add(match.group(0), f"dbSNP:{match.group(0).lower()}", match.span())
 
     # 3. A bare, natural-language PMID mention ("PMID 21376230"). The
     #    colon-joined form ("PMID:21376230") is already caught by the
@@ -11808,6 +11808,16 @@ def _layer3_base_citation(
         if synth_finding.tool == "pubtator_annotate":
             return pubtator_build_citation(raw_output, display_index=display_index)
         if synth_finding.tool == "litvar2_lookup":
+            # The hedged or asserted label comes from the cited record itself
+            # (card 37), never from the first raw match, which can be a near
+            # miss the shaping step dropped.
+            own = [
+                m
+                for m in raw_output.variant_matches
+                if m.source_url and m.source_url == synth_finding.source_url
+            ]
+            if own:
+                raw_output = raw_output.model_copy(update={"variant_matches": own[:1]})
             return litvar2_build_citation(raw_output, display_index=display_index)
         if synth_finding.tool == "ncbi_dbsnp":
             return dbsnp_build_citation(raw_output, synth_finding.field, display_index=display_index)
