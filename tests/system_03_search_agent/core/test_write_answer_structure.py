@@ -1012,8 +1012,10 @@ async def test_card94_plain_language_isolates_show_the_genes_table(monkeypatch) 
     headings = [t["text"].strip() for t in _tokens(result) if t["kind"] == "heading"]
     assert "Isolates and their AMR genes" in headings, headings
     # A row with no collection date says so instead of showing a blank cell.
+    # Card 94 (2026-10-09): the cell also says where, and these fixture
+    # rows hold no place, so it says that is not recorded either.
     column = header.index("Collected")
-    assert [row["cells"][column] for row in rows] == ["2023", "Not recorded"]
+    assert [row["cells"][column] for row in rows] == ["2023, place not recorded", "Not recorded"]
     assert all(row["marker_ids"] for row in rows)
 
 

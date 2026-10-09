@@ -351,10 +351,13 @@ async def test_write_puts_the_count_under_an_isolate_answer(monkeypatch: pytest.
     # asserted to sit beside the name they belong to.
     tokens_all = [e.payload for e in result["events"] if e.type == "token"]
     header = next(t["cells"] for t in tokens_all if t.get("kind") == "table_header")
+    #
+    # Card 94 (2026-10-09): the "Collected" cell shows where the isolate
+    # was collected beside when, from the record's own place.
     assert header == ["Isolate", "Identifier", "AMR genes", "Collected"], header
     rows = [t for t in tokens_all if t.get("kind") == "table_row"]
     assert rows and rows[0]["cells"] == [
-        "AZ-TG59983", "SAMN02442784", "acrF, blaCTX-M-15", "2013"
+        "AZ-TG59983", "SAMN02442784", "acrF, blaCTX-M-15", "2013, USA:AZ"
     ], rows
     assert any("Isolates and their AMR genes" in t for t in tokens), tokens
     citations = [e.payload for e in result["events"] if e.type == "citation"]
@@ -368,3 +371,197 @@ def test_the_isolate_table_shows_the_genes_beside_the_name() -> None:
     assert table_second_cell("Pathogen Detection isolate", row) == "acrF, blaCTX-M-15"
     assert table_second_cell("Pathogen Detection isolate", {"name": "x", "amr_genotypes": None}) is None
     assert TABLE_HEADINGS["Pathogen Detection isolate"] == "Isolates and their AMR genes"
+
+
+# ---------------------------------------------------------------------------
+# Card 94 (2026-10-09): "An isolate answer shows each isolate's place, and
+# naming one isolate gets that isolate's details." Each arm was shown red by
+# one mutation before it was kept
+# (`testing/Developer/reports/2026-10-09_card94/build.md`).
+# ---------------------------------------------------------------------------
+
+ONE_ISOLATE_QUESTION = "What is known about Salmonella isolate SAMN02147118 in Pathogen Detection?"
+# The same accession with no organism and no isolate word: the BioSample
+# path as before, the populate check for the lookup arm.
+PLAIN_BIOSAMPLE_QUESTION = "What is BioSample SAMN02147118 and which SRA runs come from it?"
+
+
+def test_an_isolate_row_shows_its_place_or_says_none_was_recorded() -> None:
+    from system_03_search_agent.synthesis.answer_layout import collected_with_place, isolate_place
+
+    isolate_type = "Pathogen Detection isolate"
+    assert isolate_place(isolate_type, {"geo_loc_name": " USA: Minnesota "}) == "USA: Minnesota"
+    assert isolate_place(isolate_type, {"geo_loc_name": None}) == ""
+    assert isolate_place(isolate_type, {"geo_loc_name": "  "}) == ""
+    assert isolate_place(isolate_type, None) == ""
+    # Every other table keeps its cells: no place at all.
+    assert isolate_place("Clinical trial", {"geo_loc_name": "USA"}) is None
+    assert isolate_place("SequenceVariant", {"geo_loc_name": "USA"}) is None
+    # Each half the record does not hold is named as missing.
+    assert collected_with_place("2013", "USA: Minnesota") == "2013, USA: Minnesota"
+    assert collected_with_place("2013", "") == "2013, place not recorded"
+    assert collected_with_place("Not recorded", "USA: Minnesota") == "USA: Minnesota, date not recorded"
+    assert collected_with_place("", "USA: Minnesota") == "USA: Minnesota, date not recorded"
+    assert collected_with_place("Not recorded", "") == "Not recorded"
+
+
+def _one_isolate_finding(output: PathogenDetectionOutput) -> Any:
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    shaped = graph_module._layer_tool_output_to_structured_fields("pathogen_detection", output)
+    return Finding(
+        call_id="pd-1", tool="pathogen_detection", layer="layer_2_api",
+        source="structured_pass_through", structured_fields=shaped,
+        extracted_entities=None, normalized_ids=None, evidence_summary=None,
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("depth", ["researcher", "plain_language"])
+async def test_the_isolate_table_shows_each_isolates_place_beside_when(
+    monkeypatch: pytest.MonkeyPatch, depth: str
+) -> None:
+    """RED before: the "Collected" cell held the year alone, and the place in
+    each row's fields never reached a cell. A table with no date at all still
+    shows the column, so the place is never dropped with it."""
+    from tests.system_03_search_agent.core.test_write_answer_structure import _install, _no_prose
+    from tests.system_03_search_agent.core.test_write_answer_structure import _state as _write_state
+
+    _install(monkeypatch, _no_prose)
+    placed = _isolate("SAMN02442784", "AZ-TG59983", ["blaCTX-M-15"])
+    unplaced = _isolate("SAMN02442785", "AZ-TG59984", ["blaCTX-M-27"]).model_copy(
+        update={"geo_loc_name": None}
+    )
+    undated = _isolate("SAMN02442786", "AZ-TG59985", ["blaCTX-M-14"]).model_copy(
+        update={"collection_date": None, "geo_loc_name": "Mexico"}
+    )
+    output = _search_output([placed, unplaced, undated], total=3)
+    state = _write_state(depth)
+    state["query"] = Query(text=GOLDEN_QUESTION, session_id="s-iso", trace_id="t-iso", user_id=None)
+    state["isolate_question"] = _question()
+    state["layer3_raw_outputs"] = {"pd-1": output}
+    state["findings"] = [_one_isolate_finding(output)]
+    state["findings_count"] = 1
+    result = await graph_module.write_node(state)
+    tokens = [e.payload for e in result["events"] if e.type == "token"]
+    header = next(t["cells"] for t in tokens if t.get("kind") == "table_header")
+    assert header == ["Isolate", "Identifier", "AMR genes", "Collected"], header
+    rows = {row[0]: row[3] for row in (t["cells"] for t in tokens if t.get("kind") == "table_row")}
+    assert rows == {
+        "AZ-TG59983": "2013, USA:AZ",
+        "AZ-TG59984": "2013, place not recorded",
+        "AZ-TG59985": "Mexico, date not recorded",
+    }, rows
+
+
+def _biosample_plan() -> Any:
+    from system_03_search_agent.core import accession as accession_module
+
+    record = accession_module.parse_accession(ONE_ISOLATE_QUESTION)
+    assert record is not None and record.kind == "biosample"
+    return graph_module._AccessionPlan(record=record, uid="2147118", linked={"sra": ["111"]})
+
+
+@pytest.mark.asyncio
+async def test_naming_one_isolate_plans_the_tools_lookup_of_that_isolate_first(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RED before: the plan was the BioSample summaries only, and the tool's
+    lookup mode was never called."""
+    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
+    state = _state(
+        ONE_ISOLATE_QUESTION, resolved_entities=[], query_class="lookup",
+        accession_plan=_biosample_plan(),
+    )
+    result = await graph_module.plan_node(state)
+    calls = result["tool_calls"]
+    lookup = calls[0]
+    assert isinstance(lookup, graph_module._PlannedLayerToolCall), calls
+    assert lookup.tool_call.tool == "pathogen_detection" and lookup.purpose == "isolate_lookup"
+    assert lookup.tool_input.root.mode == "isolate_lookup"
+    assert lookup.tool_input.root.taxon == "Salmonella"
+    assert lookup.tool_input.root.biosample_acc == "SAMN02147118"
+    # The BioSample record and its runs are still planned beside it.
+    assert [c.purpose for c in calls[1:]] == ["biosample_summary", "sra_summary"]
+    assert not any(isinstance(c, graph_module._PlannedToolCall) for c in calls), "no graph call"
+    plan = next(e for e in result["events"] if e.type == "plan")
+    assert plan.payload["tool_calls"][0]["tool"] == "pathogen_detection"
+
+
+@pytest.mark.asyncio
+async def test_a_biosample_question_naming_no_isolate_organism_plans_no_lookup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With no organism named there is no taxon folder to read, so the plan
+    stays the BioSample summaries, as before."""
+    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
+    state = _state(
+        PLAIN_BIOSAMPLE_QUESTION, resolved_entities=[], query_class="lookup",
+        accession_plan=_biosample_plan(),
+    )
+    result = await graph_module.plan_node(state)
+    assert [c.tool_call.tool for c in result["tool_calls"]] == ["ncbi_efetch", "ncbi_efetch"]
+
+
+@pytest.mark.asyncio
+async def test_one_isolates_answer_shows_its_details_with_no_sample_note(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The lookup's one isolate reaches the answer as one row: strain,
+    BioSample accession, genes, place and year, cited to its Pathogen
+    Detection page, with no "first 20" count under it."""
+    from tests.system_03_search_agent.core.test_write_answer_structure import _install, _no_prose
+    from tests.system_03_search_agent.core.test_write_answer_structure import _state as _write_state
+
+    _install(monkeypatch, _no_prose)
+    one = _isolate("SAMN02147118", "SL1344", ["aph(3'')-Ib", "sul2"])
+    output = PathogenDetectionOutput(
+        status="ok", mode="isolate_lookup", pdg_snapshot="PDG000000002.1", isolates=[one],
+        isolate_count=1, total_available=1, truncated=False,
+    )
+    shaped = graph_module._layer_tool_output_to_structured_fields("pathogen_detection", output)
+    assert shaped["row_count"] == 1 and shaped["truncated"] is False
+    state = _write_state("researcher")
+    state["query"] = Query(text=ONE_ISOLATE_QUESTION, session_id="s-iso", trace_id="t-iso", user_id=None)
+    state["layer3_raw_outputs"] = {"pd-1": output}
+    state["findings"] = [_one_isolate_finding(output)]
+    state["findings_count"] = 1
+    result = await graph_module.write_node(state)
+    tokens = [e.payload for e in result["events"] if e.type == "token"]
+    rows = [t["cells"] for t in tokens if t.get("kind") == "table_row"]
+    assert rows == [["SL1344", "SAMN02147118", "aph(3'')-Ib, sul2", "2013, USA:AZ"]], rows
+    assert not any("Pathogen Detection lists" in t["text"] for t in tokens), tokens
+    citations = [e.payload for e in result["events"] if e.type == "citation"]
+    assert citations and all(c["source_id"] == "SAMN02147118" for c in citations), citations
+    assert all("pathogens/isolates" in c["source_url"] for c in citations), citations
+
+
+@pytest.mark.asyncio
+async def test_an_isolate_table_with_no_dates_still_shows_each_place(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RED before: with no isolate holding a date there was no "Collected"
+    column, and the places had nowhere to show."""
+    from tests.system_03_search_agent.core.test_write_answer_structure import _install, _no_prose
+    from tests.system_03_search_agent.core.test_write_answer_structure import _state as _write_state
+
+    _install(monkeypatch, _no_prose)
+    undated = [
+        _isolate(f"SAMN0244278{i}", f"AZ-{i}", ["blaCTX-M-15"]).model_copy(
+            update={"collection_date": None}
+        )
+        for i in range(2)
+    ]
+    output = _search_output(undated, total=2)
+    state = _write_state("researcher")
+    state["query"] = Query(text=GOLDEN_QUESTION, session_id="s-iso", trace_id="t-iso", user_id=None)
+    state["isolate_question"] = _question()
+    state["layer3_raw_outputs"] = {"pd-1": output}
+    state["findings"] = [_one_isolate_finding(output)]
+    state["findings_count"] = 1
+    result = await graph_module.write_node(state)
+    tokens = [e.payload for e in result["events"] if e.type == "token"]
+    header = next(t["cells"] for t in tokens if t.get("kind") == "table_header")
+    assert header == ["Isolate", "Identifier", "AMR genes", "Collected"], header
+    rows = [t["cells"][3] for t in tokens if t.get("kind") == "table_row"]
+    assert rows == ["USA:AZ, date not recorded"] * 2, rows

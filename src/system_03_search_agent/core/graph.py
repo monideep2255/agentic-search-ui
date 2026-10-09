@@ -552,6 +552,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     GroundingInput,
     answer_summary_sentence,
     collected_placeholder,
+    collected_with_place,
     condition_ids_for_row,
     drop_record_restatements,
     emphasis_for,
@@ -560,6 +561,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     grounding_input,
     heading_is_supported,
     is_plain_language,
+    isolate_place,
     key_terms,
     parse_synth_layout,
     placeholder_link_count,
@@ -669,7 +671,10 @@ from system_03_search_agent.tools.pathogen_detection import (
     build_citation as pathogen_build_citation,
 )
 from system_03_search_agent.tools.pathogen_detection import pathogen_detection
-from system_03_search_agent.tools.pathogen_detection_schemas import PathogenDetectionOutput
+from system_03_search_agent.tools.pathogen_detection_schemas import (
+    PathogenDetectionInput,
+    PathogenDetectionOutput,
+)
 from system_03_search_agent.tools.pubtator_annotate import build_citation as pubtator_build_citation
 from system_03_search_agent.tools.pubtator_annotate import pubtator_annotate
 from system_03_search_agent.tools.pubtator_annotate_schemas import (
@@ -6993,11 +6998,46 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         )
         planned_tool_calls: list[_PlannedToolCall | _PlannedNcbiEfetchToolCall] = []
         if accession_plan is not None and accession_plan.uid is not None:
+            # Card 94 (2026-10-09): "naming one isolate gets that isolate's
+            # details." A BioSample asked about as a Pathogen Detection
+            # isolate of a named organism also plans the tool's lookup of
+            # that one isolate, first, so the answer shows its strain,
+            # place, date and resistance genes with its Pathogen Detection
+            # link, beside the BioSample record. The organism is the one
+            # the isolate shape reads from the question; with none named
+            # there is no taxon folder to read, and the plan is unchanged.
+            isolate_shape = (
+                isolate_search.parse_isolate_question(query.text)
+                if accession_plan.record.kind == "biosample"
+                else None
+            )
+            lookup_calls = (
+                [
+                    breadth_plan.PlannedCall(
+                        tool="pathogen_detection",
+                        layer="layer_2_api",
+                        prefix="pd",
+                        purpose="isolate_lookup",
+                        tool_input=PathogenDetectionInput.model_validate(
+                            {
+                                "mode": "isolate_lookup",
+                                "taxon": isolate_shape.organism.taxon_folder,
+                                "biosample_acc": accession_plan.record.value,
+                            }
+                        ),
+                    )
+                ]
+                if isolate_shape is not None and isolate_shape.organism is not None
+                else []
+            )
             planned_tool_calls = [
                 _planned_from_breadth(call)
-                for call in accession.plan_summary_calls(
-                    accession_plan.record, accession_plan.uid, accession_plan.linked
-                )
+                for call in [
+                    *lookup_calls,
+                    *accession.plan_summary_calls(
+                        accession_plan.record, accession_plan.uid, accession_plan.linked
+                    ),
+                ]
             ]
             lead_name = persona_for_session(session_id=query.session_id, user_id=query.user_id)
             planned_tool_calls = _assign_helpers(planned_tool_calls, lead_name=lead_name)
@@ -13218,6 +13258,16 @@ def _answer_parts(
                 for (_, finding), row_fields in zip(entries, row_fields_by_entry, strict=True)
             ]
             extra_label = next((extra[0] for extra in extras if extra is not None), None)
+            # Card 94 (2026-10-09): an isolate row shows where it was
+            # collected beside when, both read from its own record, in its
+            # "Collected" cell (`collected_with_place`). The column shows on
+            # every isolate table, even when no isolate holds a date.
+            places = [
+                isolate_place(entity_type, row_fields) if finding is not None else None
+                for (_, finding), row_fields in zip(entries, row_fields_by_entry, strict=True)
+            ]
+            if extra_label is None and any(place is not None for place in places):
+                extra_label = "Collected"
             has_identifier = any(identifiers)
             columns = [first_column_label(entity_type)]
             if has_identifier:
@@ -13240,8 +13290,14 @@ def _answer_parts(
             else:
                 heading(records_heading)
             listed_records: dict[tuple[str, str], list[ListedRow]] = {}
-            for (sentence, finding), row_fields, second, identifier, extra in zip(
-                entries, row_fields_by_entry, second_cells, identifiers, extras, strict=True
+            for (sentence, finding), row_fields, second, identifier, extra, place in zip(
+                entries,
+                row_fields_by_entry,
+                second_cells,
+                identifiers,
+                extras,
+                places,
+                strict=True,
             ):
                 if finding is None:
                     sentence_token(sentence)
@@ -13261,10 +13317,15 @@ def _answer_parts(
                             )
                         )
                     if extra_label is not None:
-                        cells.append(
+                        when = (
                             extra[1]
                             if extra is not None and extra[0] == extra_label
                             else collected_placeholder(extra_label, row_fields)
+                        )
+                        cells.append(
+                            when
+                            if place is None or extra_label != "Collected"
+                            else collected_with_place(when, place)
                         )
                 # One row per record: two claims about the same record (its
                 # title and its symbol) are one row, not two identical ones.

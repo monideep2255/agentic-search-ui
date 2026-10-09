@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-10-08.
+Last updated: 2026-10-09.
 
 Every entry has the same three parts:
 
@@ -734,7 +734,8 @@ Queries to try:
 What you should see:
 
 - The flagship isolate search question, the one the product is measured on.
-- A table headed "Isolates and their AMR genes" with 20 rows. Each row shows the isolate's BioSample accession, strain, and where and when it was collected, beside its gene list; every row carries a blaCTX-M gene, and each gene list is linked to that isolate's own Pathogen Detection page.
+- A table headed "Isolates and their AMR genes" with 20 rows. Each row shows the isolate's strain, its BioSample accession under "Identifier", its gene list, and under "Collected" when and where it was collected, such as "2013, USA: Minnesota"; every row carries a blaCTX-M gene, and each gene list is linked to that isolate's own Pathogen Detection page.
+- A row whose record holds no place reads "2013, place not recorded"; one with no date reads "USA: Minnesota, date not recorded"; one with neither reads "Not recorded" (card 94).
 - The line "Pathogen Detection lists 140,476 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown."
 - A note saying only the blaCTX-M family of genes was searched for "extended-spectrum beta-lactamase", and why: a plain blaTEM or blaSHV gene name cannot be told apart from a genuine ESBL by its name alone, so those families were left out rather than risk a wrong label.
 - E. coli named and linked to its NCBI Taxonomy record among the sources cited.
@@ -861,8 +862,9 @@ Queries to try:
 What you should see:
 
 - The older, single-isolate mode of this tool is not broken by adding isolate search.
-- A single isolate's details: its strain, where and when it was collected, its resistance genes, and a link to its Pathogen Detection page.
+- A single isolate's details in one row: its strain, its BioSample accession, its resistance genes, and when and where it was collected, with a link to its Pathogen Detection page (card 94). The BioSample's own NCBI record and its sequencing runs are listed beside it.
 - No mention of "showing the first 20" or a count of isolates, since this is a single-record lookup, not a search.
+- The organism must be named for the lookup, since Pathogen Detection is read one organism at a time: `What is BioSample SAMN02147118?` still shows only the BioSample record, as before.
 - Why it matters: adding a new search mode should never break the lookup someone was already relying on.
 
 ### 43. The wait feels alive (isolate query 11)
