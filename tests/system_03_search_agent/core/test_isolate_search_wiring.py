@@ -484,7 +484,7 @@ async def test_an_isolate_table_with_no_dates_still_shows_each_place(
     "placeholder",
     [
         "missing", "Missing", "not collected", "Not Applicable", "not provided", "NULL",
-        "unknown", "N/A", "restricted access", "missing: control sample", "", "   ",
+        "unknown", "N/A", "N.A.", "restricted access", "missing: control sample", "", "   ",
     ],
 )
 def test_a_missing_value_word_in_the_place_field_is_not_a_place(placeholder: str) -> None:

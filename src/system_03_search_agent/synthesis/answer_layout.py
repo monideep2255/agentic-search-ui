@@ -623,7 +623,8 @@ NOT_RECORDED = "Not recorded"
 #: (https://www.insdc.org/technical-specifications/missing-value-reporting/),
 #: which BioSample and Pathogen Detection metadata follow. "NULL" is how a
 #: graph row writes an empty field; "unknown", "N/A" and "NA" are the
-#: informal forms submitters also use. Compared without case.
+#: informal forms submitters also use. Compared without case, and without
+#: dots or slashes, so "N/A" and "N.A." both read as "na".
 PLACE_PLACEHOLDERS = frozenset(
     {
         "missing",
@@ -633,7 +634,6 @@ PLACE_PLACEHOLDERS = frozenset(
         "restricted access",
         "null",
         "unknown",
-        "n/a",
         "na",
     }
 )
@@ -645,7 +645,9 @@ CUT_MARK = "\u2026"
 def _is_placeholder(value: str) -> bool:
     """True for an INSDC missing-value word or a "missing: <reason>" form."""
     folded = value.strip().casefold()
-    return folded in PLACE_PLACEHOLDERS or folded.startswith(_MISSING_WITH_REASON)
+    if folded.startswith(_MISSING_WITH_REASON):
+        return True
+    return folded.replace(".", "").replace("/", "") in PLACE_PLACEHOLDERS
 
 
 def isolate_place(entity_type: str, row_fields: dict[str, Any] | None) -> str | None:
