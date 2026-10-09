@@ -2095,12 +2095,20 @@ async def _guardrail_after_prefilter(
         # the parse error's own text, "the guard tier did not return valid JSON",
         # which named an internal part and said nothing to do. The parse
         # error itself is in the log line of each unusable attempt above.
+        #
+        # Fix round of the guardrail design, A-GR-10: "transient", not
+        # "recoverable". Two unreadable replies are the guardrail's own
+        # check not finishing, like two timeouts, and asking again usually
+        # works (twelve of thirteen replies parsed). "recoverable" is the
+        # class of a failure the question itself caused, a provider's
+        # content-policy refusal or a 400, whose words tell the person to
+        # rephrase; the web app now tells the two apart by this class alone.
         return {
             "step_error": {
                 "fatal": True,
                 "scope": "step",
                 "source": "guardrail",
-                "error_class": "recoverable",
+                "error_class": "transient",
                 "message": _GUARDRAIL_NO_USABLE_VERDICT_MESSAGE,
                 "retry_after_s": 0,
             }

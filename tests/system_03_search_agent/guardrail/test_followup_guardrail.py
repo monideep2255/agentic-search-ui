@@ -901,7 +901,11 @@ async def test_no_usable_verdict_says_what_to_do_next(
     monkeypatch: pytest.MonkeyPatch, behaviours: tuple[Any, ...]
 ) -> None:
     """MUTATION PROOF: returning the parse error's own text again turns this
-    red on the message."""
+    red on the message.
+
+    Fix round, A-GR-10: the class is "transient", the guardrail's own check
+    not finishing, so the web app reads its guardrail words; "recoverable"
+    is left to failures the question caused (content policy, a 400)."""
     _shrink(monkeypatch)
     _classifier(monkeypatch, *behaviours)
     events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
@@ -910,8 +914,64 @@ async def test_no_usable_verdict_says_what_to_do_next(
         "fatal": True,
         "scope": "step",
         "source": "guardrail",
-        "error_class": "recoverable",
+        "error_class": "transient",
         "message": "A step in this query could not complete. Retrying the query may succeed.",
         "retry_after_s": 0,
     }
 
+
+# ---------------------------------------------------------------------------
+# Fix round of the guardrail design, A-GR-10: the class a guardrail failure
+# carries on the wire is what the web app reads to choose its words, so each
+# kind of failure carries its own category. Only the guardrail's own check
+# not finishing is "transient"; a failure the question caused is
+# "recoverable"; one asking again cannot fix is "unexpected".
+# ---------------------------------------------------------------------------
+
+
+def _content_policy() -> BaseException:
+    return litellm.ContentPolicyViolationError(
+        message="content policy (stub)", model="m", llm_provider="openrouter"
+    )
+
+
+def _bad_request() -> BaseException:
+    return litellm.BadRequestError("bad request (stub)", model="m", llm_provider="openrouter")
+
+
+def _unauthorised() -> BaseException:
+    return litellm.AuthenticationError(message="401 (stub)", llm_provider="openrouter", model="m")
+
+
+_FAILURE_KINDS = [
+    ("both attempts time out", ("hang",), "transient"),
+    ("two unreadable replies", ("I will look this up.",), "transient"),
+    ("a content-policy refusal", (_content_policy,), "recoverable"),
+    ("a 400", (_bad_request,), "recoverable"),
+    ("a 401", (_unauthorised,), "unexpected"),
+]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("behaviours", "error_class"), [k[1:] for k in _FAILURE_KINDS], ids=[k[0] for k in _FAILURE_KINDS]
+)
+async def test_each_kind_of_guardrail_failure_carries_its_own_category(
+    monkeypatch: pytest.MonkeyPatch, behaviours: tuple[Any, ...], error_class: str
+) -> None:
+    """A-GR-10: the web app shows "a problem on our side, try asking again"
+    for a guardrail failure of class "transient" only. A content-policy
+    refusal or a 400 is caused by the question and stays "recoverable" (its
+    words say to rephrase); a 401 stays "unexpected" (asking again cannot
+    fix it). Two unreadable replies are the check not finishing, so they
+    are "transient" like two timeouts.
+
+    MUTATION PROOF: the unusable-verdict error back at "recoverable" turns
+    the unreadable arm red."""
+    _shrink(monkeypatch)
+    _classifier(monkeypatch, *behaviours)
+    events, result, _ = await _run_guardrail(_ORDINARY_QUESTION)
+    assert _guard(events) is None
+    step_error = result.get("step_error")
+    assert step_error is not None
+    assert (step_error["source"], step_error["error_class"]) == ("guardrail", error_class)

@@ -343,7 +343,9 @@ async def test_guardrail_unusable_replies_log_unusable_reply(
 
     out = await _run_guardrail("Which diseases are associated with BRCA1?")
 
-    assert out["step_error"]["error_class"] == "recoverable"
+    # "transient" since the guardrail design's fix round (A-GR-10): two
+    # unreadable replies are the check not finishing, like two timeouts.
+    assert out["step_error"]["error_class"] == "transient"
     lines = [entry for entry in _lines(caplog) if entry["point"] == "guardrail.classify"]
     assert [(entry["attempt"], entry["outcome"]) for entry in lines] == [
         ("1", "unusable_reply"),

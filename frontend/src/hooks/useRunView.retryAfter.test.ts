@@ -4,11 +4,15 @@
  * searched and the problem was ours, and a rate limit that named a wait says
  * how long, in seconds up to two minutes and in minutes past that.
  *
- * Only a fatal error whose `source` is the guardrail changes. Every other
- * failure keeps its own line, "in a moment" included, and a stopped run keeps
- * "This run was stopped". The backend's free-form `message` is never
- * rendered (F-4.8-A-15): the messages below are quoted from `core/graph.py`
- * only to prove they never reach the screen.
+ * Only a fatal error whose `source` is the guardrail AND whose class is
+ * "transient" changes: the guardrail's own check not finishing, two timeouts
+ * or two unreadable replies (fix round, A-GR-10). A guardrail failure the
+ * question caused ("recoverable": a content-policy refusal, a 400) keeps
+ * "rephrase the question"; one asking again cannot fix ("unexpected": a 401)
+ * keeps its own line. Every other failure keeps its own line, "in a moment"
+ * included, and a stopped run keeps "This run was stopped". The backend's
+ * free-form `message` is never rendered (F-4.8-A-15): the messages below are
+ * quoted from `core/graph.py` only to prove they never reach the screen.
  *
  * Findings closed here: F-72-V05 and F-84-A02 (a long wait read as thousands
  * of seconds; no "in a moment" for a guardrail failure), F-84-A01 and A09 (a
@@ -18,7 +22,9 @@
  * MUTATION PROOF: dropping the `source === "guardrail"` branch from
  * `useRunView` turns every guardrail case red; reading the branch for every
  * source turns "other failures keep their own words" red; dropping the
- * minutes arm turns the long-wait case red.
+ * minutes arm turns the long-wait case red; reading the branch for every
+ * class but "cancelled" (the first build) turns the content-policy, 400 and
+ * 401 cases red.
  */
 
 import { renderHook } from "@testing-library/react";
@@ -73,8 +79,13 @@ const WITH_WAIT = (words: string): string =>
 // `_GUARDRAIL_NO_USABLE_VERDICT_MESSAGE`, quoted to prove they never render.
 const TRANSIENT_MESSAGE =
   "A step in this query hit a temporary error. Retrying the query may succeed.";
-const RECOVERABLE_MESSAGE =
+const NO_USABLE_VERDICT_MESSAGE =
   "A step in this query could not complete. Retrying the query may succeed.";
+const RECOVERABLE_MESSAGE = "A step in this query could not complete as requested.";
+const UNEXPECTED_MESSAGE = "A step in this query failed unexpectedly.";
+
+// Develop's words for the classes a guardrail failure keeps (A-GR-10).
+const REPHRASE = "This run could not be completed. Try asking again, or rephrase the question.";
 
 describe("useRunView: a guardrail failure reads plain words", () => {
   it("a double timeout reads the plain words", () => {
@@ -82,13 +93,10 @@ describe("useRunView: a guardrail failure reads plain words", () => {
   });
 
   it("two unreadable replies read the same words, never 'rephrase the question'", () => {
-    const text = failure({ error_class: "recoverable", message: RECOVERABLE_MESSAGE });
+    // The backend sends two unreadable replies as "transient" (A-GR-10).
+    const text = failure({ error_class: "transient", message: NO_USABLE_VERDICT_MESSAGE });
     expect(text).toBe(PLAIN);
     expect(text).not.toContain("rephrase");
-  });
-
-  it("an unexpected guardrail failure reads the same words", () => {
-    expect(failure({ error_class: "unexpected" })).toBe(PLAIN);
   });
 
   it("a named wait reads in seconds, 'second' for one", () => {
@@ -119,6 +127,25 @@ describe("useRunView: a guardrail failure reads plain words", () => {
       expect(text).not.toContain("Retrying the query");
       expect(text).not.toContain("secret backend detail");
     }
+  });
+});
+
+describe("useRunView: a guardrail failure the question caused, or that asking again cannot fix, keeps develop's words", () => {
+  // Fix round, A-GR-10: decided by category, from `source` and `error_class`.
+  it("a content-policy refusal reads develop's words, not 'a problem on our side'", () => {
+    const text = failure({ error_class: "recoverable", message: RECOVERABLE_MESSAGE });
+    expect(text).toBe(REPHRASE);
+    expect(text).not.toContain("problem on our side");
+  });
+
+  it("a 400 reads develop's words, a named wait ignored", () => {
+    expect(failure({ error_class: "recoverable", retry_after_s: 20 })).toBe(REPHRASE);
+  });
+
+  it("a 401 reads develop's words, never 'not with your question'", () => {
+    const text = failure({ error_class: "unexpected", message: UNEXPECTED_MESSAGE });
+    expect(text).toBe(REPHRASE);
+    expect(text).not.toContain("not with your question");
   });
 });
 

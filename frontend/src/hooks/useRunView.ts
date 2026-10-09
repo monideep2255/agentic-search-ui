@@ -1235,11 +1235,19 @@ export function useRunView(events: AgentEvent[]): RunView {
      * every question passes first could not finish, a double timeout or two
      * unreadable replies, nothing was searched and nothing was wrong with the
      * question, so "rephrase the question" and "in a moment" were both wrong.
-     * Only a fatal error whose `source` is the guardrail reads these words;
-     * every other failure keeps `FATAL_COPY`, and a stopped run keeps its own
-     * line. `source` and `retry_after_s` are a fixed step name and a number on
-     * the wire, never free text, so the backend's `message` is still never
-     * rendered (F-4.8-A-15).
+     *
+     * Decided by category, from `source` and `error_class` alone (fix round,
+     * A-GR-10): only a fatal error whose `source` is the guardrail AND whose
+     * class is "transient", the check not finishing on our side, reads these
+     * words. The backend sends both timeouts and two unreadable replies as
+     * "transient". A "recoverable" guardrail failure is one the question
+     * caused, a provider's content-policy refusal or a 400, and keeps
+     * "rephrase the question"; an "unexpected" one, a 401 among them, is not
+     * fixed by asking again, and keeps its own line; a stopped run keeps its
+     * own line. Every other failure keeps `FATAL_COPY`. `source`,
+     * `error_class` and `retry_after_s` are a fixed step name, a closed enum
+     * and a number on the wire, never free text, so the backend's `message`
+     * is still never rendered (F-4.8-A-15).
      *
      * A wait the provider named arrives in `retry_after_s`: seconds up to two
      * minutes, whole minutes past that (F-84-A02, F-72-V05). A wait of 0, one
@@ -1264,7 +1272,7 @@ export function useRunView(events: AgentEvent[]): RunView {
     const failure =
       fatalError && fatalError.type === "error"
         ? fatalError.payload.source === "guardrail" &&
-          fatalError.payload.error_class !== "cancelled"
+          fatalError.payload.error_class === "transient"
           ? guardrailFailure(fatalError.payload.retry_after_s)
           : (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
         : null;
