@@ -14,11 +14,16 @@ Reads:
       reads `OPENROUTER_API_KEY`, then passes both in.
 
 Writes:
-    - Nothing. Jev's own `usage.cost` is returned on `JevResult` for the
-      caller to charge through `Harness.track_cost`, and, for a reply that
-      came back but could not be used, on `JevCallError.billed_cost_usd`
-      (build phase 8.6 fix round, F-8.6-J10); this module never touches a
-      `Harness` instance.
+    - Nothing. What each reply is charged is fixed here, by `jev_charge_usd`
+      (the product owner's rule of 2026-09-29), and handed to the caller to
+      charge through `Harness.track_cost`: on `JevResult.cost_usd` for a
+      usable reply, on `JevCallError.billed_cost_usd` for every other reply
+      that came back, an error status included. This module never touches
+      a `Harness` instance. It writes one warning whenever a reply is not
+      charged the cost it states, naming the amount, an error status
+      included. A warning carries a fixed category, the reply's length and
+      the amounts, never the reply's own text: a reply can echo the
+      person's question (fix round, A-GRS-05).
 
 THE ENDPOINT'S SHAPE IS NOT PUBLICLY DOCUMENTED. Everything below was
 pinned live on 2026-09-25 against the real endpoint, `POST
@@ -105,13 +110,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import sys
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Annotated, Any
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
 
@@ -133,29 +139,39 @@ JEV_TOTAL_TIMEOUT_S = _TIMEOUT_S
 
 JevFailureReason = str  # "timeout" | "http_error" | "malformed_reply" | "invalid_option"
 
-#: The most one decision may report costing, in US dollars. Measured live at
+#: The most one Jev reply is ever charged, in US dollars, and the most one
+#: decision may report costing and still be used. Measured live at
 #: $0.0000148 to $0.0000197 per call (builder D), so this is about 500 times
 #: the real price. Jev's cost is the one model cost in the loop the loop does
 #: not compute itself: it is whatever the undocumented endpoint says, and it
 #: is charged straight into the per-query, per-user and system-wide caps.
 #:
-#: A reply reporting more than this is not used: it is malformed, so the
+#: A reply stating more than this is not used: it is malformed, so the
 #: guard's pick decides or, for the sentence check, nothing is approved. It
-#: IS charged (build phase 8.6 fix round, F-8.6-J10), because the money was
-#: spent either way and a reply the caps never see is exactly the expensive
-#: one, but at this ceiling, never in full (F-8.6-V01): a reply once reported
-#: 12.5 for a call that actually cost $0.0000125, and charging the full
-#: figure would have paused every person's questions for the rest of the
-#: day on one units slip from the undocumented alpha endpoint. The cost cap
-#: then applies to the rest of the question as to any charge.
-#:
-#: A figure that is not a finite, non-negative amount is charged this same
-#: ceiling too, never $0.0 (`_reported_cost_usd`, F-8.6-V03): `Infinity`
-#: stopped every later model call in the question and turned the done
-#: event's cost into null (F-8.2-J15), `NaN` would switch the per-query cap
-#: off since no comparison with it is ever true, and a $0.0 charge for a
-#: call that reached the provider and was billed left the cap blind to it.
+#: is charged the `JEV_FLOOR_COST_USD` floor, never the stated figure
+#: (F-8.6-V01: a reply once reported 12.5 for a call that actually cost
+#: $0.0000125, and charging it would have paused every person's questions
+#: for the rest of the day). The floor, not this ceiling, because the
+#: owner's rule of 2026-09-29 reads "the cost it states when that is above
+#: $0 and at most `MAX_JEV_COST_USD`, otherwise a floor", and a stated cost
+#: above this is "otherwise", whatever its spelling: 0.05, 1e309,
+#: Infinity, an integer too large for a float, a numeric string (fix round
+#: of 2026-10-09, J-GRS-03, J-GRS-04, A-GRS-03). Develop charged it this
+#: ceiling (F-84-A06); the rule as written replaces that.
 MAX_JEV_COST_USD = 0.01
+
+#: What a Jev reply that came back is charged when it states no cost above
+#: $0 and at most `MAX_JEV_COST_USD`, in US dollars: about five times Jev's measured price, so every cap
+#: still sees the call, and a hundredth of `MAX_JEV_COST_USD` (the product
+#: owner's rule of 2026-09-29, step 3a of the guardrail design).
+#:
+#: A reply that reached the provider is never charged $0 (F-72-J02: a
+#: usable reply stating $0 was charged $0, invisible to every cap; F-72-V03:
+#: an error status was charged $0). Not the ceiling either: charging a cent
+#: for every reply that states no cost made a drift in the endpoint's shape
+#: cost about $0.07 a question, enough to stop every search at the $25
+#: daily cap after a few hundred questions (F-72-A03).
+JEV_FLOOR_COST_USD = 0.0001
 
 #: At most one probability per offered option; `DecisionRecord.options`
 #: allows 12.
@@ -170,7 +186,9 @@ class JevResult(BaseModel):
     read back from an external HTTPS call, and it is treated with the
     same discipline as any other untrusted response before the caller
     acts on it. `cost_usd` is bounded above and `probabilities` in size
-    for the same reason (F-8.2-J15).
+    for the same reason (F-8.2-J15). As `call_jev` returns it, `cost_usd`
+    is what the caller charges (`jev_charge_usd`): the stated cost when it
+    is above $0, and the `JEV_FLOOR_COST_USD` floor for a stated $0.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -198,17 +216,16 @@ class JevCallError(RuntimeError):
     `reason` on the `DecisionRecord.fallback_reason` field; no retry
     happens inside this module.
 
-    `billed_cost_usd` is what a reply that came back but could not be used
-    is charged, in US dollars, on the question (fix round, F-8.6-J10, then
-    clamped to the ceiling by F-8.6-V01 and V03): a malformed reply, an
-    option outside the set and a reply reporting a cost above
-    `MAX_JEV_COST_USD` are all billed, but never above the ceiling. A
-    well-formed cost at or under `MAX_JEV_COST_USD` is billed exactly as
-    reported; anything else, a cost above the ceiling or a reply that
-    states no amount, or one that is not a finite, non-negative number, is
-    billed the ceiling itself, never the reported figure and never $0.0
-    (`_reported_cost_usd`, `_cost_ceiling_error`). 0.0 only when no reply
-    came back at all, for example a timeout or a transport error.
+    `billed_cost_usd` is what the question is charged for this failed call,
+    in US dollars, fixed by `jev_charge_usd` (the product owner's rule of
+    2026-09-29): a reply that came back but could not be used is charged
+    as any reply is, the cost it states when that is above $0 and at most
+    `MAX_JEV_COST_USD`, and otherwise the `JEV_FLOOR_COST_USD` floor: a
+    stated cost above the ceiling, $0, no cost or no amount (F-84-J04:
+    usable or not makes no difference). A reply with an error
+    status (a 500, 429 or 402) reached the provider, so it is charged the
+    floor (F-72-V03). 0.0 only when no reply came back at all: a timeout or
+    a transport failure.
     """
 
     def __init__(self, message: str, *, reason: str, billed_cost_usd: float = 0.0) -> None:
@@ -217,97 +234,144 @@ class JevCallError(RuntimeError):
         self.billed_cost_usd = billed_cost_usd
 
 
-def _reported_cost_usd(payload: object, subject: str) -> float:
-    """What a 200 reply says the call cost, in US dollars, for the caller
-    to charge; `MAX_JEV_COST_USD`, the ceiling, logged, when the reply
-    states no usable amount (F-8.6-V03).
+def _stated_cost_usd(payload: object) -> float | None:
+    """The cost a 200 reply states, in US dollars, or None when it states no
+    readable amount.
 
-    A real amount only: a finite number, zero or more, read the way a
-    usable reply's `usage.cost` is read. A reply that states no cost, or a
-    cost that is not a number, is negative, is not finite (`Infinity` and
-    `NaN` both parse from JSON), or is an integer too large to become a
-    float at all (`float()` raises `OverflowError`), charges the ceiling
-    instead of the stated amount, because no trustworthy amount was
-    stated: `harness.py`'s rule is that a cost cap which guesses must guess
-    toward stopping (F-2.1-B02), and a conservative finite charge is safer
-    than the $0.0 this used to charge, which left the per-query cap blind
-    to a call that reached the provider and was billed. The warning says
-    so, so the ceiling charge is never silent. A finite, non-negative
-    amount at or under the ceiling is returned exactly as reported; a
-    finite amount above the ceiling is returned as reported too, since the
-    caller (`_cost_ceiling_error`) is the one that clamps it, not this
-    function.
+    A finite number zero or more is an amount, a numeric string included, as
+    `float()` reads it. A positive integer too large for a float states more
+    than any call costs, so it reads as the largest float: above the
+    ceiling, so the reply is not used. No `usage.cost`, a boolean, a figure
+    that is not a number, a negative one, `NaN` and infinity are unreadable
+    amounts. Every one of these is charged the floor by `jev_charge_usd`,
+    above the ceiling included (the owner's rule of 2026-09-29, as
+    written). What a reply is charged is decided by `jev_charge_usd` from
+    this figure alone, whether or not the rest of the reply can be used
+    (F-84-J04).
     """
     try:
         raw = payload["usage"]["cost"]  # type: ignore[index]
-    except (KeyError, TypeError, IndexError):
-        logger.warning(
-            "Jev's reply for %s states no cost, so it is charged the $%.2f ceiling",
-            subject,
-            MAX_JEV_COST_USD,
-        )
-        return MAX_JEV_COST_USD
+    except Exception:  # noqa: BLE001 - any body shape that names no cost states no amount
+        return None
+    if isinstance(raw, bool):
+        return None
     try:
-        cost = None if isinstance(raw, bool) else float(raw)
-    except (TypeError, ValueError, OverflowError):
-        cost = None
-    if cost is None or not math.isfinite(cost) or cost < 0:
-        logger.warning(
-            "Jev's reply for %s states a cost that is not an amount of money (%s), "
-            "so it is charged the $%.2f ceiling",
-            subject,
-            repr(raw)[:40],
-            MAX_JEV_COST_USD,
-        )
-        return MAX_JEV_COST_USD
+        cost = float(raw)
+    except OverflowError:
+        return sys.float_info.max if isinstance(raw, int) and raw > 0 else None
+    except Exception:  # noqa: BLE001 - not a number at all
+        return None
+    if not math.isfinite(cost) or cost < 0:
+        return None
     return cost
 
 
-def _cost_ceiling_error(
-    subject: str, cost_usd: float, next_step: str
+def jev_charge_usd(stated_usd: float | None) -> float:
+    """What a Jev reply that came back is charged, in US dollars, from the
+    cost it states (the product owner's rule of 2026-09-29, step 3a of the
+    guardrail design):
+
+    - a finite cost above $0 and at most `MAX_JEV_COST_USD`: the stated
+      cost, a stated cost under the floor included ($0.00002 is charged
+      $0.00002);
+    - everything else, "otherwise a floor" in the owner's words:
+      `JEV_FLOOR_COST_USD`. That is a cost above `MAX_JEV_COST_USD`, however
+      it is spelled (fix round, J-GRS-03: develop charged it the ceiling),
+      $0, no stated cost, and an unreadable amount (None, `NaN`, infinity,
+      a negative figure).
+
+    The same for a usable reply and an unusable one (F-84-J04). A timeout,
+    where no reply came back, is charged nothing and never reaches here.
+    """
+    if stated_usd is not None and math.isfinite(stated_usd) and 0.0 < stated_usd <= MAX_JEV_COST_USD:
+        return stated_usd
+    return JEV_FLOOR_COST_USD
+
+
+#: The fixed categories an unusable reply's warning names, in place of
+#: anything the reply said (fix round, A-GRS-05).
+NOT_JSON = "not_json"
+COST_ABOVE_CEILING = "cost_above_ceiling"
+WRONG_SHAPE = "wrong_shape"
+OPTION_OUTSIDE_SET = "option_outside_set"
+
+
+def _unusable_reply(
+    subject: str,
+    category: str,
+    detail: str,
+    next_step: str,
+    *,
+    charged_usd: float,
+    reply_length: int,
+    reason: str = "malformed_reply",
 ) -> JevCallError:
-    """The error for a reply that reports more than any one call should
-    cost: not used, and charged at the ceiling instead of the reported
-    figure (F-8.6-V01)."""
+    """The error for a reply that came back from the provider but cannot be
+    used, charged `charged_usd` (`jev_charge_usd` of what it states, or the
+    floor when the body could not be read at all), and the one log line that
+    says so by amount.
+
+    The log line carries `subject` (code-authored: a decision key or a
+    count), one of the fixed categories above, the reply's length in bytes
+    and the charge, and nothing the reply said (fix round, A-GRS-05). An
+    option outside the set is Jev's own free text over the person's
+    question, and a reply can echo that question, so it never reaches the
+    log. `detail` goes only into the error's message, which callers do not
+    log (they log `reason`): code-authored text plus, at most, an
+    exception's type name, a bounded stated figure or Jev's own bounded
+    choice, never the key, never the state.
+    """
     logger.warning(
-        "Jev's reply for %s reported a cost of $%.6f, above the $%.2f ceiling; "
-        "the reply is not used and it is charged the $%.2f ceiling, not the reported figure",
+        "Jev's reply for %s could not be used: %s, reply length %d bytes; it is charged $%.6f",
         subject,
-        cost_usd,
-        MAX_JEV_COST_USD,
-        MAX_JEV_COST_USD,
+        category,
+        reply_length,
+        charged_usd,
     )
     return JevCallError(
-        f"Jev's reply for {subject} reported a cost of ${cost_usd:.6f}, above the "
-        f"${MAX_JEV_COST_USD:.2f} any one call should cost, so it is not used and it is "
-        f"charged the ${MAX_JEV_COST_USD:.2f} ceiling, not the reported figure; {next_step}",
-        reason="malformed_reply",
-        billed_cost_usd=MAX_JEV_COST_USD,
+        f"Jev's reply for {subject} could not be used: {detail}; it is charged "
+        f"${charged_usd:.6f}; {next_step}",
+        reason=reason,
+        billed_cost_usd=charged_usd,
     )
+
+
+def _charged_for_usable(subject: str, stated_usd: float) -> float:
+    """A usable reply's charge, `jev_charge_usd` of its stated cost, with a
+    warning when that is not the stated cost (a stated $0 charged the floor,
+    F-72-J02)."""
+    charged = jev_charge_usd(stated_usd)
+    if charged != stated_usd:
+        logger.warning(
+            "Jev's reply for %s stated a cost of $%.6f; it is charged $%.6f",
+            subject,
+            stated_usd,
+            charged,
+        )
+    return charged
 
 
 def _json_payload(response: httpx.Response, subject: str, next_step: str) -> object:
-    """The 200 reply's body read as JSON, or a malformed-reply error
-    charged the ceiling (F-8.6-RJ05).
+    """The 200 reply's body read as JSON, or an unusable-reply error charged
+    the floor (F-8.6-RJ05; the owner's rule of 2026-09-29).
 
     A 200 came back from the provider, so the call was billed, but a body
-    that is empty or not JSON states no amount at all. It is charged
-    `MAX_JEV_COST_USD`, the same as a JSON body that states no cost, and
-    the warning names that amount, so two unreadable replies are never
-    priced differently and the ceiling charge is never silent.
+    that cannot be read states no amount at all, so it is charged
+    `JEV_FLOOR_COST_USD`, like any reply stating no cost. Any error reading
+    it is caught, by base class: a body nested too deep raises
+    `RecursionError`, not `ValueError`, and must not escape uncharged
+    (F-8.6-FA01).
     """
     try:
         return response.json()
-    except ValueError as exc:  # json.JSONDecodeError and UnicodeDecodeError are both ValueError
-        logger.warning(
-            "Jev's reply for %s is not JSON, so it is charged the $%.2f ceiling",
+    except Exception as exc:  # every unreadable body, by base class
+        raise _unusable_reply(
             subject,
-            MAX_JEV_COST_USD,
-        )
-        raise JevCallError(
-            f"Jev's reply for {subject} was not JSON ({type(exc).__name__}); {next_step}",
-            reason="malformed_reply",
-            billed_cost_usd=MAX_JEV_COST_USD,
+            NOT_JSON,
+            f"it could not be read as JSON ({type(exc).__name__})",
+            next_step,
+            charged_usd=JEV_FLOOR_COST_USD,
+            reply_length=len(response.content),
         ) from exc
 
 
@@ -385,7 +449,8 @@ async def _send(
     Raises:
         JevCallError: reason="timeout" when the call does not complete
             within `timeout_s` in total, body included; reason="http_error"
-            on a transport failure or a non-200 status.
+            on a transport failure (charged nothing) or a non-200 status
+            (charged `JEV_FLOOR_COST_USD`).
     """
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -410,10 +475,24 @@ async def _send(
     latency_ms = int((time.monotonic() - start) * 1000)
 
     if response.status_code != 200:
+        # An error status (a 500, 429 or 402) is a reply from the provider,
+        # so it is charged the floor, never $0 (F-72-V03, the owner's rule of
+        # 2026-09-29). A transport failure above, where nothing came back,
+        # is charged nothing. Like every charge that is not a stated cost,
+        # it is named in a warning, by status and length only, never the
+        # body's text (fix round, J-GRS-11).
+        logger.warning(
+            "Jev returned HTTP %d for %s, reply length %d bytes; it is charged $%.6f",
+            response.status_code,
+            subject,
+            len(response.content),
+            JEV_FLOOR_COST_USD,
+        )
         raise JevCallError(
             f"Jev returned HTTP {response.status_code} for {subject} "
-            f"({response.text[:200]!r}); {next_step}",
+            f"({response.text[:200]!r}); it is charged ${JEV_FLOOR_COST_USD:.6f}; {next_step}",
             reason="http_error",
+            billed_cost_usd=JEV_FLOOR_COST_USD,
         )
     return response, latency_ms
 
@@ -467,15 +546,24 @@ async def call_jev(
     )
 
     payload = _json_payload(response, subject, next_step)
-    billed_usd = MAX_JEV_COST_USD
+    stated_usd = _stated_cost_usd(payload)
+    charged_usd = jev_charge_usd(stated_usd)
+    if stated_usd is not None and stated_usd > MAX_JEV_COST_USD:
+        # `:.6g` keeps the figure short whatever its size (A-GRS-07).
+        raise _unusable_reply(
+            subject,
+            COST_ABOVE_CEILING,
+            f"it reported a cost of ${stated_usd:.6g}, above the ${MAX_JEV_COST_USD:.2f} "
+            "any one call should cost",
+            next_step,
+            charged_usd=charged_usd,
+            reply_length=len(response.content),
+        )
     try:
-        billed_usd = _reported_cost_usd(payload, subject)
-        if billed_usd > MAX_JEV_COST_USD:
-            raise _cost_ceiling_error(subject, billed_usd, next_step)
-        answer = payload["answers"][question_key]
-        usage = payload["usage"]
+        answer = payload["answers"][question_key]  # type: ignore[index]
+        usage = payload["usage"]  # type: ignore[index]
         parsed = JevResult(
-            resolved_model=str(payload["model"]),
+            resolved_model=str(payload["model"]),  # type: ignore[index]
             choice=str(answer["choice"]),
             confidence=float(answer["confidence"]),
             probabilities={str(k): float(v) for k, v in answer.get("probabilities", {}).items()},
@@ -484,26 +572,34 @@ async def call_jev(
             cost_usd=float(usage["cost"]),
             latency_ms=latency_ms,
         )
-    except (KeyError, TypeError, ValueError, OverflowError, ValidationError) as exc:
-        # `OverflowError` (F-8.6-RA01, RJ04): an integer too large for a
-        # float, in `cost`, `confidence` or a probability, is a malformed
-        # reply like any other, charged what `_reported_cost_usd` read above.
-        raise JevCallError(
-            f"Jev's reply for decision {question_key!r} did not match the confirmed response "
-            f"shape ({type(exc).__name__}: {exc}); fall back to the guard tier's pick for this decision",
-            reason="malformed_reply",
-            billed_cost_usd=billed_usd,
+    except Exception as exc:  # every body shape, by base class
+        # By base class, not a list: a list of five error types missed the
+        # `AttributeError` of `"probabilities": null`, so that reply escaped
+        # uncharged (F-8.6-FJ01). Charged what it states, as every reply is.
+        raise _unusable_reply(
+            subject,
+            WRONG_SHAPE,
+            f"it did not match the confirmed response shape ({type(exc).__name__})",
+            next_step,
+            charged_usd=charged_usd,
+            reply_length=len(response.content),
         ) from exc
 
     if parsed.choice not in options:
-        raise JevCallError(
-            f"Jev chose {parsed.choice!r} for decision {question_key!r}, which is not one of "
-            f"the offered options {list(options)!r}; fall back to the guard tier's pick for this decision",
+        raise _unusable_reply(
+            subject,
+            OPTION_OUTSIDE_SET,
+            f"it chose {parsed.choice!r}, which is not one of the offered options {list(options)!r}",
+            next_step,
+            charged_usd=charged_usd,
+            reply_length=len(response.content),
             reason="invalid_option",
-            billed_cost_usd=parsed.cost_usd,
         )
 
-    return parsed
+    # `cost_usd` is what the caller charges: the stated cost, or the floor
+    # for a stated $0 (F-72-J02). A usable reply never states more than the
+    # ceiling: `JevResult` refuses it above.
+    return parsed.model_copy(update={"cost_usd": _charged_for_usable(subject, parsed.cost_usd)})
 
 
 # ---------------------------------------------------------------------------
@@ -553,7 +649,7 @@ class JevBatchResult(BaseModel):
     The same discipline as `JevResult` (`extra="forbid"`, every string and
     map bounded, and a reply reporting more than `MAX_JEV_COST_USD` for the
     whole call, about 30 times the $0.00033 measured for thirty questions,
-    not used, and charged the `MAX_JEV_COST_USD` ceiling rather than the
+    not used, and charged the `JEV_FLOOR_COST_USD` floor rather than the
     figure it reported; see `MAX_JEV_COST_USD`).
     """
 
@@ -636,17 +732,26 @@ async def call_jev_batch(
     )
 
     payload = _json_payload(response, subject, next_step)
-    billed_usd = MAX_JEV_COST_USD
+    stated_usd = _stated_cost_usd(payload)
+    charged_usd = jev_charge_usd(stated_usd)
+    if stated_usd is not None and stated_usd > MAX_JEV_COST_USD:
+        # `:.6g` keeps the figure short whatever its size (A-GRS-07).
+        raise _unusable_reply(
+            subject,
+            COST_ABOVE_CEILING,
+            f"it reported a cost of ${stated_usd:.6g}, above the ${MAX_JEV_COST_USD:.2f} "
+            "any one call should cost",
+            next_step,
+            charged_usd=charged_usd,
+            reply_length=len(response.content),
+        )
     try:
-        billed_usd = _reported_cost_usd(payload, subject)
-        if billed_usd > MAX_JEV_COST_USD:
-            raise _cost_ceiling_error(subject, billed_usd, next_step)
-        raw_answers = payload["answers"]
+        raw_answers = payload["answers"]  # type: ignore[index]
         if not isinstance(raw_answers, dict) or set(raw_answers) != set(questions):
             raise KeyError("the reply's answers do not match the questions asked, key for key")
-        usage = payload["usage"]
+        usage = payload["usage"]  # type: ignore[index]
         parsed = JevBatchResult(
-            resolved_model=str(payload["model"]),
+            resolved_model=str(payload["model"]),  # type: ignore[index]
             answers={
                 str(key): JevAnswer(
                     choice=str(answer["choice"]),
@@ -660,20 +765,25 @@ async def call_jev_batch(
             cost_usd=float(usage["cost"]),
             latency_ms=latency_ms,
         )
-    except (KeyError, TypeError, ValueError, AttributeError, OverflowError, ValidationError) as exc:
-        raise JevCallError(
-            f"Jev's reply for {subject} did not match the confirmed response shape "
-            f"({type(exc).__name__}); {next_step}",
-            reason="malformed_reply",
-            billed_cost_usd=billed_usd,
+    except Exception as exc:  # every body shape, by base class (F-8.6-FJ01)
+        raise _unusable_reply(
+            subject,
+            WRONG_SHAPE,
+            f"it did not match the confirmed response shape ({type(exc).__name__})",
+            next_step,
+            charged_usd=charged_usd,
+            reply_length=len(response.content),
         ) from exc
 
     for key, answer in parsed.answers.items():
         if answer.choice not in questions[key].options:
-            raise JevCallError(
-                f"Jev chose {answer.choice!r} for question {key!r}, which is not one of its "
-                f"offered options; {next_step}",
+            raise _unusable_reply(
+                subject,
+                OPTION_OUTSIDE_SET,
+                f"it chose {answer.choice!r} for question {key!r}, which is not one of its offered options",
+                next_step,
+                charged_usd=charged_usd,
+                reply_length=len(response.content),
                 reason="invalid_option",
-                billed_cost_usd=parsed.cost_usd,
             )
-    return parsed
+    return parsed.model_copy(update={"cost_usd": _charged_for_usable(subject, parsed.cost_usd)})
