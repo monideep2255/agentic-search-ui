@@ -846,6 +846,21 @@ def _first_resolvable_curie(derived: dict[str, Any]) -> str | None:
     return None
 
 
+# Field names the MedGen clinical feature rows carry (`synthesis/findings.py`
+# CLINICAL_FEATURES_FIELD and `core/graph.py` _FEATURE_*_FIELD). A name check
+# on our own reserved strings, never a reading of the model's text.
+_RESERVED_FEATURE_FIELD_NAMES: frozenset[str] = frozenset(
+    {"clinical_features", "clinical_features_total", "hpo_id", "disease_title"}
+)
+
+
+def _graph_field_name(label: str) -> str:
+    """A Layer 1 field name that never equals a reserved feature field name."""
+    if label in _RESERVED_FEATURE_FIELD_NAMES:
+        return f"graph_{label}"
+    return label
+
+
 def _shape_derived_value(
     derived: dict[str, Any],
     snapshot_version: str,
@@ -882,7 +897,13 @@ def _shape_derived_value(
     # alias keeps its positional name; see `cypher_query.column_labels_for`
     # for why an unaliased expression is not paraphrased into a label.
     labels = column_labels or {}
-    fields = {labels.get(column, column): value for column, value in derived.items()}
+    # Card 32: four field names belong to MedGen's clinical feature rows
+    # (Layer 2) and every consumer downstream keys on the name alone. A graph
+    # column the model happens to alias to one of them is renamed here, where
+    # a Layer 1 field name is born, so it is never shown as MedGen's list.
+    fields = {
+        _graph_field_name(labels.get(column, column)): value for column, value in derived.items()
+    }
 
     projected_curie = _first_resolvable_curie(derived)
     if projected_curie:
