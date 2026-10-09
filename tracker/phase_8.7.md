@@ -83,8 +83,8 @@ Resumed 2026-10-08 (night of 2026-10-08 to 09):
 | Role | Model | Effort | Started | Ended | Tokens |
 |---|---|---|---|---|---|
 | builder W, steps 5 and 6 | depth | high | 00:33 | | |
-| builder S, steps 2 and 7 | balance | medium | 00:33 | | |
-| builder F, step 4 | balance | medium | 00:33 | | |
+| builder S, steps 2 and 7 | balance | medium | 00:33 | 01:29 | 160,731 |
+| builder F, step 4 | balance | medium | 00:33 | 01:14 | 105,106 |
 
 ## Tickets
 
@@ -177,5 +177,8 @@ A and C touch disjoint functions of `core/graph.py`. The lead fixes the placemen
 
 - 2026-10-09 00:25 UTC: phase resumed overnight on the owner's decision of 2026-10-08, from `testing/Developer/reports/2026-10-05_phase_8.7_resume/plan.md`. Step 0: develop (c916cfa3) merged into this branch, clean. Steps 1 and 3: builder C's six commits cherry-picked, all clean; two of its tests were stale against today's develop (the old writer's installed price now estimates slightly above the static figure; card 91 names the unfinished search) and were brought up to date (586d7151). 46 of 46 of its tests pass.
 - 2026-10-09 00:33 UTC: builders W, S and F dispatched from 586d7151, each in a worktree the lead created (`asu-8.7-w`, `asu-8.7-screen`, `asu-8.7-field`) on local branches `feat/8.7-w`, `feat/8.7-screen`, `feat/8.7-field`. Builder R (step 8) waits for W, since both edit `core/graph.py`.
+
+- 2026-10-09 01:16 UTC: builder F's step 4 merged into this branch (f0022125): `TokenPayload.placement` (cherry-pick of 1e030148, clean) and one reading-order helper, `contracts/token_order.py`, used by MCP, GraphQL, the command line, feedback capture, the trace source and one script. The guard held every commit the builder tried, so the lead reviewed the staged diff and committed it (d44d44da). Its runs: adapters 857, contracts 214, feedback 220 passed.
+- 2026-10-09 01:30 UTC: builder S's steps 2 and 7 merged (af8be31c), committed by the lead for the same reason. cb407508 had three conflicts, resolved around card 59's `stopping` and `answerStood` and card 23's `openTableRow`; six arms of `App.stopUntilAnswer.test.tsx` and two of `App.stopAfterAnswer.test.tsx` reshaped to the owner's Stop rule of 2026-09-27. On the merged branch: `tsc` clean, 77 of 77 in the placement, listing-first and lib tests. Open for review: the writing mark above the records is cb407508's choice and is not in `streaming.html`; the Stop count in `summarySentencesShown` has no biting test.
 
 ## Findings
