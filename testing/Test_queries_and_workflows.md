@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-10-08.
+Last updated: 2026-10-09.
 
 Every entry has the same three parts:
 
@@ -734,7 +734,8 @@ Queries to try:
 What you should see:
 
 - The flagship isolate search question, the one the product is measured on.
-- A table headed "Isolates and their AMR genes" with 20 rows. Each row shows the isolate's BioSample accession, strain, and where and when it was collected, beside its gene list; every row carries a blaCTX-M gene, and each gene list is linked to that isolate's own Pathogen Detection page.
+- A table headed "Isolates and their AMR genes" with 20 rows. Each row shows the isolate's strain, its BioSample accession under "Identifier", its gene list, and under "Collected" when and where it was collected, such as "2013, USA: Minnesota"; every row carries a blaCTX-M gene, and each gene list is linked to that isolate's own Pathogen Detection page.
+- A row whose record holds no place reads "2013, place not recorded"; one with no date reads "USA: Minnesota, date not recorded"; one with neither reads "Not recorded" (card 94).
 - The line "Pathogen Detection lists 140,476 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown."
 - A note saying only the blaCTX-M family of genes was searched for "extended-spectrum beta-lactamase", and why: a plain blaTEM or blaSHV gene name cannot be told apart from a genuine ESBL by its name alone, so those families were left out rather than risk a wrong label.
 - E. coli named and linked to its NCBI Taxonomy record among the sources cited.
