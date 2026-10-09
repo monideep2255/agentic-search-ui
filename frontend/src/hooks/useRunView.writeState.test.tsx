@@ -112,6 +112,20 @@ describe("the Write state", () => {
     expect(banner).not.toHaveTextContent(/found/);
   });
 
+  it("enters Write when a planned call never started (skipped at the call limit)", () => {
+    // c2 is in the plan but has no start frame: act_node skipped it at the 20-call limit.
+    const view = renderHook(() =>
+      useRunView([
+        GUARD,
+        THINK,
+        PLAN_TWO,
+        start("c1", "ncbi_efetch", "layer_2_api", "Salk"),
+        result("c1", "ncbi_efetch", "layer_2_api", "Salk", 6),
+      ]),
+    ).result.current;
+    expect(view.activeStep).toBe("Write");
+  });
+
   it("stays on Plan while a planned tool has not started", () => {
     const view = renderHook(() => useRunView([GUARD, THINK, PLAN_TWO])).result.current;
     expect(view.activeStep).toBe("Plan");

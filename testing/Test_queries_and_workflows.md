@@ -1158,6 +1158,7 @@ What you should see:
 - While the helpers hand back, and while the line says the answer is being written, Stop is not grey.
 - Pressed then, "Search stopped" appears with "No answer was produced. Run the same question again, or start a new one.", and the Run again and New search buttons, as query 56 describes.
 - No answer appears from the stopped search, even when the server had already finished writing it.
+- On a question so broad that some of the planned lookups are skipped at the 20-call limit, the progress steps still move from Act to Write as soon as the lookups that did start have handed back, instead of staying on Act until the first sentence appears (card 19).
 - Left alone, Stop turns grey once the first sentence of the answer is on screen, and it is gone once the answer settles.
 - Known: a search stopped after the server had already finished can come back as answered in your history after a reload, and a follow-up in the same conversation can remember it (card 59).
 - Why it matters: in the product owner's words, "a user should be able to stop the answer at any point of time until the answer pops out". On the slowest questions Stop went grey for up to 13 seconds while the screen had nothing to read yet.
