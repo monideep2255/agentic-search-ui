@@ -1504,6 +1504,27 @@ What you should see:
 - Known: a model makes the call, not a list, so a borderline word such as `MeSH` can go either way (asked back 2 times in 3).
 - Why it matters: the product owner's words, approving it on 2026-09-23: "If clarify needed -> yes approved". A two-word question like `reflux disease` could mean its symptoms, its trials or its genes, and answering one silent reading of it hides the other three from the reader.
 
+### 112. A broad opening question asks which aspect first (card 48)
+
+Queries to try:
+
+- `Tell me about the tree of life.` and `Tell me about apple trees.`, each as the first question after reloading the page. Reload for each: "New search" keeps the same conversation, so only a reload starts a fresh one.
+- Controls, each first after a reload: `How do birds fly?`, `What is Marfan syndrome?`, `what does the literature say about metformin` and `Tell me about PMID 33057194.`.
+- After one of the first two is asked back, click one of the offered choices, or type a reply such as `Tell me more about the second one.`.
+- Type `What can you do?` first after a reload.
+
+What you should see:
+
+- The first two show a "What would you like to know about ...?" question with clickable choices written for that subject, and no search has run yet.
+- The four controls are searched with no question back: each asks something of its own, or names one exact record.
+- A clicked choice or a typed reply is never asked which aspect again. It is searched, or, for a reply that points back to something the product no longer holds, told which detail to add.
+- `What can you do?` is never asked which aspect, however it is punctuated.
+- A real question waits at most one second longer than before, and only when the decision is slow; the decision took 0.27 s at the median in this card's live runs.
+- Known: a model makes the call, not a list. In the fix round's live runs (three each) it asked back none of 118 real questions and 33 of 33 broad subjects; a subject with a narrow name, such as `Tell me about TP53.`, is usually asked back too.
+- Known: an asked-back question shows its choices only after a second, writing call; the review measured that call alone at 1.4 to 6.4 s.
+- Known: the server remembers which conversations have begun in memory only, so after a server restart the next message of an ongoing conversation is treated as an opening one.
+- Why it matters: a confident list of papers that sit beside the question is worse than one short question that finds out what the person wants, and a real question asked back is worse than either.
+
 ## 12. The overnight build of 2026-09-25
 
 Built overnight from the board's To do column. Everything here is on develop only.
@@ -2013,6 +2034,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 48 | A broad opening question such as "Tell me about the tree of life" asks which aspect is meant; a real question still searches | Query 112 |
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
 | card 67 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now" | Query 100 |
 | card 104 | An answer lists one record once in its tables and Plain language list | Query 107 |

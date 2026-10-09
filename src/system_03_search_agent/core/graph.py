@@ -1039,21 +1039,43 @@ _ASK_BACK: Final = _DecisionSpec(
     options=("ask_back", "proceed"),
     fail_open="proceed",
     instructions=(
-        "The state is the whole of a short opening message a person typed into a "
+        "The state is the whole of an opening message a person typed into a "
         "biomedical evidence search engine. Decide whether it already says what "
-        "the person wants to know, or only names a subject."
+        "the person wants to know, or names only a subject. First set aside "
+        "the words that only ask to be told, taught or given an explanation, "
+        "however they are phrased, even as a polite question asking whether "
+        "you can tell. A question about the subject itself is never set "
+        "aside: words asking what something is, what is known about it or "
+        "what the research says are the person's aim. Then look at what is "
+        "left, reading every misspelt word as the word it is meant to be. Most "
+        "messages say what the person wants to know; choose ask_back only when "
+        "what is left is the name of a subject alone."
     ),
     criteria={
         "ask_back": (
-            "It only names a subject: a thing, condition or topic on its own, with "
-            "no word saying what to find out about it."
+            "Every word left is part of the name of one subject, a thing, "
+            "condition or topic itself, with no word saying what to find out "
+            "about it. A subject followed by a word for things that belong to "
+            "it, such as its variants, mutations or trials, is not a subject "
+            "alone. There is no kind of information, no second subject, no group "
+            "of people, no time, no case and no question about it, so the answer "
+            "depends on which aspect of the subject is meant."
         ),
         "proceed": (
-            "It says what to find out, either as a question or as a subject "
-            "followed by a word that names the wanted kind of information, for "
-            "example a definition, papers, trials, variants, symptoms, causes or "
-            "therapy options. A subject that is followed by such a word is a "
-            "request, not a bare subject."
+            "Any word left that is not part of the subject's name, even a "
+            "misspelt one, says what to find out. A question asking what something "
+            "is, what is known or should be known about it, or what the research "
+            "or literature says about a named subject is a request with its own "
+            "aim, and so is a question about how or why something happens, what "
+            "causes it, what it means for someone or whether two things are "
+            "linked. A subject followed by a word that names the wanted kind of "
+            "information, for example a definition, papers, trials, variants or "
+            "mutations, symptoms, causes or therapy options, is a request, not a "
+            "bare subject, and so is a subject joined to a second subject, a "
+            "group of people or a time. A message that describes a patient, a "
+            "case or the person's own situation, or that pastes a text, is a "
+            "request. A complete question with its own aim is a request even "
+            "when its subject is broad."
         ),
     },
 )
@@ -3750,6 +3772,13 @@ async def resolve_window_genes(
 #: module's docstring for the full account.
 _MAX_CLARIFY_TRIGGER_WORDS: Final[int] = 3
 
+#: Card 48 fix round (A-48-09, J-48-03): how long a longer opening
+#: message's ask-back decision is waited for, from its start. Jev decided
+#: in 0.26 s at the median and 0.31 s at the 90th percentile over 291 live
+#: calls; one past this bound reads as no pick, and the message is searched
+#: with no more wait than this on top of Think's own classification.
+_LONG_ASK_BACK_WAIT_S: Final[float] = 1.0
+
 #: The writing call's own share of `budget_for_step("think", "lookup")`,
 #: never the whole thing. It must leave room for the REAL think classify
 #: call that still runs afterward on a `proceed` decision or ANY failure,
@@ -4092,6 +4121,44 @@ def _is_small_talk(text: str) -> bool:
     return text.strip().lower() in _NO_TOOL_QUERY_TEXTS
 
 
+def _is_small_talk_however_punctuated(text: str) -> bool:
+    """`_is_small_talk` after the guardrail's own `prefilter.normalize`, so
+    "What can you do?" is small talk here exactly as it is to the guardrail,
+    which admits it as conversational (card 48 fix round, J-48-06)."""
+    return _is_small_talk(prefilter.normalize(text))
+
+
+def _opens_conversation(query: Any) -> bool:
+    """Whether this message is the first of its conversation, recorded as
+    a turn of it either way (`core.clarify.begin_turn`, card 48 fix round).
+
+    A query with no session id has no conversation to continue, so every
+    message it sends opens one.
+    """
+    if not query.session_id:
+        return True
+    return clarify.begin_turn(_offer_key(query))
+
+
+def _names_a_record(text: str) -> bool:
+    """Whether the message names one exact record that an existing local
+    parser recognises: a PMID, an rs number, a RefSeq accession or a CURIE
+    (`resolve_exact_identifiers`), an NCBI accession (`accession.
+    parse_accession`) or a chromosome window (`coordinate_window.
+    parse_coordinate_window`).
+
+    Card 48 fix round (A-48-01, J-48-01): a message naming one record is a
+    specific request, so code checks the ask-back classifier's pick against
+    it and searches. No model call, no word list: the parsers the search
+    itself already uses.
+    """
+    return (
+        bool(resolve_exact_identifiers(text))
+        or accession.parse_accession(text) is not None
+        or coordinate_window.parse_coordinate_window(text) is not None
+    )
+
+
 async def _no_decision() -> DecisionRecord | None:
     """The decision a question that plans no search never needs."""
     return None
@@ -4125,9 +4192,31 @@ async def _think(
     # decides whether to ask and `core.clarify`'s writer writes what to
     # ask, both at the same moment. Only a real `ask_back` pick WITH usable
     # choices asks back; anything else searches, the fail-open rule.
+    #
+    # Card 48 (owner, 2026-10-09): "A broad subject with no kind of
+    # information asked, such as 'Tell me about the tree of life', asks
+    # which aspect is meant; a real question such as 'How do birds fly?'
+    # still searches." A longer opening message is asked the same
+    # decision, but beside Think's own classification further down rather
+    # than before it, so a real question waits for no extra call; the
+    # choices are written only after the decision picks `ask_back`.
+    #
+    # Card 48 fix round: only the FIRST message of a conversation is an
+    # opening one for the longer message's decision (`_opens_conversation`),
+    # so a clicked choice, a typed reply to a question asked back, or any
+    # follow-up after a turn that stored no memory is searched, never asked
+    # back again (J-48-02, J-48-09, A-48-06, A-48-13). Small talk is
+    # recognised in any punctuation, as the guardrail recognises it
+    # (J-48-06).
+    opening = _opens_conversation(query)
+    ask_beside_classification = False
     if _session_memory(state) is None:
         trigger_words = query.text.strip().split()
-        if trigger_words and len(trigger_words) <= _MAX_CLARIFY_TRIGGER_WORDS:
+        if trigger_words and len(trigger_words) > _MAX_CLARIFY_TRIGGER_WORDS:
+            ask_beside_classification = opening and not _is_small_talk_however_punctuated(
+                query.text
+            )
+        elif trigger_words:
             # The recent_years decision is waited for here too, so all three
             # of Think's opening calls overlap (card 6). Neither decision is
             # waited for past Think's budget (fix round, F-8.6-A03, J08); one
@@ -4143,7 +4232,16 @@ async def _think(
                 )
             finally:
                 _cancel_if_pending(ask_task)
-            if _usable_choice(ask_record) == "ask_back":
+            short_pick = _usable_choice(ask_record)
+            if short_pick == "ask_back" and _names_a_record(query.text):
+                # Card 48 fix round: a message naming one exact record is
+                # a specific request on this path too (A-48-01).
+                logger.info(
+                    "ask_back picked for a message naming one exact record "
+                    "(trace %s); searching instead",
+                    trace_id,
+                )
+            elif short_pick == "ask_back":
                 if choices is not None:
                     return _ask_back(
                         sink,
@@ -4216,7 +4314,56 @@ async def _think(
     classify_task = asyncio.create_task(
         _run_think_classification(harness, trace_id, think_messages)
     )
+    # Card 48: a longer opening message's ask-back decision runs beside the
+    # classification just started. Only a real `ask_back` pick writes the
+    # choices; no usable pick, `proceed`, or choices that could not be
+    # written all search, the fail-open rule. Fix round: the decision is
+    # waited for no longer than `_LONG_ASK_BACK_WAIT_S` from its start, so a
+    # slow or hung decision adds at most that to a real question (A-48-09,
+    # J-48-03), and a pick of `ask_back` on a message naming one exact
+    # record is checked in code and searched (A-48-01).
+    long_ask_task: asyncio.Task[DecisionRecord | None] | None = (
+        asyncio.create_task(_decide_point(harness, trace_id, _ASK_BACK, query.text))
+        if ask_beside_classification
+        else None
+    )
+    long_ask_deadline = min(step_deadline, time.monotonic() + _LONG_ASK_BACK_WAIT_S)
     try:
+        if long_ask_task is not None:
+            long_ask_record = await _await_within_step(
+                long_ask_task,
+                long_ask_deadline,
+                None,
+                point=_ASK_BACK.point,
+                trace_id=trace_id,
+                why="its own bound for a longer opening message ran out",
+            )
+            long_pick = _usable_choice(long_ask_record)
+            if long_pick == "ask_back" and _names_a_record(query.text):
+                logger.info(
+                    "ask_back picked for a message naming one exact record "
+                    "(trace %s); searching instead",
+                    trace_id,
+                )
+            elif long_pick == "ask_back":
+                long_choices = await _write_clarify_choices(harness, trace_id, sink, query.text)
+                if long_choices is not None:
+                    return _ask_back(
+                        sink,
+                        long_choices.question,
+                        list(long_choices.options),
+                        narrative=(
+                            "the ask-back classifier read an opening question "
+                            "that asks about a subject in general, with no kind "
+                            "of information named, so the answer asks which "
+                            "aspect is meant before any search"
+                        ),
+                    )
+                logger.warning(
+                    "ask_back decided but the choices could not be written "
+                    "(trace %s); searching instead",
+                    trace_id,
+                )
         recent_record = await _await_within_step(
             recent_task, step_deadline, None, point=_RECENT_YEARS.point, trace_id=trace_id
         )
@@ -4233,6 +4380,7 @@ async def _think(
         outcome = await classify_task
     finally:
         _cancel_if_pending(classify_task)
+        _cancel_if_pending(long_ask_task)
     if isinstance(outcome, dict):
         return outcome
     classification = outcome

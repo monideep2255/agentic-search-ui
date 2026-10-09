@@ -49,6 +49,9 @@ Reads:
 Writes:
     - `_OFFERED`, that in-process record: at most 1024 sessions, each for
       an hour, never persisted.
+    - `_BEGUN`, the conversations Think has already seen a turn of (card
+      48 fix round): at most 4096 sessions, each for an hour after its
+      last turn, never persisted.
 """
 
 from __future__ import annotations
@@ -388,6 +391,44 @@ def is_recent_window_option(text: str) -> bool:
     )
 
 
+# ---------------------------------------------------------------------------
+# Which conversations have already begun (card 48 fix round, J-48-02,
+# J-48-09, A-48-06, A-48-13).
+#
+# A turn that asked back, or that found nothing to remember, stores no
+# session memory, so the next message of the same conversation (a clicked
+# choice, a typed reply, any follow-up) looked like an opening message and
+# was asked back again. The web client sends a click as plain text, so the
+# server remembers instead: every turn Think sees is recorded against its
+# caller and session, and only the first is an opening message. Bounded and
+# kept in this process only, like the offered windows above; a restart or
+# an evicted session makes the next message look like an opening one again.
+# ---------------------------------------------------------------------------
+
+_MAX_BEGUN_SESSIONS: Final[int] = 4096
+
+_BEGUN: OrderedDict[str, float] = OrderedDict()
+
+
+def begin_turn(session_key: str) -> bool:
+    """Record a turn of this conversation; True only for its first one.
+
+    Each turn keeps the conversation for another `_OFFER_TTL_S`, so a
+    conversation idle for longer than that starts afresh.
+    """
+    now = time.monotonic()
+    while _BEGUN and next(iter(_BEGUN.values())) <= now:
+        _BEGUN.popitem(last=False)
+    first = session_key not in _BEGUN
+    _BEGUN[session_key] = now + _OFFER_TTL_S
+    _BEGUN.move_to_end(session_key)
+    while len(_BEGUN) > _MAX_BEGUN_SESSIONS:
+        _BEGUN.popitem(last=False)
+    return first
+
+
 def clear_offered_windows() -> None:
-    """Forget every offer. For tests, which share one process."""
+    """Forget every offer and every begun conversation. For tests, which
+    share one process."""
     _OFFERED.clear()
+    _BEGUN.clear()
