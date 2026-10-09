@@ -6,6 +6,7 @@ The product reviewer's pre-screen of card 109 (pull request #225, merge d0319502
 
 - [Which app answered](#which-app-answered)
 - [Findings](#findings)
+- [Result](#result)
 - [What was not captured](#what-was-not-captured)
 
 ## Which app answered
