@@ -253,6 +253,10 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 32 | A graph column named like MedGen's clinical features is never shown as them | Live, awaiting your retest | 87 |
 | card 51, part | The About page no longer describes the retired track beside each answer | Live, awaiting your retest | 102 |
 | card 85, part | A crash or failed step logs which search and why, never the error's text | Live, awaiting your retest | none, nothing a person sees |
+| card 11 | The same question no longer returns different sets of papers on repeated runs: not reproduced since 2026-09-25, and the fix tried then was reverted | Closed 2026-10-09 at the owner's answer, as not reproduced; reopens if a test query fails on it | 75 |
+| card 12 | The trust verdict under an answer no longer changes with nothing else changed: not reproduced since 2026-09-25, and the fix tried then was reverted | Closed 2026-10-09 at the owner's answer, as not reproduced; reopens if a test query fails on it | 1 |
+| card 14 | No search runs for minutes: no run passed 60 s in phase 8.7's 32 live runs, and the slowest answers on develop tonight took 27 to 28 s | Closed 2026-10-09 when phase 8.7 merged, per the decision of 2026-10-05 | 1, 66 |
+| card 16 | Three golden questions that got nothing from the graph: G-022 is fixed, and G-005's open part is card 56's "Illumina" refusal | Closed 2026-10-09 at the owner's answer, folded into card 56 | none; golden question G-005 |
 
 ## What is done, in summary
 
@@ -294,20 +298,20 @@ What the Waiting on column means:
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-10-08, AT THE END OF THE NIGHT. THE ONE THING TO KNOW:
+LAST UPDATED 2026-10-09, AT THE END OF THE NIGHT. THE ONE THING TO KNOW:
 
-- Six cards merged overnight, each behind CI, a judge, an adversary, one fix round and a fresh verifier, then checked on develop at 1280 and 390, and wait for your retest: 71 (#212), 37 part (#213), 32 (#214), 36 (#215), 51 part (#219) and 85 part (#220)
-- Phase 8.7 is built, reviewed, fixed once and checked live on its branch, and waits for your call on pull request #218: its fresh verifier found two things worse than develop
-- Parked with their reasons: the guardrail (84 and 72), card 15's next step and card 101's last slices
+- Phase 8.7 and its follow-ups, the guardrail's safe part and cards 19, 109, 94 part and 112 merged, each behind CI, a judge, an adversary, one fix round and a fresh verifier, then checked on develop at 1280 and 390, and wait for your retest
+- Cards 35 (#228) and 48 (#230) are built and reviewed, and wait for your call on their open pull requests
+- Parked with their reasons: card 17, card 20 and card 94's single-isolate lookup
 
 `HANDOFF.md` says what to do next.
 
 What is live on develop:
 
-- Every card in "Waiting for your retest" above, newest first: tonight's cards 71, 37 part, 36, 51 part, and 32 with 85 part on top. Each is one row in "Done features at a glance", with its query number.
+- Every card in "Waiting for your retest" above, newest first, tonight's on top. Each is one row in "Done features at a glance", with its query number.
 - Card 98 (an empty guard reply asks the person to try again) is live with no query to type.
-- Develop's API carries `CLASSIFIER_PROVIDER=jev`, `SYSTEM_DAILY_CAP_USD=25` and its own `SYNTH_MODEL`, so a code default does not change develop's writer. Migration 0011 (the risk tier column) ran on develop late on 2026-10-08. Both Railway services redeploy on every push to `develop`.
-- What each numbered phase delivered and what stays open: its ledger, `tracker/phase_N.M.md`. Phase 8.7's ledger is on its branch until it merges.
+- Develop's API carries `CLASSIFIER_PROVIDER=jev`, `SYSTEM_DAILY_CAP_USD=25`, `PER_QUERY_COST_CAP_USD=0.25` (set 2026-10-09 with the owner's yes) and its own `SYNTH_MODEL`, so a code default does not change develop's writer. Both Railway services redeploy on every push to `develop`.
+- What each numbered phase delivered and what stays open: its ledger, `tracker/phase_N.M.md`; phase 8.7's is `tracker/phase_8.7.md`.
 - Production is unchanged on `v0.2.0`. The release job tags `production` and never pushes to it, and only the owner changes `develop` and `production`.
 
 What awaits the product owner is under "What is waiting on the product owner" below.
@@ -467,58 +471,49 @@ board on 2026-09-24.
 
 ### Next, in order
 
-- Rewritten 2026-10-08, after the overnight run, in the order of the board's To do column, top to bottom, one line per card.
-- The board is the order; this list gives each card's reason or a pointer to its detail.
+- Rewritten 2026-10-09, after the overnight run, in the order of the board's To do column, top to bottom, one line per card, each line the card's status cell.
+- The board is the order; this list gives each card's state or a pointer to its detail.
 - `testing/Board_plan.md` holds the dependencies and the waves, and the order work is built in.
 
-1. Card 56: Smallest fix live (#186): the plain SARS-CoV-2 question no longer binds the disease SARS. Still open, for a design with the owner first: "SARS CoV-2" with a space, a remembered gene after a missed question, and the leukaemia and "Illumina" cases on the board.
-2. Card 101: Part live (#193, #204). Its last three slices were built overnight on 2026-10-08 and parked after both reviews found a new sentence splitter worse than develop: it needs a design for where a record sentence ends (`testing/Developer/reports/2026-10-08_card101/`).
-3. Card 94: Part live. Still open: the place column (the accession already shows as Identifier), a single-isolate lookup and a follow-up such as "from 2023"; diagnosed 2026-10-08, built after phase 8.7 merges since it touches the same answer layout.
-4. Card 84: Built overnight with card 72 and parked: its fix round admitted a follow-up after a long server pause that develop refuses and over-charged Jev replies. Re-split proposed in its `DECISIONS.md` row of 2026-10-08.
-5. Card 72: Logging live (#159); its fix is the guardrail re-split with card 84; step 2, host routing, waits for a week of logs that name a cut call's host.
-6. Card 75: Factory's next card (`docs/build/Factory_onboarding.md`): the command line's MCP bridge latches after a refused or unreadable sign-in renewal, so it never resends a spent token.
-7. Card 85: Part live (#167, #220): the page sentences and the logging slice. Still open, each the owner's: the facts checker's gaps, under `.claude/`, and the five `exc_info` warnings (A07).
-8. Card 2: Phase 8.7, pull request #218, waiting for the owner's call; the first sentence answers when a checked sentence does.
-9. Card 4: Tell the reader when the search was drafted rather than checked; keyed on the query being drafted, never on empty or failed. Nobody on it.
-10. Card 5: The per-model effort setting and the Opus writer are built in phase 8.7 (#218); develop's writer stays as it is until the owner chooses, since at a true 25-cent bound Opus's repairs are refused on 3 to 19 of 24 bench questions.
-11. Card 6: The agentic loop, the owner's second quote under their model architecture direction. Nobody on it.
-12. Card 7: Hard and soft edges over a fuller graph; read `testing/Developer/reports/2026-09-23_overnight/soft_edges_scoping.md` first (11.29). Nobody on it.
-13. Card 8: Trust-line wording (9.9): the owner chose "say what was checked"; planned in phase 8.9 from the parked 8.4 commit.
-14. Card 9: Judge answer quality once answering is reliable (10.4). Nobody on it.
-15. Card 11: Proposed for closing: not reproduced since 2026-09-25 and its fix reverted (`tracker/phase_8.1.md` F-8.1-03).
-16. Card 12: Proposed for closing: not reproduced since 2026-09-25 and its fix reverted (F-8.1-A13).
-17. Card 14: One 127-second search against a median of 14 (F-8.1-05). No run passed 60 s in phase 8.7's 32 live runs on 2026-10-08 (slowest 58.6 s); per the 2026-10-05 decision it closes when phase 8.7 merges.
-18. Card 15: Step 1 live (#171). The next step was built overnight on 2026-10-08 and parked: one record for every non-count question gave wrong or thinner answers. Needs one checked template per question shape (`testing/Developer/reports/2026-10-08_card15/`).
-19. Card 16: G-022 is fixed; G-005 fails on the "Illumina" refusal card 56 holds for a design; proposed to fold into card 56 (diagnosis `testing/Developer/reports/2026-10-08_overnight/card16_diagnosis.md`).
-20. Card 17: A reworded sentence can switch papers on a generic title word; five design options with their costs in `testing/Developer/reports/2026-10-08_overnight/card17_diagnosis.md`, for the owner.
-21. Card 18: Mostly fixed; two rows remain when a record's sentences pass 1000 characters. Small, built after phase 8.7 merges (diagnosis in the overnight folder).
-22. Card 19: No false writing step found; one real gap (a call skipped at the 20-call limit keeps the steps on Act through the writing wait). Small, built after phase 8.7 merges.
-23. Card 20: An isolate search filters only by gene prefix; the parked filters merge cleanly, but where the year and place come from is a design choice for the owner (diagnosis in the overnight folder).
-24. Card 24: Factory's card after 75: the Plain language and Researcher switch beside the answer's header, with the confirmation the owner approved on 2026-10-06.
-25. Card 25: Install the public USWDS package: decided 2026-09-25, not built; a new package needs the owner's approval and a supply-chain review first.
-26. Card 29: The answering sentence under each cited paper; parked on `parked/phase-8.8-snippets-2026-09-25`. Lifts mostly cleanly; how many papers get a sentence is a cost and speed choice for the owner.
-27. Card 30: The BRCA1 pathogenic-variants question lists unclassified variants and drops the caveat; the honest note is small and built after phase 8.7 merges; fetching classifications is a cost choice for the owner.
-28. Card 33: G-006 is fixed (#172); G-004 waits on decision D19, since nothing is findable until the isolate is named.
-29. Card 35: An off-topic follow-up containing a word such as "cell" still gets through; small, built after the guardrail re-split since both change `guardrail_node`.
-30. Card 36: Live (#215): the plan line now says when a picked or typed date range could not be applied. Still open, the owner's design choice: making a picked window survive a restart.
-31. Card 37: Part live (#213): rs334 lists only rs334. Still open: the rs334 row named by its clinical significance labels and naming no condition; planned in phase 8.9.
-32. Card 38: Orthologs' species and papers' titles still missing (the isolate genes are fixed); phase 8.9 tickets, built after phase 8.7 merges.
-33. Card 40: The itemized list is written, 27 items each a yes or no (`testing/Developer/reports/2026-10-08_card40/itemized_list.md`); nothing in the security layer changes before the owner answers.
-34. Card 42: The build team checks the product the way a person uses it; proposal `docs/build/Verify_loop_proposal.md` waits for the owner's yes.
-35. Card 48: A fuzzy question should ask which aspect is meant first; whether "How do birds fly?" asks back, and the extra writer call's cost, are the owner's (diagnosis in the overnight folder).
-36. Card 50: Phase 8.7 (#218): records at a median 9.3 s against 27.3 s for the whole answer on its live check; waiting for the owner's call.
-37. Card 51: Part live (#156, #219): the About page no longer describes the retired track. Still open, the owner's: a registry of every page claim.
-38. Card 52: Every answer ends by offering the next useful step; designed in `testing/Developer/reports/2026-09-26_conversation_next_steps/design.md`, a numbered phase after 8.7 and 8.9.
-39. Card 55: The test queries document is the gate; the golden run is an alarm only (decision D4).
-40. Card 100: Factory's card after 24, low priority: a very long signed-in email pushes the top bar off screen between 721 and 900 pixels.
-41. Card 105: A picked date range limits only the live PubMed search, while the graph's own article records ignore it; found by card 36's product check. Nobody on it.
-42. Card 106: The "High-risk claim" tag breaks across two lines on a phone; found by card 71's product check. Nobody on it.
-43. Card 107: A rejected reworded clause can leave the start of its sentence on screen; card 101's territory, found by card 51's verifier. Nobody on it.
-
-Not on this list, deliberately: the explanation half of item 11.31.
-
-- The owner approved the current state as is on 2026-09-21.
-- The remaining lever is recorded in "The result that should shape what happens next" in [`testing/UI_fixes_archive.md`](UI_fixes_archive.md#the-result-that-should-shape-what-happens-next) as a standing option, not as queued work.
+1. Card 56: Part live once merged (#186 or the next number): the plain SARS-CoV-2 question no longer binds the SARS disease (0 of 20 live runs, 5 of 26 before). Still open, for a design with you first: "SARS CoV-2" typed with a space still binds SARS; after a gene in the same conversation a missed SARS-CoV-2 question uses the remembered gene; "SRA runs from AML-derived cell lines" can lose its leukaemia match; the "Illumina" refusal (7 of 20 runs). Evidence: `testing/Developer/reports/2026-10-06_card56/`; card 16 folded in on 2026-10-09: golden question G-005 fails on this card's "Illumina" refusal
+2. Card 101: Part live (#193, #204, in Retest). Its last three slices were built on 2026-10-08 overnight and parked after both reviews found a new sentence splitter worse than develop; it needs a design for where a record sentence ends. Evidence: `testing/Developer/reports/2026-10-08_card101/`
+3. Card 94: Part live (#158, #165, #169, #174, and the place in the "Collected" cell, #226, in Retest). Still open: a single-isolate lookup, parked for your choice on the SNP-distance scan (`testing/Developer/reports/2026-10-09_card94/build.md`, "Parked"), and a follow-up such as "from 2023" (card 20)
+4. Card 84: Safe part live 2026-10-09 (#227, in Retest): plain words when the check cannot finish, Jev charged by your rule as written, a clean log line. Still open: step 3b, the server-pause fix, parked with its reports in `testing/Developer/reports/2026-10-08_guardrail_design/`; code of the full attempt under the local tag `parked/card84-72-guardrail-2026-10-08`
+5. Card 72: Part live (#159, one log line per guard and Jev call; #227, the safe part with card 84, in Retest). Still open: step 2, host routing, waits for a week of logs that name a cut call's host, which the log now keeps for names written in words (`testing/Developer/reports/2026-10-08_guardrail_design/step2_data.md`); a slow guard was seen again on 2026-10-09, 8.3 s on card 19's check
+6. Card 75: Factory's next card (`docs/build/Factory_onboarding.md`, card 75), from card 61's review (#190): after a sign-in renewal reply that cannot be read, a second request through the same bridge resends the spent token and production signs the person out of the command line and the web app (on develop today too). The fix latches the bridge after an unreadable or refused renewal, so it never calls /auth/refresh again in that process, tested with two calls. The older items in this row stay out of that section: they wait for the server's `data.reason` refusal field to land and reach production first, then the client change
+7. Card 85: Part live (#167, #220, in Retest): the page sentences and the logging slice. Still open, each yours: the facts checker's gaps, under `.claude/`, and the five `exc_info` warnings (A07)
+8. Card 4: Nobody on it
+9. Card 6: Nobody on it
+10. Card 7: Nobody on it
+11. Card 8: You chose, 2026-09-25: say what was checked. Planned: phase 8.9, from the parked 8.4 commit with "which differ" corrected
+12. Card 9: Nobody on it
+13. Card 15: Step 1 live (#171). The next step was built on 2026-10-08 overnight and parked (pull request #216 closed): one record for every non-count question gave wrong or thinner answers. Needs one checked template per question shape (`testing/Developer/reports/2026-10-08_card15/`)
+14. Card 17: Parked 2026-10-09: option B dropped 2 good sentences on a replay of 35 saved runs (`testing/Developer/reports/2026-10-09_card17/build.md`); your choice between accepting the drops and another option, the other four still in the diagnosis
+15. Card 18: Diagnosed 2026-10-08: mostly fixed; two rows remain when a record's sentences pass 1000 characters. Built after phase 8.7 merges
+16. Card 20: Parked 2026-10-09 after review: built as you chose, with Think reading the year and place, it showed wrong filters as right (Guinea also matched Guinea-Bissau, a travel country became the place, undated isolates left out in silence) and moved Think's other answers on 2 of 20 questions; your choice: a small extraction call only on isolate questions (the lead's recommendation), or Think extracting with the listed fixes. Reviews and the patch: `testing/Developer/reports/2026-10-09_card20/`
+17. Card 24: Your decision of 2026-10-06: the switch sits beside the answer's header, its cost shown on click (D21). Factory's card after 75 (`docs/build/Factory_onboarding.md`, card 24): it ports the switch built in commit `df7d7a2c`, kept under the local tag `parked/phase-8.4-2026-09-25` since the branch left the remote, and adds the cost shown on click
+18. Card 25: Out of Factory's lane on 2026-10-06: a new package needs your approval and a supply-chain review first. Before: Nobody on it
+19. Card 29: Your choice: how many papers get a sentence, a cost and speed question (`testing/Developer/reports/2026-10-08_overnight/card29_diagnosis.md`)
+20. Card 30: Diagnosed 2026-10-08: the honest note is built after phase 8.7 merges; fetching classifications is a cost choice for you
+21. Card 33: Diagnosed 2026-10-08: G-006 fixed (#172); G-004 waits on your decision D19
+22. Card 35: Built and reviewed 2026-10-09, pull request #228 open for your call: off-topic follow-ups caught 38 of 43 (develop 14 of 44), on-topic ones never refused; its fresh verifier found one path worse than develop, a follow-up Jev calls injection waiting up to 3.75 s when the topic check hangs (V-35-03). Merge as it is, or a one-line change and a fresh verifier
+23. Card 36: Live (#215, in Retest): the plan line says when a picked or typed date range could not be applied. Still open, your design choice: making a picked window survive a restart
+24. Card 37: Part live (#213, in Retest): rs334 lists only rs334. Still open: the rs334 row named by its clinical significance labels; planned in phase 8.9
+25. Card 38: Diagnosed 2026-10-08: orthologs' species and papers' titles; phase 8.9 tickets, built after phase 8.7 merges
+26. Card 40: The itemized list is written: 27 items, each your yes or no (`testing/Developer/reports/2026-10-08_card40/itemized_list.md`); nothing in the security layer changes before you answer
+27. Card 42: Queued by the owner behind the running work: phase 8.6's golden run, the build-harness and hook-gap pull requests, card 39 and phase 8.9's opening. Proposal: `docs/build/Verify_loop_proposal.md`, waiting for the owner's yes before anything is built
+28. Card 48: Built and reviewed 2026-10-09, pull request #230 open for your call: real questions are never asked back and broad subjects are, but a question naming a record the code cannot read (a variant such as "BRCA1 c.68_69delAG", a ClinVar or PMC id, a DOI) is asked back every time (V-48-04), and the guard tier production runs is too slow for the 1 s bound (V-48-03). The lead recommends a redesign: the classifier judges whether a message names a record
+29. Card 51: Part live (#156, #219, in Retest): the About page no longer describes the retired track. Still open, yours: a registry of every page claim
+30. Card 52: Designed, 2026-09-26: `testing/Developer/reports/2026-09-26_conversation_next_steps/design.md`. The writing model proposes at most three follow-up questions from the answer's own findings, code checks each is answerable and names a record the answer found, and Jev decides it asks what records hold, not advice. No fixed menu. A numbered phase after 8.6's follow-up, 8.7 and 8.9, at dial position 3 (event schema). Five decisions for you when it opens, the lead recommending yes to each
+31. Card 55: Being designed, 2026-09-26: how each entry becomes checks, the runner, the cost and the first baseline run. Then built on a branch, since it changes `.claude/`. The golden run stays the blocking gate until this one has run once. The expert review is the owner's to arrange; the lead prepares the answers to check
+32. Card 100: Your decision of 2026-10-06: low priority, a Factory screen card after card 24
+33. Card 105: Nobody on it; found 2026-10-08 overnight, true on develop before card 36
+34. Card 106: Nobody on it; found 2026-10-08 overnight
+35. Card 107: Nobody on it; card 101's territory, found 2026-10-08 overnight
+36. Card 108: Nobody on it; true on develop before card 19; needs a new progress event, so it is an event-schema change at dial position 3
+37. Card 110: Nobody on it yet; built after the phase 8.7 follow-ups merge, since both change the pick; not caused by 8.7
+38. Card 111: Nobody on it yet; built after the phase 8.7 follow-ups merge; probably not caused by 8.7
+39. Card 113: Nobody on it; needs one look by hand after a Stop
 
 ### How to start the next session
 
@@ -581,6 +576,28 @@ Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-
 | 12.17 | A good question sometimes fails at the think step and shows a refusal | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it | Seen twice in about forty live runs over 2026-09-23 and 2026-09-24: `Does coffee help make exercise more effective?` and `is there a trial recruiting for melanoma`, both at researcher depth, each failing with "the plan tier's response did not match the think classification schema". Neither question reaches 12.3's ask-back, which only reads one to three words, so tonight's work did not cause it. The reader sees a refusal for a question the product answers on every other run. Evidence: `testing/Developer/reports/2026-09-24_no_hardcoding/live_runs/` |
 
 ## Session history
+
+### The night of 2026-10-09, in one table
+
+- The lead ran the owner's list and their answers of the early hours under their approval; every pull request went through CI, a judge, an adversary, one fix round and a fresh verifier, merged only when that verifier found nothing worse than develop, and was then checked on deployed develop at 1280 and 390
+- Seven pull requests merged; two wait for the owner with options; three pieces of work were parked; a network outage of about five hours stopped every agent and each was resumed
+- OpenRouter: $0.41 spent tonight, $31.36 left
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| Phase 8.7 (#218) | Merged at the owner's yes, A04 and A07 to follow; develop's per-question cap set to 25 cents | Live; in Retest; its check found cards 109 to 111 |
+| 8.7 follow-ups (#229) | The summary held at most about 1 s for its first-sentence pick; a cited record carries the sentence's checked words; the fix round stored a re-sent citation once everywhere; pydantic stated at 2.12.0 | Live; in Retest; queries 1 and 91 passed |
+| Card 19 (#224) | The progress steps reach Write once every started search returns; a backend test pins the order it rests on | Live; in Retest; query 98 passed |
+| Card 109 (#225) | A stopped search reads "No answer saved" in "Your searches"; the fix round kept the false flag the API reader dropped | Live; in Retest; query 56 passed |
+| Card 94, part (#226) | Each isolate's place in its "Collected" cell; the single-isolate lookup taken out and parked, slower than develop | Live, part; in Retest; query 33 passed |
+| Card 112 (#231) | Asking a question again keeps every earlier row; the cause was a rule from phase 4.13 | Live; in Retest; query 56 passed |
+| Guardrail safe part (#227) | Plain words when the check cannot finish, Jev charged by the owner's rule as written, a clean log line that keeps provider names | Live, part of cards 84 and 72; in Retest |
+| Card 35 (#228) | Off-topic follow-ups caught 38 of 43, up from 14 of 44 | Waiting for the owner: one hang path slower than develop (V-35-03) |
+| Card 48 (#230) | Broad subjects asked which aspect, real questions never | Waiting for the owner: a record the code cannot read is asked back (V-48-04) |
+| Card 17 | Option B replayed over 35 saved runs | Parked: it dropped 2 good sentences |
+| Card 20 | Year and place read by Think and verified in code | Parked: wrong filters shown as right, and drift in Think |
+| Cards 11, 12, 14, 16 | Closed at the owner's answers or by the decision of 2026-10-05 | Done |
+| Cards 105 to 113 | Filed from tonight's checks and reviews | On the board |
 
 ### The night of 2026-10-08 to 09, in one table
 

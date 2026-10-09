@@ -1050,6 +1050,18 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-09. THE UI FIX LOOP, THE NIGHT OF 2026-10-09: PHASE 8.7 AND ITS FOLLOW-UPS, THE GUARDRAIL'S SAFE PART AND FOUR CARDS MERGED; CARDS 35 AND 48 WAIT FOR THE OWNER. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
+
+- What landed, by what a person notices, each behind green CI, a judge, an adversary, one fix round and a fresh verifier, then checked on deployed develop at 1280 and 390:
+  - Records show within seconds and the summary's first sentence answers the question (phase 8.7, cards 2, 50 and 5, #218, the owner's yes); the summary is held at most about 1 s for its first-sentence pick and a cited record carries the sentence's checked words (its follow-ups, #229).
+  - The progress steps reach Write only after the last running search returns (card 19, #224).
+  - A stopped search reads "No answer saved" in "Your searches" (card 109, #225), and asking a question again keeps every earlier row (card 112, #231).
+  - An isolate's "Collected" cell says when and where it was collected (card 94, part, #226).
+  - When the check every question passes cannot finish, the message says nothing was searched and the problem was ours; Jev is charged by the owner's rule as written (cards 84 and 72, the guardrail's safe part, #227).
+- Held for the owner, pull requests open: card 35 (#228), off-topic follow-ups caught far more often, one hang path slower than develop; card 48 (#230), a named record the code cannot read asked back.
+- Parked with reasons in `DECISIONS.md`: card 17 (its replay dropped good sentences), card 20 (wrong filters shown as right, and drift in Think), card 94's single-isolate lookup (slower than develop). Filed: cards 105 to 113.
+- Develop's per-question cost cap set to 25 cents with the owner's yes. A network outage of about five hours stopped every agent mid-run; each was resumed (`LEARNINGS.md`). OpenRouter spend tonight $0.41 of an $8 cap ($31.77 left at the start, $31.36 at the close).
+
 2026-10-08. THE UI FIX LOOP, THE NIGHT OF 2026-10-08 TO 09: PULL REQUESTS #212 TO #215, #219 AND #220 MERGED; PHASE 8.7 WAITS FOR THE OWNER. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
 
 - What landed, by what a person notices:
