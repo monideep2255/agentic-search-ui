@@ -653,7 +653,7 @@ async def _ask_jev(
     # Card 99: the calls run at the same time and none is charged until it
     # returns, so the cap must hold for all of them at once, at the most
     # each can be charged: `MAX_JEV_COST_USD`, the ceiling the client bills
-    # for a reply it cannot read (A-99-05, J-99-07). One check then reserves
+    # a reply stating more (A-99-05, J-99-07). One check then reserves
     # (calls x ceiling): `check_per_query_cap` adds the guard estimate to the
     # running cost, so the cap it is given is lowered to leave exactly that
     # much room. A query too close to its cap for every call approves
@@ -679,8 +679,9 @@ async def _ask_jev(
                 timeout_s=timeout_s,
             )
         except JevCallError as exc:
-            # An unusable reply was still billed: its reported cost is charged,
-            # never zero, even though it approves nothing (fix round, F-8.6-J10).
+            # An unusable reply or an error status was still billed: the
+            # charge `jev_client` fixed is charged, never zero, even though it
+            # approves nothing (F-8.6-J10; step 3a, F-84-J04, F-72-V03, J11).
             if exc.billed_cost_usd:
                 harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
             raise

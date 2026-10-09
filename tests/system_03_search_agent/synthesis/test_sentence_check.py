@@ -1121,9 +1121,9 @@ async def test_the_adversarys_a01_replies_now_approve_nothing(monkeypatch, first
     [
         ({"item_1": _jev_answer("no")}, 0.02, jev_client_module.MAX_JEV_COST_USD),
         ({"item_1": _jev_answer("maybe")}, 0.004, 0.004),
-        ({"item_1": _jev_answer("no")}, float("inf"), jev_client_module.MAX_JEV_COST_USD),
+        ({"item_1": _jev_answer("no")}, float("inf"), jev_client_module.JEV_FLOOR_COST_USD),
     ],
-    ids=["above the ceiling, charged at the ceiling", "an option outside the set, charged", "infinite, not an amount"],
+    ids=["above the ceiling, charged at the ceiling", "an option outside the set, charged", "infinite, an unreadable amount, charged the floor"],
 )
 async def test_an_unusable_jev_reply_approves_nothing_and_is_charged_its_reported_cost(
     monkeypatch, answers, cost, charged
