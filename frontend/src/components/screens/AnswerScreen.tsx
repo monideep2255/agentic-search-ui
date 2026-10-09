@@ -25,7 +25,7 @@
  */
 
 import type React from "react";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Component, createRef, Fragment, useEffect, useRef, useState } from "react";
 import { Box, Typography, useMediaQuery } from "@mui/material";
 
 import { designTokens, layerColour } from "../../theme";
@@ -87,6 +87,32 @@ export interface Claim {
   tableHeader?: string[];
   /** 2026-09-14: a record line after the findings-tail note, set by `useRunView`. */
   findingsTail?: boolean;
+  /**
+   * Build phase 8.7, T-8.7-03 (card 50): "listing" for the code-built count
+   * line and record listing the server sends the moment the searches end.
+   * Absent means the written summary, which is where every claim from an
+   * older producer belongs. The summary always renders ABOVE the listing,
+   * whatever order the two arrived in, and a listing claim is not an answer
+   * sentence for Stop (card 58).
+   */
+  placement?: "listing";
+}
+
+/**
+ * Whether a claim is part of the written answer rather than the record
+ * listing shown before it (build phase 8.7).
+ *
+ * Stop reads this, not `claims.length`: card 58 keeps Stop offered until the
+ * first sentence of the ANSWER is on screen, and records shown at the end of
+ * the searches are what the answer is built from, not the answer.
+ */
+export function isSummaryClaim(claim: Claim): boolean {
+  return claim.placement !== "listing";
+}
+
+/** How many sentences of the written answer are on screen (card 58, phase 8.7). */
+export function summarySentencesShown(claims: Claim[]): number {
+  return claims.filter(isSummaryClaim).length;
 }
 
 /**
@@ -234,6 +260,131 @@ const PROSE_SX = {
   "@media (max-width:720px)": { fontSize: 16, lineHeight: 1.65, mb: "16px", overflowWrap: "anywhere" },
 } as const;
 
+/**
+ * The quiet "writing" mark, from the approved `Streaming.dc.html`
+ * (`testing/Developer/reports/2026-09-14_handover_inputs/design/`): the word
+ * "writing" at 13.5px in `inkMuted`, then the dots at weight 700 in `blue`,
+ * 4px apart. `aria-hidden`, because the claims region is already a polite
+ * live region and `RunProgress` announces "Write step running".
+ *
+ * Build phase 8.7 adds a second place for it, `inSlot`: above a record
+ * listing that is already on screen, where the summary will land.
+ *
+ * DESIGN GAP, named rather than filled silently (`design-consistency`). No
+ * design shows records on screen BEFORE the written answer: the approved
+ * `Streaming.dc.html`, `screens/streaming.html` and `prototype/app.html`
+ * all build the answer top to bottom, records last, with the mark at the
+ * end of what has been written. `docs/build/design/README.md`'s coverage
+ * table lists no such state. So the slot is the designed mark, unchanged,
+ * standing where the text will grow, and no new value is introduced:
+ *
+ *   type, colour, dots   the mark itself, as above
+ *   space below it       18px, 16px on a phone: `PROSE_SX`'s paragraph gap
+ *                        (`prototype/app.html`'s `.answer p`), so the slot
+ *                        sits a paragraph's gap above the records, the
+ *                        space the summary's own last paragraph keeps
+ *   space above it       0 in the slot; 8px (theme spacing 1) after the
+ *                        text, as before
+ */
+function WritingMark({ testId, inSlot = false }: { testId: string; inSlot?: boolean }) {
+  return (
+    <Box
+      data-testid={testId}
+      {...(inSlot ? { "data-writing-slot": "" } : {})}
+      aria-hidden="true"
+      sx={{
+        ...(inSlot
+          ? { m: "0 0 18px", "@media (max-width:720px)": { mb: "16px" } }
+          : { mt: 1 }),
+        fontSize: 13.5,
+        color: designTokens.inkMuted,
+        display: "flex",
+        alignItems: "center",
+        gap: "4px",
+      }}
+    >
+      writing
+      <Box component="span" sx={{ fontWeight: 700, color: designTokens.blue }}>
+        <WritingEllipsis />
+      </Box>
+    </Box>
+  );
+}
+
+/**
+ * The top edge of what the reader can actually see: the bottom of the sticky
+ * app bar (`AppShell`'s `<AppBar position="sticky">`), or the viewport's top
+ * when there is no bar. Content scrolled behind the bar is out of sight.
+ */
+function readingEdge(): number {
+  const bar = document.querySelector("header");
+  return bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0;
+}
+
+/**
+ * Keeps the record listing where the reader is looking when the summary,
+ * the status line or the progress above it changes (build phase 8.7,
+ * T-8.7-03: "the summary appears above the list without the list jumping").
+ *
+ * WHAT A JUMP IS, and what this does about it. The web platform's own
+ * definition, CSS scroll anchoring: content changing ABOVE what the reader
+ * is looking at moves what they are reading. So:
+ *
+ *   - The reader has scrolled into the records (the listing's first record
+ *     is above the reading edge): whatever changes above them, the page
+ *     scrolls by exactly the distance the records moved, and the row they
+ *     were reading stays under their eyes.
+ *   - The top of the records is in view: the reader can see the slot where
+ *     the summary will land, and the summary fills it where they are looking.
+ *     Nothing is scrolled, because scrolling would carry the summary they are
+ *     waiting for out of sight.
+ *
+ * Browsers with native scroll anchoring (Chromium, Firefox) usually hold the
+ * records themselves; Safari does not. This measures the listing's position
+ * on screen AFTER any native adjustment, so where the browser already held
+ * it the measured move is zero and nothing is scrolled twice.
+ *
+ * A class, because `getSnapshotBeforeUpdate` is React's one hook that runs
+ * after a render and BEFORE the page changes, which is when the listing's
+ * old position can still be read.
+ */
+class ListingScrollAnchor extends Component<{ children: React.ReactNode }> {
+  private readonly root = createRef<HTMLDivElement>();
+
+  private firstListingElement(): HTMLElement | null {
+    return this.root.current?.querySelector<HTMLElement>('[data-placement="listing"]') ?? null;
+  }
+
+  getSnapshotBeforeUpdate(): number | null {
+    const listing = this.firstListingElement();
+    if (listing === null) return null;
+    const top = listing.getBoundingClientRect().top;
+    // Only a reader already reading inside the records is held in place.
+    return top < readingEdge() ? top : null;
+  }
+
+  componentDidUpdate(_props: unknown, _state: unknown, topBefore: number | null): void {
+    if (topBefore === null) return;
+    const listing = this.firstListingElement();
+    if (listing === null) return;
+    const moved = listing.getBoundingClientRect().top - topBefore;
+    if (Math.abs(moved) >= 1) window.scrollBy(0, moved);
+  }
+
+  render() {
+    return <div ref={this.root}>{this.props.children}</div>;
+  }
+}
+
+/**
+ * `data-placement="listing"` on a listing claim's element, and nothing on a
+ * summary claim, so a summary element is exactly what it was before 8.7.
+ * The scroll anchor (`ListingScrollAnchor`) finds the listing by it.
+ */
+function placementAttribute(claim: Claim): { "data-placement"?: "listing" } {
+  return claim.placement === "listing" ? { "data-placement": "listing" } : {};
+}
+
 const RTAB_CELL = {
   textAlign: "left",
   p: "8px 11px",
@@ -350,8 +501,18 @@ export type AnswerBlock =
  *     by label, with the label as the block's heading.
  * Everything else is prose, one paragraph per `paragraph` number, or one
  * paragraph per sentence for a producer that sends none.
+ *
+ * `indexes`, build phase 8.7: each claim's position in the run's whole claim
+ * list, when `claims` is one region of it (the summary or the listing).
+ * Every key and row index below is that ORIGINAL position, so a block keeps
+ * its identity when the other region grows: a records table already on
+ * screen is not rebuilt when the summary lands above it. Defaults to each
+ * claim's own position, so a caller passing one list sees no change.
  */
-export function buildAnswerBlocks(claims: Claim[]): AnswerBlock[] {
+export function buildAnswerBlocks(
+  claims: Claim[],
+  indexes: number[] = claims.map((_, position) => position),
+): AnswerBlock[] {
   const blocks: AnswerBlock[] = [];
   const labels = claims.map((claim) =>
     claim.kind === "list_item" || claim.kind === "table_row" ? null : parseRecordLine(claim.text),
@@ -362,7 +523,8 @@ export function buildAnswerBlocks(claims: Claim[]): AnswerBlock[] {
     if (claims[later]!.heading || claims[later]!.noteBefore) return false;
     return claims[other]!.paragraph === claims[index]!.paragraph;
   };
-  claims.forEach((claim, index) => {
+  claims.forEach((claim, position) => {
+    const index = indexes[position] ?? position;
     if (claim.noteBefore) blocks.push({ type: "note", text: claim.noteBefore, key: `note-${index}` });
     if (claim.heading) blocks.push({ type: "heading", text: claim.heading, key: `heading-${index}` });
     const last = blocks[blocks.length - 1];
@@ -389,10 +551,12 @@ export function buildAnswerBlocks(claims: Claim[]): AnswerBlock[] {
       if (claim.noteAfter) blocks.push({ type: "note", text: claim.noteAfter, key: `note-after-${index}` });
       return;
     }
-    const parsed = labels[index];
+    const parsed = labels[position];
     if (
       parsed &&
-      (claim.findingsTail || adjacentRecordLine(index, index - 1) || adjacentRecordLine(index, index + 1))
+      (claim.findingsTail ||
+        adjacentRecordLine(position, position - 1) ||
+        adjacentRecordLine(position, position + 1))
     ) {
       const row = { claim, index, cells: [parsed.value] };
       if (last && last.type === "records" && last.source === "record_line" && last.label === parsed.label) {
@@ -1283,9 +1447,44 @@ export function AnswerBody({
     setRecordsPage({});
   }, [question]);
 
-  const blocks = buildAnswerBlocks(claims);
-  // UI fix 11.27: the one bold term in the body, or none.
-  const mainPoint = mainPointFor(claims, question);
+  /*
+   * Build phase 8.7, T-8.7-03 (card 50): THE SUMMARY ABOVE, THE LISTING
+   * BELOW, whatever order they arrived in. The server sends the count line
+   * and the records the moment the searches end and the written summary
+   * later, so the records are on screen while the summary is still being
+   * written, and the summary is placed above them when it lands.
+   *
+   * Each region is grouped into blocks on its own, keyed by each claim's
+   * position in the arrival-ordered list (`buildAnswerBlocks`' `indexes`).
+   * The listing's blocks therefore keep their keys when the summary lands:
+   * React inserts the summary's elements above them and leaves every record
+   * row, the table's page and the reader's place in it where they were.
+   *
+   * An older producer sends no placement, so its whole answer is the
+   * summary region and renders exactly as before.
+   */
+  const summaryIndexes: number[] = [];
+  const listingIndexes: number[] = [];
+  claims.forEach((claim, index) => (isSummaryClaim(claim) ? summaryIndexes : listingIndexes).push(index));
+  const summaryBlocks = buildAnswerBlocks(
+    summaryIndexes.map((index) => claims[index]!),
+    summaryIndexes,
+  );
+  const listingBlocks = buildAnswerBlocks(
+    listingIndexes.map((index) => claims[index]!),
+    listingIndexes,
+  );
+  // UI fix 11.27: the one bold term in the body, or none. Chosen in READING
+  // order, summary first, so the lead a reader sees first is the one read.
+  const readingOrder = [...summaryIndexes, ...listingIndexes];
+  const mainPointInOrder = mainPointFor(
+    readingOrder.map((index) => claims[index]!),
+    question,
+  );
+  const mainPoint =
+    mainPointInOrder === null
+      ? null
+      : { index: readingOrder[mainPointInOrder.index]!, term: mainPointInOrder.term };
   let headingNumber = 0;
   let noteNumber = 0;
   let recordsNumber = 0;
@@ -1358,6 +1557,7 @@ export function AnswerBody({
                 key={index}
                 data-testid={`${testIdPrefix}claim-text-${index}`}
                 data-layer={provenance(claim)}
+                {...placementAttribute(claim)}
                 sx={{
                   display: "flex",
                   flexDirection: "column",
@@ -1435,6 +1635,7 @@ export function AnswerBody({
                   key={index}
                   data-testid={`${testIdPrefix}claim-text-${index}`}
                   data-layer={provenance(claim)}
+                  {...placementAttribute(claim)}
                   sx={{ ...uncitedInk(claim), ...rise }}
                 >
                   {cells.map((cell, c) => (
@@ -1501,6 +1702,7 @@ export function AnswerBody({
               key={index}
               data-testid={`${testIdPrefix}claim-text-${index}`}
               data-layer={provenance(claim)}
+              {...placementAttribute(claim)}
               sx={{ ...uncitedInk(claim), ...rise }}
             >
               {!longFinalName ? (
@@ -1693,34 +1895,29 @@ export function AnswerBody({
         data-testid={`${testIdPrefix}claims`}
         aria-live={streaming ? "polite" : undefined}
       >
-        {blocks.map(renderBlock)}
+        {summaryBlocks.map(renderBlock)}
+        {/*
+          Build phase 8.7: THE WRITING SLOT. While the records are on screen
+          and the summary is still being written, the "writing" mark stands
+          where the summary will land, above the records, and stays at the
+          end of the summary as its sentences arrive. See `WritingMark` for
+          where every value comes from, and why this placement is a named
+          design gap.
+        */}
+        {streaming && writing && listingBlocks.length > 0 ? (
+          <WritingMark testId={`${testIdPrefix}streaming-writing-indicator`} inSlot />
+        ) : null}
+        {listingBlocks.map(renderBlock)}
       </Box>
 
       {/*
         The "writing" line at the end of the streamed text, from the approved
-        `Streaming.dc.html`: 13.5px `inkMuted`, the dots 700 in `blue`. Gone
-        the moment the run lands or stops. `aria-hidden`, because the claims
-        region is already a polite live region and `RunProgress` announces
-        "Write step running".
+        `Streaming.dc.html`. Gone the moment the run lands or stops. With a
+        record listing on screen it stands in the slot above the listing
+        instead, where the text is still growing.
       */}
-      {streaming && writing ? (
-        <Box
-          data-testid={`${testIdPrefix}streaming-writing-indicator`}
-          aria-hidden="true"
-          sx={{
-            mt: 1,
-            fontSize: 13.5,
-            color: designTokens.inkMuted,
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-          }}
-        >
-          writing
-          <Box component="span" sx={{ fontWeight: 700, color: designTokens.blue }}>
-            <WritingEllipsis />
-          </Box>
-        </Box>
+      {streaming && writing && listingBlocks.length === 0 ? (
+        <WritingMark testId={`${testIdPrefix}streaming-writing-indicator`} />
       ) : null}
 
       {/*
@@ -2583,63 +2780,85 @@ export function AnswerScreen({
           question above it.
         */}
         <Box sx={{ mt: 2.5 }}>
-          {running ? (
-            <>
-              {progress}
-              {/* UI fix set 9, item 9.6: the answer builds under the progress. */}
-              {claims.length > 0 ? (
-                <Box data-testid="streaming-answer" sx={{ mt: 2.5 }}>
-                  <AnswerBody streaming writing={!stopped} question={question} claims={claims} sources={sources} />
-                </Box>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <AnswerBody
-                tour
-                question={question}
-                claims={claims}
-                sources={sources}
-                meta={meta}
-                outcome={outcome}
-                outcomeTone={outcomeTone}
-                elapsedMs={elapsedMs}
-                steps={steps}
-                trust={trust}
-                refusal={refusal}
-                refusalLabel={refusalLabel}
-                refusalLink={refusalLink}
-                failure={failure}
-                capMessage={capMessage}
-                systemNotes={systemNotes}
-                onFlagSource={onFlagSource}
-                flaggedSources={flaggedSources}
-              />
+          {/*
+            Build phase 8.7, T-8.7-03: ONE ANSWER BODY FROM THE FIRST RECORD
+            TO THE LANDED ANSWER. The records now arrive while the run is
+            live and the summary lands with `done`, so the moment the run
+            lands is the moment the summary is placed above the records.
+            This used to swap the running branch's `AnswerBody` for a second
+            one in the landed branch, which React treats as a different
+            element: every record row was rebuilt and the records table went
+            back to its first page at exactly that moment. The body now
+            stands at one position in both states, and only what it is given
+            changes, so the records stay the same elements on screen.
+          */}
+          <ListingScrollAnchor>
+            {running ? progress : null}
+            {/* UI fix set 9, item 9.6: the answer builds under the progress. */}
+            {!running || claims.length > 0 ? (
+              <Box
+                {...(running ? { "data-testid": "streaming-answer" } : {})}
+                sx={running ? { mt: 2.5 } : undefined}
+              >
+                {running ? (
+                  <AnswerBody
+                    streaming
+                    writing={!stopped}
+                    question={question}
+                    claims={claims}
+                    sources={sources}
+                  />
+                ) : (
+                  <AnswerBody
+                    tour
+                    question={question}
+                    claims={claims}
+                    sources={sources}
+                    meta={meta}
+                    outcome={outcome}
+                    outcomeTone={outcomeTone}
+                    elapsedMs={elapsedMs}
+                    steps={steps}
+                    trust={trust}
+                    refusal={refusal}
+                    refusalLabel={refusalLabel}
+                    refusalLink={refusalLink}
+                    failure={failure}
+                    capMessage={capMessage}
+                    systemNotes={systemNotes}
+                    onFlagSource={onFlagSource}
+                    flaggedSources={flaggedSources}
+                  />
+                )}
+              </Box>
+            ) : null}
+            {!running ? (
+              <>
+                {/*
+                  F-4.8-D-11. These were the other way round. The prototype's `#tail`
+                  orders sources, verdict pills, the follow-up form, then the rating,
+                  which asks "was that useful" AFTER offering the next question rather
+                  than before it.
+                */}
 
-              {/*
-                F-4.8-D-11. These were the other way round. The prototype's `#tail`
-                orders sources, verdict pills, the follow-up form, then the rating,
-                which asks "was that useful" AFTER offering the next question rather
-                than before it.
-              */}
-
-              <Box ref={followUpRef}>{followUp}</Box>
-              {/*
-                T-4.6-09. `FeedbackSurface` is built here, not passed in as an
-                opaque node, so it can be given the real POST target (`runId`) and
-                bearer token (`authToken`) it needs. `key={question}` remounts it
-                per question, the same reset the old call site in `App.tsx`
-                achieved with `key={searchView.question}`, so a rating typed for
-                one answer can never linger onto the next.
-              */}
-              <FeedbackSurface
-                key={question}
-                runId={runId}
-                authToken={authToken}
-                flaggedSources={flaggedSources}
-              />
-            </>
-          )}
+                <Box ref={followUpRef}>{followUp}</Box>
+                {/*
+                  T-4.6-09. `FeedbackSurface` is built here, not passed in as an
+                  opaque node, so it can be given the real POST target (`runId`) and
+                  bearer token (`authToken`) it needs. `key={question}` remounts it
+                  per question, the same reset the old call site in `App.tsx`
+                  achieved with `key={searchView.question}`, so a rating typed for
+                  one answer can never linger onto the next.
+                */}
+                <FeedbackSurface
+                  key={question}
+                  runId={runId}
+                  authToken={authToken}
+                  flaggedSources={flaggedSources}
+                />
+              </>
+            ) : null}
+          </ListingScrollAnchor>
         </Box>
       </Box>
     </Box>

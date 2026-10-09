@@ -249,7 +249,10 @@ const resultPage = () => document.querySelector('[data-tour="answer"]');
 const pageText = () => document.body.textContent ?? "";
 
 /** Ask, and return once the first chunk of `stream` has been read. */
-async function ask(stream: ReturnType<typeof openStream>): Promise<ReturnType<typeof userEvent.setup>> {
+async function ask(
+  stream: ReturnType<typeof openStream>,
+  { awaitGuard = true }: { awaitGuard?: boolean } = {},
+): Promise<ReturnType<typeof userEvent.setup>> {
   openEventStreamMock.mockImplementationOnce(() => stream.response);
   const user = userEvent.setup();
   render(<App />);
@@ -257,7 +260,9 @@ async function ask(stream: ReturnType<typeof openStream>): Promise<ReturnType<ty
   await user.type(main.getByRole("textbox", { name: /question/i }), QUESTION);
   await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
   await waitFor(() => expect(stream.firstChunkRead(), "the run's first chunk was never read").toBe(true));
-  await screen.findByTestId("step-Guard");
+  // Build phase 8.7: a run whose text has arrived is shown at once, so its
+  // steps are never on screen to wait for.
+  if (awaitGuard) await screen.findByTestId("step-Guard");
   return user;
 }
 
@@ -290,26 +295,22 @@ describe("card 59: an answer that finished before Stop arrived stands", () => {
     vi.useRealTimers();
   });
 
-  it("Stop after the server finished shows the whole answer with its sources and trust line, never Search stopped", async () => {
+  it("an answer the server finished is on screen the moment it arrives, with its sources and trust line, and Stop is gone", async () => {
+    // Build phase 8.7: the screen no longer holds a finished answer back, so
+    // there is no window in which the server has finished and the reader
+    // still sees only the steps. The old arm pressed Stop in that window;
+    // `Stop while done is in flight` below keeps the race that remains.
     const stream = openStream(sse([...SEARCH, ...ANSWER_FRAMES]));
-    const user = await ask(stream);
-
-    // `done` has arrived; the pacing still holds the answer back.
-    expect(answerOnScreen(), "populate-check: the answer was already on screen").toBe(false);
-    expect(stopButton(), "populate-check: Stop was not offered").toBeEnabled();
-
     const stopped = watchFor("run-stopped");
-    await user.click(stopButton()!);
+    await ask(stream, { awaitGuard: false });
 
-    // At once, not after the pacing: the reader asked to stop waiting.
     expect(await screen.findByTestId("source-1", {}, { timeout: 1_500 })).toBeInTheDocument();
     expect(answerOnScreen(), "the finished answer is not on screen").toBe(true);
     expect(screen.getByTestId("trust-line")).toBeInTheDocument();
     expect(resultPage(), "the answer did not land on the result page").not.toBeNull();
+    expect(stopButton(), "Stop is offered over a finished answer").toBeNull();
     stopped.stop();
     expect(stopped.seen(), "Search stopped showed for an answer that had already finished").toBe(false);
-    // Nothing to stop on the server, and a stop sent now could cut its
-    // record-keeping short.
     expect(stopRunMock).not.toHaveBeenCalled();
   });
 
@@ -405,9 +406,12 @@ describe("card 59: an answer that finished before Stop arrived stands", () => {
   });
 
   it("J-59-06 (M7): no sentence of the answer appears while Stopping, nor after the stop is confirmed", async () => {
-    // The answer's sentence, citation and verdict have arrived, `done` has
-    // not, and the screen is still pacing: the reveal holds the sentence.
-    const stream = openStream(sse([...SEARCH, ...ANSWER_FRAMES.slice(0, -1)]));
+    // Only the searches have arrived when Stop is pressed. The answer's
+    // sentence, citation and verdict reach the browser while the reply is
+    // awaited, `done` never does. Build phase 8.7 shows arrived text at once,
+    // so what keeps it off the screen is that a press freezes the screen at
+    // the events that had arrived.
+    const stream = openStream(sse(SEARCH));
     await ask(stream);
     expect(answerOnScreen(), "populate-check: the answer was already on screen").toBe(false);
     expect(stopButton(), "populate-check: Stop was not offered").toBeEnabled();
@@ -418,10 +422,7 @@ describe("card 59: an answer that finished before Stop arrived stands", () => {
     });
     expect(stopButton()).toHaveTextContent("Stopping…");
 
-    // Past the writing banner's minimum, inside the 5 second wait. Mutation
-    // that turns this red: stop freezing the reveal while the reply is
-    // awaited (`stopped: stopped || stopping` in `App.tsx`). The sentence
-    // then appears under "Stopping…" and stays under "Search stopped".
+    act(() => stream.push(sse(ANSWER_FRAMES.slice(0, -1), SEARCH.length)));
     await advance(3_000);
     expect(answerOnScreen(), "a sentence appeared while Stop was awaiting the server").toBe(false);
 

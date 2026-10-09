@@ -90,7 +90,7 @@ import { HomeScreen } from "./components/screens/HomeScreen";
 import { RunScreen } from "./components/screens/RunScreen";
 import { RunProgress } from "./components/screens/RunProgress";
 import type { StepName } from "./components/screens/RunScreen";
-import { AnswerScreen } from "./components/screens/AnswerScreen";
+import { AnswerScreen, summarySentencesShown } from "./components/screens/AnswerScreen";
 import type { PreviousTurn } from "./components/screens/AnswerScreen";
 import { SavedAnswerScreen } from "./components/screens/SavedAnswerScreen";
 import { ArchitectureScreen } from "./components/screens/ArchitectureScreen";
@@ -1093,11 +1093,11 @@ export function App() {
    */
   const liveView = runId === null ? EMPTY_RUN_VIEW : pacedView;
   /*
-   * 2026-09-14. The write step's sentences arrive as one burst, usually with
-   * `done`, after a long silent gap. `useAnswerReveal` shows them one at a
-   * time under the writing banner and holds the view unlanded until the last
-   * one is on screen, so every consumer below sees one consistent state.
-   * Once revealed, it returns `liveView` itself, unchanged.
+   * Build phase 8.7, T-8.7-03: the screen follows the stream. The answer is
+   * no longer revealed on a timer; `useAnswerReveal` passes the view through
+   * unchanged and decides only what a Stop leaves on screen
+   * (`whatStopLeavesOnScreen`): nothing of an answer the reader had not
+   * seen, and exactly the records they had seen, with nothing new after.
    */
   const revealedView = useAnswerReveal(liveView, {
     runKey: runId,
@@ -1105,7 +1105,6 @@ export function App() {
     // under a Stop that may yet be confirmed.
     stopped: stopped || stopping,
     flush: status === "error" || answerStood,
-    reducedMotion,
   });
   /*
    * Card 58, 2026-09-27: Stop follows the SCREEN, not the stream.
@@ -1127,12 +1126,20 @@ export function App() {
    * because `useAgentRun` keeps the previous run's events until a new run
    * replaces them (F-4.8-J-03), and off once pressed.
    */
+  /*
+   * Build phase 8.7: only SUMMARY sentences count. The record listing now
+   * reaches the screen the moment the searches end, while the summary is
+   * still being written; the reader is still waiting for the answer then,
+   * and the server is still working, so Stop stays offered. Counting the
+   * records would grey Stop at the records, which card 58's report warned
+   * against in advance.
+   */
   const stopOffered =
     runId !== null &&
     stopVerdict === "none" &&
     deriveStopOffered(events, {
       landed: revealedView.landed,
-      claimsShown: revealedView.claims.length,
+      claimsShown: summarySentencesShown(revealedView.claims),
     });
   const view = useMemo(
     () =>
@@ -1627,7 +1634,37 @@ export function App() {
     setSearchView({ name: "home" });
   };
 
+  /*
+   * Build phase 8.7, T-8.7-03: the answer page does not blink when the run
+   * lands.
+   *
+   * The records now reach the screen the moment the searches end, on the
+   * answer page, and the summary lands with `done`. Two things used to
+   * rebuild that page at exactly that moment:
+   *
+   *   - The effect above moves the view from "run" to "answer" AFTER the
+   *     landed frame has rendered, so that frame fell through to `RunScreen`,
+   *     unmounting the answer page with its records, and the next frame
+   *     mounted it again.
+   *   - `fadedBody` is keyed on the view's name, so "run" to "answer"
+   *     remounted everything and replayed the page's fade-in from nothing.
+   *
+   * So the landed run is shown as the answer in the SAME frame, and the fade
+   * is keyed on which page is on show: a run whose records are already on
+   * the answer page is the answer page, and moving to "answer" is not a
+   * change of page. The effect still moves the state, as before.
+   */
+  const shownSearchView: SearchView =
+    searchView.name === "run" && (view.landed || status === "error")
+      ? { name: "answer", question: searchView.question }
+      : searchView;
+  const pageOnShow =
+    shownSearchView.name === "run" && view.claims.length > 0 ? "answer" : shownSearchView.name;
+
   const body = () => {
+    // The view on show, see `shownSearchView`: equal to the state except in
+    // the one frame a run lands, before the effect catches the state up.
+    const searchView = shownSearchView;
     if (screen === "integrations") return <IntegrationsScreen />;
     if (screen === "about")
       return (
@@ -1689,30 +1726,38 @@ export function App() {
          * live, the SAME answer screen a follow-up uses renders the progress
          * (with Stop) above the answer as it builds. The landed state is
          * unchanged: the effect below still switches the view to "answer" on
-         * the terminal event. A stopped run falls back to `RunScreen`, whose
-         * "Search stopped" block says no answer was written, rather than
-         * leaving half an answer on screen as if it were one.
+         * the terminal event.
+         *
+         * STOP, the owner's decision of 2026-09-27 (build phase 8.7). A run
+         * stopped before any of its answer was on screen falls back to
+         * `RunScreen`, whose "Search stopped" block says no answer was
+         * written: `useAnswerReveal` withheld everything, so there are no
+         * claims here. A run stopped AFTER its records were on screen keeps
+         * them: "Search stopped" stands above them, in the progress's own
+         * stopped block, and nothing that arrives afterwards is shown.
          */
-        if (!stopped && !view.landed && view.claims.length > 0) {
+        if (!view.landed && view.claims.length > 0) {
           return (
             <AnswerScreen
               question={searchView.question}
+              stopped={stopped}
               progress={
                 <RunProgress
-                  activeStep={step}
-                  startedAt={runStartedAt}
+                  activeStep={stopped ? null : step}
+                  startedAt={stopped ? null : runStartedAt}
                   reachedSteps={view.reachedSteps}
                   toolCalls={view.toolCalls}
                   steps={view.steps}
                   personaName={persona?.name ?? null}
                   personaAbout={persona?.about ?? null}
                   personaWikipedia={persona?.wikipedia ?? null}
-                  stopEnabled={view.stopEnabled}
+                  stopEnabled={view.stopEnabled && !stopped}
                   stopping={stopping}
                   refusal={view.refusal}
                   capMessage={view.capMessage}
                   failure={streamError}
-                  stopped={false}
+                  stopped={stopped}
+                  recordsKept={stopped}
                   showNewSearch={false}
                   onStop={stopCurrentRun}
                   onRunAgain={() => void ask(searchView.question, depth)}
@@ -1784,6 +1829,7 @@ export function App() {
             capMessage={view.capMessage}
             failure={streamError}
             stopped={stopped}
+            recordsKept={stopped && view.claims.length > 0}
             showNewSearch={false}
             onStop={stopCurrentRun}
             onRunAgain={() => {
@@ -1969,7 +2015,7 @@ export function App() {
    */
   const fadedBody = () => (
     <Box
-      key={`${screen}:${searchView.name}`}
+      key={`${screen}:${pageOnShow}`}
       sx={{
         flex: 1,
         display: "flex",
