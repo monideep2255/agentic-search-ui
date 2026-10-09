@@ -56,6 +56,7 @@ import { LAYER_WORD, isLinkableCitationUrl } from "../answer/CitationMarkers";
 import { sourcePageKey } from "./AnswerScreen";
 import { SavedAnswerMarkdown } from "./savedAnswerMarkdown";
 import type { HistoryAnswerCitation, HistoryAnswerResponse } from "../../lib/api";
+import { riskTagLabel } from "../../lib/riskTag";
 
 export interface SavedAnswerScreenProps {
   /** The question as it was asked, shown while the answer is still loading. */
@@ -217,6 +218,7 @@ export function SavedAnswerScreen({
   onNewSearch,
 }: SavedAnswerScreenProps) {
   const askedAt = answer ? formatAskedAt(answer.asked_at) : "";
+  const riskLabel = answer ? riskTagLabel(answer.risk_tier) : null;
   return (
     <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", my: "auto", px: { xs: 2, sm: 3 }, py: 3.5 }}>
       <Box
@@ -316,29 +318,51 @@ export function SavedAnswerScreen({
               carried none, falls back to `trust_signal` unchanged, exactly
               as this screen behaved before tonight.
             */}
-            {answer.trust_line ? (
+            {answer.trust_line || answer.trust_signal || riskLabel ? (
               <Box
                 role="status"
                 data-testid="saved-answer-trust-line"
                 sx={{ mt: "14px", fontSize: 12.5, color: designTokens.inkMuted }}
               >
-                {answer.trust_line.startsWith("Confirmed") ? (
-                  <Box component="span" aria-hidden="true" sx={{ color: designTokens.ok, mr: 0.5 }}>
-                    ✓
-                  </Box>
+                {answer.trust_line ? (
+                  <>
+                    {answer.trust_line.startsWith("Confirmed") ? (
+                      <Box component="span" aria-hidden="true" sx={{ color: designTokens.ok, mr: 0.5 }}>
+                        ✓
+                      </Box>
+                    ) : null}
+                    {answer.trust_line}
+                  </>
+                ) : answer.trust_signal ? (
+                  <>
+                    <Box component="span" aria-hidden="true" sx={{ color: designTokens.ok, mr: 0.5 }}>
+                      ✓
+                    </Box>
+                    {answer.trust_signal}
+                  </>
                 ) : null}
-                {answer.trust_line}
-              </Box>
-            ) : answer.trust_signal ? (
-              <Box
-                role="status"
-                data-testid="saved-answer-trust-line"
-                sx={{ mt: "14px", fontSize: 12.5, color: designTokens.inkMuted }}
-              >
-                <Box component="span" aria-hidden="true" sx={{ color: designTokens.ok, mr: 0.5 }}>
-                  ✓
-                </Box>
-                {answer.trust_signal}
+                {/*
+                  The risk tag (card 71): the live answer's own words
+                  (`riskTagLabel`), the risk colour, regular weight, after a
+                  middle dot, as on the live trust line. A row with no stored
+                  tier shows nothing here, never a low-risk claim.
+                */}
+                {riskLabel ? (
+                  <>
+                    {answer.trust_line || answer.trust_signal ? (
+                      <Box component="span" aria-hidden="true" sx={{ mx: 0.75 }}>
+                        ·
+                      </Box>
+                    ) : null}
+                    <Box
+                      component="span"
+                      data-testid="saved-answer-trust-risk"
+                      sx={{ fontWeight: 400, color: designTokens.risk }}
+                    >
+                      {riskLabel}
+                    </Box>
+                  </>
+                ) : null}
               </Box>
             ) : null}
 

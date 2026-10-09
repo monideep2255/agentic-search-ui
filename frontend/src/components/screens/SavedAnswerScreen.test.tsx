@@ -128,6 +128,45 @@ describe("SavedAnswerScreen", () => {
     );
   });
 
+  it("shows the High-risk claim tag for a high tier, in the risk colour, beside the trust line", () => {
+    // Card 71. Mutation: not reading `risk_tier` (the pre-card behaviour),
+    // changing the words, or dropping the tag's test id turns this red.
+    render(
+      <SavedAnswerScreen
+        question={ANSWER.question}
+        loading={false}
+        answer={{ ...ANSWER, trust_line: "Based on 2 sources cited, not yet confirmed", risk_tier: "high" }}
+        onRunAgain={() => undefined}
+      />,
+    );
+    const tag = screen.getByTestId("saved-answer-trust-risk");
+    expect(tag).toHaveTextContent("High-risk claim");
+    expect(screen.getByTestId("saved-answer-trust-line")).toContainElement(tag);
+    expect(screen.getByTestId("saved-answer-trust-line")).toHaveTextContent(
+      "Based on 2 sources cited, not yet confirmed",
+    );
+  });
+
+  it.each([[null], [undefined], ["low"], ["unknown"]])(
+    "shows no risk tag when the stored tier is %s",
+    (tier) => {
+      // Card 71: an answer saved before the tier was stored shows no tag
+      // rather than a wrong one. Mutation: treating a missing tier as high
+      // (or rendering the tag unconditionally) turns this red.
+      render(
+        <SavedAnswerScreen
+          question={ANSWER.question}
+          loading={false}
+          answer={{ ...ANSWER, risk_tier: tier }}
+          onRunAgain={() => undefined}
+        />,
+      );
+      expect(screen.getByTestId("saved-answer-trust-line")).toBeInTheDocument();
+      expect(screen.queryByTestId("saved-answer-trust-risk")).not.toBeInTheDocument();
+      expect(screen.queryByText(/risk claim/i)).not.toBeInTheDocument();
+    },
+  );
+
   it("Run again is reachable by keyboard and calls onRunAgain, without starting a new search itself", async () => {
     // Mutation: Run again not being a real, focusable, native button (for
     // example a div with only an onClick) turns this red, since Tab plus
