@@ -552,6 +552,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     GroundingInput,
     answer_summary_sentence,
     collected_placeholder,
+    collected_with_place,
     condition_ids_for_row,
     drop_record_restatements,
     emphasis_for,
@@ -560,6 +561,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     grounding_input,
     heading_is_supported,
     is_plain_language,
+    isolate_place,
     key_terms,
     parse_synth_layout,
     placeholder_link_count,
@@ -13253,6 +13255,16 @@ def _answer_parts(
                 for (_, finding), row_fields in zip(entries, row_fields_by_entry, strict=True)
             ]
             extra_label = next((extra[0] for extra in extras if extra is not None), None)
+            # Card 94 (2026-10-09): an isolate row shows where it was
+            # collected beside when, both read from its own record, in its
+            # "Collected" cell (`collected_with_place`). The column shows on
+            # every isolate table, even when no isolate holds a date.
+            places = [
+                isolate_place(entity_type, row_fields) if finding is not None else None
+                for (_, finding), row_fields in zip(entries, row_fields_by_entry, strict=True)
+            ]
+            if extra_label is None and any(place is not None for place in places):
+                extra_label = "Collected"
             has_identifier = any(identifiers)
             columns = [first_column_label(entity_type)]
             if has_identifier:
@@ -13275,8 +13287,14 @@ def _answer_parts(
             else:
                 heading(records_heading)
             listed_records: dict[tuple[str, str], list[ListedRow]] = {}
-            for (sentence, finding), row_fields, second, identifier, extra in zip(
-                entries, row_fields_by_entry, second_cells, identifiers, extras, strict=True
+            for (sentence, finding), row_fields, second, identifier, extra, place in zip(
+                entries,
+                row_fields_by_entry,
+                second_cells,
+                identifiers,
+                extras,
+                places,
+                strict=True,
             ):
                 if finding is None:
                     sentence_token(sentence)
@@ -13296,10 +13314,15 @@ def _answer_parts(
                             )
                         )
                     if extra_label is not None:
-                        cells.append(
+                        when = (
                             extra[1]
                             if extra is not None and extra[0] == extra_label
                             else collected_placeholder(extra_label, row_fields)
+                        )
+                        cells.append(
+                            when
+                            if place is None or extra_label != "Collected"
+                            else collected_with_place(when, place)
                         )
                 # One row per record: two claims about the same record (its
                 # title and its symbol) are one row, not two identical ones.

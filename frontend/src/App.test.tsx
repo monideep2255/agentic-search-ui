@@ -580,6 +580,29 @@ describe("F-4.13-A-10: a restored row renders something asked_at makes possible"
     expect(item.textContent).toMatch(/3 sources cited/i);
   });
 
+  it("card 109: a row with no saved answer reads 'No answer saved', an answered row keeps its count, a row without the flag keeps its count", async () => {
+    fetchHistoryMock.mockResolvedValue({
+      items: [
+        { trace_id: "stopped-1", question: "Stopped question", asked_at: "2026-08-20T12:00:00Z", trust_signal: "refuse", citation_count: 21, has_saved_answer: false },
+        { trace_id: "answered-1", question: "Answered question", asked_at: "2026-08-20T12:00:00Z", trust_signal: "answer", citation_count: 4, has_saved_answer: true },
+        { trace_id: "answered-odd", question: "Odd outcome question", asked_at: "2026-08-20T12:00:00Z", trust_signal: "refuse", citation_count: 2, has_saved_answer: true },
+        { trace_id: "old-1", question: "Older api question", asked_at: "2026-08-20T12:00:00Z", citation_count: 7 },
+      ],
+      count: 4,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    const rail = await screen.findByTestId("history-rail");
+    const row = (name: RegExp) => within(rail).getByRole("button", { name });
+    expect(row(/stopped question/i).textContent).toMatch(/No answer saved/);
+    expect(row(/stopped question/i).textContent).not.toMatch(/sources cited/i);
+    expect(row(/^answered question/i).textContent).toMatch(/4 sources cited/i);
+    expect(row(/odd outcome/i).textContent).toMatch(/2 sources cited/i);
+    expect(row(/older api/i).textContent).toMatch(/7 sources cited/i);
+  });
+
   it("does not render 'Invalid Date' for a restored row with a malformed asked_at", async () => {
     fetchHistoryMock.mockResolvedValue({
       items: [{ trace_id: "row-1", question: "What is BRCA1?", asked_at: "not-a-real-timestamp" }],

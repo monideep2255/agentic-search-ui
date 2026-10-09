@@ -548,6 +548,32 @@ async def test_follow_ups_run_on_the_sorted_capped_ids_the_searches_returned(
 
 
 @pytest.mark.asyncio
+async def test_every_tool_start_comes_before_the_first_tool_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 19 pins the order the progress steps rest on.
+
+    `useRunView` ends Act once every STARTED call has a result. That is only
+    right while `act_node` writes every `tool_start` of a run, follow-ups
+    included, before any call runs. A start after a result would send the
+    steps to Write and then back to Act.
+    """
+    _ModelSpy(monkeypatch)
+    _install_lookup(monkeypatch)
+    spy = _ToolSpy(monkeypatch)
+    events = await _events(_GENE_QUESTION)
+    # Not vacuous: follow-up calls (fetch and summary, built from the ids a
+    # search returned) really ran, and every planned call has a start frame.
+    follow_up_actions = [i["action"] for i in spy.efetch_inputs if i["action"] != "search"]
+    assert follow_up_actions, spy.efetch_inputs
+    kinds = [e.type for e in events if e.type in ("tool_start", "tool_result")]
+    starts = [i for i, k in enumerate(kinds) if k == "tool_start"]
+    results = [i for i, k in enumerate(kinds) if k == "tool_result"]
+    assert len(starts) == 13 == len(results), (len(starts), len(results))
+    assert max(starts) < min(results), kinds
+
+
+@pytest.mark.asyncio
 async def test_a_failed_search_closes_its_follow_ups_empty_and_the_run_still_answers(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

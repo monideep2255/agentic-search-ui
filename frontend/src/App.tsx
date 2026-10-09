@@ -267,7 +267,14 @@ function nextLocalHistoryId(): string {
  */
 function formatHistoryMeta(item: HistoryItem): string | undefined {
   const parts: string[] = [];
-  if (item.citation_count !== undefined && item.citation_count !== null) {
+  if (item.has_saved_answer === false) {
+    // Card 109: a row with no saved answer (a search stopped after its
+    // records appeared, a refusal, a clarifying question) carries a citation
+    // count from the records it showed, but nothing to open. Saying "N
+    // sources cited" would make it look like an answered row. An absent flag
+    // (an older API) keeps the count, as before.
+    parts.push("No answer saved");
+  } else if (item.citation_count !== undefined && item.citation_count !== null) {
     // Card 22 fix round (J-22-05, A-22-06): the server counts the distinct
     // record pages the answer cited (`feedback/history.py`,
     // `_citation_count`), the number the live item's line called "sources

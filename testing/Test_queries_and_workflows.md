@@ -734,7 +734,8 @@ Queries to try:
 What you should see:
 
 - The flagship isolate search question, the one the product is measured on.
-- A table headed "Isolates and their AMR genes" with 20 rows. Each row shows the isolate's BioSample accession, strain, and where and when it was collected, beside its gene list; every row carries a blaCTX-M gene, and each gene list is linked to that isolate's own Pathogen Detection page.
+- A table headed "Isolates and their AMR genes" with 20 rows. Each row shows the isolate's strain, its BioSample accession under "Identifier", its gene list, and under "Collected" when and where it was collected, such as "2013, USA: Minnesota"; every row carries a blaCTX-M gene, and each gene list is linked to that isolate's own Pathogen Detection page.
+- A row whose record holds no place reads "2013, place not recorded"; one with no date reads "USA: Minnesota, date not recorded"; one with neither reads "Not recorded" (card 94).
 - The line "Pathogen Detection lists 140,476 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown."
 - A note saying only the blaCTX-M family of genes was searched for "extended-spectrum beta-lactamase", and why: a plain blaTEM or blaSHV gene name cannot be told apart from a genuine ESBL by its name alone, so those families were left out rather than risk a wrong label.
 - E. coli named and linked to its NCBI Taxonomy record among the sources cited.
@@ -1161,6 +1162,7 @@ What you should see:
 - No answer appears from the stopped search.
 - Pressed while the search is still working, the button reads "Stopping…" for a moment, then "Search stopped"; after a reload the search is not listed as answered, and a follow-up such as "what about it?" does not refer to it.
 - Pressed after the search had already finished but while its answer is still appearing, the whole answer shows at once, with its sources and trust line, and history and the conversation keep that same answer (card 59).
+- Card 109: press Stop after the records have appeared, then open "Your searches": that row reads "No answer saved" with its date, while an answered row still reads its source count ("N sources cited").
 - Pressing Stop and asking a new question straight away answers the new question normally.
 - Why it matters: a person who changes their mind mid-search should not have to wait out a search they no longer want.
 
@@ -1177,6 +1179,7 @@ What you should see:
 - While the helpers hand back, and while the line says the answer is being written, Stop is not grey.
 - Pressed then, "Search stopped" appears with "No answer was produced. Run the same question again, or start a new one.", and the Run again and New search buttons, as query 56 describes.
 - No answer appears from the stopped search, even when the server had already finished writing it.
+- Type query 98's question, or any question that searches several sources, and watch the progress steps at 1280 and 390. The Write step lights only after the last running search shows a result, never while a search chip is still running, and never goes back from Write to Act. The case where some planned searches are skipped is checked by the frontend test, since no typed question reliably produces it (card 19).
 - Left alone, Stop turns grey once the first sentence of the answer is on screen, and it is gone once the answer settles.
 - Known: a search stopped after the server had already finished can come back as answered in your history after a reload, and a follow-up in the same conversation can remember it (card 59).
 - Why it matters: in the product owner's words, "a user should be able to stop the answer at any point of time until the answer pops out". On the slowest questions Stop went grey for up to 13 seconds while the screen had nothing to read yet.

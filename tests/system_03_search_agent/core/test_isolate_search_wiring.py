@@ -466,10 +466,13 @@ async def test_write_puts_the_count_under_an_isolate_answer(monkeypatch: pytest.
     # asserted to sit beside the name they belong to.
     tokens_all = [e.payload for e in result["events"] if e.type == "token"]
     header = next(t["cells"] for t in tokens_all if t.get("kind") == "table_header")
+    #
+    # Card 94 (2026-10-09): the "Collected" cell shows where the isolate
+    # was collected beside when, from the record's own place.
     assert header == ["Isolate", "Identifier", "AMR genes", "Collected"], header
     rows = [t for t in tokens_all if t.get("kind") == "table_row"]
     assert rows and rows[0]["cells"] == [
-        "AZ-TG59983", "SAMN02442784", "acrF, blaCTX-M-15", "2013"
+        "AZ-TG59983", "SAMN02442784", "acrF, blaCTX-M-15", "2013, USA:AZ"
     ], rows
     assert any("Isolates and their AMR genes" in t for t in tokens), tokens
     citations = [e.payload for e in result["events"] if e.type == "citation"]
@@ -483,3 +486,151 @@ def test_the_isolate_table_shows_the_genes_beside_the_name() -> None:
     assert table_second_cell("Pathogen Detection isolate", row) == "acrF, blaCTX-M-15"
     assert table_second_cell("Pathogen Detection isolate", {"name": "x", "amr_genotypes": None}) is None
     assert TABLE_HEADINGS["Pathogen Detection isolate"] == "Isolates and their AMR genes"
+
+
+# ---------------------------------------------------------------------------
+# Card 94 (2026-10-09): "An isolate answer shows each isolate's place." The
+# lookup of one named isolate was taken out of the card and parked for the
+# owner (`raw/lookup_parked.patch`). Each arm was shown red by one mutation
+# before it was kept
+# (`testing/Developer/reports/2026-10-09_card94/build.md`).
+# ---------------------------------------------------------------------------
+
+def test_an_isolate_row_shows_its_place_or_says_none_was_recorded() -> None:
+    from system_03_search_agent.synthesis.answer_layout import collected_with_place, isolate_place
+
+    isolate_type = "Pathogen Detection isolate"
+    assert isolate_place(isolate_type, {"geo_loc_name": " USA: Minnesota "}) == "USA: Minnesota"
+    assert isolate_place(isolate_type, {"geo_loc_name": None}) == ""
+    assert isolate_place(isolate_type, {"geo_loc_name": "  "}) == ""
+    assert isolate_place(isolate_type, None) == ""
+    # Every other table keeps its cells: no place at all.
+    assert isolate_place("Clinical trial", {"geo_loc_name": "USA"}) is None
+    assert isolate_place("SequenceVariant", {"geo_loc_name": "USA"}) is None
+    # Each half the record does not hold is named as missing.
+    assert collected_with_place("2013", "USA: Minnesota") == "2013, USA: Minnesota"
+    assert collected_with_place("2013", "") == "2013, place not recorded"
+    assert collected_with_place("Not recorded", "USA: Minnesota") == "USA: Minnesota, date not recorded"
+    assert collected_with_place("", "USA: Minnesota") == "USA: Minnesota, date not recorded"
+    assert collected_with_place("Not recorded", "") == "Not recorded"
+
+
+def _one_isolate_finding(output: PathogenDetectionOutput) -> Any:
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    shaped = graph_module._layer_tool_output_to_structured_fields("pathogen_detection", output)
+    return Finding(
+        call_id="pd-1", tool="pathogen_detection", layer="layer_2_api",
+        source="structured_pass_through", structured_fields=shaped,
+        extracted_entities=None, normalized_ids=None, evidence_summary=None,
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("depth", ["researcher", "plain_language"])
+async def test_the_isolate_table_shows_each_isolates_place_beside_when(
+    monkeypatch: pytest.MonkeyPatch, depth: str
+) -> None:
+    """RED before: the "Collected" cell held the year alone, and the place in
+    each row's fields never reached a cell. A table with no date at all still
+    shows the column, so the place is never dropped with it."""
+    from tests.system_03_search_agent.core.test_write_answer_structure import _install, _no_prose
+    from tests.system_03_search_agent.core.test_write_answer_structure import _state as _write_state
+
+    _install(monkeypatch, _no_prose)
+    placed = _isolate("SAMN02442784", "AZ-TG59983", ["blaCTX-M-15"])
+    unplaced = _isolate("SAMN02442785", "AZ-TG59984", ["blaCTX-M-27"]).model_copy(
+        update={"geo_loc_name": None}
+    )
+    undated = _isolate("SAMN02442786", "AZ-TG59985", ["blaCTX-M-14"]).model_copy(
+        update={"collection_date": None, "geo_loc_name": "Mexico"}
+    )
+    output = _search_output([placed, unplaced, undated], total=3)
+    state = _write_state(depth)
+    state["query"] = Query(text=GOLDEN_QUESTION, session_id="s-iso", trace_id="t-iso", user_id=None)
+    state["isolate_question"] = _question()
+    state["layer3_raw_outputs"] = {"pd-1": output}
+    state["findings"] = [_one_isolate_finding(output)]
+    state["findings_count"] = 1
+    result = await graph_module.write_node(state)
+    tokens = [e.payload for e in result["events"] if e.type == "token"]
+    header = next(t["cells"] for t in tokens if t.get("kind") == "table_header")
+    assert header == ["Isolate", "Identifier", "AMR genes", "Collected"], header
+    rows = {row[0]: row[3] for row in (t["cells"] for t in tokens if t.get("kind") == "table_row")}
+    assert rows == {
+        "AZ-TG59983": "2013, USA:AZ",
+        "AZ-TG59984": "2013, place not recorded",
+        "AZ-TG59985": "Mexico, date not recorded",
+    }, rows
+
+
+@pytest.mark.asyncio
+async def test_an_isolate_table_with_no_dates_still_shows_each_place(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RED before: with no isolate holding a date there was no "Collected"
+    column, and the places had nowhere to show."""
+    from tests.system_03_search_agent.core.test_write_answer_structure import _install, _no_prose
+    from tests.system_03_search_agent.core.test_write_answer_structure import _state as _write_state
+
+    _install(monkeypatch, _no_prose)
+    undated = [
+        _isolate(f"SAMN0244278{i}", f"AZ-{i}", ["blaCTX-M-15"]).model_copy(
+            update={"collection_date": None}
+        )
+        for i in range(2)
+    ]
+    output = _search_output(undated, total=2)
+    state = _write_state("researcher")
+    state["query"] = Query(text=GOLDEN_QUESTION, session_id="s-iso", trace_id="t-iso", user_id=None)
+    state["isolate_question"] = _question()
+    state["layer3_raw_outputs"] = {"pd-1": output}
+    state["findings"] = [_one_isolate_finding(output)]
+    state["findings_count"] = 1
+    result = await graph_module.write_node(state)
+    tokens = [e.payload for e in result["events"] if e.type == "token"]
+    header = next(t["cells"] for t in tokens if t.get("kind") == "table_header")
+    assert header == ["Isolate", "Identifier", "AMR genes", "Collected"], header
+    rows = [t["cells"][3] for t in tokens if t.get("kind") == "table_row"]
+    assert rows == ["USA:AZ, date not recorded"] * 2, rows
+
+
+@pytest.mark.parametrize(
+    "placeholder",
+    [
+        "missing", "Missing", "not collected", "Not Applicable", "not provided", "NULL",
+        "unknown", "N/A", "N.A.", "restricted access", "missing: control sample", "", "   ",
+    ],
+)
+def test_a_missing_value_word_in_the_place_field_is_not_a_place(placeholder: str) -> None:
+    """J-94-01, A-94-05. RED before: "missing" or "not collected" was shown
+    after the year as if it were the place: "2013, not collected"."""
+    from system_03_search_agent.synthesis.answer_layout import collected_with_place, isolate_place
+
+    place = isolate_place("Pathogen Detection isolate", {"geo_loc_name": placeholder})
+    assert place == "", place
+    assert collected_with_place("2013", place) == "2013, place not recorded"
+    assert collected_with_place("Not recorded", place) == "Not recorded"
+    # A real place that merely contains such a word is still a place.
+    assert isolate_place(
+        "Pathogen Detection isolate", {"geo_loc_name": "USA: Unknown County"}
+    ) == "USA: Unknown County"
+
+
+def test_a_place_too_long_for_the_cell_ends_with_a_mark_that_it_was_cut() -> None:
+    """J-94-02, A-94-06. RED before: a 144-character place was cut at 128
+    characters mid-phrase with no mark, and read as the whole place."""
+    from system_03_search_agent.synthesis.answer_layout import MAX_IDENTIFIER_CHARS, isolate_place
+
+    long_place = (
+        "USA: Minnesota, Hennepin County, Minneapolis, Mississippi River sampling site "
+        "number 4 near the Stone Arch Bridge downstream of the lock and dam"
+    )
+    assert len(long_place) > MAX_IDENTIFIER_CHARS
+    place = isolate_place("Pathogen Detection isolate", {"geo_loc_name": long_place})
+    assert place is not None and place.endswith("…"), place
+    assert len(place) <= MAX_IDENTIFIER_CHARS
+    assert long_place.startswith(place[:-1]), place
+    # A place that fits is shown whole, with no mark.
+    fits = "X" * MAX_IDENTIFIER_CHARS
+    assert isolate_place("Pathogen Detection isolate", {"geo_loc_name": fits}) == fits
