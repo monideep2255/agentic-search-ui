@@ -965,6 +965,64 @@ async def test_a_client_that_asks_gets_placement_and_the_early_listing(
 
 
 # ---------------------------------------------------------------------------
+# Fix round, F-8.7-J05: the two protections the judge could remove with every
+# arm green.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_the_answer_keeps_each_early_citation_exactly_as_it_was_sent(
+    monkeypatch: pytest.MonkeyPatch, placement_contract: None
+) -> None:
+    """A citation already on screen is the one the answer keeps: the
+    payload the conflict flags read is the very payload sent early, so no
+    surface is ever told two things about one chip. The prose here cites
+    records 1 to 3, which makes a freshly built payload for them differ
+    from the early one (its `claim_text` joins the prose's words, F-8.7-A04),
+    so dropping the substitution is visible. Mutation that turns this red:
+    remove `citations = [sent_by_id.get(c.citation_id, c) for c in citations]`."""
+    _models(monkeypatch)
+    timeline = _record_timeline(monkeypatch)
+    seen: list[list] = []
+    real_flags = graph_module._apply_conflict_flags_to_claim_trusts
+
+    def _spy(claim_trusts, citations, findings_by_id):
+        seen.append(list(citations))
+        return real_flags(claim_trusts, citations, findings_by_id)
+
+    monkeypatch.setattr(graph_module, "_apply_conflict_flags_to_claim_trusts", _spy)
+
+    await graph_module.write_node(_write_state(audience_depth="researcher"))
+
+    writer_at = next(i for i, (kind, _) in enumerate(timeline) if kind == "writer_call")
+    sent_early = {
+        payload.citation_id: payload  # type: ignore[attr-defined]
+        for kind, payload in timeline[:writer_at]
+        if kind == "citation"
+    }
+    assert sent_early, "populate-check: nothing was sent early"
+    used = {citation.citation_id: citation for citation in seen[-1]}
+    for citation_id, payload in sent_early.items():
+        assert used[citation_id] == payload, (citation_id, used[citation_id], payload)
+
+
+def test_a_sentence_without_a_marker_is_never_offered_to_lead() -> None:
+    """The lead decision is offered only sentences that carry a citation
+    marker, whatever the grounding pass hands it. Mutation that turns this
+    red: drop the `_MARKER_PATTERN.search(sentence)` filter from
+    `_lead_candidates`."""
+    grounding = GroundingResult(
+        narrative="BRCA1 is a gene. BRCA1 is linked to familial breast cancer [1].",
+        claims=[],
+        stripped_count=0,
+        refused=False,
+        sentences=("BRCA1 is a gene.", "BRCA1 is linked to familial breast cancer [1]."),
+    )
+
+    assert graph_module._lead_candidates(grounding) == [1]
+
+
+# ---------------------------------------------------------------------------
 # Fix round, F-8.7-J04 and F-8.7-A06: the cap is a bound.
 # ---------------------------------------------------------------------------
 
