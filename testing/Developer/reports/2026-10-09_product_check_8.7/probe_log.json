@@ -1,0 +1,23 @@
+{
+ "mode": "probe",
+ "steps": [
+  {
+   "k": "signed in, email visible unmasked",
+   "v": false
+  },
+  {
+   "k": "textbox visible after resize",
+   "v": false
+  },
+  {
+   "k": "textbox visible after Escape",
+   "v": true
+  },
+  {
+   "k": "bundle",
+   "v": [
+    "index-BUMzWQlH.js"
+   ]
+  }
+ ]
+}

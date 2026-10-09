@@ -1,0 +1,66 @@
+{
+ "keys": [
+  "asked_at",
+  "citation_count",
+  "has_saved_answer",
+  "question",
+  "trace_id",
+  "trust_signal"
+ ],
+ "rows": [
+  {
+   "question": "Which diseases are associated with BRCA1?",
+   "trust_signal": "ask",
+   "citation_count": 21,
+   "has_saved_answer": true
+  },
+  {
+   "question": "Which diseases are associated with BRCA1?",
+   "trust_signal": "refuse",
+   "citation_count": 21,
+   "has_saved_answer": false
+  },
+  {
+   "question": "Which diseases are associated with BRCA1?",
+   "trust_signal": "refuse",
+   "citation_count": 21,
+   "has_saved_answer": false
+  },
+  {
+   "question": "Which diseases are associated with BRCA1?",
+   "trust_signal": "ask",
+   "citation_count": 21,
+   "has_saved_answer": true
+  },
+  {
+   "question": "Any trials for GERD?",
+   "trust_signal": "answer",
+   "citation_count": 12,
+   "has_saved_answer": true
+  },
+  {
+   "question": "What phenotypic features are associated with Marfan syndrome?",
+   "trust_signal": "answer",
+   "citation_count": 12,
+   "has_saved_answer": true
+  },
+  {
+   "question": "Which diseases are associated with BRCA1?",
+   "trust_signal": "ask",
+   "citation_count": 21,
+   "has_saved_answer": true
+  },
+  {
+   "question": "Which diseases are associated with BRCA1?",
+   "trust_signal": "ask",
+   "citation_count": 21,
+   "has_saved_answer": true
+  },
+  {
+   "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+   "trust_signal": "ask",
+   "citation_count": 55,
+   "has_saved_answer": true
+  }
+ ]
+}
