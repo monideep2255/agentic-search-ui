@@ -77,6 +77,7 @@ from system_03_search_agent.harness.jev_client import (
     JevCallError,
     JevResult,
     call_jev,
+    wait_counting_free_time,
 )
 from system_03_search_agent.harness.tiers import resolve_jev_model
 
@@ -98,6 +99,14 @@ _GUARD_BUDGET_S = 15.0
 #: around the whole request since the fix round, F-8.2-J03) plus a small
 #: margin for the cap check and scheduling. A second, outer net only: the
 #: client's own bound fires first.
+#:
+#: Both clocks count only time the server's event loop was free to read
+#: Jev's reply (`jev_client.wait_counting_free_time`, step 3b of the
+#: guardrail design). Before, a pause of about half a second between this
+#: net being armed and Jev's request going out spent the half-second
+#: margin, so the net said "timeout" while Jev was still inside its own
+#: bound, and a question Jev judged on topic was refused as off topic
+#: (F-8.6-FA03, F-72-J03).
 _JEV_WAIT_S = JEV_TOTAL_TIMEOUT_S + 0.5
 
 #: How long `decide()` waits for the guard tier's pick once Jev has failed
@@ -367,15 +376,20 @@ async def _jev_attempt(
     "invalid_option"), "cost_cap", "timeout" again when Jev's own bound did
     not fire and `_JEV_WAIT_S` did, or "unexpected_error". Never raises,
     except for cancellation: a caller that cancels the decision stops Jev's
-    call with it, since `asyncio.wait_for` cancels what it waits on.
+    call with it, since `wait_counting_free_time` stops what it waits on.
+
+    `_JEV_WAIT_S` counts only time the event loop was free, like Jev's own
+    bound (step 3b of the guardrail design): a pause of the server anywhere
+    inside this wait, before Jev's request or while its reply is read, never
+    turns a pick Jev delivers inside its own bound into a "timeout".
     """
     started = time.monotonic()
     try:
-        result = await asyncio.wait_for(
+        result = await wait_counting_free_time(
             _run_jev_pick(
                 harness, trace_id, point, state, options, model, api_key, instructions, criteria
             ),
-            timeout=_JEV_WAIT_S,
+            _JEV_WAIT_S,
         )
     except JevCallError as exc:
         _log_jev_call(trace_id, point, started, call_log.jev_outcome(exc.reason))
@@ -430,6 +444,7 @@ async def decide(
     instructions: str | None = None,
     criteria: Mapping[str, str] | None = None,
     default: str | None = None,
+    jev_failed: asyncio.Event | None = None,
 ) -> DecisionRecord:
     """Decide one closed-option question, `point`, over the bounded `state`.
 
@@ -469,6 +484,16 @@ async def decide(
       reason are what say that nobody decided. Without a `default`,
       `chosen` is `options[0]`.
 
+    `jev_failed` (step 3b of the guardrail design, F-8.6-FA03): when the
+    caller passes an event, `decide()` sets it the moment Jev's OWN pick can
+    no longer come back from this decision: in Jev mode as soon as Jev has
+    failed, before the guard tier is asked; with the guard provider at
+    once, since Jev is never asked. A caller whose outcome only Jev's own
+    pick could change waits on this event rather than on a clock, so a
+    paused server that delays Jev's request never cuts off a pick Jev still
+    delivers, and a refusal arrives when Jev fails, not when a clock runs
+    out. It is never set when Jev made a pick: the record is then returned.
+
     Raises:
         ValueError: if `options` is empty (there is nothing to decide
             between), the description does not fit the options (see
@@ -486,6 +511,8 @@ async def decide(
     bounded_state = state[:_STATE_MAX_CHARS]
 
     if not jev_decides():
+        if jev_failed is not None:
+            jev_failed.set()
         guard_choice = await _run_guard_pick(
             harness, trace_id, point, bounded_state, options, instructions, criteria
         )
@@ -507,6 +534,9 @@ async def decide(
     if isinstance(jev, JevResult):
         return _jev_mode_record(point, options, jev, None, fallback_default)
 
+    # Jev has failed and says so, before the guard tier is asked (step 3b).
+    if jev_failed is not None:
+        jev_failed.set()
     logger.warning(
         "Jev made no pick for decision %s (trace %s, %s); asking the guard tier",
         point,

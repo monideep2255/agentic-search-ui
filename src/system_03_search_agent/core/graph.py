@@ -527,6 +527,7 @@ from system_03_search_agent.harness.jev_client import (
     JevCallError,
     JevResult,
     call_jev,
+    wait_counting_free_time,
 )
 from system_03_search_agent.harness.tiers import Tier, resolve_jev_model
 from system_03_search_agent.synthesis.answer_layout import (
@@ -1211,7 +1212,12 @@ def _done_decisions(harness: Any) -> list[DecisionRecord] | None:
 
 
 async def _decide_point(
-    harness: Harness, trace_id: str, spec: _DecisionSpec, text: str
+    harness: Harness,
+    trace_id: str,
+    spec: _DecisionSpec,
+    text: str,
+    *,
+    jev_failed: asyncio.Event | None = None,
 ) -> DecisionRecord | None:
     """One decision through the seam, recorded for the `done` event.
 
@@ -1219,7 +1225,10 @@ async def _decide_point(
     treats that as "no decision" and fails open exactly as it would on a
     decision with no usable pick (`_usable_choice`). `decide` already
     bounds `text` to its own state limit before either model reads it.
+    `jev_failed`, when given, is handed to `decide`, which sets it once
+    Jev's own pick can no longer come (step 3b of the guardrail design).
     """
+    signal: dict[str, asyncio.Event] = {} if jev_failed is None else {"jev_failed": jev_failed}
     try:
         record = await decide(
             harness,
@@ -1230,6 +1239,7 @@ async def _decide_point(
             instructions=spec.instructions,
             criteria=spec.criteria,
             default=spec.fail_open,
+            **signal,
         )
     except Exception as exc:  # noqa: BLE001 - a broken seam must never break the question
         logger.warning(
@@ -1452,21 +1462,10 @@ def _drop_features_decision(harness: Any) -> None:
 
 #: How long the guardrail waits for Jev's injection pick: Jev's own total
 #: bound plus the half-second margin `decide()` gives its own Jev call. An
-#: outer net only; the client's bound fires first.
+#: outer net only; the client's bound fires first. Both count only time the
+#: event loop was free (`wait_counting_free_time`, step 3b of the guardrail
+#: design, F-72-J03).
 _JEV_INJECTION_WAIT_S: Final[float] = JEV_TOTAL_TIMEOUT_S + 0.5
-
-#: How long after a Jev-mode decision starts Jev's OWN pick can still come
-#: back from it (re-land follow-up, R-06; F-8.6-RJ03, RJ09). `decide()`
-#: waits for Jev at most `JEV_TOTAL_TIMEOUT_S` plus half a second
-#: (`harness.decide._JEV_WAIT_S`, the same margin as above) and, on a pick,
-#: returns at once with no further wait; past that it is asking the guard
-#: tier. The quarter second on top covers the few lines `decide()` runs
-#: before its wait starts. A decision still running this long after it
-#: began can therefore only end in the guard tier's pick or in none, never
-#: in Jev's own, so a refusal that only Jev's own pick could change is not
-#: held for it. `test_followup_guardrail.py` pins this above `decide()`'s
-#: own wait, so a longer wait there cannot quietly cut Jev's pick off here.
-_JEV_OWN_PICK_WINDOW_S: Final[float] = _JEV_INJECTION_WAIT_S + 0.25
 
 #: The share of the guardrail's remaining budget the guard classifier's
 #: FIRST attempt may use (re-land, R-01); a second attempt, after a timeout
@@ -1642,7 +1641,7 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
         return "cost_cap"
     started = time.monotonic()
     try:
-        result = await asyncio.wait_for(
+        result = await wait_counting_free_time(
             call_jev(
                 model=resolve_jev_model(),
                 question_key=_INJECTION.point,
@@ -1652,7 +1651,7 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
                 instructions=_INJECTION.instructions,
                 criteria=_INJECTION.criteria,
             ),
-            timeout=_JEV_INJECTION_WAIT_S,
+            _JEV_INJECTION_WAIT_S,
         )
     except JevCallError as exc:
         # A reply that came back but could not be used, or an error status,
@@ -1677,32 +1676,61 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
 
 
 async def _relevancy_decision(
-    harness: Harness, trace_id: str, text: str, started: list[float]
+    harness: Harness, trace_id: str, text: str, jev_failed: asyncio.Event
 ) -> DecisionRecord | None:
     """`guardrail.relevancy` through the seam, exactly as `_decide_point`
-    asks it, noting on `started` the moment it began (re-land follow-up,
-    R-06). `decide()` starts its wait for Jev in this same step, with no
-    wait before it, so `started` is where Jev's own window begins
-    (`_jev_own_pick_deadline`)."""
-    started.append(time.monotonic())
-    return await _decide_point(harness, trace_id, _RELEVANCY, text)
+    asks it, with `jev_failed` for `decide()` to set the moment Jev's own
+    pick can no longer come (step 3b of the guardrail design, F-8.6-FA03)."""
+    return await _decide_point(harness, trace_id, _RELEVANCY, text, jev_failed=jev_failed)
 
 
-def _jev_own_pick_deadline(started: Sequence[float] | None, step_deadline: float) -> float:
-    """When a refusal that only Jev's OWN relevancy pick could change stops
-    waiting for it (re-land follow-up, R-06; F-8.6-RJ03, RJ09).
+async def _await_jev_own_pick(
+    task: asyncio.Task[DecisionRecord | None] | None,
+    jev_failed: asyncio.Event | None,
+    step_deadline: float,
+    *,
+    point: str,
+    trace_id: str,
+) -> DecisionRecord | None:
+    """The relevancy decision's record, waited for only while Jev's OWN pick
+    can still come from it (step 3b of the guardrail design, F-8.6-FA03,
+    F-72-J07; before it re-land follow-up R-06, F-8.6-RJ03, RJ09).
 
-    The end of Jev's own window, `_JEV_OWN_PICK_WINDOW_S` after the decision
-    began, or the step's deadline when that comes first. With the provider
-    at its default, or when the decision's start is unknown (a caller that
-    passed none), the step's deadline, exactly as before. A decision that
-    has not started yet by the time this is read starts now, so its window
-    is counted from now: later, never earlier, than the real one.
+    For a refusal that only Jev's own pick could change. The wait ends at
+    the first of: the decision finishing, `decide()` saying through
+    `jev_failed` that Jev made no pick (it then asks the guard tier, whose
+    pick cannot change the refusal, so that fallback is stopped rather than
+    waited for), or the step's deadline. Never on a clock of its own: R-06
+    ended the wait 3.75 s after the decision began, so a server pause that
+    moved Jev's request later cut off a pick Jev still delivered inside its
+    own bound, and turned a Jev admission into an off-topic refusal. With
+    the provider at its default, or with no event, the step's deadline,
+    exactly as before. The signal is read while the wait runs, so a Jev
+    failure that comes mid-wait ends it at once (F-72-J07).
     """
-    if started is None or not _jev_decides():
-        return step_deadline
-    began = started[0] if started else time.monotonic()
-    return min(step_deadline, began + _JEV_OWN_PICK_WINDOW_S)
+    if task is None:
+        return None
+    if jev_failed is None or not _jev_decides():
+        return await _await_within_step(task, step_deadline, None, point=point, trace_id=trace_id)
+    remaining = step_deadline - time.monotonic()
+    if not task.done() and not jev_failed.is_set() and remaining > 0:
+        said_so = asyncio.ensure_future(jev_failed.wait())
+        try:
+            await asyncio.wait({task, said_so}, timeout=remaining, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            said_so.cancel()
+    if task.done():
+        if task.cancelled() or task.exception() is not None:
+            return None
+        return task.result()
+    task.cancel()
+    logger.warning(
+        "decision %s still running when %s (trace %s); taking its default",
+        point,
+        "Jev said it made no pick of its own" if jev_failed.is_set() else "its step's budget ran out",
+        trace_id,
+    )
+    return None
 
 
 def _injection_record(
@@ -1826,11 +1854,11 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     # the injection classifier below rather than after it: the person waits
     # for one model call, not two. Only its "off_topic" refuses, below.
     relevancy_task: asyncio.Task[DecisionRecord | None] | None = None
-    relevancy_started: list[float] = []
+    relevancy_jev_failed = asyncio.Event()
     if not prefilter.clears_biomedical_allowlist(query.text):
         relevancy_task = asyncio.create_task(
             _relevancy_decision(
-                harness, trace_id, _relevancy_state(query.text, state), relevancy_started
+                harness, trace_id, _relevancy_state(query.text, state), relevancy_jev_failed
             )
         )
     # guardrail.injection (build phase 8.6, T-8.6-04; fix round, F-8.6-A05,
@@ -1852,7 +1880,7 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
             relevancy_task,
             injection_task,
             step_deadline=step_deadline,
-            relevancy_started=relevancy_started,
+            relevancy_jev_failed=relevancy_jev_failed,
         )
     finally:
         # Any path that ends the node before reading the relevancy or the
@@ -1869,16 +1897,16 @@ async def _guardrail_after_prefilter(
     injection_task: asyncio.Task[JevResult | str] | None = None,
     *,
     step_deadline: float | None = None,
-    relevancy_started: Sequence[float] | None = None,
+    relevancy_jev_failed: asyncio.Event | None = None,
 ) -> dict[str, Any]:
     """Section 10.1 steps 3 to 6, after the pre-filter, plus the relevancy
     decision `guardrail_node` started (None when the allowlist admitted) and,
     with Jev as the classifier, Jev's own injection pick (None otherwise).
     Neither is waited for past `step_deadline`, the guardrail's own budget
-    from the moment the node started (`_step_deadline`). `relevancy_started`
-    holds the moment the relevancy decision began (`_relevancy_decision`);
-    a refusal only Jev's own pick could change waits no longer than Jev's
-    window from it (`_jev_own_pick_deadline`)."""
+    from the moment the node started (`_step_deadline`). `relevancy_jev_failed`
+    is set by `decide()` once Jev's own relevancy pick can no longer come;
+    a refusal only Jev's own pick could change waits no longer than that
+    (`_await_jev_own_pick`, step 3b of the guardrail design)."""
     harness = state["harness"]
     query = state["query"]
     trace_id = query.trace_id
@@ -2156,19 +2184,20 @@ async def _guardrail_after_prefilter(
             # reached, so nothing is waited for that was not waited for
             # before.
             #
-            # Re-land follow-up, R-06 (F-8.6-RJ03): only Jev's OWN pick can
-            # set this refusal aside, so it waits for no longer than Jev's
-            # own window (`_jev_own_pick_deadline`). A decision still running
-            # then is the guard tier's fallback after Jev failed, whose pick
+            # Re-land follow-up, R-06 (F-8.6-RJ03), then step 3b of the
+            # guardrail design (F-8.6-FA03): only Jev's OWN pick can set this
+            # refusal aside, so it waits for no longer than `decide()` says
+            # that pick can still come. A decision still running once Jev has
+            # said it failed is the guard tier's fallback, whose pick
             # `_jev_picked` never acts on: the refusal was already certain,
-            # and it now returns without waiting for that fallback.
-            relevancy_record = await _await_within_step(
+            # and it returns without waiting for that fallback. No clock of
+            # its own decides this, so a server pause never cuts Jev off.
+            relevancy_record = await _await_jev_own_pick(
                 relevancy_task,
-                _jev_own_pick_deadline(relevancy_started, step_deadline),
-                None,
+                relevancy_jev_failed,
+                step_deadline,
                 point=_RELEVANCY.point,
                 trace_id=trace_id,
-                why="Jev's own pick could no longer arrive",
             )
             relevancy_read = True
             if not _jev_picked(relevancy_record, "on_topic"):
@@ -2201,35 +2230,32 @@ async def _guardrail_after_prefilter(
     # Re-land follow-up, R-06 (F-8.6-RJ09): when the classifier admitted the
     # question and Jev's injection pick already refuses it, a refusal is
     # certain and this decision can only change its category. It is then
-    # read within Jev's own window only (`_jev_own_pick_deadline`), not while
-    # the guard tier's fallback runs after Jev failed. Jev's own relevancy
-    # pick still decides the category exactly as before; a decision still
-    # running past the window reads as no pick, and the refusal is the
-    # forbidden screen's or the injection one below. So the one refusal
-    # whose category can differ from before is a question Jev called
-    # injection, whose relevancy Jev failed to judge, and whose guard-tier
-    # fallback would have said off topic after the window: refused as
+    # read only while Jev's own pick can still come (`_await_jev_own_pick`,
+    # step 3b of the guardrail design: on `decide()`'s signal, never a
+    # clock), not while the guard tier's fallback runs after Jev failed.
+    # Jev's own relevancy pick still decides the category exactly as before;
+    # a decision still running once Jev has said it failed reads as no pick,
+    # and the refusal is the forbidden screen's or the injection one below.
+    # So the one refusal whose category can differ from before R-06 is a
+    # question Jev called injection, whose relevancy Jev failed to judge, and
+    # whose guard-tier fallback would have said off topic: refused as
     # injection now, as off topic before. A memory-bound follow-up set aside
     # above keeps its full wait, unchanged.
     if relevancy_task is not None:
         if not relevancy_read:
             certain_refusal = jev_says_injection and classifier_verdict.admitted
-            relevancy_record = await _await_within_step(
-                relevancy_task,
-                (
-                    _jev_own_pick_deadline(relevancy_started, step_deadline)
-                    if certain_refusal
-                    else step_deadline
-                ),
-                None,
-                point=_RELEVANCY.point,
-                trace_id=trace_id,
-                why=(
-                    "Jev's own pick could no longer arrive"
-                    if certain_refusal
-                    else "its step's budget ran out"
-                ),
-            )
+            if certain_refusal:
+                relevancy_record = await _await_jev_own_pick(
+                    relevancy_task,
+                    relevancy_jev_failed,
+                    step_deadline,
+                    point=_RELEVANCY.point,
+                    trace_id=trace_id,
+                )
+            else:
+                relevancy_record = await _await_within_step(
+                    relevancy_task, step_deadline, None, point=_RELEVANCY.point, trace_id=trace_id
+                )
         relevancy = _usable_choice(relevancy_record)
         if relevancy == "off_topic":
             return _decline_for_guardrail(

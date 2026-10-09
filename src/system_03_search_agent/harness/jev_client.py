@@ -96,8 +96,8 @@ between two options.
 No retries inside this module (ai-security-standards, tool-call-budgets):
 the caller's fallback to the guard tier's own pick IS the retry, per this
 ticket's brief. A 3-second TOTAL timeout on the whole call (see
-`_TIMEOUT_S`) and a host-pinned, literal URL (never
-built from caller input) are both non-negotiable per
+`_TIMEOUT_S`, counted by `wait_counting_free_time`) and a host-pinned,
+literal URL (never built from caller input) are both non-negotiable per
 `tool-call-budgets.md` and `production-standards.md`'s multi-agent
 pipeline gate.
 """
@@ -108,25 +108,29 @@ import asyncio
 import logging
 import math
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Annotated, Any
+from typing import Annotated, Any, TypeVar
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
 
+_R = TypeVar("_R")
+
 JEV_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
 
 #: The whole call's bound, connect to last byte of the body, in seconds.
-#: Enforced by `asyncio.wait_for` around `_post` in `call_jev`, because the
+#: Enforced by `wait_counting_free_time` around `_post` in `_send` (it was
+#: `asyncio.wait_for` until step 3b of the guardrail design), because the
 #: same float handed to `httpx.AsyncClient(timeout=...)` sets four SEPARATE
 #: per-phase limits (connect, read, write, pool), and httpx's read limit is
 #: the gap between two received chunks, not the response. Measured by the
 #: phase 8.2 judge (F-8.2-J03): a server that sent the headers at once and
 #: the body in 2-second pieces held one decision for 14 seconds, and Jev's
-#: pick was still used.
+#: pick was still used. Counted in time the event loop was free, up to
+#: `JEV_STALL_ALLOWANCE_S` of pause.
 _TIMEOUT_S = 3.0
 
 #: Public name for the bound above, read by `harness.decide` to size how
@@ -320,6 +324,70 @@ def _charged_for_usable(subject: str, stated_usd: float) -> float:
     return charged
 
 
+#: How long one look at the clock waits in `wait_counting_free_time`.
+_LOOK_S = 0.05
+
+#: A look that comes back later than asked by more than this was a stall of
+#: the server's own event loop: only the time asked plus this is counted.
+_STALL_SLACK_S = 0.05
+
+#: The most real time a stalled server may add to one of Jev's bounds, so a
+#: server that keeps stalling still ends the wait (step 3b of the guardrail
+#: design). A stall longer than this still ends Jev's clock: the residual
+#: both reviews named.
+JEV_STALL_ALLOWANCE_S = 2.0
+
+#: Time left below this is none: a wait of a few billionths of a second
+#: can come back without the clock having moved, and would then never end.
+_NONE_LEFT_S = 1e-6
+
+
+async def wait_counting_free_time(awaitable: Awaitable[_R], budget_s: float) -> _R:
+    """Await `awaitable` for at most `budget_s` seconds of time the event
+    loop was free to run, and never more than `budget_s` plus
+    `JEV_STALL_ALLOWANCE_S` of real time; past that, stop it and raise
+    `TimeoutError` (step 3b of the guardrail design; F-8.6-FA03, F-72-J03).
+
+    Every clock on a Jev call counts this way: Jev's own total bound
+    (`_send`), `decide()`'s outer net (`_jev_attempt`) and the guardrail's
+    injection net (`core.graph._jev_injection_pick`). Time the server spent
+    frozen, on another question's synchronous work, is time nobody could
+    read Jev's reply in, so it is not counted against Jev. On develop a
+    pause of about 0.6 s inside `decide()`'s wait spent its half-second
+    margin, the net said "timeout" while Jev was still inside its own bound,
+    and a question Jev judged on topic was refused as off topic. A reply
+    that has arrived always wins over the clock.
+
+    A body that trickles in slowly (F-8.2-J03) does not stall the loop, so
+    its time is counted in full and it is cut at the bound as before.
+    """
+    task = asyncio.ensure_future(awaitable)
+    started = last = time.monotonic()
+    counted = 0.0
+    try:
+        while True:
+            if task.done():
+                return task.result()
+            left_s = budget_s - counted
+            real_left_s = budget_s + JEV_STALL_ALLOWANCE_S - (time.monotonic() - started)
+            if left_s <= _NONE_LEFT_S or real_left_s <= _NONE_LEFT_S:
+                raise TimeoutError
+            ask_s = min(_LOOK_S, left_s, real_left_s)
+            await asyncio.wait({task}, timeout=ask_s)
+            now = time.monotonic()
+            counted += min(now - last, ask_s + _STALL_SLACK_S)
+            last = now
+    except BaseException as exc:
+        # Past the bound, or this wait itself stopped: stop what it waits
+        # on, and wait for it to stop unless this coroutine is being closed,
+        # where no further wait is allowed.
+        if not task.done():
+            task.cancel()
+            if not isinstance(exc, GeneratorExit):
+                await asyncio.gather(task, return_exceptions=True)
+        raise
+
+
 def _json_payload(response: httpx.Response, subject: str, next_step: str) -> object:
     """The 200 reply's body read as JSON, or an unusable-reply error charged
     the floor (F-8.6-RJ05; the owner's rule of 2026-09-29).
@@ -428,7 +496,8 @@ async def _send(
         # The TOTAL bound (F-8.2-J03): connect, send, and the whole body
         # read, however it trickles in. `_post` finishes reading the body
         # before it returns, so nothing slow is left outside this wait.
-        response = await asyncio.wait_for(_post(headers, body), timeout=timeout_s)
+        # Counted in time the server was free to read it (step 3b, F-72-J03).
+        response = await wait_counting_free_time(_post(headers, body), timeout_s)
     except (TimeoutError, httpx.TimeoutException) as exc:
         raise JevCallError(
             f"Jev did not answer within {timeout_s}s in total for {subject}; {next_step}",
