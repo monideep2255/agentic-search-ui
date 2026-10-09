@@ -84,7 +84,12 @@ Resumed 2026-10-08 (night of 2026-10-08 to 09):
 |---|---|---|---|---|---|
 | builder W, steps 5 and 6 | depth | high | 00:15 | 01:08 | 369,476 |
 | builder R, step 8 | depth | high | 01:12 | 01:28 | 198,995 |
-| integration fixer | depth | high | 01:15 | | |
+| integration fixer | depth | high | 01:15 | 01:37 | 190,370 |
+| judge | depth | high | 01:48 | 02:13 | 253,632 |
+| adversary | depth | high | 01:48 | 02:06 | 307,374 |
+| fix agent 1, the gap clause | depth | high | 02:17 | 02:31 | 188,211 |
+| fix agent 2, cap, old clients, tests | depth | high | 02:17 | 02:58 | 372,962 |
+| fresh verifier | depth | high | 03:19 | 03:40 | 268,023 |
 | builder S, steps 2 and 7 | balance | medium | 00:15 | 00:29 | 160,731 |
 | builder F, step 4 | balance | medium | 00:15 | 00:22 | 105,106 |
 
@@ -187,5 +192,9 @@ A and C touch disjoint functions of `core/graph.py`. The lead fixes the placemen
 - 2026-10-09 01:17 UTC: the full unit suite on the merged branch: 14 failed, 7350 passed, 143 skipped. Five Stop tests whose premise was a stop before any answer, five ordering tests, two rewording-repair arms, and two debugging-guide coverage tests for the new `contracts/token_order.py`. An integration fixer takes all 14 in `feat/8.7-int`; builder R takes step 8 in `feat/8.7-r` (act_node only). OpenRouter unchanged at $36.11: no live spend yet.
 
 - 2026-10-09 01:30 UTC: the times in this resume's entries were first written from the lead's estimate and some were wrong by up to 80 minutes; they are corrected here from the commit times and the task notifications. Builder R's step 8 done (a68cb417): the reader pass no longer runs on the answer path; a paper's hidden instructions stay blocked by `_sanitized_citeable_row`, which never depended on the reader; `_prefetch_answer_names` no longer runs and is dead code, so step 3's name-lookup gain is gone. Waits for the integration fixer before it merges, since both edit core tests.
+
+- 2026-10-09 01:46 UTC: the writer's finalist check on the branch, $3.67 of the $20 ceiling: no question over 25 cents (most $0.208), first records at a median 9.3 s on the streaming path against 27.3 s for the whole answer, query 88 refused 2 of 2. Report: `testing/Developer/reports/2026-10-08_phase_8.7/live_check.md`. Pull request #218 opened.
+- 2026-10-09 02:13 UTC: the judge (FIX FIRST, J01 and J02 major, J03 for the owner) and the adversary (six majors: A01 old command-line clients fail, A02, A03 and A13 a wrong "no clinical features" clause, A06 a question at $0.27, A10 the cap setting at merge). One fix round in two agents split by file: the gap clause rebuilt to hold by construction (62d0889b); placement and the early listing opt-in per request with `?reads=placement`, and the cap a true bound (07b46ff3). Develop merged in (20a8e246); full suite 7468 passed.
+- 2026-10-09 03:40 UTC: the fresh verifier confirmed all 12 fixes and found nothing refused or capped under develop's settings (its current writer, a 25-cent cap), but two things worse than develop with no owner decision: on the web a citation chip under a summary sentence no longer shows the words it was checked against (A04, card 57), and every summary waits up to about 3.5 s for Jev's lead-sentence pick (A07); and one minor regression inside fix commit 95680687, the token contract's serialization schema reads `{}` (F-8.7-V01). Under the owner's bar, "a fresh verifier finds nothing worse than develop", the phase does not merge tonight; there is no third round. Pull request #218 stays open for the owner. Dispatches used: 10 of 12.
 
 ## Findings
