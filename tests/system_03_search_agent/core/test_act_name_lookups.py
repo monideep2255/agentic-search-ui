@@ -22,6 +22,15 @@ call count are real.
 Mutation: remove the Act-time lookup and the "during Act" arms go red (no
 lookup inside act_node, and Write makes two calls of its own). Remove the
 one-lookup guard and the "more names than one lookup holds" arm goes red.
+
+Build phase 8.7, step 8 (card 50, option K, the owner's yes of 2026-10-05):
+the reader pass came off the answer path, so on every question there is now
+no reader pass in Act. By the rule above, the lookups stay in Write. The
+first two arms and the variant arm now hold that: Act makes no lookup and
+no reader call on a paper question, and Write makes the same lookups, with
+the same answer, it makes on every other question. The comparison arms
+still hold as they are: the same NCBI calls and the same answer whichever
+step looks the names up.
 """
 
 from __future__ import annotations
@@ -245,28 +254,30 @@ _DISEASE_ROWS = [_disease_row("C0346153", "MedGen"), _disease_row("C2676676", "O
 
 
 @pytest.mark.asyncio
-async def test_the_name_lookups_run_during_act_beside_the_reader_pass(
+async def test_on_a_paper_question_act_runs_no_reader_and_no_name_lookup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Step 8: a question with an Article row no longer runs the reader pass
+    in Act, so there is nothing to hide a lookup behind and Act makes none."""
     ncbi = _install_ncbi(monkeypatch, delay_s=0.15)
     models = _install_models(monkeypatch, reader_delay_s=0.4)
     planned = _graph_call(monkeypatch, [*_DISEASE_ROWS, _ARTICLE_ROW])
 
-    await _act_then_write(planned)
-    # Only Act has run at this point in `_act_then_write`'s first half, so
-    # everything below was measured inside act_node.
+    _, act_result, write_state = await _act_then_write(planned)
+    # Only Act has run at this point, so everything below was inside act_node.
 
-    assert models.reader_calls, "populate-check: the reader pass ran"
-    assert [name for name, _, _ in ncbi.calls[:2]] == ["search", "summary"], (
-        "the MedGen lookup ran inside Act"
+    assert act_result["findings_count"] == 2, "populate-check: the Article pair was assembled"
+    assert models.reader_calls == [], "the reader pass ran on the answer path"
+    assert ncbi.calls == [], "Act made a name lookup with no reader pass to hide it behind"
+
+    await graph_module.write_node(write_state)
+    assert [name for name, _, _ in ncbi.calls] == ["search", "summary"], (
+        "Write made the one MedGen lookup itself"
     )
-    _reader_started, reader_ended = models.reader_calls[0]
-    lookup_started = ncbi.calls[0][1]
-    assert lookup_started < reader_ended, "the lookup overlapped the reader pass"
 
 
 @pytest.mark.asyncio
-async def test_write_then_makes_no_name_lookup_of_its_own_and_names_the_diseases(
+async def test_write_makes_the_name_lookup_and_names_the_diseases(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     ncbi = _install_ncbi(monkeypatch, delay_s=0.0)
@@ -277,8 +288,8 @@ async def test_write_then_makes_no_name_lookup_of_its_own_and_names_the_diseases
     made_in_act = len(ncbi.calls)
     write_result = await graph_module.write_node(write_state)
 
-    assert made_in_act == 2, "populate-check: Act made the one MedGen lookup"
-    assert len(ncbi.calls) == made_in_act, "Write made a name lookup of its own"
+    assert made_in_act == 0, "Act made a name lookup"
+    assert len(ncbi.calls) == 2, "Write made the one MedGen lookup"
     text = " ".join(e.payload["text"] for e in write_result["events"] if e.type == "token")
     assert "Familial cancer of breast" in text, "the answer names the disease in words"
 
@@ -337,7 +348,8 @@ async def test_a_variant_question_makes_the_same_calls_and_write_looks_up_nothin
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The second of Write's two MedGen lookups, the linked conditions of a
-    variant row, is looked up in Act too, with the same result."""
+    variant row, stays in Write with the first (step 8), with the same calls
+    and the same answer."""
     counts: list[int] = []
     answers: list[str] = []
     in_act: list[int] = []
@@ -360,7 +372,7 @@ async def test_a_variant_question_makes_the_same_calls_and_write_looks_up_nothin
 
     assert counts[1] >= 2, "populate-check: the variant question makes name lookups"
     assert counts[0] == counts[1], f"NCBI calls with and without the Act lookup: {counts}"
-    assert in_act[0] == counts[0], "with the Act lookup, Write looked a name up itself"
+    assert in_act == [0, 0], "Act made a name lookup with no reader pass to hide it behind"
     assert answers[0] == answers[1]
     assert "Familial cancer of breast" in answers[0]
 

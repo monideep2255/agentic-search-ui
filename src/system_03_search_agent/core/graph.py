@@ -8855,27 +8855,47 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             layer3_raw_outputs[planned.tool_call.call_id] = outcome.layer_raw_output
         cap_exceeded = cap_exceeded or outcome.cap_exceeded
 
-    # Build phase 8.7, T-8.7-02 (option H's Act half): when a reader pass
-    # runs, the names Write will look up are looked up beside it, so their
-    # time hides behind the reader's. Only when Write will reach its own
-    # lookups: never on a question `_write_answer` ends before them (a step
-    # error, a cap hit, a clarifying question, an unresolved name). See
-    # `_prefetch_answer_names` for why only here.
-    reader_pass_runs = any(result.contains_untrusted_free_text for result in results)
-    write_reaches_its_lookups = not (
-        cap_exceeded
-        or state.get("cap_exceeded", False)
-        or state.get("step_error") is not None
-        or state.get("clarification_needed")
-        or state.get("unresolved_entity_symbols")
+    # Build phase 8.7, step 8 (card 50, option K; the owner's yes of
+    # 2026-10-05): the reader pass is off the answer path. A paper question
+    # no longer waits up to 10 s for a guard-model read of its Article
+    # titles before Write can start.
+    #
+    # Not run at all, rather than started and left unawaited:
+    #
+    # - Nothing reads what it returns. `build_synth_findings` and every
+    #   citation, count and truncation helper skip a finding with no
+    #   `structured_fields`, which every reader finding is, and no module
+    #   outside `coordinator_worker.py` reads its three fields
+    #   (`test_reader_pass_reach_probe.py`'s static check, which goes red
+    #   the day one does).
+    # - The protection against a paper's hidden instructions is not the
+    #   reader. It is `_sanitized_citeable_row`: an Article row reaches
+    #   `structured_fields` with `fields` emptied, so its title never
+    #   reaches a prompt, a citation or an event. That holds unchanged.
+    # - Started in the background it would still spend one guard call per
+    #   paper question, and its cost would land on the harness while
+    #   Write's own cap checks run, so a reader's spend could tip Write
+    #   into a capped partial answer at random, and land after `done`
+    #   reported the question's cost.
+    #
+    # The quarantine pair is still built, by `_execute_planned_call`, and
+    # simply not handed over, so a later phase that gives the reader a
+    # real use reattaches it here. `findings_count` still counts every
+    # pair Act assembled, so `done.total_tool_calls` is unchanged.
+    #
+    # Option H's Act-time name lookup (`_prefetch_answer_names`) ran only
+    # beside the reader pass, to hide behind it. With no reader pass there
+    # is nothing in Act to hide it behind, so by its own rule it does not
+    # run, and Write makes the lookups itself, as it does on every other
+    # question.
+    answer_pairs = [
+        (call, result)
+        for call, result in zip(tool_calls, results, strict=True)
+        if not result.contains_untrusted_free_text
+    ]
+    findings = await coordinator_worker_execute(
+        harness, [call for call, _ in answer_pairs], [result for _, result in answer_pairs]
     )
-    if reader_pass_runs and write_reaches_its_lookups:
-        findings, _ = await asyncio.gather(
-            coordinator_worker_execute(harness, tool_calls, results),
-            _prefetch_answer_names(state, tool_calls, results),
-        )
-    else:
-        findings = await coordinator_worker_execute(harness, tool_calls, results)
     # Decided from the user's chair, 2026-09-22: a search that failed is
     # recorded here, with the tool's own reason, so `write_node` can say
     # so in one plain sentence. The reason is the same bounded text the
@@ -8904,7 +8924,9 @@ async def act_node(state: GraphState) -> dict[str, Any]:
     # (not just its length), so write_node can read what Act actually
     # found instead of fabricating trust_outcome="answer" over nothing.
     result: dict[str, Any] = {
-        "findings_count": len(findings),
+        # Every pair Act assembled, the quarantine pair included, so
+        # `done.total_tool_calls` reads as it did while the reader ran.
+        "findings_count": len(results),
         "findings": findings,
         # T-3.4-05: empty for the common single-tool query; write_node
         # falls back to a generic citation construction when a Layer 2

@@ -138,6 +138,16 @@ when the byte ceiling shrank `rows` underneath it (measured:
 500). `_reconcile_row_count` recomputes `row_count` from the actual,
 already-capped `rows` list in `_structured_pass_through`, so the two
 fields can never disagree, whether or not capping fired this call.
+
+Build phase 8.7, step 8 (card 50, option K; the owner's yes of 2026-10-05):
+`core.graph.act_node` no longer hands a free-text pair to this function on
+the answer path, so `_reader_pass` makes no model call while a person waits
+for an answer. Nothing the reader returns reached any answer
+(`test_reader_pass_reach_probe.py`, whose static check goes red the day a
+module outside this one reads `extracted_entities`, `normalized_ids` or
+`evidence_summary`). The reader stays here, unchanged and tested, for a
+later phase that gives its output a real use; that phase passes the
+quarantine pair back in `act_node`.
 """
 
 from __future__ import annotations
