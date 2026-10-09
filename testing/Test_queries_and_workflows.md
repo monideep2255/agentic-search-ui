@@ -993,6 +993,22 @@ What you should see:
 - Before phase 8.6's re-land, this request got the label "Not a research question", which says nothing about what the product can do (F-8.6-G01). The follow-up's golden run gave the read-only reply in 3 of 3 passes.
 - Why it matters: a person who asks to change a record should learn that the product only reads NCBI records, not be treated as someone attacking it.
 
+### 109. When the check on a question cannot finish, the message says so plainly (cards 84 and 72)
+
+Queries to try:
+
+- `Which diseases are associated with BRCA1?`, as a new search. The failure itself cannot be triggered on demand: it shows only when the check every question passes first cannot finish. That happens on a slow or busy spell at the model provider (no answer in time twice, a rate limit, a server error, a dropped connection), about 15 seconds after the question is sent, or when the check's two replies both come back unreadable.
+- Query 1 covers the ordinary answer to the same question.
+
+What you should see:
+
+- Only when that check could not finish: no answer, no citation chips, and the message "We could not finish checking your question, so nothing was searched. This was a problem on our side, not with your question. Try asking again."
+- For these failures it never reads "Try asking again in a moment" and never "rephrase the question".
+- Asking the same question again a little later answers it as query 1 does.
+- When the model provider refuses the question under its content policy, or rejects the request as malformed, or refuses our own key, the message still reads "This run could not be completed. Try asking again, or rephrase the question." The first two may be the question's fault and asking again cannot fix the third, so none of them says the problem was ours.
+- A search you stopped still reads "This run was stopped before it finished, so no answer was written."
+- Why it matters: before this, a check that ran out of time read "This run could not be completed. Try asking again in a moment", which said neither that nothing was searched nor whose problem it was, and a check whose two replies came back unreadable told a person whose question was fine to rephrase it. Saying the problem was ours, and that asking again is the fix, tells them what to do next.
+
 ## 7. Sign in, sessions and history
 
 ### 49. Log in and log out (Product test 3)
@@ -2016,6 +2032,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| cards 84 and 72 | When the check every question passes first cannot finish, the message says nothing was searched, the problem was ours, and to ask again | Query 109 |
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
 | card 57, F-8.7-A04 | A citation under a summary sentence carries the record words that sentence was checked against, and each citation is listed once | Query 91 |
 | card 2, F-8.7-A07 | The written summary is never held more than about a second while the first sentence is chosen | Query 1 |

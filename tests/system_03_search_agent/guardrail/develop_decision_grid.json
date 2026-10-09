@@ -1,0 +1,4034 @@
+{
+ "allowlisted | admit | HTTP 429 | not asked | not asked": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "allowlisted | admit | HTTP 500 | not asked | not asked": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "allowlisted | admit | an option outside the set | not asked | not asked": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "allowlisted | admit | injection | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "allowlisted | admit | injection, Infinity | not asked | not asked": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "allowlisted | admit | injection, above the ceiling | not asked | not asked": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "allowlisted | admit | injection, no cost | not asked | not asked": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "allowlisted | admit | injection, null probabilities | not asked | not asked": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "allowlisted | admit | injection, stated $0 | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "allowlisted | admit | not JSON | not asked | not asked": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "allowlisted | admit | not_injection | not asked | not asked": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "allowlisted | admit | not_injection, stated $0 | not asked | not asked": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "allowlisted | injection | HTTP 429 | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "allowlisted | injection | HTTP 500 | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "allowlisted | injection | an option outside the set | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "allowlisted | injection | injection | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "allowlisted | injection | injection, Infinity | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "allowlisted | injection | injection, above the ceiling | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "allowlisted | injection | injection, no cost | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "allowlisted | injection | injection, null probabilities | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "allowlisted | injection | injection, stated $0 | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "allowlisted | injection | not JSON | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "allowlisted | injection | not_injection | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "allowlisted | injection | not_injection, stated $0 | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "allowlisted | off topic | HTTP 429 | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "allowlisted | off topic | HTTP 500 | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "allowlisted | off topic | an option outside the set | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "allowlisted | off topic | injection | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "allowlisted | off topic | injection, Infinity | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "allowlisted | off topic | injection, above the ceiling | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "allowlisted | off topic | injection, no cost | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "allowlisted | off topic | injection, null probabilities | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "allowlisted | off topic | injection, stated $0 | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "allowlisted | off topic | not JSON | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "allowlisted | off topic | not_injection | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "allowlisted | off topic | not_injection, stated $0 | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "allowlisted | two unreadable replies | HTTP 429 | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "allowlisted | two unreadable replies | HTTP 500 | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "allowlisted | two unreadable replies | an option outside the set | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "allowlisted | two unreadable replies | injection | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "allowlisted | two unreadable replies | injection, Infinity | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "allowlisted | two unreadable replies | injection, above the ceiling | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "allowlisted | two unreadable replies | injection, no cost | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "allowlisted | two unreadable replies | injection, null probabilities | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "allowlisted | two unreadable replies | injection, stated $0 | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "allowlisted | two unreadable replies | not JSON | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "allowlisted | two unreadable replies | not_injection | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "allowlisted | two unreadable replies | not_injection, stated $0 | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "forbidden | admit | HTTP 429 | not asked | not asked": {
+  "category": "write_seeking",
+  "passed": false,
+  "reason": "I have read-only access to the knowledge graph and can't create, change, or delete anything in it. I can show you what it already contains, with citations."
+ },
+ "forbidden | admit | HTTP 500 | not asked | not asked": {
+  "category": "write_seeking",
+  "passed": false,
+  "reason": "I have read-only access to the knowledge graph and can't create, change, or delete anything in it. I can show you what it already contains, with citations."
+ },
+ "forbidden | admit | an option outside the set | not asked | not asked": {
+  "category": "write_seeking",
+  "passed": false,
+  "reason": "I have read-only access to the knowledge graph and can't create, change, or delete anything in it. I can show you what it already contains, with citations."
+ },
+ "forbidden | admit | injection | not asked | not asked": {
+  "category": "write_seeking",
+  "passed": false,
+  "reason": "I have read-only access to the knowledge graph and can't create, change, or delete anything in it. I can show you what it already contains, with citations."
+ },
+ "forbidden | admit | injection, Infinity | not asked | not asked": {
+  "category": "write_seeking",
+  "passed": false,
+  "reason": "I have read-only access to the knowledge graph and can't create, change, or delete anything in it. I can show you what it already contains, with citations."
+ },
+ "forbidden | admit | injection, above the ceiling | not asked | not asked": {
+  "category": "write_seeking",
+  "passed": false,
+  "reason": "I have read-only access to the knowledge graph and can't create, change, or delete anything in it. I can show you what it already contains, with citations."
+ },
+ "forbidden | admit | injection, no cost | not asked | not asked": {
+  "category": "write_seeking",
+  "passed": false,
+  "reason": "I have read-only access to the knowledge graph and can't create, change, or delete anything in it. I can show you what it already contains, with citations."
+ },
+ "forbidden | admit | injection, null probabilities | not asked | not asked": {
+  "category": "write_seeking",
+  "passed": false,
+  "reason": "I have read-only access to the knowledge graph and can't create, change, or delete anything in it. I can show you what it already contains, with citations."
+ },
+ "forbidden | admit | injection, stated $0 | not asked | not asked": {
+  "category": "write_seeking",
+  "passed": false,
+  "reason": "I have read-only access to the knowledge graph and can't create, change, or delete anything in it. I can show you what it already contains, with citations."
+ },
+ "forbidden | admit | not JSON | not asked | not asked": {
+  "category": "write_seeking",
+  "passed": false,
+  "reason": "I have read-only access to the knowledge graph and can't create, change, or delete anything in it. I can show you what it already contains, with citations."
+ },
+ "forbidden | admit | not_injection | not asked | not asked": {
+  "category": "write_seeking",
+  "passed": false,
+  "reason": "I have read-only access to the knowledge graph and can't create, change, or delete anything in it. I can show you what it already contains, with citations."
+ },
+ "forbidden | admit | not_injection, stated $0 | not asked | not asked": {
+  "category": "write_seeking",
+  "passed": false,
+  "reason": "I have read-only access to the knowledge graph and can't create, change, or delete anything in it. I can show you what it already contains, with citations."
+ },
+ "forbidden | injection | HTTP 429 | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "forbidden | injection | HTTP 500 | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "forbidden | injection | an option outside the set | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "forbidden | injection | injection | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "forbidden | injection | injection, Infinity | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "forbidden | injection | injection, above the ceiling | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "forbidden | injection | injection, no cost | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "forbidden | injection | injection, null probabilities | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "forbidden | injection | injection, stated $0 | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "forbidden | injection | not JSON | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "forbidden | injection | not_injection | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "forbidden | injection | not_injection, stated $0 | not asked | not asked": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "forbidden | off topic | HTTP 429 | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "forbidden | off topic | HTTP 500 | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "forbidden | off topic | an option outside the set | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "forbidden | off topic | injection | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "forbidden | off topic | injection, Infinity | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "forbidden | off topic | injection, above the ceiling | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "forbidden | off topic | injection, no cost | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "forbidden | off topic | injection, null probabilities | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "forbidden | off topic | injection, stated $0 | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "forbidden | off topic | not JSON | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "forbidden | off topic | not_injection | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "forbidden | off topic | not_injection, stated $0 | not asked | not asked": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "forbidden | two unreadable replies | HTTP 429 | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "forbidden | two unreadable replies | HTTP 500 | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "forbidden | two unreadable replies | an option outside the set | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "forbidden | two unreadable replies | injection | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "forbidden | two unreadable replies | injection, Infinity | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "forbidden | two unreadable replies | injection, above the ceiling | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "forbidden | two unreadable replies | injection, no cost | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "forbidden | two unreadable replies | injection, null probabilities | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "forbidden | two unreadable replies | injection, stated $0 | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "forbidden | two unreadable replies | not JSON | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "forbidden | two unreadable replies | not_injection | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "forbidden | two unreadable replies | not_injection, stated $0 | not asked | not asked": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | admit | HTTP 429 | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | HTTP 429 | HTTP 500 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 429 | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | HTTP 429 | not JSON | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 429 | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | HTTP 429 | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | HTTP 429 | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 429 | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 429 | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | HTTP 429 | on_topic, Infinity | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 429 | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | HTTP 429 | on_topic, above the ceiling | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 429 | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 429 | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 500 | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | HTTP 500 | HTTP 500 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 500 | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | HTTP 500 | not JSON | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 500 | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | HTTP 500 | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | HTTP 500 | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 500 | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 500 | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | HTTP 500 | on_topic, Infinity | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 500 | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | HTTP 500 | on_topic, above the ceiling | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 500 | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | HTTP 500 | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | an option outside the set | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | an option outside the set | HTTP 500 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | an option outside the set | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | an option outside the set | not JSON | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | an option outside the set | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | an option outside the set | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | an option outside the set | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | an option outside the set | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | an option outside the set | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | an option outside the set | on_topic, Infinity | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | an option outside the set | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | an option outside the set | on_topic, above the ceiling | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | an option outside the set | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | an option outside the set | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection, Infinity | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, Infinity | HTTP 500 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, Infinity | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, Infinity | not JSON | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, Infinity | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, Infinity | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, Infinity | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, Infinity | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, Infinity | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, Infinity | on_topic, Infinity | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, Infinity | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, Infinity | on_topic, above the ceiling | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, Infinity | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, Infinity | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | HTTP 500 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | not JSON | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | on_topic, Infinity | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | on_topic, above the ceiling | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, above the ceiling | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, no cost | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, no cost | HTTP 500 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, no cost | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, no cost | not JSON | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, no cost | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, no cost | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, no cost | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, no cost | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, no cost | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, no cost | on_topic, Infinity | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, no cost | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, no cost | on_topic, above the ceiling | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, no cost | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, no cost | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, null probabilities | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, null probabilities | HTTP 500 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, null probabilities | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, null probabilities | not JSON | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, null probabilities | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, null probabilities | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, null probabilities | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, null probabilities | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, null probabilities | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, null probabilities | on_topic, Infinity | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, null probabilities | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, null probabilities | on_topic, above the ceiling | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, null probabilities | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, null probabilities | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | injection, stated $0 | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, stated $0 | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection, stated $0 | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, stated $0 | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection, stated $0 | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, stated $0 | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, stated $0 | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection, stated $0 | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection, stated $0 | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, stated $0 | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection, stated $0 | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | injection, stated $0 | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection, stated $0 | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | injection, stated $0 | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | admit | not JSON | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not JSON | HTTP 500 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not JSON | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not JSON | not JSON | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not JSON | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not JSON | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not JSON | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not JSON | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not JSON | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not JSON | on_topic, Infinity | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not JSON | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not JSON | on_topic, above the ceiling | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not JSON | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not JSON | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not_injection | HTTP 500 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not_injection | not JSON | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not_injection | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not_injection | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not_injection | on_topic, Infinity | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not_injection | on_topic, above the ceiling | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | HTTP 500 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | not JSON | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | on_topic, Infinity | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | on_topic, above the ceiling | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | admit | not_injection, stated $0 | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | injection | HTTP 429 | HTTP 500 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | not JSON | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | off_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | off_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | on_topic, Infinity | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | on_topic, above the ceiling | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 429 | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | HTTP 500 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | not JSON | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | off_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | off_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | on_topic, Infinity | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | on_topic, above the ceiling | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | HTTP 500 | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | HTTP 500 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | not JSON | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | off_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | off_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | on_topic, Infinity | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | on_topic, above the ceiling | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | an option outside the set | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | HTTP 500 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | not JSON | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | off_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | off_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | on_topic, Infinity | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | on_topic, above the ceiling | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | HTTP 500 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | not JSON | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | off_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | off_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | on_topic, Infinity | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | on_topic, above the ceiling | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, Infinity | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | HTTP 500 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | not JSON | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | off_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | off_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | on_topic, Infinity | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | on_topic, above the ceiling | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, above the ceiling | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | HTTP 500 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | not JSON | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | off_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | off_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | on_topic, Infinity | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | on_topic, above the ceiling | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, no cost | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | HTTP 500 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | not JSON | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | off_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | off_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | on_topic, Infinity | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | on_topic, above the ceiling | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, null probabilities | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | HTTP 500 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | not JSON | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | off_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | off_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | on_topic, Infinity | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | on_topic, above the ceiling | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | injection, stated $0 | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | HTTP 500 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | not JSON | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | off_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | off_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | on_topic, Infinity | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | on_topic, above the ceiling | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not JSON | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | HTTP 500 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | not JSON | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | off_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | off_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | on_topic, Infinity | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | on_topic, above the ceiling | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | HTTP 500 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | HTTP 500 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | not JSON | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | not JSON | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | off_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | off_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | on_topic, Infinity | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | on_topic, Infinity | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | on_topic, above the ceiling | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | on_topic, above the ceiling | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | injection | not_injection, stated $0 | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence (an ordinary biomedical question)"
+ },
+ "jev judges relevancy | off topic | HTTP 429 | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 429 | HTTP 500 | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 429 | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 429 | not JSON | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 429 | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 429 | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 429 | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | HTTP 429 | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | HTTP 429 | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 429 | on_topic, Infinity | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 429 | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 429 | on_topic, above the ceiling | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 429 | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | HTTP 429 | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | HTTP 500 | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 500 | HTTP 500 | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 500 | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 500 | not JSON | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 500 | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 500 | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 500 | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | HTTP 500 | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | HTTP 500 | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 500 | on_topic, Infinity | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 500 | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 500 | on_topic, above the ceiling | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | HTTP 500 | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | HTTP 500 | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | an option outside the set | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | an option outside the set | HTTP 500 | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | an option outside the set | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | an option outside the set | not JSON | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | an option outside the set | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | an option outside the set | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | an option outside the set | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | an option outside the set | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | an option outside the set | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | an option outside the set | on_topic, Infinity | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | an option outside the set | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | an option outside the set | on_topic, above the ceiling | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | an option outside the set | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | an option outside the set | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection | HTTP 500 | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection | not JSON | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | off topic | injection | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | off topic | injection | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection | on_topic, Infinity | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection | on_topic, above the ceiling | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | off topic | injection | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | off topic | injection, Infinity | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, Infinity | HTTP 500 | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, Infinity | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, Infinity | not JSON | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, Infinity | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, Infinity | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, Infinity | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, Infinity | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, Infinity | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, Infinity | on_topic, Infinity | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, Infinity | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, Infinity | on_topic, above the ceiling | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, Infinity | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, Infinity | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | HTTP 500 | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | not JSON | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | on_topic, Infinity | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | on_topic, above the ceiling | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, above the ceiling | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, no cost | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, no cost | HTTP 500 | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, no cost | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, no cost | not JSON | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, no cost | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, no cost | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, no cost | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, no cost | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, no cost | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, no cost | on_topic, Infinity | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, no cost | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, no cost | on_topic, above the ceiling | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, no cost | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, no cost | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | HTTP 500 | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | not JSON | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | on_topic, Infinity | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | on_topic, above the ceiling | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, null probabilities | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | HTTP 500 | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | not JSON | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | on_topic | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | on_topic | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | on_topic, Infinity | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | on_topic, above the ceiling | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | on_topic, stated $0 | off_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | off topic | injection, stated $0 | on_topic, stated $0 | on_topic": {
+  "category": "injection",
+  "passed": false,
+  "reason": "the query contains an instruction directed at the system rather than a question about biomedical evidence"
+ },
+ "jev judges relevancy | off topic | not JSON | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not JSON | HTTP 500 | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not JSON | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not JSON | not JSON | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not JSON | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not JSON | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not JSON | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | not JSON | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | not JSON | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not JSON | on_topic, Infinity | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not JSON | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not JSON | on_topic, above the ceiling | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not JSON | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | not JSON | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | not_injection | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection | HTTP 500 | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection | not JSON | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | not_injection | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | not_injection | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection | on_topic, Infinity | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection | on_topic, above the ceiling | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | not_injection | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | HTTP 500 | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | HTTP 500 | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | not JSON | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | not JSON | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | off_topic | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | off_topic | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | on_topic | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | on_topic | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | on_topic, Infinity | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | on_topic, Infinity | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | on_topic, above the ceiling | off_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | on_topic, above the ceiling | on_topic": {
+  "category": "off_topic",
+  "passed": false,
+  "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | on_topic, stated $0 | off_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | off topic | not_injection, stated $0 | on_topic, stated $0 | on_topic": {
+  "category": "ok",
+  "passed": true,
+  "reason": null
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | HTTP 500 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | HTTP 500 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | not JSON | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | not JSON | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | off_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | off_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | on_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | on_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | on_topic, Infinity | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | on_topic, Infinity | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | on_topic, above the ceiling | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | on_topic, above the ceiling | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | on_topic, stated $0 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 429 | on_topic, stated $0 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | HTTP 500 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | HTTP 500 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | not JSON | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | not JSON | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | off_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | off_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | on_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | on_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | on_topic, Infinity | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | on_topic, Infinity | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | on_topic, above the ceiling | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | on_topic, above the ceiling | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | on_topic, stated $0 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | HTTP 500 | on_topic, stated $0 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | HTTP 500 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | HTTP 500 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | not JSON | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | not JSON | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | off_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | off_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | on_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | on_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | on_topic, Infinity | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | on_topic, Infinity | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | on_topic, above the ceiling | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | on_topic, above the ceiling | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | on_topic, stated $0 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | an option outside the set | on_topic, stated $0 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | HTTP 500 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | HTTP 500 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | not JSON | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | not JSON | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | off_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | off_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | on_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | on_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | on_topic, Infinity | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | on_topic, Infinity | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | on_topic, above the ceiling | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | on_topic, above the ceiling | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | on_topic, stated $0 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection | on_topic, stated $0 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | HTTP 500 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | HTTP 500 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | not JSON | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | not JSON | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | off_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | off_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | on_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | on_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | on_topic, Infinity | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | on_topic, Infinity | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | on_topic, above the ceiling | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | on_topic, above the ceiling | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | on_topic, stated $0 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, Infinity | on_topic, stated $0 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | HTTP 500 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | HTTP 500 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | not JSON | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | not JSON | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | off_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | off_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | on_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | on_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | on_topic, Infinity | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | on_topic, Infinity | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | on_topic, above the ceiling | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | on_topic, above the ceiling | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | on_topic, stated $0 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, above the ceiling | on_topic, stated $0 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | HTTP 500 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | HTTP 500 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | not JSON | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | not JSON | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | off_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | off_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | on_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | on_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | on_topic, Infinity | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | on_topic, Infinity | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | on_topic, above the ceiling | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | on_topic, above the ceiling | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | on_topic, stated $0 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, no cost | on_topic, stated $0 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | HTTP 500 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | HTTP 500 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | not JSON | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | not JSON | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | off_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | off_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | on_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | on_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | on_topic, Infinity | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | on_topic, Infinity | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | on_topic, above the ceiling | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | on_topic, above the ceiling | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | on_topic, stated $0 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, null probabilities | on_topic, stated $0 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | HTTP 500 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | HTTP 500 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | not JSON | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | not JSON | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | off_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | off_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | on_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | on_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | on_topic, Infinity | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | on_topic, Infinity | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | on_topic, above the ceiling | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | on_topic, above the ceiling | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | on_topic, stated $0 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | injection, stated $0 | on_topic, stated $0 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | HTTP 500 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | HTTP 500 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | not JSON | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | not JSON | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | off_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | off_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | on_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | on_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | on_topic, Infinity | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | on_topic, Infinity | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | on_topic, above the ceiling | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | on_topic, above the ceiling | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | on_topic, stated $0 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not JSON | on_topic, stated $0 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | HTTP 500 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | HTTP 500 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | not JSON | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | not JSON | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | off_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | off_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | on_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | on_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | on_topic, Infinity | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | on_topic, Infinity | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | on_topic, above the ceiling | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | on_topic, above the ceiling | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | on_topic, stated $0 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection | on_topic, stated $0 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | HTTP 500 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | HTTP 500 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | not JSON | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | not JSON | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | off_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | off_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | on_topic | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | on_topic | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | on_topic, Infinity | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | on_topic, Infinity | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | on_topic, above the ceiling | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | on_topic, above the ceiling | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | on_topic, stated $0 | off_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ },
+ "jev judges relevancy | two unreadable replies | not_injection, stated $0 | on_topic, stated $0 | on_topic": {
+  "step_error": [
+   "guardrail",
+   "recoverable"
+  ]
+ }
+}
