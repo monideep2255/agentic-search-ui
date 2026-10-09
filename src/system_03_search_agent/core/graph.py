@@ -5433,10 +5433,12 @@ _CURIE_IN_TEXT_PATTERN = re.compile(
 # confirmation call) is also reused, now called from `think_node`'s model-
 # extraction confirmation step instead of from a regex-token guess.
 
-# An rsID, Section 17's literal `rs\d+`. Case-insensitive (card 37): a
-# person who types "RS334" means the same variant as "rs334". Every use
-# lowercases the matched text before it becomes an identifier.
-_RSID_PATTERN = re.compile(r"\brs\d+\b", re.IGNORECASE)
+# An rsID, Section 17's literal `rs\d+`. Case-sensitive: a real rsID is
+# always written with a lowercase "rs" prefix by convention, and Section
+# 17 gives the pattern exactly this way. Card 37's fix round tried ignoring
+# case and the verifier found "What does the RS1 gene do?" then resolved
+# the variant rs1 instead of the gene RS1, so it stays case-sensitive.
+_RSID_PATTERN = re.compile(r"\brs\d+\b")
 
 # A PMID mentioned in natural language ("PMID 21376230", "PMID: 21376230"),
 # distinct from the verbatim-CURIE form `_CURIE_IN_TEXT_PATTERN` already
@@ -5510,7 +5512,7 @@ def resolve_exact_identifiers(query_text: str) -> list[EventResolvedEntity]:
 
     # 2. rsID.
     for match in _RSID_PATTERN.finditer(query_text):
-        _add(match.group(0), f"dbSNP:{match.group(0).lower()}", match.span())
+        _add(match.group(0), f"dbSNP:{match.group(0)}", match.span())
 
     # 3. A bare, natural-language PMID mention ("PMID 21376230"). The
     #    colon-joined form ("PMID:21376230") is already caught by the

@@ -98,11 +98,9 @@ def test_uppercase_rsid_in_a_match_is_kept_for_a_lowercase_query() -> None:
     assert _rsids(shaped) == ["RS334"]
 
 
-def test_rsid_in_capitals_is_found_in_the_question() -> None:
-    assert _rsids_in_text("What is RS334?") == ["rs334"]
-    assert _rsids_in_text("What is Rs334 and rs334?") == ["rs334"]
-    assert _rsids_in_text("What is rs334?") == ["rs334"]
-
+def test_a_gene_symbol_in_capitals_is_not_read_as_an_rsid() -> None:
+    # The verifier's regression of card 37's fix round: RS1 is a gene.
+    assert _rsids_in_text("What does the RS1 gene do?") == []
 
 def _citation_for(first: str, first_sig: list[str], second: str, second_sig: list[str], cited: str):
     def match(rsid: str, sig: list[str]) -> Litvar2VariantMatch:
