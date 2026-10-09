@@ -53,6 +53,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from system_03_search_agent.contracts.query import Query
+from system_03_search_agent.contracts.token_order import in_reading_order
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
@@ -179,6 +180,14 @@ def _tokens(result) -> list[tuple[str, list[str]]]:
     return [(e.payload["text"], list(e.payload["marker_ids"])) for e in _events(result, "token")]
 
 
+def _read_tokens(result) -> list[tuple[str, list[str]]]:
+    """`_tokens` in reading order: the summary above the listing, as every
+    surface lays the answer out (`contracts/token_order.py`). Build phase
+    8.7 sends the listing first, so arrival order and reading order differ."""
+    payloads = in_reading_order(e.payload for e in _events(result, "token"))
+    return [(payload["text"], list(payload["marker_ids"])) for payload in payloads]
+
+
 def _source_ids(result) -> list[str]:
     return [e.payload["source_id"] for e in _events(result, "citation")]
 
@@ -206,7 +215,15 @@ async def test_the_tail_reports_what_the_model_left_out_so_sources_equal_prepare
 async def test_the_note_precedes_the_tail_and_carries_no_marker(model_reports) -> None:
     model_reports(first={1})
     result = await graph_module.write_node(_state())
-    tokens = _tokens(result)
+    # Build phase 8.7: the listing arrives first, under its heading; read
+    # in reading order the summary and the model's prose stand above it,
+    # which is what this arm's positions are about.
+    arrived = _tokens(result)
+    assert any(text.startswith("Disease records found") for text, _ in arrived[:2]), (
+        "populate-check failed: the listing did not arrive first, so the "
+        "reading order below is not doing any work."
+    )
+    tokens = _read_tokens(result)
     citation_id_by_source = {
         e.payload["source_id"]: e.payload["citation_id"] for e in _events(result, "citation")
     }
