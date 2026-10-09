@@ -12565,9 +12565,12 @@ async def _lead_sentence_choice(
     return None if picked is None else candidates[picked]
 
 
-def _asked_field(clinical_features_asked: bool) -> AskedField | None:
+def _asked_field(
+    clinical_features_asked: bool, failed_searches: list[dict[str, str]]
+) -> AskedField | None:
     """What kind of fact the question asks for, when a decision already made
-    says so, for the opening line's honest-gap clause (card 2).
+    says so, and the state of the source that carries it, for the opening
+    line's honest-gap clause (card 2).
 
     Today one decision supplies one: `think.asks_features` picking
     `asks_features` means the question asks for a condition's clinical
@@ -12575,10 +12578,27 @@ def _asked_field(clinical_features_asked: bool) -> AskedField | None:
     organism, title and gene), so every other question gets None and the
     line is unchanged. Never read off the question's words (DECISIONS.md
     2026-09-24).
+
+    The source state (fix round, F-8.7-J02, A02): the features come from
+    MedGen, and a record is known to list none only through the code-built
+    "MedGen lists no clinical features for <disease>" statement, which
+    `_with_medgen_clinical_feature_rows` writes only for a record fetched
+    and read. `every_search_finished` is False when any search of this
+    question failed or timed out, since that search may be the one that
+    carries them; the clause is then never said. The fields the feature
+    rows carry beside the name (the total, the disease's own title, the HPO
+    id) say nothing about the record's content.
     """
-    if clinical_features_asked:
-        return AskedField(label="clinical features", field_names=(CLINICAL_FEATURES_FIELD,))
-    return None
+    if not clinical_features_asked:
+        return None
+    return AskedField(
+        label="clinical features",
+        field_names=(CLINICAL_FEATURES_FIELD,),
+        source="MedGen",
+        lists_none_prefix=NO_CLINICAL_FEATURES_PREFIX,
+        quiet_fields=(_FEATURE_TOTAL_FIELD, _FEATURE_DISEASE_FIELD, _FEATURE_HPO_FIELD),
+        every_search_finished=not failed_searches,
+    )
 
 
 @dataclass(frozen=True)
@@ -14722,7 +14742,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             # Build phase 8.7, card 2: the honest gap, when a decision
             # already made says what kind of fact was asked for and code
             # finds no record in the answer that gives it.
-            asked_field=_asked_field(clinical_features_asked),
+            asked_field=_asked_field(clinical_features_asked, state.get("failed_searches", [])),
             all_findings=synth_findings,
         )
         # Build phase 8.7, card 2 (design C): whether a grounded, cited

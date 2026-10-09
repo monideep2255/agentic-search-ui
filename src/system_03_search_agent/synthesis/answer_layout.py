@@ -74,7 +74,6 @@ from system_03_search_agent.synthesis.disease_names import (
 )
 from system_03_search_agent.synthesis.findings import (
     SynthFinding,
-    is_no_clinical_features_finding,
     one_finding_per_record,
 )
 from system_03_search_agent.synthesis.grounding import (
@@ -1065,18 +1064,50 @@ MAX_SUMMARY_MARKERS = 20
 
 @dataclass(frozen=True)
 class AskedField:
-    """The kind of fact a question asks for, as the loop was told it, and
-    the record fields that would carry it (build phase 8.7, card 2).
+    """The kind of fact a question asks for, as the loop was told it, what
+    the loop knows about the source that carries it, and the record fields
+    that would carry it (build phase 8.7, card 2).
 
-    `label` is how the opening line names it, article included where one
-    is needed ("clinical features", "the organism"). `field_names` are the
-    row and finding fields code checks. Supplied by the loop from a
-    decision already made (today `think.asks_features`), never read off
-    the question's words (DECISIONS.md 2026-09-24).
+    `label` is how the opening line names it ("clinical features").
+    `field_names` are the row and finding fields that carry it. `source` is
+    the database that carries it, as a person names it ("MedGen"), so the
+    line says whose record was read. `lists_none_prefix` opens the one
+    code-built statement that says a record was fetched, read, and lists
+    none ("MedGen lists no clinical features for "); a record has positive
+    evidence of absence only through that statement. `quiet_fields` are the
+    fields the source's own rows carry beside it that say nothing about the
+    record's content (a count of zero, the record's own title).
+    `every_search_finished` is the loop's record that no search of this
+    question failed or timed out.
+
+    Supplied by the loop from a decision already made (today
+    `think.asks_features`), never read off the question's words
+    (DECISIONS.md 2026-09-24). No field has a default, so a caller cannot
+    leave the source state unsaid and get the clause by accident.
     """
 
     label: str
     field_names: tuple[str, ...]
+    source: str
+    lists_none_prefix: str
+    quiet_fields: tuple[str, ...]
+    every_search_finished: bool
+
+
+#: Fields that name, identify or classify a record and so say nothing about
+#: what the record contains: the label fields, the CURIE a finding falls back
+#: to, and MedGen's closed `semantictype` vocabulary. Every OTHER field with
+#: a value (a definition, a summary, an abstract, a description, a list of
+#: linked conditions, any field added later) might carry the asked-for fact
+#: in its own words, and code cannot read prose for it, so its presence means
+#: the absence is not known (F-8.7-J01, F-8.7-A03).
+_IDENTITY_FIELDS: frozenset[str] = frozenset((*_LABEL_FIELDS, "curie", "semantictype"))
+
+
+def _has_value(value: Any) -> bool:
+    if isinstance(value, str):
+        return bool(value.strip())
+    return value not in (None, [], {}, ())
 
 
 def records_lack_field(
@@ -1085,40 +1116,81 @@ def records_lack_field(
     row_for: Any,
     asked: AskedField,
 ) -> bool:
-    """Whether NO record in this answer carries the asked-for field.
+    """Whether the product positively KNOWS that no record in this answer
+    gives the asked-for field. The check behind the honest-gap clause of
+    `answer_summary_sentence`.
 
-    The check behind the honest-gap clause of `answer_summary_sentence`:
-    the clause says the records do not give something, so code must have
-    looked. Every counted record's own row is read for a non-empty value
-    under any of `asked.field_names`, and every finding in the answer,
-    counted or not, is read for a finding of that field, so a record the
-    line does not count can never hold the fact the line says is missing.
-    The one finding that states an absence in its own words, "MedGen lists
-    no clinical features for <disease>", carries no feature and is not
-    counted as one. True only when every check found nothing.
+    The user's chair: a confident wrong absence is worse than saying
+    nothing. So the answer is True only when all four of these hold, each
+    decided from the state of the field's source, never from wording:
+
+    1. Every search of this question finished (`every_search_finished`).
+       A search that failed or timed out may be the one that carries the
+       field (F-8.7-A02).
+    2. The source was searched, the search came back and was read, for
+       EVERY counted record: each has its own code-built "lists none"
+       statement (`lists_none_prefix`) on the same record page. A record
+       whose field was never read, could not be read, or comes from a
+       source the lookup never touches (a graph-only row, a variant, a
+       gene) has no such statement, so nothing is known about it and the
+       clause is not said (F-8.7-J02, F-8.1-J11, F-8.7-A13).
+    3. No finding shown in this answer, counted or not, gives the field, or
+       gives anything but an identity field (`_IDENTITY_FIELDS`) or one of
+       the source's quiet fields. A definition, summary, abstract or
+       description might state the field in prose (F-8.7-J01, F-8.7-A03).
+    4. The same holds for every field of every shown record's row, which
+       the listing can show beside its label.
     """
     names = set(asked.field_names)
-    if not names:
+    if not names or not asked.every_search_finished or not counted:
         return False
-    for finding in all_findings:
-        if finding.field in names and not is_no_clinical_features_finding(finding):
+    quiet = _IDENTITY_FIELDS | set(asked.quiet_fields)
+
+    def lists_none(field: str, value: Any) -> bool:
+        return (
+            field in names
+            and isinstance(value, str)
+            and value.startswith(asked.lists_none_prefix)
+        )
+
+    def says_nothing(field: str, value: Any) -> bool:
+        if lists_none(field, value):
+            return True
+        if field in names:
+            return not _has_value(value)
+        return field in quiet or not _has_value(value)
+
+    read_and_none: set[str] = set()
+    shown = list(all_findings) + [f for f in counted if f not in all_findings]
+    for finding in shown:
+        if lists_none(finding.field, finding.field_value):
+            page = source_page_key(finding.source_url)
+            if page:
+                read_and_none.add(page)
+        elif not says_nothing(finding.field, finding.field_value):
             return False
-    for finding in counted:
         row = row_for(finding)
-        fields = (row or {}).get("fields") if isinstance(row, dict) else None
-        if not isinstance(fields, dict):
-            continue
-        for name in names:
-            if fields.get(name) not in (None, "", [], {}):
-                return False
+        fields = row.get("fields") if isinstance(row, dict) else None
+        if isinstance(fields, dict):
+            for name, value in fields.items():
+                if not says_nothing(str(name), value):
+                    return False
+    for finding in counted:
+        page = source_page_key(finding.source_url)
+        if not page or page not in read_and_none:
+            return False
     return True
 
 
 def _gap_clause(record_count: int, asked: AskedField) -> str:
-    """The words the opening line adds when the records lack what was asked."""
+    """The words the opening line adds when the records are known to lack
+    what was asked. They name the source's RECORD as what lists nothing, in
+    both depths, so no reader can take them as a fact about the condition
+    itself (F-8.7-A13): "and its MedGen record lists no clinical features",
+    never "which does not give clinical features" after "3 conditions"."""
     if record_count == 1:
-        return f", which does not give {asked.label}"
-    return f", none of which gives {asked.label}"
+        return f", and its {asked.source} record lists no {asked.label}"
+    return f", and none of their {asked.source} records lists {asked.label}"
 
 
 def summary_label(finding: SynthFinding, row: dict[str, Any] | None) -> str:
@@ -1145,15 +1217,18 @@ def answer_summary_sentence(
 ) -> str | None:
     """The code-built sentence that opens an answer (2026-09-14).
 
-    The honest gap (build phase 8.7, card 2). When the loop says what kind
-    of fact the question asks for (`asked_field`) and code finds that no
-    record in the answer carries it (`records_lack_field`, over the counted
-    records' rows and every finding in `all_findings`), the line ends by
-    saying so: "Found 1 disease record for Marfan syndrome: Marfan syndrome
-    [1], which does not give clinical features." That is the owner's "or
-    tells me the records do not say". It is added only after that check, so
-    the line can never claim a gap one of its own records disproves, and it
-    states an absence in the records, never a fact about the subject. It
+    The honest gap (build phase 8.7, card 2; fix round, F-8.7-J01, J02,
+    A02, A03, A13). When the loop says what kind of fact the question asks
+    for (`asked_field`) and the product positively knows that no record
+    shown in the answer gives it (`records_lack_field`: every search
+    finished, the field's source read every counted record and found none,
+    and no shown finding or row carries anything that might state it), the
+    line ends by saying so, naming the source's record as what lists
+    nothing: "Found 1 disease record for Marfan syndrome: Marfan syndrome
+    [1], and its MedGen record lists no clinical features." That is the
+    owner's "or tells me the records do not say". Anything short of that
+    knowledge leaves the line exactly as it was without the clause. It
+    states an absence in a record, never a fact about the subject, and it
     adds words, never markers, so `MAX_SUMMARY_MARKERS` still holds.
 
     Item 12.9, rule 1 (2026-09-23): in plain language the same sentence
@@ -1236,7 +1311,8 @@ def answer_summary_sentence(
     counted = list(by_page.values()) + unkeyed
 
     def finish(sentence: str) -> str:
-        # Build phase 8.7, card 2: the honest gap, only once code has looked.
+        # Build phase 8.7, card 2: the honest gap, only when the absence is
+        # known, never when it is merely not seen (`records_lack_field`).
         if asked_field is not None and records_lack_field(
             counted, list(all_findings or answer_findings), row_for, asked_field
         ):
