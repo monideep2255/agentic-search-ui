@@ -345,14 +345,17 @@ This section is also the shared plan.
 ### What is waiting on the product owner
 
 - "Waiting for your retest" above, newest first, tonight's cards on top; each row names its queries in `testing/Test_queries_and_workflows.md`.
-- Phase 8.7, pull request #218: merge with A04 and A07 filed as cards, or fix them first; with any merge, set `PER_QUERY_COST_CAP_USD=0.25` on develop's API (the lead's attempt was refused by the permission layer). Separately, whether develop's writer becomes Opus 5.5, knowing that at a true 25-cent bound its repairs are refused on 3 to 19 of 24 bench questions.
-- The guardrail's re-split, proposed in its `DECISIONS.md` row.
+- Card 35, pull request #228: merge as it is, or a one-line change to use the earlier deadline and a fresh verifier (V-35-03).
+- Card 48, pull request #230: park and redesign so the classifier judges whether a message names a record (the lead's recommendation), or merge as it is (V-48-04).
+- Card 20: a small extraction call only on isolate questions (the lead's recommendation), or Think extracting with every listed fix; branch `fix/card20-isolate-year-place` kept.
+- Card 94's single-isolate lookup: the SNP-distance scan that takes about 19 s of it (F-3.5-A-05); patch in `testing/Developer/reports/2026-10-09_card94/raw/`.
+- Card 17: accept option B's two dropped sentences, or another option from its diagnosis.
+- The guardrail's step 3b, the server-pause fix, still parked; step 2 waits for a week of logs.
+- Whether develop's writer becomes Opus 5.5 (card 5): at a true 25-cent bound its repairs are refused on 3 to 19 of 24 bench questions.
 - Card 40: 27 itemized hook and rule changes, each a yes or no, `testing/Developer/reports/2026-10-08_card40/itemized_list.md`; nothing in the security layer changed.
-- Closing cards 11 and 12, proposed: neither reproduced since 2026-09-25, and both fixes were reverted.
-- Design or decision questions from tonight's diagnoses: cards 16 (fold into 56), 17, 20, 29, 33 (D19), 48, and the `.claude/` and A07 parts of 51 and 85. New cards found tonight: `testing/Developer/reports/2026-10-08_overnight/new_cards.md`.
-- The decisions taken on the owner's behalf overnight, each a `DECISIONS.md` row dated 2026-10-08.
+- Design or decision questions still open from the diagnoses of 2026-10-08: cards 29, 33 (D19), and the `.claude/` and A07 parts of 51 and 85.
+- The decisions taken on the owner's behalf overnight, each a `DECISIONS.md` row dated 2026-10-09.
 - Decisions D5 to D21 in `testing/Board_plan.md`: each carries the lead's recommended default, taken unless the owner objects.
-- After phase 8.7 merges, delete `feat/8.7-s1` to `s3` on GitHub (the lead's tag-and-delete was refused).
 - The privacy pre-commit hooks on the second laptop, and `railway link` there so deploys can be confirmed.
 
 Carried from 2026-09-29 and not re-checked today:
