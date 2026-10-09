@@ -769,6 +769,55 @@ async def test_a_choice_s_words_typed_with_no_offer_limit_nothing(
     assert pubmed and all("[dp]" not in s["term"] for s in pubmed), pubmed
 
 
+_LOST_WINDOW_NOTE = "the date range you chose could not be applied, so papers from any year were searched"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("ask", ["recent papers on statins", "recent papers on BRCA1"])
+async def test_a_picked_window_whose_offer_is_lost_says_it_was_not_applied(
+    monkeypatch: pytest.MonkeyPatch, ask: str
+) -> None:
+    """Card 36: a restart loses the offer, so the click is searched with no
+    date limit. The plan says so, on both plan paths, and the search is not
+    narrowed."""
+    from system_03_search_agent.core import clarify
+
+    _install_tools(monkeypatch)
+    searches = _spy_searches(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch, {"think.recent_years": "recent_unbounded"})
+
+    asked = await _run(ask)
+    options = _payload(asked, "think")["clarifying_options"]  # type: ignore[index]
+
+    clarify.clear_offered_windows()  # what a restart does
+    _install_decide(monkeypatch)
+    events = await _run(options[1])
+
+    plan = _payload(events, "plan")
+    assert plan is not None and _LOST_WINDOW_NOTE in plan["narrative"], plan
+    pubmed = [s for s in searches if s.get("db") == "pubmed"]
+    assert pubmed and all("[dp]" not in s["term"] for s in pubmed), pubmed
+
+
+@pytest.mark.asyncio
+async def test_an_applied_window_does_not_carry_the_not_applied_note(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_tools(monkeypatch)
+    _spy_searches(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch, {"think.recent_years": "recent_unbounded"})
+
+    asked = await _run("recent papers on statins")
+    options = _payload(asked, "think")["clarifying_options"]  # type: ignore[index]
+    _install_decide(monkeypatch)
+    events = await _run(options[1])
+
+    plan = _payload(events, "plan")
+    assert plan is not None and _LOST_WINDOW_NOTE not in plan["narrative"], plan
+
+
 # ---------------------------------------------------------------------------
 # plan.literature (build phase 8.2, card 3): started by Think, read by Plan.
 # ---------------------------------------------------------------------------

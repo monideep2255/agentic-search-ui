@@ -250,6 +250,17 @@ class TestRecentWindowChoices:
         choices = clarify.recent_window_choices("what do the latest papers say about statins?")
         assert choices.options[0] == "What do the latest papers say about statins from the last 12 months?"
 
+    def test_is_recent_window_option_verifies_only_our_fixed_option_strings(self) -> None:
+        """Card 36: true only for the shape the product itself generates."""
+        for option in clarify.recent_window_choices("recent papers on BRCA1").options:
+            assert clarify.is_recent_window_option(option)
+            assert clarify.is_recent_window_option(f"  {option} ")
+        assert not clarify.is_recent_window_option("papers on statins in 2000 patients")
+        assert not clarify.is_recent_window_option("Recent papers on BRCA1 from the last 5 years")
+        assert not clarify.is_recent_window_option("Papers from the last 5 years? in mice")
+        assert not clarify.is_recent_window_option(" from the last 5 years?")
+        assert not clarify.is_recent_window_option("")
+
     def test_each_offered_choice_carries_its_own_window_as_a_value(self) -> None:
         """Fix round, F-8.2-A07 and J01: the window comes from what was
         OFFERED, never from reading the clicked text."""
