@@ -1,0 +1,48 @@
+{
+  "tag": "S1b_rs334",
+  "question": "What is rs334 and what condition is it associated with?",
+  "mode": "Researcher",
+  "steps": [
+    {
+      "step": "bundle",
+      "bundle": [
+        "index-DB6gWcmy.js"
+      ]
+    },
+    {
+      "step": "signed in",
+      "ok": true
+    },
+    {
+      "step": "mode",
+      "pressed": "true"
+    },
+    {
+      "step": "landed",
+      "secs": 15.396,
+      "which": [
+        "answer-failure",
+        "trust-line"
+      ]
+    },
+    {
+      "step": "answer texts",
+      "emailStillVisible": false,
+      "answerBody": "0 tool calls · 0 sources cited\n\nThis run could not be completed. Try asking again in a moment.\nNot verified · the run did not finish",
+      "answerMeta": "0 tool calls · 0 sources cited",
+      "trust": "Not verified · the run did not finish",
+      "workPanel": null,
+      "sources": null,
+      "notes": null,
+      "refusal": null
+    },
+    {
+      "step": "rail open at 390 after hide attempt",
+      "open": false
+    },
+    {
+      "step": "answer 390",
+      "overflow390": 0
+    }
+  ]
+}
