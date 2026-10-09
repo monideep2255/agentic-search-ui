@@ -23,3 +23,13 @@ The meta line is a block text span with normal wrapping (`FollowUp.tsx`, around 
 - `npx tsc --noEmit -p .`: no output (clean).
 - `npm run build`: succeeds (only the existing chunk size warning).
 - `ruff check` from the root: All checks passed.
+
+## Fix round
+
+Finding F-109-V-01 (major): `withValidatedOptionalFields` in `frontend/src/lib/api.ts` kept `has_saved_answer` only when true, so the real `fetchHistory` turned `false` into absent and the row kept its source count. The round 1 test passed only because it mocked `fetchHistory`.
+
+- Fix: the validator keeps `has_saved_answer` when it is a boolean, true or false. A string, a number or null is still dropped to absent. The field comment in `HistoryItem` now says so.
+- Readers of the flag in `frontend/src`: `formatHistoryMeta` tests `=== false` (the new "No answer saved" path, the only one that changes); the restored-row builder tests `=== true` to set `hasSavedAnswer`, so false gives false, as absent did; the reopen handler tests `item.hasSavedAnswer === true`, so a false row still re-asks exactly as before. Nothing tests `!== undefined` or `in`. A person sees one change: the false row's text.
+- New tests: `frontend/src/lib/api.fetchHistory.test.ts` (real `fetchHistory`, fetch stubbed, rows false, true, absent, and a string "false" arrive as false, true, undefined, undefined) and `frontend/src/App.historyNoAnswer.test.tsx` (App rendered with only `fetch` stubbed; the false row reads "No answer saved", the true row and the no-flag row read "21 sources cited").
+- Red on the old validator: 2 failed, 8 passed (`undefined` instead of `false`; `Stopped question21 sources cited` did not match `/No answer saved/`). Green after the fix: 10 passed. Mutated back to `=== true`: 2 failed, restored.
+- Whole frontend suite: 67 files, 610 tests passed. `npx tsc --noEmit -p .`: clean. `npm run build`: succeeds (existing chunk size warning only). `ruff check` from the root: All checks passed.
