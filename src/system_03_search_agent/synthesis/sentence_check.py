@@ -652,8 +652,8 @@ async def _ask_jev(
     pair_calls, not_asked = build_pair_calls(sent)
     # Card 99: the calls run at the same time and none is charged until it
     # returns, so the cap must hold for all of them at once, at the most
-    # each can be charged: `MAX_JEV_COST_USD`, the ceiling the client bills
-    # a reply stating more (A-99-05, J-99-07). One check then reserves
+    # each can be charged: `MAX_JEV_COST_USD`, the most the client bills
+    # any one reply, one stating exactly that (A-99-05, J-99-07). One check then reserves
     # (calls x ceiling): `check_per_query_cap` adds the guard estimate to the
     # running cost, so the cap it is given is lowered to leave exactly that
     # much room. A query too close to its cap for every call approves

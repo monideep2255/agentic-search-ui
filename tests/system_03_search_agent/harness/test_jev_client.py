@@ -22,7 +22,6 @@ import pytest
 from system_03_search_agent.harness import jev_client as jev_client_module
 from system_03_search_agent.harness.jev_client import (
     JEV_FLOOR_COST_USD,
-    MAX_JEV_COST_USD,
     JevCallError,
     JevResult,
     call_jev,
@@ -248,9 +247,18 @@ async def test_call_jev_sends_the_callers_description(monkeypatch: pytest.Monkey
         ("Infinity", JEV_FLOOR_COST_USD),
         ("NaN", JEV_FLOOR_COST_USD),
         ("-0.1", JEV_FLOOR_COST_USD),
-        ("0.5", MAX_JEV_COST_USD),
-        ("0.02", MAX_JEV_COST_USD),
+        ("0.5", JEV_FLOOR_COST_USD),
+        ("0.02", JEV_FLOOR_COST_USD),
+        ("0.0100001", JEV_FLOOR_COST_USD),
+        ("1e309", JEV_FLOOR_COST_USD),
+        ('"0.05"', JEV_FLOOR_COST_USD),
+        ("1" + "0" * 400, JEV_FLOOR_COST_USD),
+        ("1" + "0" * 5000, JEV_FLOOR_COST_USD),
         ("true", JEV_FLOOR_COST_USD),
+    ],
+    ids=[
+        "Infinity", "NaN", "negative", "half a dollar", "two cents", "just above the ceiling",
+        "1e309", "a numeric string", "an int of 401 digits", "an int of 5001 digits", "true",
     ],
 )
 async def test_a_cost_no_decision_could_have_is_a_malformed_reply(
@@ -261,11 +269,12 @@ async def test_a_cost_no_decision_could_have_is_a_malformed_reply(
     every later model call in the question. Such a reply is malformed, so
     the guard's pick decides.
 
-    The owner's rule of 2026-09-29 (step 3a of the guardrail design): a
-    stated cost above the ceiling is billed the ceiling, never the reported
-    figure and never less (F-84-A06); a figure that is not a readable
+    The owner's rule of 2026-09-29 as written: a stated cost above the
+    ceiling is "otherwise", so billed the `JEV_FLOOR_COST_USD` floor,
+    never the reported figure, whatever its spelling (fix round, J-GRS-03,
+    A-GRS-03; develop billed the ceiling); a figure that is not a readable
     amount (infinity, not a number, negative, a boolean) is billed the
-    `JEV_FLOOR_COST_USD` floor, never $0.0."""
+    floor too, never $0.0."""
     raw = json.dumps(_success_body()).replace('"cost": 1.4784e-05', f'"cost": {cost}')
     assert f'"cost": {cost}' in raw
     monkeypatch.setattr(
@@ -510,17 +519,21 @@ async def test_a_batch_answer_outside_its_options_is_an_invalid_option(monkeypat
         ("Infinity", JEV_FLOOR_COST_USD),
         ("NaN", JEV_FLOOR_COST_USD),
         ("-0.1", JEV_FLOOR_COST_USD),
-        ("0.5", MAX_JEV_COST_USD),
-        ("0.02", MAX_JEV_COST_USD),
+        ("0.5", JEV_FLOOR_COST_USD),
+        ("0.02", JEV_FLOOR_COST_USD),
+        ("1e309", JEV_FLOOR_COST_USD),
+        ('"0.05"', JEV_FLOOR_COST_USD),
+        ("1" + "0" * 400, JEV_FLOOR_COST_USD),
     ],
+    ids=["Infinity", "NaN", "negative", "half a dollar", "two cents", "1e309", "a numeric string", "an int of 401 digits"],
 )
 async def test_a_batch_cost_no_call_could_have_is_malformed(
     monkeypatch: pytest.MonkeyPatch, cost: str, billed: float
 ) -> None:
     """Malformed, so nothing in the reply is used; a stated cost above the
-    ceiling is billed the ceiling (F-8.6-V01, F-84-A06), and a figure that
-    is not an amount the floor, never $0.0 (the owner's rule of
-    2026-09-29)."""
+    ceiling is billed the floor, never the figure (F-8.6-V01; the owner's
+    rule of 2026-09-29 as written, J-GRS-03), and a figure that is not an
+    amount the floor too, never $0.0."""
     raw = json.dumps(_batch_body({"item_1": "no", "item_2": "no"})).replace('"cost": 5.3e-05', f'"cost": {cost}')
     assert f'"cost": {cost}' in raw
     monkeypatch.setattr(jev_client_module, "_post", AsyncMock(return_value=httpx.Response(200, content=raw.encode())))

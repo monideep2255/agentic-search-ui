@@ -22,8 +22,16 @@ Every case's verdict (the guard event's passed, category and reason, or
 the step error's source and class) must equal the verdict develop's own
 code gives, recorded in `develop_decision_grid.json`. That file was written
 by running this same grid with develop's source at b01dee92 in place, and
-this test passes with develop's source in place too, so the verdicts are
+this test passed with develop's source in place too, so the verdicts are
 the same before and after the change.
+
+One difference from develop's record is approved and named in
+`_APPROVED_CLASS_CHANGES`: two unreadable guard replies end in a guardrail
+step error of class "transient", not "recoverable" (A-GR-10, the backend
+half of 3592e856, J-GRS-08). That changes only the words the web app shows
+for that step error; the case is still neither admitted nor refused. The
+recorded file stays develop's, unedited, and the change is applied to it
+here, for exactly those cases, so any other difference still fails.
 
 Every reply returns at once: no timeout or pause is in the grid, because
 the safe part does not touch the guardrail's waits (step 3b, the pause fix,
@@ -208,6 +216,27 @@ async def run_grid(monkeypatch: pytest.MonkeyPatch) -> dict[str, dict[str, Any]]
     return verdicts
 
 
+#: The approved differences from develop's record, by guard classifier
+#: outcome: develop's verdict, and the verdict this branch gives instead.
+_APPROVED_CLASS_CHANGES = {
+    "two unreadable replies": (
+        {"step_error": ["guardrail", "recoverable"]},
+        {"step_error": ["guardrail", "transient"]},
+    ),
+}
+
+
+def _expected_now(case_id: str, develop: dict[str, Any]) -> dict[str, Any]:
+    """Develop's recorded verdict with the approved class change applied."""
+    guard = case_id.split(" | ")[1]
+    change = _APPROVED_CLASS_CHANGES.get(guard)
+    if change is None:
+        return develop
+    was, now = change
+    assert develop == was, f"{case_id}: develop recorded {develop}, not {was}"
+    return now
+
+
 @pytest.fixture(autouse=True)
 def _env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GUARD_MODEL", "test-provider/guard-model")
@@ -230,14 +259,15 @@ def _env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.asyncio
 async def test_every_guard_and_jev_outcome_keeps_develops_verdict(monkeypatch: pytest.MonkeyPatch) -> None:
-    expected: dict[str, dict[str, Any]] = json.loads(_EXPECTED_PATH.read_text())
+    develop: dict[str, dict[str, Any]] = json.loads(_EXPECTED_PATH.read_text())
+    expected = {case: _expected_now(case, verdict) for case, verdict in develop.items()}
     actual = await run_grid(monkeypatch)
     assert set(actual) == set(expected), "the grid and develop's recorded verdicts list different cases"
     differences = {case: (expected[case], actual[case]) for case in expected if actual[case] != expected[case]}
-    assert not differences, f"{len(differences)} of {len(expected)} verdicts differ from develop's: " + "; ".join(
-        f"{case}: develop {want}, now {got}" for case, (want, got) in list(differences.items())[:10]
+    assert not differences, f"{len(differences)} of {len(expected)} verdicts differ from develop's, the approved class change applied: " + "; ".join(
+        f"{case}: expected {want}, now {got}" for case, (want, got) in list(differences.items())[:10]
     )
     # The grid reaches every kind of verdict, so an all-admit or all-refuse
     # stub could not pass it by accident.
-    kinds = {json.dumps(v, sort_keys=True) for v in expected.values()}
+    kinds = {json.dumps(v, sort_keys=True) for v in develop.values()}
     assert len(kinds) >= 4, kinds

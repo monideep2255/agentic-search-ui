@@ -1279,11 +1279,9 @@ export function useRunView(events: AgentEvent[]): RunView {
      * Decided by category, from `source` and `error_class` alone (fix round,
      * A-GR-10): only a fatal error whose `source` is the guardrail AND whose
      * class is "transient", the check not finishing on our side, reads these
-     * words. The backend sends a double timeout as "transient". Two
-     * unreadable guard replies still arrive as "recoverable" from
-     * `core/graph.py`, which this change left alone, so they keep develop's
-     * words. A "recoverable" guardrail failure is otherwise one the question
-     * caused, a provider's content-policy refusal or a 400, and keeps
+     * words. The backend sends a double timeout and two unreadable guard
+     * replies as "transient". A "recoverable" guardrail failure is one the
+     * question caused, a provider's content-policy refusal or a 400, and keeps
      * "rephrase the question"; an "unexpected" one, a 401 among them, is not
      * fixed by asking again, and keeps its own line; a stopped run keeps its
      * own line. Every other failure keeps `FATAL_COPY`. `source`,

@@ -5,14 +5,12 @@
  * how long, in seconds up to two minutes and in minutes past that.
  *
  * Only a fatal error whose `source` is the guardrail AND whose class is
- * "transient" changes: the guardrail's own check not finishing, such as two
- * timeouts (fix round, A-GR-10). A guardrail failure the question caused
- * ("recoverable": a content-policy refusal, a 400) keeps "rephrase the
- * question"; one asking again cannot fix ("unexpected": a 401) keeps its own
- * line. Two unreadable guard replies still arrive as "recoverable" from
- * `core/graph.py`, which the safe part of 2026-10-09 left unchanged, so they
- * keep develop's words too. Every other failure keeps its own line, "in a moment"
- * included, and a stopped run keeps "This run was stopped". The backend's
+ * "transient" changes: the guardrail's own check not finishing, two timeouts
+ * or two unreadable replies (fix round, A-GR-10; `core/graph.py` sends both
+ * as "transient"). A guardrail failure the question caused ("recoverable": a
+ * content-policy refusal, a 400) keeps "rephrase the question"; one asking
+ * again cannot fix ("unexpected": a 401) keeps its own line. Every other
+ * failure keeps its own line, "in a moment" included, and a stopped run keeps "This run was stopped". The backend's
  * free-form `message` is never rendered (F-4.8-A-15): the messages below are
  * quoted from `core/graph.py` only to prove they never reach the screen.
  *
@@ -26,7 +24,9 @@
  * source turns "other failures keep their own words" red; dropping the
  * minutes arm turns the long-wait case red; reading the branch for every
  * class but "cancelled" (the first build) turns the content-policy, 400 and
- * 401 cases red.
+ * 401 cases red. Whether two unreadable replies read these words rests on
+ * the class `core/graph.py` sends, pinned by the backend's
+ * `test_each_kind_of_guardrail_failure_carries_its_own_category`.
  */
 
 import { renderHook } from "@testing-library/react";
@@ -94,6 +94,14 @@ describe("useRunView: a guardrail failure reads plain words", () => {
     expect(failure({ error_class: "transient", message: TRANSIENT_MESSAGE })).toBe(PLAIN);
   });
 
+  it("two unreadable replies read the same words, never 'rephrase the question'", () => {
+    // The backend sends two unreadable replies as "transient" (A-GR-10).
+    const text = failure({ error_class: "transient", message: NO_USABLE_VERDICT_MESSAGE });
+    expect(text).toBe(PLAIN);
+    expect(text).not.toContain("rephrase");
+    expect(text).not.toContain("Retrying the query");
+  });
+
   it("a named wait reads in seconds, 'second' for one", () => {
     expect(failure({ retry_after_s: 20 })).toBe(WITH_WAIT("20 seconds"));
     expect(failure({ retry_after_s: 1 })).toBe(WITH_WAIT("1 second"));
@@ -135,14 +143,6 @@ describe("useRunView: a guardrail failure the question caused, or that asking ag
 
   it("a 400 reads develop's words, a named wait ignored", () => {
     expect(failure({ error_class: "recoverable", retry_after_s: 20 })).toBe(REPHRASE);
-  });
-
-  it("two unreadable replies, sent as 'recoverable' today, read develop's words", () => {
-    // `core/graph.py` sends two unreadable guard replies as "recoverable";
-    // this change leaves that class alone, so the words stay develop's.
-    const text = failure({ error_class: "recoverable", message: NO_USABLE_VERDICT_MESSAGE });
-    expect(text).toBe(REPHRASE);
-    expect(text).not.toContain("Retrying the query");
   });
 
   it("a 401 reads develop's words, never 'not with your question'", () => {

@@ -995,17 +995,17 @@ What you should see:
 
 Queries to try:
 
-- `Which diseases are associated with BRCA1?`, as a new search. The failure itself cannot be triggered on demand: it shows only when the check every question passes first gets no answer in time, twice, which happens on a slow spell at the model provider, about 15 seconds after the question is sent.
+- `Which diseases are associated with BRCA1?`, as a new search. The failure itself cannot be triggered on demand: it shows only when the check every question passes first cannot finish. That happens on a slow or busy spell at the model provider (no answer in time twice, a rate limit, a server error, a dropped connection), about 15 seconds after the question is sent, or when the check's two replies both come back unreadable.
 - Query 1 covers the ordinary answer to the same question.
 
 What you should see:
 
 - Only when that check could not finish: no answer, no citation chips, and the message "We could not finish checking your question, so nothing was searched. This was a problem on our side, not with your question. Try asking again."
-- It never reads "Try asking again in a moment" and never "rephrase the question" for this failure.
+- For these failures it never reads "Try asking again in a moment" and never "rephrase the question".
 - Asking the same question again a little later answers it as query 1 does.
-- When the model provider refuses the question, or the check's two replies both come back unreadable, the message still reads "This run could not be completed. Try asking again, or rephrase the question."
+- When the model provider refuses the question under its content policy, or rejects the request as malformed, or refuses our own key, the message still reads "This run could not be completed. Try asking again, or rephrase the question." The first two may be the question's fault and asking again cannot fix the third, so none of them says the problem was ours.
 - A search you stopped still reads "This run was stopped before it finished, so no answer was written."
-- Why it matters: before this, a person whose question was fine was told to rephrase it, and did not know that nothing had been searched. Saying the problem was ours, and that asking again is the fix, tells them what to do next.
+- Why it matters: before this, a check that ran out of time read "This run could not be completed. Try asking again in a moment", which said neither that nothing was searched nor whose problem it was, and a check whose two replies came back unreadable told a person whose question was fine to rephrase it. Saying the problem was ours, and that asking again is the fix, tells them what to do next.
 
 ## 7. Sign in, sessions and history
 

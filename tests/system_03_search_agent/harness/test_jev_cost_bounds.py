@@ -1,27 +1,28 @@
 """Step 3a of the guardrail design (cards 84 and 72): what one Jev reply is
 charged, as the pure functions `_stated_cost_usd` and `jev_charge_usd` fix
-it, by the product owner's rule of 2026-09-29.
+it, by the product owner's rule of 2026-09-29, as written: "the cost it
+states when that is above $0 and at most `MAX_JEV_COST_USD`, otherwise a
+floor near Jev's real price, about $0.0001, never $0".
 
 | What the reply states | Charged |
 |---|---|
-| a cost above $0 and at most `MAX_JEV_COST_USD` | that cost |
-| a finite cost above `MAX_JEV_COST_USD`, an integer too large for a float included | `MAX_JEV_COST_USD` (F-84-A06) |
-| $0, no cost, or an unreadable amount (not a number, negative, a boolean, `NaN`, infinity) | `JEV_FLOOR_COST_USD` (F-72-J02, A03) |
+| a finite cost above $0 and at most `MAX_JEV_COST_USD` | that cost |
+| a cost above `MAX_JEV_COST_USD`, however spelled: 0.05, 1e309, Infinity, an integer too large for a float, a numeric string | `JEV_FLOOR_COST_USD` (fix round, J-GRS-03, J-GRS-04, A-GRS-03; develop charged the ceiling) |
+| $0, no cost, or an unreadable amount (not a number, negative, a boolean, `NaN`) | `JEV_FLOOR_COST_USD` (F-72-J02, A03) |
 
 Usable or not makes no difference (F-84-J04); `test_jev_followup_costs.py`
 proves that end to end through `call_jev`, `call_jev_batch` and the three
 charge sites, with the error statuses and the timeout.
 
-MUTATION PROOF: `jev_charge_usd` returning the floor above the ceiling (the
-parked branch's F-84-A06) turns `test_more_stated_is_never_less_charged`
-red; returning the stated $0 turns `test_a_stated_zero_is_charged_the_floor`
+MUTATION PROOF: `jev_charge_usd` returning the ceiling above it (develop's
+rule, F-84-A06) turns `test_a_stated_cost_above_the_ceiling_is_charged_the_floor`
+and `test_the_boundary_at_the_ceiling` red; returning the stated $0 turns `test_a_stated_zero_is_charged_the_floor`
 red; returning `MAX_JEV_COST_USD` for no amount (develop's rule) turns
 `test_no_amount_is_charged_the_floor` red.
 """
 
 from __future__ import annotations
 
-import itertools
 import math
 import sys
 
@@ -99,26 +100,37 @@ def test_no_cost_field_is_charged_the_floor(payload: object) -> None:
 
 @pytest.mark.parametrize(
     "raw",
-    [0.0100001, 0.05, 12.5, 1e300, 10**400],
-    ids=["just above", "five cents", "a units slip", "a huge finite figure", "an overflowing int"],
+    [0.0100001, 0.05, 12.5, 1e300, 1e309, math.inf, "Infinity", "0.05", "1e309", 10**400, 10**5000],
+    ids=[
+        "just above", "five cents", "a units slip", "a huge finite figure", "1e309",
+        "infinity", "the string Infinity", "a numeric string", "the string 1e309",
+        "an overflowing int", "an int of 5001 digits",
+    ],
 )
-def test_a_stated_cost_above_the_ceiling_is_charged_the_ceiling(raw: object) -> None:
-    """F-84-A06: the parked branch charged these the floor, so the more a
-    reply said it cost, the less was counted. F-8.6-V01: never the stated
-    figure either."""
-    assert _charge(raw) == MAX_JEV_COST_USD
+def test_a_stated_cost_above_the_ceiling_is_charged_the_floor(raw: object) -> None:
+    """The owner's rule as written: above `MAX_JEV_COST_USD` is "otherwise",
+    so the floor, whatever the figure's spelling (fix round, J-GRS-03,
+    J-GRS-04, A-GRS-03; develop charged the ceiling). F-8.6-V01: never the
+    stated figure either."""
+    assert _charge(raw) == JEV_FLOOR_COST_USD
 
 
-def test_more_stated_is_never_less_charged() -> None:
-    """The charge never falls as a finite stated cost rises, from the first
-    cent above $0 to the largest float (F-84-A06). Infinity is not a stated
-    amount: it is unreadable, and charged the floor."""
-    stated = [
-        1e-9, 0.00001, 0.0001, 0.005, 0.0099, MAX_JEV_COST_USD, 0.0100001, 0.05, 1.0, 1e9, sys.float_info.max,
-    ]
-    charges = [jev_charge_usd(value) for value in stated]
-    for lower, higher in itertools.pairwise(charges):
-        assert higher >= lower, charges
+def test_the_boundary_at_the_ceiling() -> None:
+    """Exactly `MAX_JEV_COST_USD` is "at most", so charged as stated; the
+    next float above it is "otherwise", so the floor."""
+    above = math.nextafter(MAX_JEV_COST_USD, math.inf)
+    assert jev_charge_usd(MAX_JEV_COST_USD) == MAX_JEV_COST_USD
+    assert jev_charge_usd(above) == JEV_FLOOR_COST_USD
+    assert jev_charge_usd(sys.float_info.max) == JEV_FLOOR_COST_USD
+
+
+def test_the_boundary_at_zero() -> None:
+    """$0 is not "above $0", so the floor; the smallest float above it is,
+    so charged as stated (A-GRS-04, J-GRS-05: left as the rule reads)."""
+    smallest = math.nextafter(0.0, 1.0)
+    assert jev_charge_usd(0.0) == JEV_FLOOR_COST_USD
+    assert jev_charge_usd(-0.0) == JEV_FLOOR_COST_USD
+    assert jev_charge_usd(smallest) == smallest
 
 
 def test_every_charge_is_above_zero_and_at_most_the_ceiling() -> None:
@@ -127,7 +139,7 @@ def test_every_charge_is_above_zero_and_at_most_the_ceiling() -> None:
     words."""
     raws: list[object] = [
         float("nan"), float("-inf"), float("inf"), -1.0, 0.0, 1e-12, 0.005, MAX_JEV_COST_USD,
-        0.5, 999.9, 10**400, -(10**400), "abc", "0.002", True, None,
+        0.5, 999.9, 10**400, 10**5000, -(10**400), "abc", "0.002", "1e309", True, None,
     ]
     for raw in raws:
         charged = _charge(raw)

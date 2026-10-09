@@ -807,14 +807,14 @@ def _free_guard(monkeypatch: pytest.MonkeyPatch, *, reply: str = "relevant") -> 
 @pytest.mark.parametrize(
     ("cost", "choice", "reason", "charged"),
     [
-        ("0.02", "relevant", "malformed_reply", MAX_JEV_COST_USD),
+        ("0.02", "relevant", "malformed_reply", JEV_FLOOR_COST_USD),
         ("0.004", "maybe", "invalid_option", 0.004),
         ("Infinity", "relevant", "malformed_reply", JEV_FLOOR_COST_USD),
         ("NaN", "relevant", "malformed_reply", JEV_FLOOR_COST_USD),
         ("-0.1", "relevant", "malformed_reply", JEV_FLOOR_COST_USD),
     ],
     ids=[
-        "above the ceiling, charged at the ceiling",
+        "above the ceiling, charged the floor (the owner's rule as written, J-GRS-03)",
         "an option outside the set, charged",
         "infinite, an unreadable amount, charged the floor",
         "not a number, not an amount",
@@ -840,23 +840,26 @@ async def test_an_unusable_jev_reply_is_charged_at_its_reported_cost(
 
 @pytest.mark.asyncio
 async def test_the_cost_cap_still_applies_after_an_over_ceiling_charge(monkeypatch: pytest.MonkeyPatch) -> None:
-    """$0.02 reported, charged at the $0.01 ceiling (F-8.6-V01) against a
-    $0.015 cap: the guard fallback is refused by the cap before it is
-    sent, and the fail-open default is recorded.
+    """An option outside the set stating the $0.01 ceiling, charged as
+    stated, against a $0.015 cap: the guard fallback is refused by the cap
+    before it is sent, and the fail-open default is recorded.
 
     The cap was $0.005 here until the fix round's F-8.7-A06: a Jev call can
-    be billed its $0.01 ceiling, so under a $0.005 cap the check now refuses
-    it before it is sent, which is the cap holding as a bound."""
+    be billed $0.01, so under a $0.005 cap the check now refuses it before
+    it is sent, which is the cap holding as a bound. Until the safe part's
+    fix round this reply stated $0.02 and was charged the ceiling; the
+    owner's rule as written charges that the floor (J-GRS-03), so the reply
+    now states the ceiling itself."""
     _jev_mode(monkeypatch)
     _patch_cap(monkeypatch, cap_usd="0.015")
     mock_guard = _free_guard(monkeypatch)
-    _real_jev_reply(monkeypatch, cost="0.02")
+    _real_jev_reply(monkeypatch, cost="0.01", choice="maybe")
     harness = Harness(trace_id="j10-2")
 
     record = await decide(harness, "j10-2", "guardrail.relevancy", "x", _OPTIONS, default="relevant")
 
     mock_guard.assert_not_called()
-    assert record.fallback_reason == "no_usable_pick:malformed_reply"
+    assert record.fallback_reason == "no_usable_pick:invalid_option"
     assert record.chosen == "relevant"
     assert harness.get_query_cost_usd("j10-2") == pytest.approx(MAX_JEV_COST_USD)
 
