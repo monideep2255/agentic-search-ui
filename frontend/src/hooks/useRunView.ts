@@ -1229,9 +1229,44 @@ export function useRunView(events: AgentEvent[]): RunView {
       recoverable: "This run could not be completed. Try asking again, or rephrase the question.",
       unexpected: "This run could not be completed. Try asking again, or rephrase the question.",
     };
+    /*
+     * Guardrail failures get their own words (cards 84 and 72, step 1 of the
+     * guardrail design, accepted by the owner on 2026-10-08). When the check
+     * every question passes first could not finish, a double timeout or two
+     * unreadable replies, nothing was searched and nothing was wrong with the
+     * question, so "rephrase the question" and "in a moment" were both wrong.
+     * Only a fatal error whose `source` is the guardrail reads these words;
+     * every other failure keeps `FATAL_COPY`, and a stopped run keeps its own
+     * line. `source` and `retry_after_s` are a fixed step name and a number on
+     * the wire, never free text, so the backend's `message` is still never
+     * rendered (F-4.8-A-15).
+     *
+     * A wait the provider named arrives in `retry_after_s`: seconds up to two
+     * minutes, whole minutes past that (F-84-A02, F-72-V05). A wait of 0, one
+     * that has passed or none named, reads the plain "Try asking again.", so a
+     * person is never told to wait when no wait is known (F-84-A01, A09).
+     */
+    const GUARDRAIL_FAILURE =
+      "We could not finish checking your question, so nothing was searched. " +
+      "This was a problem on our side, not with your question.";
+    const guardrailFailure = (retryAfterS: number): string => {
+      const seconds =
+        Number.isFinite(retryAfterS) && retryAfterS > 0 ? Math.ceil(retryAfterS) : 0;
+      if (seconds === 0) return `${GUARDRAIL_FAILURE} Try asking again.`;
+      if (seconds <= 120) {
+        return (
+          `${GUARDRAIL_FAILURE} Try asking again in about ${seconds} ` +
+          `${seconds === 1 ? "second" : "seconds"}.`
+        );
+      }
+      return `${GUARDRAIL_FAILURE} Try asking again in about ${Math.ceil(seconds / 60)} minutes.`;
+    };
     const failure =
       fatalError && fatalError.type === "error"
-        ? (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
+        ? fatalError.payload.source === "guardrail" &&
+          fatalError.payload.error_class !== "cancelled"
+          ? guardrailFailure(fatalError.payload.retry_after_s)
+          : (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
         : null;
 
     const failedGuard = events.find(
