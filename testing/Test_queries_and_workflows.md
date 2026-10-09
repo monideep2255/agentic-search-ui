@@ -1826,7 +1826,7 @@ What you should see:
 - They say what the PubTator3 and LitVar2 searches return, that each source has its own time limit with Pathogen Detection's 120 seconds the longest, and that some follow-up searches run in a second round after the first.
 - No page or README names LitSense, which nothing calls, and README names no Redis cache.
 - Known, card 76: the layer 3 stop names three kinds of question searched another way where there are five, and the About walk says BRCA1's live searches run at the same time as the graph, where four of its thirteen run in a second round.
-- About, "Cite or refuse": every sentence there describes something you can see on an answer. It does not mention a coloured track beside the answer, which the answer screen no longer has. It says each claim's marker carries its layer's colour and a line of framing with no source shows in muted ink with no marker. Stop 5 says a sentence that copies part of a record word for word is judged by the same model check, and the whole sentence is dropped if any copied part is held back.
+- About, "Cite or refuse": every sentence there describes something you can see on an answer. It does not mention a coloured track beside the answer, which the answer screen no longer has. It says each claim's marker carries its layer's colour and a line of framing with no source shows in muted ink with no marker. Stop 5 says a copied cut is judged by the same model check, and a sentence with any copied piece held back is dropped whole.
 - Why it matters: a researcher who reads how the system works and then sees it do something else stops trusting the rest of what it says.
 
 ## Workflow for the product owner

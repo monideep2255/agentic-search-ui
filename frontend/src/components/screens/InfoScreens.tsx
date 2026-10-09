@@ -1485,11 +1485,10 @@ export function AboutScreen({
             the record it points at: the exact words must be in the record, every number must be in
             the quote, and a negation must match. A sentence that fails those checks is dropped. One
             that passes but was reworded is then judged by a model, and kept only when the model
-            finds it adds nothing beyond the record's own words. A sentence that copies part of a
-            record word for word is judged the same way, and if any copied part is held back the
-            whole sentence is dropped. If nothing citeable survives, the system says it could not
-            find an answer and stops instead of answering from memory. That rule is called cite or
-            refuse.
+            finds it adds nothing beyond the record's own words. A copied cut is judged the same
+            way, and a sentence with any copied piece held back is dropped whole. If nothing
+            citeable survives, the system says it could not find an answer and stops instead of
+            answering from memory. That rule is called cite or refuse.
           </StopText>
           <StopText>
             What reaches your browser is a stream of small events rather than one finished page:
