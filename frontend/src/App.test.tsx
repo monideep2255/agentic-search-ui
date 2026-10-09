@@ -654,7 +654,7 @@ describe("F-4.13-A-07: re-asking a restored question", () => {
     fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
   });
 
-  it("moves the re-asked row to the top instead of relabeling it in place", async () => {
+  it("puts the re-ask on top as a new row, keeps the restored row, and relabels nothing in place", async () => {
     // Two restored rows, newest first (the server's own order). The
     // OLDER one, "What is BRCA1?", is re-asked from the rail.
     //
@@ -663,7 +663,11 @@ describe("F-4.13-A-07: re-asking a restored question", () => {
     // `history`, NOTHING is added and NOTHING is moved, so the row stays
     // in its original, lower position. The prototype's `start()` instead
     // filters the old entry out and unshifts a fresh one to the top
-    // (`app.html` around line 1262), which is what this test requires.
+    // (`app.html` around line 1262).
+    //
+    // Card 112 kept the new row on top and dropped the filter: each search
+    // is its own row on the server, and filtering earlier ones out made them
+    // vanish from "Your searches" until a reload (11 rows fell to 5).
     fetchHistoryMock.mockResolvedValue({
       items: [
         { trace_id: "restored-newer", question: "Which variant is pathogenic in CFTR?" },
@@ -685,20 +689,25 @@ describe("F-4.13-A-07: re-asking a restored question", () => {
     );
 
     const afterRail = screen.getByTestId("history-rail");
-    // No duplicate: still exactly one row for the re-asked question.
+    // Card 112: the restored row stays, and the re-ask is a second row.
     expect(
       within(afterRail).getAllByRole("button", { name: /what is brca1\?/i }),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
 
-    // Moved to the top: ahead of the row that was newer before the re-ask.
+    // The new row is on top, ahead of the row that was newer before the
+    // re-ask; the restored row keeps its place below it.
     const buttonTexts = within(afterRail)
       .getAllByRole("button")
       .map((button) => button.textContent ?? "");
     const brca1Index = buttonTexts.findIndex((text) => /what is brca1\?/i.test(text));
+    const restoredIndex = buttonTexts.findIndex(
+      (text, index) => index > brca1Index && /what is brca1\?/i.test(text),
+    );
     const cftrIndex = buttonTexts.findIndex((text) => /cftr/i.test(text));
     expect(brca1Index).toBeGreaterThan(-1);
     expect(cftrIndex).toBeGreaterThan(-1);
     expect(brca1Index).toBeLessThan(cftrIndex);
+    expect(restoredIndex).toBeGreaterThan(cftrIndex);
   });
 
   it("does not relabel an unrelated restored row's meta when a different question lands", async () => {
@@ -772,9 +781,10 @@ describe("F-4.13-RV-01: a rail row's identity survives the list shrinking", () =
     await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
 
     // 2. Re-ask A from the rail, the exact interaction F-4.13-A-07's fix
-    //    exists to enable. Filter-then-unshift REMOVES the old row and adds
-    //    one, so the list length is 1 before and 1 after: the moment a
-    //    length-derived id stops being unique.
+    //    exists to enable. Filter-then-unshift used to REMOVE the old row
+    //    and add one, so the list length was 1 before and 1 after: the
+    //    moment a length-derived id stops being unique. Card 112 keeps the
+    //    old row, so the rail now holds two rows for A, each its own id.
     let rail = await screen.findByTestId("history-rail");
     await user.click(within(rail).getByRole("button", { name: /what is brca1\?/i }));
     await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(2));
@@ -788,8 +798,8 @@ describe("F-4.13-RV-01: a rail row's identity survives the list shrinking", () =
 
     rail = screen.getByTestId("history-rail");
     expect(
-      within(rail).getByRole("button", { name: /what is brca1\?/i }),
-    ).toBeInTheDocument();
+      within(rail).getAllByRole("button", { name: /what is brca1\?/i }),
+    ).toHaveLength(2);
     expect(within(rail).getByRole("button", { name: /cftr/i })).toBeInTheDocument();
 
     // 4. Each row must run ITS OWN question. Both are asserted rather than
@@ -798,7 +808,7 @@ describe("F-4.13-RV-01: a rail row's identity survives the list shrinking", () =
     //    fix deliberately changed, and pinning only one would go vacuous the
     //    next time that ordering moves.
     createRunMock.mockClear();
-    await user.click(within(rail).getByRole("button", { name: /what is brca1\?/i }));
+    await user.click(within(rail).getAllByRole("button", { name: /what is brca1\?/i })[0]!);
     await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
     expect(createRunMock).toHaveBeenCalledWith(
       expect.objectContaining({ text: "What is BRCA1?" }),
