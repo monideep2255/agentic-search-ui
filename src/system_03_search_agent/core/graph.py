@@ -4889,8 +4889,21 @@ def _layer_tool_output_to_structured_fields(
 
     if tool == "litvar2_lookup":
         litvar: Litvar2LookupOutput = output
+        # A search for one rs id keeps only that rs id's own records. The
+        # autocomplete also returns variants that merely start with the same
+        # digits (rs334348 for rs334); those are different variants and are
+        # never shown as the one asked about. An exact comparison of the
+        # parsed rs number, never a text prefix. A query that is not a bare
+        # rs id (HGVS, a name) is left unfiltered.
+        asked_rsid = ""
+        if tool_input is not None and getattr(tool_input, "root", None) is not None:
+            candidate = str(getattr(tool_input.root, "query", "") or "").strip().casefold()
+            if re.fullmatch(r"rs\d+", candidate):
+                asked_rsid = candidate
         for match in litvar.variant_matches:
             if not match.source_url:
+                continue
+            if asked_rsid and str(match.rsid or "").strip().casefold() != asked_rsid:
                 continue
             rows.append(
                 _pseudo_row(
