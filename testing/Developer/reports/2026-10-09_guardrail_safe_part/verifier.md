@@ -132,3 +132,18 @@ Read, not probed:
 Inside this phase's own fix: V-GRS-09, a comment this phase wrote that the fix round made wrong. Minor, no behaviour.
 
 MERGE. No finding blocks. V-GRS-06 (multi-word provider names log as "unknown") and V-GRS-09 (the stale charge comment) are worth one small follow-up before step 2 reads the log lines.
+
+## Delta check, 5cc03194
+
+Scope: the change from 6f21e0fc to 5cc03194 (multi-word provider names in `_HOST_NAME_SHAPED`, separate length cap, credential check also splitting on spaces).
+
+Probed by running `provider_of` on samples assembled in a script kept outside the checkout:
+- Rejected (logs "unknown"): embedded line feed, carriage return, tab, escape, NUL, equals sign, slash, percent sign, accented and full-width characters, no-break space, line separator, double space, 65 or more characters, 16 or more character runs with a digit, runs over 32 characters.
+- Trimmed, not rejected: leading or trailing space, tab or line feed (strip happens first, as before). Nothing inside survives.
+- Real names now log as written: Google AI Studio, Amazon Bedrock, Nebius AI Studio, Moonshot AI, Atlas Cloud. Single words unchanged.
+- Bound: the cap is checked on the stripped value, 66 characters of valid words gives "unknown", so the line bound holds.
+- Tests as run by me: harness plus guardrail 918 passed, decision grid test 1 passed (no guard verdict changes), ruff check clean, isort clean. Working tree has no edits.
+
+V-GRS-D01 (minor): the credential opening list (sk-, sk_, bearer, eyj, ghp_, github_pat, xox, akia and the like) is checked only at the start of the whole value, not at the start of each word. "Google" followed by a short key-opening word (for example an sk- word with a few characters) now logs as written, where before the space made it "unknown". Long keys are still caught by the run-length rules, so only a short, space-separated key fragment after a real word gets through, and a router would have to send that in the provider field. Suggested fix: apply the opening check to each space-separated word.
+
+Verdict: MERGE (D01 is minor and contrived; fix at the lead's discretion).
