@@ -214,6 +214,9 @@ _CRASH_LOG_MAX_GROUP_MEMBERS = 5
 _CRASH_LOG_MAX_NAME_CHARS = 100
 #: The trace id is a 36 character UUID; the cap keeps the first line short.
 _CRASH_LOG_MAX_TRACE_ID_CHARS = 48
+#: The error class on line 1 is its short name, cut to this, so the line holds
+#: the trace id and the class in one read and stays short enough not to wrap.
+_CRASH_LOG_FIRST_LINE_CLASS_CHARS = 30
 #: The whole record. Anything past it is dropped, first line first kept.
 _CRASH_LOG_MAX_CHARS = 6000
 
@@ -261,8 +264,8 @@ def _crash_frames(exc: BaseException) -> list[str]:
 
 def _crash_record(trace_id: str, exc: BaseException) -> str:
     """Build the whole crash record. The first line is short and starts with
-    the trace id, so a log handler that wraps long lines can never split it;
-    the detail follows on later lines."""
+    `trace_id=<id>` and the error class, so a log handler that wraps long lines
+    can never split them from each other; the detail follows on later lines."""
     chain: list[BaseException] = []
     seen: set[int] = set()
     link: BaseException | None = exc
@@ -271,7 +274,10 @@ def _crash_record(trace_id: str, exc: BaseException) -> str:
         chain.append(link)
         link = _next_link(link)
     lines = [
-        f"search crashed, trace {str(trace_id)[:_CRASH_LOG_MAX_TRACE_ID_CHARS]}",
+        (
+            f"search crashed trace_id={str(trace_id)[:_CRASH_LOG_MAX_TRACE_ID_CHARS]}"
+            f" error_class={_clip(type(exc).__qualname__)[:_CRASH_LOG_FIRST_LINE_CLASS_CHARS]}"
+        ),
         f"exception_class={_class_name(exc)}",
         f"chain={' <- '.join(_class_name(item) for item in chain)}",
     ]
@@ -322,7 +328,7 @@ def _log_crash(trace_id: str, exc: BaseException) -> None:
     except Exception:  # noqa: BLE001 - nothing here may cost the person the error event
         try:
             logger.error(
-                "search crashed, trace %s: crash record could not be built",
+                "search crashed trace_id=%s: crash record could not be built",
                 str(trace_id)[:_CRASH_LOG_MAX_TRACE_ID_CHARS],
             )
         except Exception:  # noqa: BLE001, S110 - last line of defence, nothing left to try
