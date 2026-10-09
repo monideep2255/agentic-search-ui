@@ -448,7 +448,9 @@ def test_provider_of_only_believes_a_plain_string() -> None:
         ("api.together.xyz", "api.together.xyz"),
         ("Fireworks-2", "Fireworks-2"),
         ("Atlas_Cloud", "Atlas_Cloud"),
-        ("Google AI Studio", None),
+        ("Google AI Studio", "Google AI Studio"),
+        ("Google  AI", None),
+        (" " + "s" + "k" + "-or-v1-abc def", None),
         ("Deep\nInfra\x1b[31m", None),
         ("Deep\rInfra\tX", None),
         ("name=evil; cat /etc/passwd", None),
@@ -462,7 +464,9 @@ def test_provider_of_only_believes_a_plain_string() -> None:
         "a host with dots",
         "a host with a hyphen and a digit",
         "a host with an underscore",
-        "a name with spaces",
+        "a name with single spaces",
+        "a double space",
+        "a key-shaped word among words",
         "a line break and an escape sequence",
         "a carriage return and a tab",
         "punctuation and slashes",
@@ -500,6 +504,7 @@ def _key_shaped() -> list[str]:
         "api.example.com." + hex64[:24],  # a host carrying a token label
         b64,  # 40 letters, longer than any host label
         "gh" + "p_" + b64[:30],
+        "Google AI " + "s" + "k" + "-or-v1-" + hex64[:20],  # a key among words
     ]
 
 

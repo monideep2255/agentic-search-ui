@@ -40,13 +40,17 @@ logger = logging.getLogger(__name__)
 #: so a longer one is not a host name and logs as "unknown".
 _PROVIDER_MAX_CHARS: Final[int] = 64
 
-#: A host-name-shaped provider: ASCII letters, digits, dots, hyphens and
-#: underscores only, 1 to `_PROVIDER_MAX_CHARS` of them. The router's field
-#: is untrusted text from outside, so a value with any other character, a
-#: space, a line break, an escape sequence, a slash or an equals sign
-#: included, is not repaired: it logs as "unknown" (step 3c of the
-#: guardrail design, F-84-J07; fix round, A-GRS-01, J-GRS-10).
-_HOST_NAME_SHAPED: Final[re.Pattern[str]] = re.compile(r"[A-Za-z0-9._-]{1,64}")
+#: A host-name-shaped provider: words of ASCII letters, digits, dots,
+#: hyphens and underscores, separated by single spaces, 1 to
+#: `_PROVIDER_MAX_CHARS` characters in all. Single spaces are kept because
+#: the router names many providers in words ("Google AI Studio", "Amazon
+#: Bedrock"), and the parked step 2 needs those names to rank hosts
+#: (V-GRS-06). The router's field is untrusted text from outside, so a value
+#: with any other character, a line break, a tab, an escape sequence, a
+#: slash or an equals sign included, is not repaired: it logs as "unknown"
+#: (step 3c of the guardrail design, F-84-J07; fix round, A-GRS-01,
+#: J-GRS-10).
+_HOST_NAME_SHAPED: Final[re.Pattern[str]] = re.compile(r"[A-Za-z0-9._-]+(?: [A-Za-z0-9._-]+)*")
 
 #: The openings of a credential or token, lower-cased: router and model
 #: keys, a bearer header, a JWT's encoded header, common access tokens.
@@ -59,7 +63,7 @@ _CREDENTIAL_OPENINGS: Final[tuple[str, ...]] = (
 #: name: provider names and host labels are short words.
 _DIGIT_RUN_CHARS: Final[int] = 16
 _LONG_RUN_CHARS: Final[int] = 32
-_SEPARATORS: Final[re.Pattern[str]] = re.compile(r"[._-]")
+_SEPARATORS: Final[re.Pattern[str]] = re.compile(r"[._ -]")
 
 #: Every other text field's cap: `point`, `trace`, `kind` and `outcome`.
 _FIELD_MAX_CHARS: Final[int] = 64
@@ -127,8 +131,8 @@ def provider_of(response: Any) -> str | None:
     `provider` field of its reply. Only a plain string is believed, so a
     reply without one, or a test double, reads as None. Outer whitespace is
     trimmed; then the value is kept only when it is shaped like a host name
-    (`_HOST_NAME_SHAPED`: letters, digits, dots, hyphens and underscores, at
-    most 64 characters) and not like a key or a token
+    (`_HOST_NAME_SHAPED`: words of letters, digits, dots, hyphens and
+    underscores between single spaces, at most 64 characters) and not like a key or a token
     (`_looks_like_a_credential`). Anything else reads as None and logs as
     "unknown", never a repaired or cut copy, so no part of a secret, a URL
     or a forged field reaches the log (step 3c of the guardrail design,
@@ -138,7 +142,11 @@ def provider_of(response: Any) -> str | None:
     if not isinstance(value, str):
         return None
     value = value.strip()
-    if not _HOST_NAME_SHAPED.fullmatch(value) or _looks_like_a_credential(value):
+    if (
+        len(value) > _PROVIDER_MAX_CHARS
+        or not _HOST_NAME_SHAPED.fullmatch(value)
+        or _looks_like_a_credential(value)
+    ):
         return None
     return value
 
