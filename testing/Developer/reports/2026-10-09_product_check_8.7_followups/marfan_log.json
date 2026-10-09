@@ -1,0 +1,1637 @@
+{
+ "mode": "marfan",
+ "steps": [
+  {
+   "k": "signed in, email visible unmasked",
+   "v": false
+  },
+  {
+   "k": "textbox visible after resize",
+   "v": false
+  },
+  {
+   "k": "textbox visible after Escape",
+   "v": true
+  },
+  {
+   "k": "bundle",
+   "v": [
+    "index-Dp5DL01h.js"
+   ]
+  },
+  {
+   "k": "depth pressed",
+   "v": "true"
+  },
+  {
+   "k": "asked",
+   "v": {
+    "q": "What phenotypic features are associated with Marfan syndrome?",
+    "depth": "Plain language",
+    "width": 390
+   }
+  },
+  {
+   "k": "first record row on screen",
+   "v": {
+    "t": 12.26,
+    "listingFirst": {
+     "tid": "claim-text-0",
+     "tag": "LI",
+     "top": 549,
+     "docTop": 608,
+     "text": "Marfan syndrome.⁠1"
+    },
+    "summaryCount": 0,
+    "overflow": 0
+   }
+  },
+  {
+   "k": "screenshot",
+   "v": "marfan_390_1_records.png"
+  },
+  {
+   "k": "first summary sentence on screen",
+   "v": {
+    "t": 17.57,
+    "summaryFirst": "MedGen lists these clinical features: Aortic regurgitation, Arachnodactyly, Astigmatism, Ectopia lentis, Esotropia, Exotropia, Pes planus, Glaucoma, Congestive heart failure, Hypertropia and Micrognathia.⁠3–13",
+    "listingCount": 20,
+    "overflow": 0
+   }
+  },
+  {
+   "k": "screenshot",
+   "v": "marfan_390_2_summary.png"
+  },
+  {
+   "k": "answer landed (meta shown)",
+   "v": {
+    "t": 17.57,
+    "meta": "✓ Answered17.2s · 8 tool calls · 12 sources cited from 2 layers"
+   }
+  },
+  {
+   "k": "final",
+   "v": {
+    "t": 20.67,
+    "recAt": 12.26,
+    "sumAt": 17.57,
+    "landAt": 17.57,
+    "listingCount": 20,
+    "summaryCount": 3,
+    "summaryFirst": "MedGen lists these clinical features: Aortic regurgitation, Arachnodactyly, Astigmatism, Ectopia lentis, Esotropia, Exotropia, Pes planus, Glaucoma, Congestive heart failure, Hypertropia and Micrognathia.⁠3–13",
+    "meta": "✓ Answered17.2s · 8 tool calls · 12 sources cited from 2 layers",
+    "overflow": 0
+   }
+  },
+  {
+   "k": "final summary all",
+   "v": "MedGen lists these clinical features: Aortic regurgitation, Arachnodactyly, Astigmatism, Ectopia lentis, Esotropia, Exotropia, Pes planus, Glaucoma, Congestive heart failure, Hypertropia and Micrognathia.⁠3–13 | I found 5 published papers, 1 condition, 1 literature index entry and 5 clinical trials related to Marfan syndrome.⁠1 +11 | Marfan syndrome is a multisystem connective tissue disease with autosomal dominant inheritance.⁠83"
+  },
+  {
+   "k": "source groups",
+   "v": [
+    "sources-group-2",
+    "sources-group-3"
+   ]
+  },
+  {
+   "k": "sources",
+   "v": {
+    "count": "12",
+    "groupCounts": [
+     "sources-group-2-count=6",
+     "sources-group-3-count=6"
+    ],
+    "rows": [
+     {
+      "tid": "source-1",
+      "markers": "[1]",
+      "name": "pubmed 2402263",
+      "layer": "2",
+      "href": "https://pubmed.ncbi.nlm.nih.gov/2402263/"
+     },
+     {
+      "tid": "source-2",
+      "markers": "[2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44][45][46][47][48][49][50][51][52][53][54][55][56][57][58][59][60][61][62][63][64][65][66][67][68][69][70][71][72]",
+      "name": "medgen 44287",
+      "layer": "2",
+      "href": "https://www.ncbi.nlm.nih.gov/medgen/44287"
+     },
+     {
+      "tid": "source-75",
+      "markers": "[75][83]",
+      "name": "pubmed 35894201",
+      "layer": "2",
+      "href": "https://pubmed.ncbi.nlm.nih.gov/35894201/"
+     },
+     {
+      "tid": "source-77",
+      "markers": "[77]",
+      "name": "pubmed 37058316",
+      "layer": "2",
+      "href": "https://pubmed.ncbi.nlm.nih.gov/37058316/"
+     },
+     {
+      "tid": "source-79",
+      "markers": "[79]",
+      "name": "pubmed 38517496",
+      "layer": "2",
+      "href": "https://pubmed.ncbi.nlm.nih.gov/38517496/"
+     },
+     {
+      "tid": "source-81",
+      "markers": "[81]",
+      "name": "pubmed 40466129",
+      "layer": "2",
+      "href": "https://pubmed.ncbi.nlm.nih.gov/40466129/"
+     },
+     {
+      "tid": "source-73",
+      "markers": "[73]",
+      "name": "ncbi_mesh @DISEASE_Marfan_Syndrome",
+      "layer": "3",
+      "href": "https://www.ncbi.nlm.nih.gov/mesh/D008382"
+     },
+     {
+      "tid": "source-74",
+      "markers": "[74]",
+      "name": "clinicaltrials.gov NCT00270686",
+      "layer": "3",
+      "href": "https://clinicaltrials.gov/study/NCT00270686"
+     },
+     {
+      "tid": "source-76",
+      "markers": "[76]",
+      "name": "clinicaltrials.gov NCT00429364",
+      "layer": "3",
+      "href": "https://clinicaltrials.gov/study/NCT00429364"
+     },
+     {
+      "tid": "source-78",
+      "markers": "[78]",
+      "name": "clinicaltrials.gov NCT00485368",
+      "layer": "3",
+      "href": "https://clinicaltrials.gov/study/NCT00485368"
+     },
+     {
+      "tid": "source-80",
+      "markers": "[80]",
+      "name": "clinicaltrials.gov NCT00593710",
+      "layer": "3",
+      "href": "https://clinicaltrials.gov/study/NCT00593710"
+     },
+     {
+      "tid": "source-82",
+      "markers": "[82]",
+      "name": "clinicaltrials.gov NCT00651235",
+      "layer": "3",
+      "href": "https://clinicaltrials.gov/study/NCT00651235"
+     }
+    ],
+    "also": [],
+    "chipLabelsN": 23,
+    "chipNums": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     73,
+     74,
+     75,
+     76,
+     77,
+     78,
+     79,
+     80,
+     81,
+     82,
+     83
+    ],
+    "listingRows": [
+     "Marfan syndrome.⁠1",
+     "Marfan syndrome⁠2",
+     "Marfan Syndrome⁠73",
+     "Studies of Heritable Disorders of Connective Tissue⁠74",
+     "[Latest advances in the diagnosis and treatment of Marfan syndrome].⁠75",
+     "Comparison of Two Medications Aimed at Slowing Aortic Root Enlargement in Individuals With Marfan Syndrome⁠76",
+     "What Is Marfan Syndrome?⁠77",
+     "Angiotensin Converting Enzyme Inhibitors in Marfan Syndrome⁠78",
+     "Marfan syndrome.⁠79",
+     "Losartan Versus Atenolol for the Treatment of Marfan Syndrome⁠80",
+     "Aortic regurgitation⁠3",
+     "Arachnodactyly⁠4",
+     "Astigmatism⁠5",
+     "Ectopia lentis⁠6",
+     "Esotropia⁠7",
+     "Exotropia⁠8",
+     "Pes planus⁠9",
+     "Glaucoma⁠10",
+     "Congestive heart failure⁠11",
+     "Hypertropia⁠12"
+    ],
+    "trust": "Based on 12 sources cited",
+    "overflow": 0,
+    "bodyOverflow": 0
+   }
+  },
+  {
+   "k": "screenshot",
+   "v": "marfan_390_3_sources_open.png"
+  },
+  {
+   "k": "screenshot",
+   "v": "marfan_390_4_top_viewport.png"
+  }
+ ],
+ "timeline": [
+  {
+   "t": 0.05,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 0.16,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 0.26,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 0.36,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 0.47,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 0.57,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 0.68,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 0.78,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 0.88,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 0.99,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 1.09,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 1.2,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 1.3,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 1.41,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 1.51,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 1.61,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 1.72,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 1.82,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 1.93,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 2.03,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 2.14,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 2.24,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 2.35,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 2.45,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 2.56,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 2.66,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 2.77,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 2.87,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 2.98,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 3.08,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 3.19,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 3.29,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 3.4,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 3.5,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 3.61,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 3.71,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 3.82,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 3.92,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 4.03,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 4.13,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 4.24,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 4.34,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 4.44,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 4.55,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 4.65,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 4.75,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 4.86,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 4.96,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 5.06,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 5.17,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 5.27,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 5.37,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 5.48,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 5.59,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 5.69,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 5.8,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 5.9,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 6.01,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 6.11,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 6.21,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 6.32,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 6.42,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 6.53,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 6.63,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 6.73,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 6.83,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 6.93,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 7.04,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 7.14,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 7.25,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 7.35,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 7.45,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 7.56,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 7.66,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 7.77,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 7.87,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 7.98,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 8.08,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 8.19,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 8.29,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 8.4,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 8.5,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 8.61,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 8.71,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 8.82,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 8.93,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 9.03,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 9.13,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 9.23,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 9.34,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 9.44,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 9.54,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 9.64,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 9.75,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 9.86,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 9.96,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 10.07,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 10.17,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 10.28,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 10.38,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 10.49,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 10.59,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 10.7,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 10.8,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 10.9,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 11.01,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 11.11,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 11.22,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 11.32,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 11.43,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 11.53,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 11.63,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 11.74,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 11.84,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 11.94,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 12.05,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 12.15,
+   "lc": 0,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 12.26,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 12.41,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 12.51,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 12.61,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 12.72,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 12.82,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 12.93,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 13.03,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 13.14,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 13.25,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 13.35,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 13.46,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 13.56,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 13.66,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 13.77,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 13.88,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 13.98,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 14.09,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 14.19,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 14.3,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 14.4,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 14.51,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 14.61,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 14.71,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 14.82,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 14.93,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 15.03,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 15.14,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 15.27,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 15.38,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 15.48,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 15.58,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 15.69,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 15.79,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 15.9,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 16,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 16.11,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 16.21,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 16.32,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 16.42,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 16.52,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 16.63,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 16.73,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 16.84,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 16.94,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 17.04,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 17.15,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 17.25,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 17.36,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 17.46,
+   "lc": 20,
+   "sc": 0,
+   "meta": false,
+   "of": 0
+  },
+  {
+   "t": 17.57,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 17.73,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 17.84,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 17.94,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 18.05,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 18.15,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 18.25,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 18.36,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 18.46,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 18.56,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 18.67,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 18.77,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 18.88,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 18.98,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 19.09,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 19.2,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 19.3,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 19.41,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 19.51,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 19.62,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 19.72,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 19.83,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 19.93,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 20.03,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 20.14,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 20.24,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 20.34,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 20.45,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 20.56,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  },
+  {
+   "t": 20.67,
+   "lc": 20,
+   "sc": 3,
+   "meta": true,
+   "of": 0
+  }
+ ]
+}

@@ -1693,7 +1693,7 @@ What you should see:
 - Every marker in the answer has its line under "References:". No line starts `[unresolved: marker`.
 - No dollar amount appears anywhere.
 - With `--json`, the terminal shows one JSON object and nothing else: the answer, every citation with its source URL, the trust verdict, the trust line, the session id, and `"complete": true`.
-- Card 57 and F-8.7-A04: in the `--json` object, each citation appears once, one entry per number. A citation that a summary sentence cites carries, in its `claim_text`, the record's own row words followed by the record words that sentence was checked against. A record that only the list cites shows only its row words.
+- Card 57 and F-8.7-A04: in the `--json` object, each citation appears once, one entry per number. A citation that a summary sentence cites carries, in its `claim_text`, the record words that sentence was checked against first, then the record's own row words. A record that only the list cites shows only its row words.
 - The capital of France prints "guard: this looks outside biomedical research. Try a gene, variant, pathogen, or paper question." and no answer and no references, the terminal's form of query 45.
 - Why it matters: a researcher who works in a terminal, or a script, should get the same evidence the web shows, cited the same way, without opening a browser.
 
