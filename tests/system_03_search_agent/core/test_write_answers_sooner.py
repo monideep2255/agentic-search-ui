@@ -388,7 +388,10 @@ async def test_prose_that_grounds_nothing_offers_no_candidate(
 
 # ---------------------------------------------------------------------------
 # Card 2, the honest gap: wired from the decision already made, never the
-# question's words.
+# question's words, and said only when the absence is known (fix round,
+# F-8.7-J01, J02, A02): the field's source read the record and found none,
+# every search finished, and no shown record carries anything that might
+# state it.
 # ---------------------------------------------------------------------------
 
 
@@ -396,20 +399,25 @@ def _count_line(events: list) -> str:
     return next(t["text"] for t in _tokens(events) if t["text"].startswith(COUNT_LINE_START))
 
 
+def _researcher() -> dict[str, object]:
+    return _write_state(audience_depth="researcher")
+
+
 @pytest.mark.asyncio
-async def test_the_count_line_says_the_records_lack_what_was_asked(
+async def test_records_whose_features_were_never_read_leave_the_count_line_unchanged(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`think.asks_features` picked "asks_features", and none of the five
-    disease records carries a clinical feature: the line says so."""
+    """F-8.7-J02: `think.asks_features` picked "asks_features", but the five
+    graph Disease rows were never read for features (no MedGen lookup ran),
+    so nothing is known about them. The line is exactly develop's."""
     _models(monkeypatch)
     monkeypatch.setattr(graph_module, "_clinical_features_asked", AsyncMock(return_value=True))
+    asked = _count_line((await graph_module.write_node(_researcher()))["events"])
+    monkeypatch.setattr(graph_module, "_clinical_features_asked", AsyncMock(return_value=False))
+    unasked = _count_line((await graph_module.write_node(_researcher()))["events"])
 
-    result = await graph_module.write_node(_write_state(audience_depth="researcher"))
-
-    assert _count_line(result["events"]).rstrip().endswith(
-        ", none of which gives clinical features."
-    ), _count_line(result["events"])
+    assert asked == unasked, asked
+    assert "clinical features" not in asked
 
 
 @pytest.mark.asyncio
@@ -422,6 +430,125 @@ async def test_the_count_line_is_unchanged_when_nothing_was_asked_for(
     result = await graph_module.write_node(_write_state(audience_depth="researcher"))
 
     assert "clinical features" not in _count_line(result["events"])
+
+
+def _medgen_lists_none_state(
+    audience_depth: str, *, definition: str | None = None, failed: bool = False
+) -> dict[str, object]:
+    """One MedGen disease record fetched and read through the real row
+    builder, listing no clinical features: the only state in which the
+    product knows the record gives none."""
+    from system_03_search_agent.harness.coordinator_worker import Finding
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    fields: dict[str, object] = {
+        "title": "Malignant tumor of breast",
+        "semantictype": {"value": "Neoplastic Process"},
+        "clinical_features": [],
+        "clinical_features_total": 0,
+    }
+    if definition is not None:
+        fields["definition"] = {"value": definition}
+    record = NcbiEfetchRecord(
+        id="651", db="medgen", fields=fields, source_url="https://www.ncbi.nlm.nih.gov/medgen/651"
+    )
+    output = NcbiEfetchOutput(
+        status="ok",
+        action="summary",
+        records=[record],
+        record_count=1,
+        total_available=1,
+        truncated=False,
+    )
+    rows = graph_module._ncbi_efetch_output_to_structured_fields(output, "medgen_summary")["rows"]
+    state = _write_state(audience_depth=audience_depth)
+    state["findings"] = [
+        Finding(
+            call_id="ne-medgen",
+            tool="ncbi_efetch",
+            layer="layer_2_api",
+            source="structured_pass_through",
+            structured_fields={"status": "ok", "row_count": len(rows), "rows": rows},
+            extracted_entities=None,
+            normalized_ids=None,
+            evidence_summary=None,
+        )
+    ]
+    if failed:
+        state["failed_searches"] = [
+            {
+                "tool": "ncbi_efetch",
+                "layer": "layer_2_ncbi",
+                "reason": "search: timed out",
+                "kind": "timeout",
+                "source": "medgen",
+            }
+        ]
+    return state
+
+
+async def _medgen_count_line(monkeypatch: pytest.MonkeyPatch, state: dict[str, object]) -> str:
+    _models(monkeypatch, first="Malignant tumor of breast [1].")
+    monkeypatch.setattr(graph_module, "_clinical_features_asked", AsyncMock(return_value=True))
+    result = await graph_module.write_node(state)
+    return _summary_claims(result["events"])[0]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("depth", "line"),
+    [
+        (
+            "researcher",
+            (
+                "Found 1 medgen record: Malignant tumor of breast [1], "
+                "and its MedGen record lists no clinical features. "
+            ),
+        ),
+        (
+            "plain_language",
+            (
+                "I found 1 condition on this topic [1], "
+                "and its MedGen record lists no clinical features. "
+            ),
+        ),
+    ],
+)
+async def test_a_record_read_and_listing_none_is_said_to_in_both_depths(
+    monkeypatch: pytest.MonkeyPatch, depth: str, line: str
+) -> None:
+    """The positive case, and F-8.7-A13's wording: the clause names the
+    record as what lists nothing, never the condition."""
+    assert await _medgen_count_line(monkeypatch, _medgen_lists_none_state(depth)) == line
+
+
+@pytest.mark.asyncio
+async def test_a_search_that_did_not_finish_keeps_the_count_line_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-8.7-A02: the same record, but a MedGen search of this question timed
+    out. The searches' state, passed by the loop, holds the clause back."""
+    state = _medgen_lists_none_state("researcher", failed=True)
+    assert await _medgen_count_line(monkeypatch, state) == (
+        "Found 1 medgen record: Malignant tumor of breast [1]. "
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_definition_on_the_record_keeps_the_count_line_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-8.7-J01: the record's own definition may state the features in
+    prose, so the line cannot say the record gives none."""
+    state = _medgen_lists_none_state(
+        "researcher", definition="A cancer that presents as a breast lump with nipple discharge."
+    )
+    assert await _medgen_count_line(monkeypatch, state) == (
+        "Found 1 medgen record: Malignant tumor of breast [1]. "
+    )
 
 
 def test_the_lead_options_are_closed_and_end_on_neither() -> None:
