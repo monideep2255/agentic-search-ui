@@ -862,9 +862,8 @@ Queries to try:
 What you should see:
 
 - The older, single-isolate mode of this tool is not broken by adding isolate search.
-- A single isolate's details in one row: its strain, its BioSample accession, its resistance genes, and when and where it was collected, with a link to its Pathogen Detection page (card 94). The BioSample's own NCBI record and its sequencing runs are listed beside it.
+- A single isolate's details: its strain, where and when it was collected, its resistance genes, and a link to its Pathogen Detection page.
 - No mention of "showing the first 20" or a count of isolates, since this is a single-record lookup, not a search.
-- The organism must be named for the lookup, since Pathogen Detection is read one organism at a time: `What is BioSample SAMN02147118?` still shows only the BioSample record, as before.
 - Why it matters: adding a new search mode should never break the lookup someone was already relying on.
 
 ### 43. The wait feels alive (isolate query 11)

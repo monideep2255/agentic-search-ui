@@ -374,17 +374,12 @@ def test_the_isolate_table_shows_the_genes_beside_the_name() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Card 94 (2026-10-09): "An isolate answer shows each isolate's place, and
-# naming one isolate gets that isolate's details." Each arm was shown red by
-# one mutation before it was kept
+# Card 94 (2026-10-09): "An isolate answer shows each isolate's place." The
+# lookup of one named isolate was taken out of the card and parked for the
+# owner (`raw/lookup_parked.patch`). Each arm was shown red by one mutation
+# before it was kept
 # (`testing/Developer/reports/2026-10-09_card94/build.md`).
 # ---------------------------------------------------------------------------
-
-ONE_ISOLATE_QUESTION = "What is known about Salmonella isolate SAMN02147118 in Pathogen Detection?"
-# The same accession with no organism and no isolate word: the BioSample
-# path as before, the populate check for the lookup arm.
-PLAIN_BIOSAMPLE_QUESTION = "What is BioSample SAMN02147118 and which SRA runs come from it?"
-
 
 def test_an_isolate_row_shows_its_place_or_says_none_was_recorded() -> None:
     from system_03_search_agent.synthesis.answer_layout import collected_with_place, isolate_place
@@ -454,88 +449,6 @@ async def test_the_isolate_table_shows_each_isolates_place_beside_when(
     }, rows
 
 
-def _biosample_plan() -> Any:
-    from system_03_search_agent.core import accession as accession_module
-
-    record = accession_module.parse_accession(ONE_ISOLATE_QUESTION)
-    assert record is not None and record.kind == "biosample"
-    return graph_module._AccessionPlan(record=record, uid="2147118", linked={"sra": ["111"]})
-
-
-@pytest.mark.asyncio
-async def test_naming_one_isolate_plans_the_tools_lookup_of_that_isolate_first(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """RED before: the plan was the BioSample summaries only, and the tool's
-    lookup mode was never called."""
-    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
-    state = _state(
-        ONE_ISOLATE_QUESTION, resolved_entities=[], query_class="lookup",
-        accession_plan=_biosample_plan(),
-    )
-    result = await graph_module.plan_node(state)
-    calls = result["tool_calls"]
-    lookup = calls[0]
-    assert isinstance(lookup, graph_module._PlannedLayerToolCall), calls
-    assert lookup.tool_call.tool == "pathogen_detection" and lookup.purpose == "isolate_lookup"
-    assert lookup.tool_input.root.mode == "isolate_lookup"
-    assert lookup.tool_input.root.taxon == "Salmonella"
-    assert lookup.tool_input.root.biosample_acc == "SAMN02147118"
-    # The BioSample record and its runs are still planned beside it.
-    assert [c.purpose for c in calls[1:]] == ["biosample_summary", "sra_summary"]
-    assert not any(isinstance(c, graph_module._PlannedToolCall) for c in calls), "no graph call"
-    plan = next(e for e in result["events"] if e.type == "plan")
-    assert plan.payload["tool_calls"][0]["tool"] == "pathogen_detection"
-
-
-@pytest.mark.asyncio
-async def test_a_biosample_question_naming_no_isolate_organism_plans_no_lookup(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """With no organism named there is no taxon folder to read, so the plan
-    stays the BioSample summaries, as before."""
-    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
-    state = _state(
-        PLAIN_BIOSAMPLE_QUESTION, resolved_entities=[], query_class="lookup",
-        accession_plan=_biosample_plan(),
-    )
-    result = await graph_module.plan_node(state)
-    assert [c.tool_call.tool for c in result["tool_calls"]] == ["ncbi_efetch", "ncbi_efetch"]
-
-
-@pytest.mark.asyncio
-async def test_one_isolates_answer_shows_its_details_with_no_sample_note(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The lookup's one isolate reaches the answer as one row: strain,
-    BioSample accession, genes, place and year, cited to its Pathogen
-    Detection page, with no "first 20" count under it."""
-    from tests.system_03_search_agent.core.test_write_answer_structure import _install, _no_prose
-    from tests.system_03_search_agent.core.test_write_answer_structure import _state as _write_state
-
-    _install(monkeypatch, _no_prose)
-    one = _isolate("SAMN02147118", "SL1344", ["aph(3'')-Ib", "sul2"])
-    output = PathogenDetectionOutput(
-        status="ok", mode="isolate_lookup", pdg_snapshot="PDG000000002.1", isolates=[one],
-        isolate_count=1, total_available=1, truncated=False,
-    )
-    shaped = graph_module._layer_tool_output_to_structured_fields("pathogen_detection", output)
-    assert shaped["row_count"] == 1 and shaped["truncated"] is False
-    state = _write_state("researcher")
-    state["query"] = Query(text=ONE_ISOLATE_QUESTION, session_id="s-iso", trace_id="t-iso", user_id=None)
-    state["layer3_raw_outputs"] = {"pd-1": output}
-    state["findings"] = [_one_isolate_finding(output)]
-    state["findings_count"] = 1
-    result = await graph_module.write_node(state)
-    tokens = [e.payload for e in result["events"] if e.type == "token"]
-    rows = [t["cells"] for t in tokens if t.get("kind") == "table_row"]
-    assert rows == [["SL1344", "SAMN02147118", "aph(3'')-Ib, sul2", "2013, USA:AZ"]], rows
-    assert not any("Pathogen Detection lists" in t["text"] for t in tokens), tokens
-    citations = [e.payload for e in result["events"] if e.type == "citation"]
-    assert citations and all(c["source_id"] == "SAMN02147118" for c in citations), citations
-    assert all("pathogens/isolates" in c["source_url"] for c in citations), citations
-
-
 @pytest.mark.asyncio
 async def test_an_isolate_table_with_no_dates_still_shows_each_place(
     monkeypatch: pytest.MonkeyPatch,
@@ -565,3 +478,44 @@ async def test_an_isolate_table_with_no_dates_still_shows_each_place(
     assert header == ["Isolate", "Identifier", "AMR genes", "Collected"], header
     rows = [t["cells"][3] for t in tokens if t.get("kind") == "table_row"]
     assert rows == ["USA:AZ, date not recorded"] * 2, rows
+
+
+@pytest.mark.parametrize(
+    "placeholder",
+    [
+        "missing", "Missing", "not collected", "Not Applicable", "not provided", "NULL",
+        "unknown", "N/A", "restricted access", "missing: control sample", "", "   ",
+    ],
+)
+def test_a_missing_value_word_in_the_place_field_is_not_a_place(placeholder: str) -> None:
+    """J-94-01, A-94-05. RED before: "missing" or "not collected" was shown
+    after the year as if it were the place: "2013, not collected"."""
+    from system_03_search_agent.synthesis.answer_layout import collected_with_place, isolate_place
+
+    place = isolate_place("Pathogen Detection isolate", {"geo_loc_name": placeholder})
+    assert place == "", place
+    assert collected_with_place("2013", place) == "2013, place not recorded"
+    assert collected_with_place("Not recorded", place) == "Not recorded"
+    # A real place that merely contains such a word is still a place.
+    assert isolate_place(
+        "Pathogen Detection isolate", {"geo_loc_name": "USA: Unknown County"}
+    ) == "USA: Unknown County"
+
+
+def test_a_place_too_long_for_the_cell_ends_with_a_mark_that_it_was_cut() -> None:
+    """J-94-02, A-94-06. RED before: a 144-character place was cut at 128
+    characters mid-phrase with no mark, and read as the whole place."""
+    from system_03_search_agent.synthesis.answer_layout import MAX_IDENTIFIER_CHARS, isolate_place
+
+    long_place = (
+        "USA: Minnesota, Hennepin County, Minneapolis, Mississippi River sampling site "
+        "number 4 near the Stone Arch Bridge downstream of the lock and dam"
+    )
+    assert len(long_place) > MAX_IDENTIFIER_CHARS
+    place = isolate_place("Pathogen Detection isolate", {"geo_loc_name": long_place})
+    assert place is not None and place.endswith("…"), place
+    assert len(place) <= MAX_IDENTIFIER_CHARS
+    assert long_place.startswith(place[:-1]), place
+    # A place that fits is shown whole, with no mark.
+    fits = "X" * MAX_IDENTIFIER_CHARS
+    assert isolate_place("Pathogen Detection isolate", {"geo_loc_name": fits}) == fits

@@ -671,10 +671,7 @@ from system_03_search_agent.tools.pathogen_detection import (
     build_citation as pathogen_build_citation,
 )
 from system_03_search_agent.tools.pathogen_detection import pathogen_detection
-from system_03_search_agent.tools.pathogen_detection_schemas import (
-    PathogenDetectionInput,
-    PathogenDetectionOutput,
-)
+from system_03_search_agent.tools.pathogen_detection_schemas import PathogenDetectionOutput
 from system_03_search_agent.tools.pubtator_annotate import build_citation as pubtator_build_citation
 from system_03_search_agent.tools.pubtator_annotate import pubtator_annotate
 from system_03_search_agent.tools.pubtator_annotate_schemas import (
@@ -6998,46 +6995,11 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         )
         planned_tool_calls: list[_PlannedToolCall | _PlannedNcbiEfetchToolCall] = []
         if accession_plan is not None and accession_plan.uid is not None:
-            # Card 94 (2026-10-09): "naming one isolate gets that isolate's
-            # details." A BioSample asked about as a Pathogen Detection
-            # isolate of a named organism also plans the tool's lookup of
-            # that one isolate, first, so the answer shows its strain,
-            # place, date and resistance genes with its Pathogen Detection
-            # link, beside the BioSample record. The organism is the one
-            # the isolate shape reads from the question; with none named
-            # there is no taxon folder to read, and the plan is unchanged.
-            isolate_shape = (
-                isolate_search.parse_isolate_question(query.text)
-                if accession_plan.record.kind == "biosample"
-                else None
-            )
-            lookup_calls = (
-                [
-                    breadth_plan.PlannedCall(
-                        tool="pathogen_detection",
-                        layer="layer_2_api",
-                        prefix="pd",
-                        purpose="isolate_lookup",
-                        tool_input=PathogenDetectionInput.model_validate(
-                            {
-                                "mode": "isolate_lookup",
-                                "taxon": isolate_shape.organism.taxon_folder,
-                                "biosample_acc": accession_plan.record.value,
-                            }
-                        ),
-                    )
-                ]
-                if isolate_shape is not None and isolate_shape.organism is not None
-                else []
-            )
             planned_tool_calls = [
                 _planned_from_breadth(call)
-                for call in [
-                    *lookup_calls,
-                    *accession.plan_summary_calls(
-                        accession_plan.record, accession_plan.uid, accession_plan.linked
-                    ),
-                ]
+                for call in accession.plan_summary_calls(
+                    accession_plan.record, accession_plan.uid, accession_plan.linked
+                )
             ]
             lead_name = persona_for_session(session_id=query.session_id, user_id=query.user_id)
             planned_tool_calls = _assign_helpers(planned_tool_calls, lead_name=lead_name)
