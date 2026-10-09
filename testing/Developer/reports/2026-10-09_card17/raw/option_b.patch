@@ -1,0 +1,61 @@
+diff --git a/src/system_03_search_agent/synthesis/grounding.py b/src/system_03_search_agent/synthesis/grounding.py
+index 76f2d6bb..a9581336 100644
+--- a/src/system_03_search_agent/synthesis/grounding.py
++++ b/src/system_03_search_agent/synthesis/grounding.py
+@@ -1856,8 +1856,20 @@ def run_grounding_pass(
+             this_urls = {
+                 (by_ref[ref].source_url or "").strip() for ref in this_refs if ref in by_ref
+             }
++            # Card 17, the owner's option B of 2026-10-09: a title word the
++            # record just left also carries cannot show which record this
++            # sentence moved to, so only the other title words count. The
++            # records just left are those the last shown sentence cited at
++            # a different page; a title and an abstract of one paper share
++            # a page and are one record.
++            left_urls = {
++                (by_ref[ref].source_url or "").strip() for ref in previous_refs if ref in by_ref
++            } - this_urls
++            left_labels = " ".join(labels_by_url.get(url, "") for url in sorted(left_urls))
+             names_a_record = any(
+-                _names_its_record(probe, labels_by_url.get(url, ""), short_forms_by_url.get(url))
++                _names_its_record(
++                    probe, labels_by_url.get(url, ""), short_forms_by_url.get(url), left_labels
++                )
+                 for url in this_urls
+             )
+             if (
+@@ -2088,7 +2100,10 @@ def defined_short_forms(text: str) -> dict[str, str]:
+ 
+ 
+ def _names_its_record(
+-    sentence: str, labels: str, short_forms: dict[str, str] | None = None
++    sentence: str,
++    labels: str,
++    short_forms: dict[str, str] | None = None,
++    left_labels: str = "",
+ ) -> bool:
+     """Whether a sentence shares a content word with its own records' titles.
+ 
+@@ -2110,12 +2125,21 @@ def _names_its_record(
+     titled "Gastroesophageal Reflux Disease." whose abstract defines it. A
+     short form for something off the title names nothing, and a short form
+     only another record defines never reaches this one.
++
++    Card 17 (2026-10-09, the owner's option B): `left_labels` are the titles
++    of the records the sentence before it cited. A title word they also
++    carry does not count. Measured live 2026-09-24: after a Tay-Sachs
++    sentence, "No patient carried more than one of these mutations" cited a
++    BRCA paper whose only shared title word was "patients". Only the switch
++    is judged, so a word every title shares still names the record unless
++    the record just left has it too. Short forms are unchanged: the record's
++    own defined term is its name, not a shared word.
+     """
+     if not labels.strip():
+         return False
+     title = _stemmed(content_tokens(labels))
+     said = _stemmed(content_tokens(sentence))
+-    if said & title:
++    if said & (title - _stemmed(content_tokens(left_labels))):
+         return True
+     for short, long_form in (short_forms or {}).items():
+         long_stems = _stemmed(content_tokens(long_form))
