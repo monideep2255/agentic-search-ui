@@ -549,6 +549,144 @@ async def test_an_injection_refusal_stops_a_relevancy_decision_still_running(
     assert started.is_set() and cancelled.is_set()
 
 
+# Card 35 (owner, 2026-10-09): "An off-topic follow-up that happens to
+# contain a word such as 'cell' or 'study' is checked for topic like any
+# other question." Before the card, the allowlist admitted such a follow-up,
+# so no relevancy decision was asked, and the referring word set aside the
+# classifier's off-topic verdict: nothing checked it at all.
+
+_OFF_TOPIC_WITH_A_BIOMEDICAL_WORD = (
+    "Which cell phone is it best to buy this year?",
+    "Is it effective to invest in bitcoin right now?",
+    "Is there a study on which car it is safest to drive?",
+)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("text", _OFF_TOPIC_WITH_A_BIOMEDICAL_WORD)
+@pytest.mark.parametrize("classifier_off_topic", [True, False])
+async def test_an_off_topic_follow_up_with_a_biomedical_word_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+    _mock_litellm: AsyncMock,
+    text: str,
+    classifier_off_topic: bool,
+) -> None:
+    """MUTATION PROOF: restoring the allowlist-only condition in
+    `guardrail_node` turns every case red: no decision is asked and the
+    question is admitted."""
+    from system_03_search_agent.guardrail import prefilter
+
+    assert prefilter.clears_biomedical_allowlist(text), "populate check: the allowlist admits it"
+    if classifier_off_topic:
+        _mock_litellm.return_value = _off_topic_reply()
+    decide_mock = _mock_decide(
+        monkeypatch,
+        return_value=_relevancy_record("off_topic", jev_choice="off_topic", guard_choice="off_topic"),
+    )
+    events, result = await _run_guardrail(text, session_memory=_memory_with_brca1())
+    assert decide_mock.await_args.args[3] == (
+        "Previous question in this conversation: Which diseases are associated with BRCA1?\n"
+        f"New question: {text}"
+    )
+    assert _payload(events, "guard") == {
+        "passed": False,
+        "category": "off_topic",
+        "reason": prefilter.OFF_TOPIC_REASON,
+    }
+    assert result.get("guard_refused") is True
+
+
+@pytest.mark.asyncio
+async def test_a_first_question_the_allowlist_admits_still_asks_no_decision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The counterfactual: the same text with no memory is no follow-up,
+    so the allowlist's shortcut stands and the question stays free."""
+    decide_mock = _mock_decide(monkeypatch, return_value=_relevancy_record("off_topic"))
+    await _run_guardrail(_OFF_TOPIC_WITH_A_BIOMEDICAL_WORD[0])
+    decide_mock.assert_not_awaited()
+
+
+#: On-topic follow-ups, each typed after a BRCA1 answer: allowlist hits and
+#: misses, with and without a referring word.
+_ON_TOPIC_FOLLOW_UPS = (
+    "tell me more",
+    "tell me more about it",
+    "what about its symptoms",
+    "what are its treatments?",
+    "and what about it in children?",
+    "What variants cause it?",
+    "Which variants of it are pathogenic?",
+    "Is this gene linked to cancer?",
+    "How common is it in men?",
+)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("text", _ON_TOPIC_FOLLOW_UPS)
+@pytest.mark.parametrize("classifier_off_topic", [False, True])
+@pytest.mark.parametrize(
+    "decide_kwargs",
+    [
+        {"return_value": _relevancy_record("on_topic", jev_choice="on_topic", guard_choice="on_topic")},
+        # No usable pick: neither model answered.
+        {
+            "return_value": _relevancy_record(
+                "on_topic", decided_by="guard", fallback_reason="no_usable_pick:timeout"
+            )
+        },
+        # The seam itself raised.
+        {"side_effect": RuntimeError("seam down")},
+    ],
+    ids=["on_topic", "no_pick", "seam_down"],
+)
+async def test_no_on_topic_follow_up_develop_admits_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+    _mock_litellm: AsyncMock,
+    text: str,
+    classifier_off_topic: bool,
+    decide_kwargs: dict[str, Any],
+) -> None:
+    """The grid: every follow-up above, under every classifier verdict and
+    every relevancy outcome short of a real "off_topic" pick, gets the
+    verdict develop gave it before the card. A follow-up develop refused
+    (no referring word, classifier off topic, no usable pick on an
+    allowlist miss) is still refused, and one it admitted is admitted."""
+    from system_03_search_agent.guardrail import prefilter
+
+    if classifier_off_topic:
+        _mock_litellm.return_value = _off_topic_reply()
+    _mock_decide(monkeypatch, **decide_kwargs)
+    events, _ = await _run_guardrail(text, session_memory=_memory_with_brca1())
+    guard = _payload(events, "guard")
+    assert guard is not None
+
+    allowlisted = prefilter.clears_biomedical_allowlist(text)
+    memory_bound = graph_module._is_memory_bound_follow_up(
+        text, {"context": _context_with_brca1()}  # type: ignore[arg-type]
+    )
+    picked_on_topic = "return_value" in decide_kwargs and decide_kwargs["return_value"].jev_choice
+    # Develop's own rule, written out: the classifier's off-topic verdict is
+    # set aside only for a memory-bound follow-up; with the allowlist
+    # missed, the decision is asked, and with it no usable pick on a
+    # set-aside verdict refuses.
+    if not classifier_off_topic:
+        develop_admits = True
+    elif not memory_bound:
+        develop_admits = False
+    elif allowlisted:
+        develop_admits = True
+    else:
+        develop_admits = bool(picked_on_topic)
+    assert guard["passed"] is develop_admits, (text, guard)
+
+
+def _context_with_brca1() -> Any:
+    from system_03_search_agent.contracts.query import RequestContext
+
+    return RequestContext(surface="rest_sse", session_memory=_memory_with_brca1())
+
+
 # ---------------------------------------------------------------------------
 # UI fix set 7, item 7.1 (2026-09-13): the classifier sees the session's
 # remembered entities, as data.
@@ -556,8 +694,17 @@ async def test_an_injection_refusal_stops_a_relevancy_decision_still_running(
 
 
 def _user_content_of_the_guard_call(mock: AsyncMock) -> str:
-    messages = mock.call_args.kwargs["messages"]
-    return "\n".join(m["content"] for m in messages if m["role"] == "user")
+    """The user turn of the guard classifier's own call. Card 35: a
+    follow-up now also asks the relevancy decision, which reads the previous
+    question by design, so the guard call is found by its system message
+    rather than taken as the last call made."""
+    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+
+    for call in mock.call_args_list:
+        messages = call.kwargs["messages"]
+        if messages and messages[0].get("content") == GUARD_SYSTEM_INSTRUCTION:
+            return "\n".join(m["content"] for m in messages if m["role"] == "user")
+    raise AssertionError("no guard classifier call was made")
 
 
 def _memory_with_brca1() -> Any:

@@ -1893,9 +1893,18 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     # question is judged by the classifier, started NOW so it runs alongside
     # the injection classifier below rather than after it: the person waits
     # for one model call, not two. Only its "off_topic" refuses, below.
+    #
+    # Card 35 (owner, 2026-10-09): "An off-topic follow-up that happens to
+    # contain a word such as 'cell' or 'study' is checked for topic like any
+    # other question." A follow-up that points back at a remembered entity
+    # is judged by the decision whatever the allowlist says, because the
+    # referring word alone would otherwise set aside the classifier's
+    # off-topic verdict with nothing left to check it.
     relevancy_task: asyncio.Task[DecisionRecord | None] | None = None
     relevancy_started: list[float] = []
-    if not prefilter.clears_biomedical_allowlist(query.text):
+    if not prefilter.clears_biomedical_allowlist(query.text) or _is_memory_bound_follow_up(
+        query.text, state
+    ):
         relevancy_task = asyncio.create_task(
             _relevancy_decision(
                 harness, trace_id, _relevancy_state(query.text, state), relevancy_started
@@ -2306,7 +2315,15 @@ async def _guardrail_after_prefilter(
             return _decline_for_guardrail(
                 state, sink, refused("off_topic", prefilter.OFF_TOPIC_REASON), charged=True
             )
-        if relevancy is None and classifier_off_topic_set_aside:
+        # Card 35 (2026-10-09): `guardrail_node` now also asks this decision
+        # for a memory-bound follow-up the allowlist admitted. There, as
+        # before the card, no usable pick admits the question; only a real
+        # "off_topic" pick, above, refuses it.
+        if (
+            relevancy is None
+            and classifier_off_topic_set_aside
+            and not prefilter.clears_biomedical_allowlist(query.text)
+        ):
             return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
 
     # Step 4, Section 10.5. Runs after classification clears, per 10.1.
