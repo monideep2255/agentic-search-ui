@@ -526,6 +526,7 @@ from system_03_search_agent.harness.jev_client import (
     JEV_TOTAL_TIMEOUT_S,
     JevCallError,
     JevResult,
+    PausedTimeoutError,
     call_jev,
     wait_counting_free_time,
 )
@@ -1467,6 +1468,13 @@ def _drop_features_decision(harness: Any) -> None:
 #: design, F-72-J03).
 _JEV_INJECTION_WAIT_S: Final[float] = JEV_TOTAL_TIMEOUT_S + 0.5
 
+#: What `_jev_injection_pick` returns when Jev's injection pick did not come
+#: because the server's own pauses ran its clock out, not because Jev took
+#: its bound (fix round, A-GR-11; `jev_client.PausedTimeoutError`). Jev may
+#: have been about to call the text an injection, so the guardrail never
+#: reads this as "not an injection" where that would set a refusal aside.
+_JEV_INJECTION_CUT_BY_PAUSE: Final[str] = "timeout_after_pause"
+
 #: The share of the guardrail's remaining budget the guard classifier's
 #: FIRST attempt may use (re-land, R-01); a second attempt, after a timeout
 #: or a transient error, gets the rest. A share, not a figure: the budget
@@ -1632,8 +1640,10 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
 
     Returns the validated `JevResult`, or one of `JevCallError.reason`'s
     values ("timeout", "http_error", "malformed_reply", "invalid_option"),
-    "cost_cap", "timeout" when the outer net fires, or "unexpected_error".
-    Never raises, except for cancellation, which stops the call with it.
+    "cost_cap", "timeout" when the outer net fires, or "unexpected_error";
+    `_JEV_INJECTION_CUT_BY_PAUSE` when either clock ran out on its
+    real-time cap after a server pause (fix round, A-GR-11). Never raises,
+    except for cancellation, which stops the call with it.
     """
     try:
         cost_control.check_per_query_cap(harness, trace_id, "guard")
@@ -1664,10 +1674,10 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)
         _log_jev_injection_call(trace_id, started, call_log.jev_outcome(exc.reason))
-        return exc.reason
-    except TimeoutError:
+        return _JEV_INJECTION_CUT_BY_PAUSE if exc.after_a_pause else exc.reason
+    except TimeoutError as exc:
         _log_jev_injection_call(trace_id, started, call_log.TIMEOUT)
-        return "timeout"
+        return _JEV_INJECTION_CUT_BY_PAUSE if isinstance(exc, PausedTimeoutError) else "timeout"
     except Exception:  # noqa: BLE001 - a broken Jev call leaves the classifier's verdict standing
         _log_jev_injection_call(trace_id, started, call_log.ERROR)
         return "unexpected_error"
@@ -2119,11 +2129,16 @@ async def _guardrail_after_prefilter(
     # The classifier's own injection verdict is unchanged and still refuses
     # right here.
     jev_says_injection = False
+    # Fix round, A-GR-11: Jev's injection pick lost to a server pause, not to
+    # Jev's own bound. Nobody knows whether Jev would have refused, so it is
+    # never read as "not an injection" where that would set a refusal aside.
+    jev_injection_unknown = False
     if injection_task is not None and classification is not None:
         jev = await _await_within_step(
             injection_task, step_deadline, "step_budget", point=_INJECTION.point, trace_id=trace_id
         )
         jev_says_injection = isinstance(jev, JevResult) and jev.choice == "injection"
+        jev_injection_unknown = jev == _JEV_INJECTION_CUT_BY_PAUSE
         if not isinstance(jev, JevResult):
             logger.warning(
                 "Jev made no injection pick (trace %s, %s); the guard classifier's "
@@ -2193,6 +2208,21 @@ async def _guardrail_after_prefilter(
             # `_jev_picked` never acts on: the refusal was already certain,
             # and it returns without waiting for that fallback. No clock of
             # its own decides this, so a server pause never cuts Jev off.
+            #
+            # Fix round, A-GR-11: Jev's on-topic pick sets the guard model's
+            # refusal aside only when Jev's injection pick is known. When a
+            # server pause ran out the injection pick's clock, the refusal
+            # that arrived, the guard model's, stands: no timing path
+            # discards a refusal from either judge. Before, one pause could
+            # keep Jev's fast on-topic pick and lose its slower injection
+            # pick, and a question both judges refused was admitted.
+            if jev_injection_unknown:
+                logger.info(
+                    "guard off-topic verdict stands: Jev's injection pick was lost to a "
+                    "server pause, so Jev's relevancy pick cannot set it aside (trace %s)",
+                    trace_id,
+                )
+                return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
             relevancy_record = await _await_jev_own_pick(
                 relevancy_task,
                 relevancy_jev_failed,

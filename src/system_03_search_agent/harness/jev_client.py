@@ -225,12 +225,26 @@ class JevCallError(RuntimeError):
     status (a 500, 429 or 402) reached the provider, so it is charged the
     floor (F-72-V03). 0.0 only when no reply came back at all: a timeout or
     a transport failure.
+
+    `after_a_pause` is True for a timeout whose wait ran out on its real-time
+    cap, not on Jev's own bound (`PausedTimeoutError`): the server's own
+    pauses took the time, so nobody knows what Jev would have said. A
+    caller for whom a missing Jev pick would remove a refusal reads that as
+    "unknown", never as "no refusal" (fix round, A-GR-11).
     """
 
-    def __init__(self, message: str, *, reason: str, billed_cost_usd: float = 0.0) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        reason: str,
+        billed_cost_usd: float = 0.0,
+        after_a_pause: bool = False,
+    ) -> None:
         super().__init__(message)
         self.reason = reason
         self.billed_cost_usd = billed_cost_usd
+        self.after_a_pause = after_a_pause
 
 
 def _stated_cost_usd(payload: object) -> float | None:
@@ -344,25 +358,94 @@ def _charged_for_usable(subject: str, stated_usd: float) -> float:
 _LOOK_S = 0.05
 
 #: A look that comes back later than asked by more than this was a stall of
-#: the server's own event loop: only the time asked plus this is counted.
+#: the server's own event loop, and none of its time is counted (fix round,
+#: J-GR-01: counting the time asked plus this slack spent up to 0.1 s of
+#: Jev's bound on every pause). A look back within it is counted in full,
+#: so the small delays of a merely busy loop still count.
 _STALL_SLACK_S = 0.05
 
 #: The most real time a stalled server may add to one of Jev's bounds, so a
 #: server that keeps stalling still ends the wait (step 3b of the guardrail
-#: design). A stall longer than this still ends Jev's clock: the residual
-#: both reviews named.
+#: design). What the code does, pinned by tests (fix round, J-GR-02, J-GR-08):
+#: Jev's clock ends at its bound plus this much real time from the moment
+#: the wait began, whatever the pauses. A long pause is not refused as such:
+#: a 4.7 s pause with a fast reply is still read, since 4.7 s plus the reply
+#: fits the 5 s; a reply that comes after the 5 s is not. The look a pause
+#: interrupts is not counted either, so the allowance covers a pause of up
+#: to this less one `_LOOK_S`. After a pause, a verdict can come later than
+#: develop's by up to the pause's length plus that look, at most this
+#: allowance.
 JEV_STALL_ALLOWANCE_S = 2.0
 
 #: Time left below this is none: a wait of a few billionths of a second
 #: can come back without the clock having moved, and would then never end.
 _NONE_LEFT_S = 1e-6
 
+#: Looks a wait may take beyond the ones its real-time cap allows, so a
+#: clock that stands still or runs backwards still ends it (fix round,
+#: J-GR-03, A-GR-09): each look waits on the event loop's own timer.
+_SPARE_LOOKS = 10
+
+#: The most turns of the event loop a wait gives a reply that arrived during
+#: a pause before the real-time cap discards it (fix round, A-GR-07,
+#: A-GR-11), within `_LOOK_S` of loop time: a reply that has arrived wins
+#: over the clock, and a busy loop costs at most one of its turns.
+_GRACE_TURNS = 20
+
+
+class PausedTimeoutError(TimeoutError):
+    """A `wait_counting_free_time` that ran out on its real-time cap, or on
+    its look limit, with its free budget unspent: the server's own pauses
+    took the time, so whether the call would have answered inside its own
+    bound is not known (fix round, A-GR-11). A caller for whom a missing
+    pick would remove a refusal treats this as unknown, never as "no"."""
+
+
+def _is_a_budget(budget_s: object) -> bool:
+    """A finite number of seconds above zero."""
+    return (
+        isinstance(budget_s, int | float)
+        and not isinstance(budget_s, bool)
+        and math.isfinite(budget_s)
+        and budget_s > 0
+    )
+
+
+def _never_awaited(awaitable: Awaitable[Any]) -> None:
+    """Close an awaitable that will not be waited for, so nothing is left
+    half started or warned about."""
+    if asyncio.iscoroutine(awaitable):
+        awaitable.close()
+    elif isinstance(awaitable, asyncio.Future):
+        awaitable.cancel()
+
+
+def _retrieve_quietly(task: asyncio.Future[Any]) -> None:
+    """A done callback for a task stopped and not waited for: read its
+    outcome so nothing is reported as never retrieved."""
+    if not task.cancelled():
+        task.exception()
+
+
+async def _read_what_arrived(task: asyncio.Future[Any]) -> bool:
+    """Give `task` up to `_GRACE_TURNS` turns of the loop, within `_LOOK_S`,
+    to finish with a reply that arrived during a pause; True when it did."""
+    began = time.monotonic()
+    for _ in range(_GRACE_TURNS):
+        if task.done():
+            return True
+        await asyncio.sleep(0)
+        if time.monotonic() - began > _LOOK_S:
+            break
+    return task.done()
+
 
 async def wait_counting_free_time(awaitable: Awaitable[_R], budget_s: float) -> _R:
     """Await `awaitable` for at most `budget_s` seconds of time the event
-    loop was free to run, and never more than `budget_s` plus
-    `JEV_STALL_ALLOWANCE_S` of real time; past that, stop it and raise
-    `TimeoutError` (step 3b of the guardrail design; F-8.6-FA03, F-72-J03).
+    loop was free to run, within `budget_s` plus `JEV_STALL_ALLOWANCE_S` of
+    real time from the moment the wait began; past either, stop it and
+    raise `TimeoutError` (step 3b of the guardrail design; F-8.6-FA03,
+    F-72-J03).
 
     Every clock on a Jev call counts this way: Jev's own total bound
     (`_send`), `decide()`'s outer net (`_jev_attempt`) and the guardrail's
@@ -371,32 +454,78 @@ async def wait_counting_free_time(awaitable: Awaitable[_R], budget_s: float) -> 
     read Jev's reply in, so it is not counted against Jev. On develop a
     pause of about 0.6 s inside `decide()`'s wait spent its half-second
     margin, the net said "timeout" while Jev was still inside its own bound,
-    and a question Jev judged on topic was refused as off topic. A reply
-    that has arrived always wins over the clock.
+    and a question Jev judged on topic was refused as off topic.
+
+    The fix round's rules (cards 84 and 72):
+
+    - A reply that has arrived wins over the clock: after a pause carries
+      the wait past its real-time cap, the reply that landed during it is
+      read before the wait gives up (`_read_what_arrived`, A-GR-07).
+    - Running out on the real-time cap, or on the look limit, with Jev's own
+      bound unspent raises `PausedTimeoutError`: the pause, not Jev, took
+      the time (A-GR-11). Running out on Jev's own bound raises a plain
+      `TimeoutError`, exactly as develop's `asyncio.wait_for` did.
+    - The wall time is bounded, the allowance included (A-GR-06): when the
+      last two looks both came back late, as on a busy server, the next one
+      is predicted to take as long, and the wait stops rather than start a
+      look that would carry it past the cap. Past the cap, what it waits on
+      is stopped and not waited for. So the wait ends by the cap, give or
+      take one turn of a busy loop.
+    - A budget that is not a finite number above zero ends at once, and a
+      clock that stands still or runs backwards still ends the wait, on its
+      look limit (J-GR-03, A-GR-14, A-GR-09).
 
     A body that trickles in slowly (F-8.2-J03) does not stall the loop, so
     its time is counted in full and it is cut at the bound as before.
     """
+    if not _is_a_budget(budget_s):
+        _never_awaited(awaitable)
+        raise TimeoutError
     task = asyncio.ensure_future(awaitable)
+    cap_s = budget_s + JEV_STALL_ALLOWANCE_S
+    looks_left = math.ceil(cap_s / _LOOK_S) + _SPARE_LOOKS
     started = last = time.monotonic()
     counted = 0.0
+    stalled = False
+    # How long each of the last two looks took when it came back late, 0.0
+    # when it came back on time.
+    late = (0.0, 0.0)
     try:
         while True:
             if task.done():
                 return task.result()
             left_s = budget_s - counted
-            real_left_s = budget_s + JEV_STALL_ALLOWANCE_S - (time.monotonic() - started)
-            if left_s <= _NONE_LEFT_S or real_left_s <= _NONE_LEFT_S:
+            if left_s <= _NONE_LEFT_S:
                 raise TimeoutError
+            next_look_s = min(late)
+            real_left_s = cap_s - (time.monotonic() - started) - next_look_s
+            if real_left_s <= _NONE_LEFT_S or looks_left <= 0:
+                if stalled and await _read_what_arrived(task):
+                    return task.result()
+                raise PausedTimeoutError
             ask_s = min(_LOOK_S, left_s, real_left_s)
             await asyncio.wait({task}, timeout=ask_s)
+            looks_left -= 1
             now = time.monotonic()
-            counted += min(now - last, ask_s + _STALL_SLACK_S)
+            took_s = max(0.0, now - last)
             last = now
+            if took_s <= ask_s + _STALL_SLACK_S:
+                counted += took_s
+                late = (late[1], 0.0)
+            else:
+                stalled = True
+                late = (late[1], took_s)
+    except TimeoutError:
+        # Past the bound: stop what it waits on, and do not wait for it to
+        # wind down, so the person waits no longer than the bound (A-GR-06).
+        if not task.done():
+            task.cancel()
+            task.add_done_callback(_retrieve_quietly)
+        raise
     except BaseException as exc:
-        # Past the bound, or this wait itself stopped: stop what it waits
-        # on, and wait for it to stop unless this coroutine is being closed,
-        # where no further wait is allowed.
+        # This wait itself stopped: stop what it waits on, and wait for it to
+        # stop unless this coroutine is being closed, where no further wait
+        # is allowed.
         if not task.done():
             task.cancel()
             if not isinstance(exc, GeneratorExit):
@@ -515,9 +644,12 @@ async def _send(
         # Counted in time the server was free to read it (step 3b, F-72-J03).
         response = await wait_counting_free_time(_post(headers, body), timeout_s)
     except (TimeoutError, httpx.TimeoutException) as exc:
+        # A wait that ran out on its real-time cap, the server's pauses having
+        # taken the time, says so: Jev's pick is unknown, not missing (A-GR-11).
         raise JevCallError(
             f"Jev did not answer within {timeout_s}s in total for {subject}; {next_step}",
             reason="timeout",
+            after_a_pause=isinstance(exc, PausedTimeoutError),
         ) from exc
     except httpx.HTTPError as exc:
         raise JevCallError(

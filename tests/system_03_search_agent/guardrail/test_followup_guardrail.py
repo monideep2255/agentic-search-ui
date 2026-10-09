@@ -744,11 +744,16 @@ def test_with_jev_a_pause_anywhere_in_jevs_wait_never_turns_its_admission_into_a
 def test_with_jev_a_pause_past_the_allowance_still_ends_jevs_clock(
     monkeypatch: pytest.MonkeyPatch, _jev_on: None
 ) -> None:
-    """The residual both reviews named, pinned: a pause longer than
-    `JEV_STALL_ALLOWANCE_S` (2 s) inside Jev's own bound, as its request is
-    sent, still ends Jev's clock, and the classifier's off-topic refusal
-    stands; the guard tier's fallback, even saying on topic, never sets it
-    aside. Nothing is admitted that the guard model refused without Jev's
+    """The residual both reviews named, pinned as the code does it (fix
+    round, J-GR-02): Jev's clock ends at its 3 s bound plus the 2 s
+    allowance of real time from when its wait began, whatever the pause. A
+    2.5 s pause as Jev's request is sent, then a reply 2.9 s later, comes at
+    5.4 s, past the 5 s, so Jev's clock has ended and the classifier's
+    off-topic refusal stands; the guard tier's fallback, even saying on
+    topic, never sets it aside. It is the reply's lateness past the 5 s that
+    refuses, not the pause's length: a 4.7 s pause before a 0.2 s reply is
+    still read (`test_with_jev_a_long_pause_before_a_fast_reply_is_still_read`
+    below). Nothing is admitted that the guard model refused without Jev's
     own pick. The same pause under the allowance admits (the arms above)."""
     _classifier(monkeypatch, _OFF_TOPIC)
     _jev_injection(monkeypatch, "not_injection")
@@ -759,6 +764,30 @@ def test_with_jev_a_pause_past_the_allowance_still_ends_jevs_clock(
 
     guard = _guard(events)
     assert guard is not None and guard["passed"] is False and guard["category"] == "off_topic"
+
+
+def test_with_jev_a_long_pause_before_a_fast_reply_is_still_read(
+    monkeypatch: pytest.MonkeyPatch, _jev_on: None
+) -> None:
+    """J-GR-02, the true statement pinned through the real node: a pause is
+    not refused for being over 2 s. The server pauses 4.7 s as Jev's request
+    is sent and Jev answers on topic 0.2 s later, at 4.9 s, inside its bound
+    plus the allowance, so Jev's pick is read and sets the classifier's
+    off-topic verdict aside, as with no pause."""
+    _classifier(monkeypatch, _OFF_TOPIC)
+    _jev_injection(monkeypatch, "not_injection")
+    monkeypatch.setattr(decide_module, "_guard_fallback_pick", AsyncMock(return_value="off_topic"))
+    reply = _jev_reply("on_topic", "off_topic", after_s=0.0)
+
+    async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
+        decide_module.time.sleep(4.7)  # the virtual clock's blocking pause
+        await asyncio.sleep(0.2)
+        return await reply(headers, body)
+
+    monkeypatch.setattr(jev_client_module, "_post", _post)
+    events, _, _, elapsed = _node(monkeypatch, _TREE_OF_LIFE)
+    assert _guard(events) == {"passed": True, "category": "ok", "reason": None}
+    assert elapsed == pytest.approx(4.9, abs=0.06)
 
 
 def test_with_jev_a_failure_signalled_mid_wait_ends_the_wait_at_once(
@@ -885,3 +914,4 @@ async def test_no_usable_verdict_says_what_to_do_next(
         "message": "A step in this query could not complete. Retrying the query may succeed.",
         "retry_after_s": 0,
     }
+

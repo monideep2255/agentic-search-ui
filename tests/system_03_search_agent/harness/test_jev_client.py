@@ -617,3 +617,264 @@ async def test_a_batch_that_should_never_be_sent_is_refused_in_code(
     with pytest.raises(ValueError):
         await _batch_once(questions=questions)
     mock_post.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Fix round of the guardrail design (cards 84 and 72): the free-time clock
+# on every Jev call, `wait_counting_free_time`, on the virtual clock. Each
+# arm names the finding it closes; each was red on the first build.
+# ---------------------------------------------------------------------------
+
+_BOUND_S = jev_client_module.JEV_TOTAL_TIMEOUT_S
+_CAP_S = _BOUND_S + jev_client_module.JEV_STALL_ALLOWANCE_S
+_TEST_KEY = "test-key"
+
+
+def _on_the_virtual_clock(monkeypatch: pytest.MonkeyPatch, make: Any) -> Any:
+    from tests.system_03_search_agent.virtual_clock import run_virtual
+
+    return run_virtual(monkeypatch, make)
+
+
+async def _never() -> str:
+    await asyncio.sleep(10_000)
+    return "never"
+
+
+async def _timed(awaitable: Any, budget_s: float, *, guard_s: float | None = 200.0) -> tuple[object, float]:
+    """(what the wait returned or raised, loop seconds it took), under an
+    outer guard that a wait which never ends runs into (none when `guard_s`
+    is None, so the guard's own turns are not measured)."""
+    loop = asyncio.get_running_loop()
+    began = loop.time()
+    wait = jev_client_module.wait_counting_free_time(awaitable, budget_s)
+    try:
+        result: object = await (wait if guard_s is None else asyncio.wait_for(wait, guard_s))
+    except TimeoutError as exc:
+        result = exc
+    return result, loop.time() - began
+
+
+@pytest.mark.parametrize("chunk_s", [0.03, 0.06, 0.1, 0.15, 0.3, 0.6])
+def test_a_hung_jev_call_on_a_busy_server_ends_by_its_bound_plus_the_allowance(
+    monkeypatch: pytest.MonkeyPatch, chunk_s: float
+) -> None:
+    """A-GR-06: other questions' synchronous work blocks the loop in chunks,
+    for ever, and Jev never answers. The wait ends by the bound plus the 2 s
+    allowance, give or take one chunk of the busy loop (it stops rather than
+    start a look that would carry it past, and does not wait for the call it
+    stops to wind down). The first build ran 5.22 s at 0.06 s chunks and
+    7.20 s at 0.6 s chunks.
+
+    MUTATION PROOF: dropping the prediction (`next_look_s = 0.0`) turns the
+    0.3 s and 0.6 s arms red; awaiting the stopped call again turns the
+    0.6 s arm red."""
+
+    async def _go() -> tuple[object, float]:
+        loop = asyncio.get_running_loop()
+
+        async def _busy() -> None:
+            while True:
+                loop.stall(chunk_s)  # type: ignore[attr-defined]
+                await asyncio.sleep(0)
+
+        busy = asyncio.ensure_future(_busy())
+        try:
+            return await _timed(_never(), _BOUND_S, guard_s=None)
+        finally:
+            busy.cancel()
+
+    result, took_s = _on_the_virtual_clock(monkeypatch, _go)
+    assert isinstance(result, TimeoutError)
+    assert took_s <= _CAP_S + chunk_s + 1e-6, took_s
+
+
+def test_a_clock_that_stands_still_still_ends_the_wait(monkeypatch: pytest.MonkeyPatch) -> None:
+    """J-GR-03: the module's clock never moves, so nothing is ever counted;
+    the wait still ends, on its look limit, within about the cap of loop
+    time. The first build waited until the outer guard fired."""
+
+    async def _go() -> tuple[object, float]:
+        monkeypatch.setattr(jev_client_module.time, "monotonic", lambda: 5.0)
+        return await _timed(_never(), _BOUND_S)
+
+    result, took_s = _on_the_virtual_clock(monkeypatch, _go)
+    assert isinstance(result, jev_client_module.PausedTimeoutError)
+    assert took_s <= _CAP_S + 1.0, took_s
+
+
+def test_a_clock_that_steps_backwards_still_ends_the_wait(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A-GR-09: the clock steps back 100 s once; the wait neither un-counts
+    time below zero nor waits the 100 s. The first build waited 103 s."""
+
+    async def _go() -> tuple[object, float]:
+        loop = asyncio.get_running_loop()
+        reads = [0]
+
+        def _monotonic() -> float:
+            reads[0] += 1
+            return loop.time() - (100.0 if reads[0] >= 5 else 0.0)
+
+        monkeypatch.setattr(jev_client_module.time, "monotonic", _monotonic)
+        return await _timed(_never(), _BOUND_S)
+
+    result, took_s = _on_the_virtual_clock(monkeypatch, _go)
+    assert isinstance(result, TimeoutError)
+    assert took_s <= _CAP_S + 1.0, took_s
+
+
+@pytest.mark.parametrize("budget_s", [float("nan"), float("inf"), float("-inf"), 0.0, -1.0])
+def test_a_budget_that_is_not_a_finite_amount_above_zero_ends_at_once(
+    monkeypatch: pytest.MonkeyPatch, budget_s: float
+) -> None:
+    """J-GR-03, A-GR-14: a NaN or infinite budget made the wait look every
+    50 ms for ever, since no comparison with NaN is true and infinity never
+    runs out. It now times out at once, as `asyncio.wait_for(..., nan)` did
+    on develop, and the call it would have waited on is closed, never left
+    half started."""
+
+    async def _go() -> tuple[object, float, bool]:
+        awaitable = _never()
+        result, took_s = await _timed(awaitable, budget_s, guard_s=30.0)
+        return result, took_s, awaitable.cr_frame is None
+
+    result, took_s, closed = _on_the_virtual_clock(monkeypatch, _go)
+    assert isinstance(result, TimeoutError) and not isinstance(result, jev_client_module.PausedTimeoutError)
+    assert took_s == 0.0
+    assert closed
+
+
+async def _batch_with_timeout(*, timeout_s: float) -> Any:
+    question = jev_client_module.JevChoiceQuestion(
+        options=("yes", "no"), instructions="i", criteria={"yes": "y", "no": "n"}
+    )
+    return await jev_client_module.call_jev_batch(
+        model="m", state="x", questions={"item_1": question}, api_key=_TEST_KEY, timeout_s=timeout_s
+    )
+
+
+async def _hang(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
+    await asyncio.sleep(60)
+    raise AssertionError("never answers")
+
+
+@pytest.mark.asyncio
+async def test_a_batch_handed_a_nan_timeout_gives_up_at_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A-GR-14: `min(nan, 3.0)` is NaN, so `call_jev_batch` handed a NaN
+    timeout waited for ever on a hung Jev; it now fails at once as a timeout,
+    charged nothing."""
+    monkeypatch.setattr(jev_client_module, "_post", _hang)
+    started = time.monotonic()
+    with pytest.raises(JevCallError) as excinfo:
+        await _batch_with_timeout(timeout_s=float("nan"))
+    assert excinfo.value.reason == "timeout" and excinfo.value.billed_cost_usd == 0.0
+    assert time.monotonic() - started < 1.0
+
+
+def test_a_reply_that_arrived_during_a_long_pause_wins_over_the_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A-GR-07: Jev answers at 0.2 s, but a 6 s pause of the server starts at
+    0.1 s, so the reply lands while the loop is frozen and the pause carries
+    the wait past its 5 s cap. The reply that arrived is read before the
+    clock gives up. The first build checked its cap first and threw the
+    reply away.
+
+    MUTATION PROOF: `_read_what_arrived` returning False at once turns this
+    red."""
+
+    async def _go() -> tuple[object, float]:
+        loop = asyncio.get_running_loop()
+
+        async def _reply() -> str:
+            await asyncio.sleep(0.2)
+            return "reply"
+
+        loop.call_later(0.1, loop.stall, 6.0)  # type: ignore[attr-defined]
+        return await _timed(_reply(), _BOUND_S)
+
+    result, took_s = _on_the_virtual_clock(monkeypatch, _go)
+    assert result == "reply"
+    assert took_s == pytest.approx(6.1)
+
+
+def test_pauses_never_spend_jevs_own_bound(monkeypatch: pytest.MonkeyPatch) -> None:
+    """J-GR-01, A-GR-08: three 0.3 s pauses inside the wait, and Jev's reply
+    after 2.9 s of time the loop was free. Each pause interrupts one look,
+    and that look counts nothing, so the reply is read. The first build
+    counted each interrupted look as 0.1 s, more than the 0.05 s it asked,
+    so the pauses spent Jev's last tenths and the reply was lost.
+
+    MUTATION PROOF: counting an interrupted look as the time asked plus the
+    slack again turns this red."""
+
+    async def _go() -> tuple[object, float]:
+        loop = asyncio.get_running_loop()
+
+        async def _reply() -> str:
+            await asyncio.sleep(2.9 + 0.9)  # 2.9 s free, plus the three pauses
+            return "reply"
+
+        for at_s in (0.52, 1.52, 2.52):
+            loop.call_later(at_s, loop.stall, 0.3)  # type: ignore[attr-defined]
+        return await _timed(_reply(), _BOUND_S)
+
+    result, _ = _on_the_virtual_clock(monkeypatch, _go)
+    assert result == "reply"
+
+
+@pytest.mark.parametrize(
+    ("pause_s", "paused"),
+    [(0.0, False), (1.0, False), (2.5, True)],
+    ids=["no pause: Jev's own bound", "a 1 s pause: Jev's own bound", "a 2.5 s pause: the real-time cap"],
+)
+def test_a_wait_says_whether_jevs_bound_or_a_pause_ended_it(
+    monkeypatch: pytest.MonkeyPatch, pause_s: float, paused: bool
+) -> None:
+    """A-GR-11: a hung Jev call ends on Jev's own 3 s bound, a plain timeout,
+    unless the server's pauses carried it to the real-time cap first; then
+    it says so (`PausedTimeoutError`, `JevCallError.after_a_pause`), and the
+    guardrail never reads the missing pick as "not an injection"."""
+    monkeypatch.setattr(jev_client_module, "_post", _hang)
+
+    async def _go() -> JevCallError:
+        loop = asyncio.get_running_loop()
+        if pause_s:
+            loop.call_later(0.5, loop.stall, pause_s)  # type: ignore[attr-defined]
+        with pytest.raises(JevCallError) as excinfo:
+            await call_jev(
+                model="m",
+                question_key="guardrail.injection",
+                state="x",
+                options=["injection", "not_injection"],
+                api_key=_TEST_KEY,
+            )
+        return excinfo.value
+
+    error = _on_the_virtual_clock(monkeypatch, _go)
+    assert error.reason == "timeout"
+    assert error.after_a_pause is paused
+
+
+def test_jevs_clock_ends_at_its_bound_plus_the_allowance_whatever_the_pause(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """J-GR-02, the rule that ships, pinned: Jev's clock ends at its bound
+    plus the 2 s allowance of real time from when the wait began, not at a
+    pause of 2 s. A 4.7 s pause before a 0.2 s reply is read (4.9 s); a
+    4.9 s pause before the same reply is not (5.1 s, past the 5 s)."""
+
+    def _go(pause_s: float) -> Any:
+        async def _run() -> object:
+            loop = asyncio.get_running_loop()
+
+            async def _reply() -> str:
+                loop.stall(pause_s)  # type: ignore[attr-defined]
+                await asyncio.sleep(0.2)
+                return "reply"
+
+            result, _ = await _timed(_reply(), _BOUND_S)
+            return result
+
+        return _run
+
+    assert _on_the_virtual_clock(monkeypatch, _go(4.7)) == "reply"
+    assert isinstance(_on_the_virtual_clock(monkeypatch, _go(4.9)), jev_client_module.PausedTimeoutError)

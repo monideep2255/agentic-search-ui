@@ -1,7 +1,11 @@
 """Step 3d of the guardrail design (cards 84 and 72): the sweep against
 develop's own code, which proves the guardrail change loses no question
-develop answers, answers none later, never has two requests of one kind in
-flight, and never passes the 15 s budget.
+develop answers, with no server pause answers none later, never has two
+requests of one kind in flight, and never passes the 15 s budget. After a
+server pause it answers later than develop by at most the pause and one
+0.05 s look, never more than the 2 s allowance (fix round, J-GR-08), and
+admits nothing develop refuses but the classes `_paused_case` names (fix
+round, A-GR-11, A-GR-12).
 
 ## The two yardsticks
 
@@ -28,11 +32,17 @@ which is how that check runs develop's tree.
 
 - Every case, the new code: never two classifier requests in flight, never
   two guard picks in flight, never past the budget.
-- Every case develop answers (an admission or a refusal): the new code
-  answers the same, no later. The one class allowed to differ is step 3b's
-  own fix, counted: develop refused a question as off topic because a server
-  pause pushed Jev's on-topic pick past develop's clock, and the new code
-  reads that pick and admits, as R-03 admits it without a pause.
+- Every case develop answers with no pause (an admission or a refusal): the
+  new code answers the same, no later, but one counted class of refusal
+  category (`_INJECTION_SOONER`).
+- Every case with one pause (`relevancy_sweep`, `_paused_case`): the
+  relevancy grid pauses 0.6 and 1.0 s as Jev's relevancy request is sent;
+  the pause grid (fix round, A-GR-12) pauses 1.5 to 6 s at every point of
+  the Jev and guard calls. Within the allowance the verdict is the one the
+  same case gets with no pause, or a refusal either way; past it, a
+  different verdict only toward a refusal, the named residual. No admission
+  develop refuses, but FA03 (develop admits the same case with no pause)
+  and one named class past the allowance.
 - The rules every step keeps, case by case: nothing is admitted without the
   guard model's own verdict; Jev never removes a refusal (an injection
   verdict from either judge always refuses).
@@ -154,13 +164,44 @@ async def _meet(outcome: _Outcome) -> Any:
     raise litellm.AuthenticationError(message="401 (stub)", llm_provider="openrouter", model="m")
 
 
+#: Where one pause of the server can land (fix round, A-GR-12): as a
+#: request of each kind is sent or as its reply arrives, or at a fixed
+#: moment of the case, whatever is running then.
+_STALL_POINTS = (
+    "relevancy_send",
+    "relevancy_reply",
+    "injection_send",
+    "injection_reply",
+    "classify_send",
+    "classify_reply",
+    "pick_send",
+    "at_1s",
+)
+
+
+class _Stall:
+    """One blocking pause of the server, `seconds` long, the first time the
+    case reaches `point`."""
+
+    def __init__(self, point: str, seconds: float) -> None:
+        self.point = point
+        self.seconds = seconds
+        self.done = seconds <= 0
+
+    def hit(self, point: str) -> None:
+        if not self.done and point == self.point:
+            self.done = True
+            asyncio.get_running_loop().stall(self.seconds)  # type: ignore[attr-defined]
+
+
 class _GuardStub:
     """`litellm.acompletion` for one case: the classifier's requests meet
     `classify`, a guard pick's meet `pick`; each kind's sends and the most
     in flight at once are counted."""
 
-    def __init__(self, classify: _Provider, pick: _Provider | None, started: float) -> None:
+    def __init__(self, classify: _Provider, pick: _Provider | None, started: float, stall: _Stall | None = None) -> None:
         self.providers = {"classify": classify, "pick": pick}
+        self.stall = stall or _Stall("", 0.0)
         self.started = started
         self.sent: dict[str, list[float]] = {"classify": [], "pick": []}
         self.outcomes: dict[str, list[_Outcome]] = {"classify": [], "pick": []}
@@ -180,37 +221,41 @@ class _GuardStub:
         self.outcomes[kind].append(outcome)
         self.active[kind] += 1
         self.peak[kind] = max(self.peak[kind], self.active[kind])
+        self.stall.hit(f"{kind}_send")
         try:
             return await _meet(outcome)
         finally:
             self.active[kind] -= 1
+            self.stall.hit(f"{kind}_reply")
 
 
 @dataclass(frozen=True)
 class _Jev:
     """Jev for one case: each question's answer (`choice`, or "http_500",
     or "hang") after `after_s`, and a blocking pause of the server of
-    `stall_s` as the relevancy request is sent."""
+    `stall_s` at `stall_at`, one of `_STALL_POINTS` (as the relevancy
+    request is sent, unless named)."""
 
     injection: str = "not_injection"
     injection_after_s: float = 0.12
     relevancy: str = "on_topic"
     relevancy_after_s: float = 0.2
     stall_s: float = 0.0
+    stall_at: str = "relevancy_send"
 
 
-def _jev_post(jev: _Jev) -> Callable[..., Any]:
+def _jev_post(jev: _Jev, stall: _Stall) -> Callable[..., Any]:
     async def _post(headers: dict[str, str], body: dict[str, Any]) -> httpx.Response:
         key = next(iter(body["questions"]))
         if key == "guardrail.injection":
-            answer, after_s, other = jev.injection, jev.injection_after_s, "injection"
+            answer, after_s, other, kind = jev.injection, jev.injection_after_s, "injection", "injection"
         else:
-            answer, after_s, other = jev.relevancy, jev.relevancy_after_s, "off_topic"
-            if jev.stall_s:
-                asyncio.get_running_loop().stall(jev.stall_s)  # type: ignore[attr-defined]
+            answer, after_s, other, kind = jev.relevancy, jev.relevancy_after_s, "off_topic", "relevancy"
+        stall.hit(f"{kind}_send")
         if answer == "hang":
             await asyncio.sleep(10_000)
         await asyncio.sleep(after_s)
+        stall.hit(f"{kind}_reply")
         if answer == "http_500":
             return httpx.Response(500, content=b"oops")
         other = "not_injection" if answer == "injection" else ("off_topic" if answer == "on_topic" else other)
@@ -351,7 +396,9 @@ def run_case(
         async def _go() -> _Run:
             loop = asyncio.get_running_loop()
             started = loop.time()
-            stub = _GuardStub(classify, pick, started)
+            if stall.point == "at_1s":
+                loop.call_at(started + 1.0, stall.hit, "at_1s")
+            stub = _GuardStub(classify, pick, started, stall)
             patch.setattr(harness_module.litellm, "acompletion", stub)
             trace_id = f"t-{uuid.uuid4().hex[:8]}"
             harness = harness_module.Harness(trace_id)
@@ -378,9 +425,10 @@ def run_case(
                 {kind: list(outcomes) for kind, outcomes in stub.outcomes.items()},
             )
 
+        stall = _Stall(jev.stall_at, jev.stall_s) if jev is not None else _Stall("", 0.0)
         if jev is not None:
             patch.setenv("CLASSIFIER_PROVIDER", "jev")
-            patch.setattr(jev_client_module, "_post", _jev_post(jev))
+            patch.setattr(jev_client_module, "_post", _jev_post(jev, stall))
         patch.setattr(graph_module, "_step_deadline", lambda *_a, **_k: graph_module.time.monotonic() + budget_s)
         if port and text != _BRCA1:
             _install_develop_jev_clocks(patch)
@@ -446,8 +494,9 @@ class _RelevancyCase:
     def label(self) -> str:
         j = self.jev
         return (
-            f"classifier {self.classify.label()}, Jev injection {j.injection}, Jev relevancy "
-            f"{j.relevancy}@{j.relevancy_after_s:g} after a {j.stall_s:g}s pause, guard pick {self.pick.label()}"
+            f"classifier {self.classify.label()}, Jev injection {j.injection}@{j.injection_after_s:g}, Jev relevancy "
+            f"{j.relevancy}@{j.relevancy_after_s:g}, a {j.stall_s:g}s pause at {j.stall_at}, "
+            f"guard pick {self.pick.label()}"
         )
 
 
@@ -475,6 +524,41 @@ def _relevancy_grid() -> list[_RelevancyCase]:
         classifies, ("not_injection", "injection", "http_500"), relevancies, picks, (0.0, 0.6, 1.0)
     ):
         jev = _Jev(injection=injection, relevancy=relevancy, relevancy_after_s=after_s, stall_s=stall_s)
+        cases.append(_RelevancyCase(classify, jev, pick))
+    return cases
+
+
+#: The pauses of the pause grid (fix round, A-GR-12): around and past the
+#: 2 s allowance, where the first grid never paused.
+_LONG_PAUSES_S = (1.5, 1.9, 2.0, 2.1, 3.0, 4.5, 6.0)
+
+
+def _pause_grid() -> list[_RelevancyCase]:
+    """Fix round, A-GR-12: one pause of each length in `_LONG_PAUSES_S` at
+    each point of `_STALL_POINTS`, over the classifier's verdicts, Jev's
+    two picks (a slow injection pick among them, A-GR-11's shape) and the
+    guard tier's fallback pick."""
+    classifies = [
+        _Outcome("reply", 0.3, "admit"),
+        _Outcome("reply", 0.3, "off-topic"),
+        _Outcome("reply", 0.3, "injection"),
+        _Outcome("reply", 6.0, "off-topic"),
+    ]
+    injections = [("not_injection", 0.12), ("injection", 0.12), ("injection", 2.0), ("http_500", 0.1), ("hang", 0.0)]
+    relevancies = [("on_topic", 0.2), ("on_topic", 2.5), ("off_topic", 0.2), ("http_500", 0.1), ("hang", 0.0)]
+    picks = [_Outcome("reply", 0.3, "on_topic"), _Outcome("reply", 0.3, "off_topic"), _Outcome("hang")]
+    cases = []
+    for classify, (injection, injection_s), (relevancy, relevancy_s), pick, stall_at, stall_s in itertools.product(
+        classifies, injections, relevancies, picks, _STALL_POINTS, _LONG_PAUSES_S
+    ):
+        jev = _Jev(
+            injection=injection,
+            injection_after_s=injection_s,
+            relevancy=relevancy,
+            relevancy_after_s=relevancy_s,
+            stall_s=stall_s,
+            stall_at=stall_at,
+        )
         cases.append(_RelevancyCase(classify, jev, pick))
     return cases
 
@@ -541,12 +625,122 @@ def classifier_sweep(
 #: consequence of step 3b reading Jev's own pick after a server pause where
 #: develop's real-time clock gave up on it.
 _PAUSE_VERDICT = "a pause: Jev's own pick now read, the verdict the same case gets with no pause"
-_PAUSE_LATER = "a pause: the same verdict, later than develop by no more than the pause"
+_PAUSE_LATER = "a pause: the same verdict, later than develop by no more than the pause and one look, at most 2 s"
+_PAUSE_CATEGORY = "a pause within the allowance: refused either way, under the other judge's category"
 _FA03 = "of those, develop refused off topic and Jev's own on-topic pick now admits (FA03)"
 _INJECTION_SOONER = (
     "Jev called it injection and made no relevancy pick: refused as injection when Jev fails, "
     "not off topic after the guard fallback (the category R-06 named)"
 )
+#: Past the 2 s allowance (fix round, A-GR-11, A-GR-12): Jev's clock can
+#: end before its pick is read, as develop's did, and the guardrail then
+#: keeps a refusal rather than admit on half of Jev's judgement. A refusal
+#: develop did not give is the named residual; an admission develop did not
+#: give is never allowed.
+_PAST_REFUSED = "a pause past the 2 s allowance: refused where the same case with no pause is not (the named residual)"
+_PAST_GUARD_ADMITTED = (
+    "a pause past the 2 s allowance: the guard model admitted and Jev's own on-topic pick was read, "
+    "where develop's clock lost that pick and its guard fallback refused off topic; Jev's injection "
+    "pick lost to the pause on both"
+)
+_PAST_AS_DEVELOP = (
+    "a pause past the 2 s allowance: Jev's injection pick lost to the pause, as on develop, "
+    "and the question admitted as develop admits it"
+)
+
+
+def _within_the_allowance(pause_s: float) -> bool:
+    """Whether one pause of `pause_s` fits the allowance with the look it
+    interrupts: that look's time is not counted, so the allowance covers a
+    pause of `JEV_STALL_ALLOWANCE_S` less one look."""
+    return pause_s + jev_client_module._LOOK_S <= jev_client_module.JEV_STALL_ALLOWANCE_S + 1e-9
+
+
+def _guard_admitted_and_develop_lost_jevs_pick(
+    case: _RelevancyCase, old: _Run, new: _Run, *, within: bool
+) -> bool:
+    """The one admission develop refuses that the rules allow, past the
+    allowance only (fix round, A-GR-11): the guard model's own verdict
+    admitted, Jev's own on-topic pick decided the topic with no guard pick
+    asked, and develop refused only because its clock lost that same pick
+    and its guard fallback said off topic. No refusal arrived on the new
+    code to be discarded; Jev's injection pick was lost to the pause on
+    both, which is develop's rule for a failed Jev pick: the guard model's
+    verdict stands."""
+    return (
+        not within
+        and case.classify.kind == "reply"
+        and case.classify.verdict == "admit"
+        and case.jev.relevancy == "on_topic"
+        and old.verdict == "off_topic"
+        and old.requests.get("pick", 0) >= 1
+        and new.requests.get("pick", 0) == 0
+    )
+
+
+def _paused_case(
+    sweep: _Sweep,
+    where: str,
+    case: _RelevancyCase,
+    old: _Run,
+    new: _Run,
+    calm: _Run,
+    develop_calm: _Run,
+) -> None:
+    """A case with one pause, against develop (`old`), the same case with no
+    pause on the new code (`calm`) and on develop (`develop_calm`).
+
+    - Never an admission develop refuses, unless develop itself admits the
+      same case with no pause: that is FA03, the pause no longer turning an
+      admission into a refusal (fix round, A-GR-12); or, past the
+      allowance, `_guard_admitted_and_develop_lost_jevs_pick`.
+    - Within the allowance, the verdict the same case gets with no pause, or
+      a refusal either way. The allowance covers a pause and the one look
+      of `jev_client._LOOK_S` it interrupts, so a pause of up to 1.95 s is
+      within it and one of 2 s is past it (`_within_the_allowance`).
+    - Past it, a different verdict only toward a refusal (the residual).
+    - Never later than develop by more than the pause and that one look,
+      and never by more than the allowance (J-GR-08).
+    """
+    pause_s = case.jev.stall_s
+    allowance_s = jev_client_module.JEV_STALL_ALLOWANCE_S
+    within = _within_the_allowance(pause_s)
+    if new.verdict == "ok" and old.verdict != "ok" and develop_calm.verdict != "ok":
+        if _guard_admitted_and_develop_lost_jevs_pick(case, old, new, within=within):
+            sweep.classes[_PAST_GUARD_ADMITTED] += 1
+            return
+        sweep.problems.append(f"{where}: admitted where develop refuses ({old.verdict}), with or without the pause")
+        return
+    if within and new.verdict != calm.verdict:
+        if new.verdict in (None, "ok") or calm.verdict in (None, "ok"):
+            sweep.problems.append(f"{where}: {new.verdict} after the pause, {calm.verdict} with none")
+            return
+        sweep.classes[_PAUSE_CATEGORY] += 1
+    if new.elapsed_s > old.elapsed_s + min(pause_s + jev_client_module._LOOK_S, allowance_s) + 1e-6:
+        sweep.problems.append(
+            f"{where}: develop {old.elapsed_s:.2f}s, new {new.elapsed_s:.2f}s, "
+            f"more than min(pause and one look, {allowance_s:g}s) later"
+        )
+        return
+    if within and new.verdict != calm.verdict:
+        return
+    if new.verdict != old.verdict:
+        if new.verdict == calm.verdict:
+            sweep.classes[_PAUSE_VERDICT] += 1
+            if old.verdict == "off_topic" and new.verdict == "ok":
+                sweep.classes[_FA03] += 1
+        elif new.verdict != "ok":
+            sweep.classes[_PAST_REFUSED] += 1
+        else:
+            sweep.problems.append(f"{where}: develop {old.verdict}, new {new.verdict}")
+        return
+    if new.verdict == "ok" and not within and case.jev.injection == "injection":
+        sweep.classes[_PAST_AS_DEVELOP] += 1
+        return
+    if new.elapsed_s > old.elapsed_s + 1e-6:
+        sweep.classes[_PAUSE_LATER] += 1
+    else:
+        sweep.held += 1
 
 
 def relevancy_sweep(monkeypatch: pytest.MonkeyPatch, grid: list[_RelevancyCase]) -> _Sweep:
@@ -558,11 +752,11 @@ def relevancy_sweep(monkeypatch: pytest.MonkeyPatch, grid: list[_RelevancyCase])
     later, but one class: a question Jev called injection whose relevancy
     pick Jev failed is refused as injection the moment Jev fails, where
     develop waited for the guard fallback and refused it as off topic; a
-    refusal either way, never later. With a pause, step 3b reads a Jev pick develop's clock gave up
-    on, so a case may differ from develop, but only toward what the same
-    case gets with no pause: the same verdict as the no-pause run, and no
-    later than develop by more than the pause itself. Those are counted."""
+    refusal either way, never later. With a pause, step 3b reads a Jev pick
+    develop's clock gave up on, so a case may differ from develop, by the
+    rules of `_paused_case`. Those are counted."""
     sweep = _Sweep()
+    calm_runs: dict[_RelevancyCase, tuple[_Run, _Run]] = {}
     for case in grid:
         sweep.cases += 1
         classify = _Provider(case.classify.label(), lambda _i, _t, o=case.classify: o)
@@ -571,14 +765,14 @@ def relevancy_sweep(monkeypatch: pytest.MonkeyPatch, grid: list[_RelevancyCase])
         new = run_case(monkeypatch, classify, text=_TREE_OF_LIFE, jev=case.jev, pick=pick)
         where = case.label()
         _check_new(sweep, where, new, 15.0)
-        _check_the_rules(sweep, where, case, new)
+        if _within_the_allowance(case.jev.stall_s):
+            _check_the_rules(sweep, where, case, new)
         if old.verdict is None:
             if new.verdict is not None:
                 sweep.problems.append(f"{where}: develop gave no answer, new {new.verdict}")
             continue
         sweep.develop_answered += 1
-        pause_s = case.jev.stall_s
-        if pause_s == 0:
+        if case.jev.stall_s == 0:
             if _compare(sweep, where, old, new, same_requests=False):
                 continue
             injection_sooner = (
@@ -593,23 +787,14 @@ def relevancy_sweep(monkeypatch: pytest.MonkeyPatch, grid: list[_RelevancyCase])
             else:
                 sweep.problems.append(f"{where}: develop {old.verdict}, new {new.verdict}")
             continue
-        calm = run_case(
-            monkeypatch, classify, text=_TREE_OF_LIFE, jev=replace(case.jev, stall_s=0.0), pick=pick
-        )
-        if new.verdict != calm.verdict:
-            sweep.problems.append(f"{where}: {new.verdict} after the pause, {calm.verdict} with none")
-        elif new.elapsed_s > old.elapsed_s + pause_s + 1e-6:
-            sweep.problems.append(
-                f"{where}: develop {old.elapsed_s:.2f}s, new {new.elapsed_s:.2f}s, more than the {pause_s:g}s pause later"
+        still = replace(case, jev=replace(case.jev, stall_s=0.0, stall_at="relevancy_send"))
+        if still not in calm_runs:
+            calm_runs[still] = (
+                run_case(monkeypatch, classify, text=_TREE_OF_LIFE, jev=still.jev, pick=pick),
+                run_case(monkeypatch, classify, text=_TREE_OF_LIFE, jev=still.jev, pick=pick, port=True),
             )
-        elif new.verdict != old.verdict:
-            sweep.classes[_PAUSE_VERDICT] += 1
-            if old.verdict == "off_topic" and new.verdict == "ok":
-                sweep.classes[_FA03] += 1
-        elif new.elapsed_s > old.elapsed_s + 1e-6:
-            sweep.classes[_PAUSE_LATER] += 1
-        else:
-            sweep.held += 1
+        calm, develop_calm = calm_runs[still]
+        _paused_case(sweep, where, case, old, new, calm, develop_calm)
     return sweep
 
 
@@ -691,12 +876,69 @@ def test_the_relevancy_wait_loses_nothing_develop_answers_and_answers_nothing_la
     assert sweep.held + counted == sweep.develop_answered
 
 
+#: A-GR-11's shapes, as the adversary found them: the shortest Jev
+#: injection latency that admitted, per pause, on the first build.
+_A_GR_11 = {3.0: 2.0, 3.5: 1.5, 4.0: 1.0, 4.5: 0.6}
+
+
+@pytest.mark.parametrize(("pause_s", "injection_s"), list(_A_GR_11.items()))
+def test_a_pause_never_admits_a_question_both_judges_refused(
+    monkeypatch: pytest.MonkeyPatch, pause_s: float, injection_s: float
+) -> None:
+    """A-GR-11, the priority of the fix round: the guard model says off topic
+    at 0.3 s, Jev says on topic at 0.2 s and injection at `injection_s`, and
+    the server pauses `pause_s` as Jev's relevancy request goes out; the
+    guard fallback would say off topic. Develop's real clocks refuse it off
+    topic. The first build read Jev's fast on-topic pick on the free-time
+    clock, lost the slower injection pick to the real-time cap, set the
+    guard model's refusal aside and admitted the question. Now the refusal
+    that arrived stands, or Jev's injection pick, read, refuses it.
+
+    MUTATION PROOF: `jev_injection_unknown` never read in the R-03 branch
+    of `_guardrail_after_prefilter` turns the 4.5 s arm red: admitted."""
+    case = _RelevancyCase(
+        _Outcome("reply", 0.3, "off-topic"),
+        _Jev(injection="injection", injection_after_s=injection_s, relevancy="on_topic", stall_s=pause_s),
+        _Outcome("reply", 0.3, "off_topic"),
+    )
+    classify = _Provider(case.classify.label(), lambda _i, _t, o=case.classify: o)
+    pick = _Provider(case.pick.label(), lambda _i, _t, o=case.pick: o)
+    old = run_case(monkeypatch, classify, text=_TREE_OF_LIFE, jev=case.jev, pick=pick, port=True)
+    new = run_case(monkeypatch, classify, text=_TREE_OF_LIFE, jev=case.jev, pick=pick)
+    assert old.verdict == "off_topic"
+    assert new.verdict in ("off_topic", "injection"), new
+    assert new.elapsed_s <= 15.0
+
+
+def test_a_pause_around_or_past_the_allowance_admits_nothing_develop_refuses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fix round, A-GR-11 and A-GR-12: one pause of 1.5 to 6 s at every point
+    of the Jev and guard calls (`_STALL_POINTS`), over 300 combinations of
+    the classifier, Jev's two picks and the guard fallback, 16,800 cases.
+    No admission develop refuses but FA03 and the one named class, every
+    rule kept within the allowance, and no verdict later than develop by
+    more than the pause and one look, at most 2 s.
+
+    MUTATION PROOF: `_guardrail_after_prefilter` letting Jev's on-topic pick
+    set the guard model's off-topic verdict aside when Jev's injection pick
+    was lost to a pause (the first build) turns this red on A-GR-11's shape:
+    admitted where develop refuses."""
+    sweep = _cached("pause", lambda: relevancy_sweep(monkeypatch, _pause_grid()))
+    assert sweep.problems == [], "\n".join(sweep.problems[:20])
+    assert sweep.cases == len(_pause_grid()) >= 16_000
+    counted = sum(n for name, n in sweep.classes.items() if name != _FA03)
+    assert sweep.held + counted == sweep.develop_answered
+    assert sweep.classes[_PAST_GUARD_ADMITTED] <= 2, sweep.classes
+
+
 def test_the_sweep_reports_its_counts(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     """The counts, printed for the builder's record (`pytest -s`)."""
     for name, run in (
         ("classifier, guard", lambda: classifier_sweep(monkeypatch, _classifier_grid(), jev=None)),
         ("classifier, jev", lambda: classifier_sweep(monkeypatch, _classifier_grid(), jev=_Jev())),
         ("relevancy", lambda: relevancy_sweep(monkeypatch, _relevancy_grid())),
+        ("pause", lambda: relevancy_sweep(monkeypatch, _pause_grid())),
     ):
         sweep = _cached(name, run)
         with capsys.disabled():
