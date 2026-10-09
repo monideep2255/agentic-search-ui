@@ -73,6 +73,19 @@ Cards: 2 (the first sentence), 50 (nobody waits in silence), 5 (models by tier, 
 | Role | Model | Effort | Started | Ended | Tokens |
 |---|---|---|---|---|---|
 
+Resumed 2026-10-08 (night of 2026-10-08 to 09):
+
+- Wall clock: 8 hours from 00:30 UTC on 2026-10-09.
+- Dispatches: up to 12, the owner's answer before sleeping (`DECISIONS.md`, 2026-10-08). Planned: builders W (steps 5 and 6), S (steps 2 and 7), F (step 4), R (step 8, after W), the judge, the adversary, one fix agent, a fresh verifier, the product reviewer.
+- Spend: at most $20 of OpenRouter credit, read from the credits endpoint before and after each live run. $36.11 left at 00:11 UTC. If it runs out before the live checks finish, the phase still merges on CI and a fresh verifier, with the unrun checks named (the owner's answer).
+- Gate: the test queries document; no golden run (the owner's choice).
+
+| Role | Model | Effort | Started | Ended | Tokens |
+|---|---|---|---|---|---|
+| builder W, steps 5 and 6 | depth | high | 00:33 | | |
+| builder S, steps 2 and 7 | balance | medium | 00:33 | | |
+| builder F, step 4 | balance | medium | 00:33 | | |
+
 ## Tickets
 
 ### T-8.7-01: The first sentence answers the question, and the write step waits less (cards 2 and 50)
@@ -161,5 +174,8 @@ A and C touch disjoint functions of `core/graph.py`. The lead fixes the placemen
   - Builder A, `feat/8.7-s1` at 32e5945e: T-8.7-01 built, but its unit suite never finished and the lead committed the working tree unreviewed, only to keep it safe. Next: review its own diff, run the suite, commit.
   - Builder B, `feat/8.7-s2` at cb407508: the placement field is committed (1e030148), and the screen work is committed unreviewed by the lead. It stopped when the write of a new test file, `frontend/src/components/screens/AnswerScreen.listingFirst.test.tsx`, was refused, and did not route around it. Still to do: the AnswerScreen and App-level Stop tests, reshaping `App.stopUntilAnswer.test.tsx` (7 arms fail by design until then), the mutation reds and the gates. Open item for the lead: MCP, GraphQL, the command line and the feedback capture join token text in arrival order, so they need to order by `placement` once builder A sends the listing first.
   - Builder C, `feat/8.7-s3` at da2c04f6: T-8.7-02 committed in six commits, all mutations red. It stopped during its final gates.
+
+- 2026-10-09 00:25 UTC: phase resumed overnight on the owner's decision of 2026-10-08, from `testing/Developer/reports/2026-10-05_phase_8.7_resume/plan.md`. Step 0: develop (c916cfa3) merged into this branch, clean. Steps 1 and 3: builder C's six commits cherry-picked, all clean; two of its tests were stale against today's develop (the old writer's installed price now estimates slightly above the static figure; card 91 names the unfinished search) and were brought up to date (586d7151). 46 of 46 of its tests pass.
+- 2026-10-09 00:33 UTC: builders W, S and F dispatched from 586d7151, each in a worktree the lead created (`asu-8.7-w`, `asu-8.7-screen`, `asu-8.7-field`) on local branches `feat/8.7-w`, `feat/8.7-screen`, `feat/8.7-field`. Builder R (step 8) waits for W, since both edit `core/graph.py`.
 
 ## Findings
