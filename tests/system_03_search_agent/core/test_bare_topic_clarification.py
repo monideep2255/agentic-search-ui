@@ -769,7 +769,9 @@ async def test_a_choice_s_words_typed_with_no_offer_limit_nothing(
     assert pubmed and all("[dp]" not in s["term"] for s in pubmed), pubmed
 
 
-_LOST_WINDOW_NOTE = "the date range you chose could not be applied, so papers from any year were searched"
+_LOST_WINDOW_NOTE = (
+    "the date range in your question could not be applied, so papers from any year were searched"
+)
 
 
 @pytest.mark.asyncio
@@ -816,6 +818,51 @@ async def test_an_applied_window_does_not_carry_the_not_applied_note(
 
     plan = _payload(events, "plan")
     assert plan is not None and _LOST_WINDOW_NOTE not in plan["narrative"], plan
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "typed",
+    [
+        "What do studies say about statins from the last 5 years?",
+        "Is BRCA1 linked to cancer from the last 12 months?",
+    ],
+)
+async def test_typed_text_ending_like_an_option_gets_the_same_note(
+    monkeypatch: pytest.MonkeyPatch, typed: str
+) -> None:
+    """Owner decision, 2026-10-08: no offer was ever made, the words end like
+    one of our options, so the note shows (worded to be true for typed text)."""
+    _install_tools(monkeypatch)
+    searches = _spy_searches(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch)
+
+    events = await _run(typed)
+
+    plan = _payload(events, "plan")
+    assert plan is not None and _LOST_WINDOW_NOTE in plan["narrative"], plan
+    pubmed = [s for s in searches if s.get("db") == "pubmed"]
+    assert pubmed and all("[dp]" not in s["term"] for s in pubmed), pubmed
+
+
+@pytest.mark.asyncio
+async def test_no_note_when_no_paper_search_was_planned(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """J-36-02: a CURIE written in the question plans no PubMed search, so
+    the plan line must not say papers were searched."""
+    _install_tools(monkeypatch)
+    searches = _spy_searches(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch)
+
+    events = await _run("Recent papers on NCBIGene:672 from the last 5 years?")
+
+    plan = _payload(events, "plan")
+    assert plan is not None
+    assert not [s for s in searches if s.get("db") == "pubmed"], searches
+    assert "papers from any year" not in plan["narrative"], plan
 
 
 # ---------------------------------------------------------------------------

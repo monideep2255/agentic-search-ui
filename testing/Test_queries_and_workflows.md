@@ -1585,7 +1585,7 @@ Queries to try:
 
 What you should see:
 
-- The plan line says the date range you chose could not be applied, so papers from any year were searched.
+- The plan line says the date range in your question could not be applied, so papers from any year were searched.
 - The answer heading does not claim a window that was not used.
 - Without a restart, the same click still limits to the last 10 years and says so.
 - Why it matters: a quiet change to what was searched is worse than an honest one.

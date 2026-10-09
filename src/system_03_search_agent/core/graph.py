@@ -6708,12 +6708,17 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # search this plan makes. Never a range read from the question's words
     # (fix round, F-8.2-A07, J01): see `_picked_publication_window`.
     publication_window = _picked_publication_window(query)
-    # Card 36: a click on our own "How far back" option whose offer is gone
-    # (a restart, an hour, eviction) is searched without a limit. The plan
-    # says so rather than staying silent. Verifies our fixed option strings
-    # only; reads no free text and never re-applies the window.
+    # Card 36: text that ends like one of our own "How far back" options,
+    # with no offer behind it (a restart, an hour, eviction, or typed words),
+    # is searched without a limit. The plan says so rather than staying
+    # silent, in words true for both cases (owner decision, 2026-10-08). It
+    # matches our fixed option strings only, reads no other free text and
+    # never applies the window. Shown only when a paper search was planned.
     window_lost = publication_window is None and clarify.is_recent_window_option(query.text)
-    window_lost_note = "the date range you chose could not be applied, so papers from any year were searched"
+    window_lost_note = (
+        "the date range in your question could not be applied, "
+        "so papers from any year were searched"
+    )
 
     # Build phase 8.2, card 3: the literature decision Think started. Read
     # below only where it can change the plan, a question with no gene
@@ -7001,7 +7006,9 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         published = (
             f", published in {publication_window.label}" if publication_window is not None else ""
         )
-        if window_lost:
+        if window_lost and any(
+            getattr(c, "purpose", "") == "pubmed_search" for c in planned_tool_calls
+        ):
             published += f"; {window_lost_note}"
         plan_payload = PlanPayload(
             narrative=(
@@ -7141,7 +7148,9 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             # The picked range limits the PubMed search on this path too, so
             # the narrative says so (F-8.2-J01 found it silent here).
             narrative += f"; PubMed papers published in {publication_window.label} only"
-        elif window_lost and (gene_curie is not None or disease_text):
+        elif window_lost and any(
+            getattr(c, "purpose", "") == "pubmed_search" for c in planned_tool_calls
+        ):
             narrative += f"; {window_lost_note}"
         narrative = narrative[:500]
 
