@@ -10,6 +10,7 @@ Base: develop at b01dee92. Branch `fix/card35-offtopic-followup`. Diagnosis: `te
 - [Tests](#tests)
 - [Checks](#checks)
 - [Left for review](#left-for-review)
+- [Fix round](#fix-round)
 
 ## What the person sees now
 
@@ -65,7 +66,7 @@ No live model calls.
 |---|---|
 | ruff on the two touched files | All checks passed |
 | isort `--check-only` on the test file | Passed |
-| isort on `core/graph.py` | Fails identically on develop at b01dee92 (the `contracts.events` import block, untouched here). Pre-existing. |
+| isort `--check-only --diff src tests services tracker alembic .claude .github` | Clean ("Skipped 2 files"). An earlier draft of this report said isort failed on `core/graph.py`; the judge (J-35-06) could not reproduce that and it was wrong. |
 | `tracker/check_doc_sync.py` | ok |
 
 ## Left for review
@@ -73,3 +74,16 @@ No live model calls.
 - Cost and wait: one guard-tier decision call on every memory-bound follow-up the allowlist admits, about $0.00008 and 1.7 to 1.9 s measured in F-8.2-A01, run beside the injection classifier, so the person waits for the slower of the two.
 - A live check that the real decision calls the three off-topic follow-ups off topic and the controls on topic, five or more runs each, is not run here.
 - The deviation above is the owner's or the reviewer's to accept.
+
+## Fix round
+
+Judge verdict MERGE, adversary PASS. One fix, in `src/system_03_search_agent/core/graph.py`.
+
+| Finding | What changed |
+|---|---|
+| J-35-03 / A-35-01 | The topic decision asked only because the card reached a memory-bound follow-up the allowlist admits now has its own bound, `_FOLLOW_UP_TOPIC_CHECK_BOUND_S` = 1.5 s from when it began (Jev answered in about 0.3 s, 0.77 s at most, beside a guard classifier of 1.9 to 4.4 s). Past it the decision is cancelled and reads as no pick, so the follow-up gets develop's verdict, admitted. A decision inside the bound still refuses an off-topic follow-up. An allowlist miss keeps the full step deadline, as before. |
+| J-35-06 | The isort claim in the Checks table is corrected above. |
+
+Tests: `test_a_hung_follow_up_topic_check_adds_only_its_bound_and_keeps_develops_verdict` (2 classifier verdicts) and `test_a_follow_up_topic_check_inside_the_bound_still_refuses`. On cd0e65a8 the hung test fails (2 failed, about 15 s wait); with the fix 3 passed. Mutation: bound removed, 2 failed; restored. Guardrail directory 411 passed, ruff and isort clean.
+
+Left as they are: J-35-02 (a follow-up Jev calls injection may show as off topic, still refused), J-35-04 (a biomedical word with no referring word skips the check), J-35-05 (guardrail step errors, not attributable to the card). Adversary A-35-02 to A-35-05 are live model variance and stay open.

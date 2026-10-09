@@ -681,6 +681,61 @@ async def test_no_on_topic_follow_up_develop_admits_is_refused(
     assert guard["passed"] is develop_admits, (text, guard)
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("classifier_off_topic", [False, True])
+async def test_a_hung_follow_up_topic_check_adds_only_its_bound_and_keeps_develops_verdict(
+    monkeypatch: pytest.MonkeyPatch,
+    _mock_litellm: AsyncMock,
+    classifier_off_topic: bool,
+) -> None:
+    """Card 35 fix round (J-35-03, A-35-01): a topic decision that hangs on a
+    memory-bound follow-up the allowlist admits is waited for no longer than
+    `_FOLLOW_UP_TOPIC_CHECK_BOUND_S`, then the follow-up is admitted exactly
+    as develop admitted it."""
+    import asyncio
+    import time
+
+    async def _hang(*_a: Any, **_k: Any) -> Any:
+        await asyncio.sleep(60)
+
+    if classifier_off_topic:
+        _mock_litellm.return_value = _off_topic_reply()
+    _mock_decide(monkeypatch, side_effect=_hang)
+    began = time.monotonic()
+    events, _ = await _run_guardrail(
+        "Which variants of it are pathogenic?", session_memory=_memory_with_brca1()
+    )
+    elapsed = time.monotonic() - began
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is True
+    bound = graph_module._FOLLOW_UP_TOPIC_CHECK_BOUND_S
+    assert bound <= 1.5
+    assert elapsed < bound + 1.0, elapsed
+
+
+@pytest.mark.asyncio
+async def test_a_follow_up_topic_check_inside_the_bound_still_refuses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A decision that answers inside the bound still refuses an off-topic
+    follow-up."""
+    import asyncio
+
+    record = _relevancy_record("off_topic", jev_choice="off_topic", guard_choice="off_topic")
+
+    async def _slowish(*_a: Any, **_k: Any) -> Any:
+        await asyncio.sleep(0.3)
+        return record
+
+    _mock_decide(monkeypatch, side_effect=_slowish)
+    events, _ = await _run_guardrail(
+        "Which cell phone is it best to buy this year?", session_memory=_memory_with_brca1()
+    )
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is False
+    assert guard["category"] == "off_topic"
+
+
 def _context_with_brca1() -> Any:
     from system_03_search_agent.contracts.query import RequestContext
 

@@ -1537,6 +1537,16 @@ _JEV_INJECTION_WAIT_S: Final[float] = JEV_TOTAL_TIMEOUT_S + 0.5
 #: own wait, so a longer wait there cannot quietly cut Jev's pick off here.
 _JEV_OWN_PICK_WINDOW_S: Final[float] = _JEV_INJECTION_WAIT_S + 0.25
 
+#: Card 35 fix round (J-35-03, A-35-01): how long after it began a topic
+#: decision asked ONLY because the card made a memory-bound follow-up the
+#: allowlist admits subject to it may be waited for. Jev answered that
+#: decision in about 0.3 s, 0.77 s at most, beside a guard classifier that
+#: takes 1.9 to 4.4 s, so a healthy decision is always read inside this. A
+#: decision still running past it reads as no pick, which admits the
+#: follow-up exactly as develop did, instead of holding it for the whole
+#: guardrail budget (15 s).
+_FOLLOW_UP_TOPIC_CHECK_BOUND_S: Final[float] = 1.5
+
 #: The share of the guardrail's remaining budget the guard classifier's
 #: FIRST attempt may use (re-land, R-01); a second attempt, after a timeout
 #: or a transient error, gets the rest. A share, not a figure: the budget
@@ -2294,11 +2304,22 @@ async def _guardrail_after_prefilter(
     if relevancy_task is not None:
         if not relevancy_read:
             certain_refusal = jev_says_injection and classifier_verdict.admitted
+            # Card 35 fix round: the decision exists only for the card's new
+            # case when the allowlist cleared the question, so it gets its own
+            # short bound, counted from when it began.
+            follow_up_only = prefilter.clears_biomedical_allowlist(query.text)
+            follow_up_deadline = min(
+                step_deadline,
+                (relevancy_started[0] if relevancy_started else time.monotonic())
+                + _FOLLOW_UP_TOPIC_CHECK_BOUND_S,
+            )
             relevancy_record = await _await_within_step(
                 relevancy_task,
                 (
                     _jev_own_pick_deadline(relevancy_started, step_deadline)
                     if certain_refusal
+                    else follow_up_deadline
+                    if follow_up_only
                     else step_deadline
                 ),
                 None,
@@ -2307,6 +2328,8 @@ async def _guardrail_after_prefilter(
                 why=(
                     "Jev's own pick could no longer arrive"
                     if certain_refusal
+                    else "the follow-up topic check's bound passed"
+                    if follow_up_only
                     else "its step's budget ran out"
                 ),
             )
