@@ -6711,7 +6711,7 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # Card 36: text that ends like one of our own "How far back" options,
     # with no offer behind it (a restart, an hour, eviction, or typed words),
     # is searched without a limit. The plan says so rather than staying
-    # silent, in words true for both cases (owner decision, 2026-10-08). It
+    # silent, in words true for both cases (decided by the lead overnight, DECISIONS.md 2026-10-08). It
     # matches our fixed option strings only, reads no other free text and
     # never applies the window. Shown only when a paper search was planned.
     window_lost = publication_window is None and clarify.is_recent_window_option(query.text)
