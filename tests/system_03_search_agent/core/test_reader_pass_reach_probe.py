@@ -31,11 +31,26 @@ puts a canary in a structured row instead and finds it in the answer, so an
 empty result above is the reader's output being absent, not the detector
 being blind. And the static scan goes red the day any module starts reading
 one of the three fields.
+
+Build phase 8.7, step 8 (card 50, option K, the owner's yes of 2026-10-05):
+on this probe's result the reader pass came off the answer path. `act_node`
+no longer hands the quarantine pair to `coordinator_worker_execute`, so a
+paper question no longer waits on a guard-model read. The arms now say so:
+
+- `test_the_answer_does_not_wait_on_the_reader_pass`: a reader that would
+  take 9 simulated seconds is never called, and Act returns well inside that.
+  Red on the code before step 8, which waited for it.
+- The dynamic arm above still runs two different reader replies and finds
+  the same answer with no canary anywhere, now because the reader is never
+  asked, which the arm checks first.
+- The static scan is unchanged. It is what keeps the skip safe: the day a
+  module reads one of the reader's fields, the skip has to be revisited.
 """
 
 from __future__ import annotations
 
 import ast
+import asyncio
 import json
 import time
 from pathlib import Path
@@ -58,6 +73,12 @@ from system_03_search_agent.tools.cypher_schemas import (
 from tests.system_03_search_agent.model_stub import compliant_synth_narrative, fake_response
 
 _QUESTION = "What gene is associated with BRCA1?"
+
+#: Real seconds are simulated seconds divided by this, the pattern
+#: `test_pubtator_act_cap.py` uses. A reader that takes 9 simulated seconds,
+#: just inside its 10 s budget, takes 0.9 real seconds here.
+_SCALE = 10.0
+_READER_SIMULATED_S = 9.0
 _READER_FIELDS = ("extracted_entities", "normalized_ids", "evidence_summary")
 _SRC = Path(__file__).resolve().parents[3] / "src" / "system_03_search_agent"
 
@@ -92,26 +113,31 @@ class _Run:
     """One question, act then write, with every prompt and event kept."""
 
     def __init__(self) -> None:
-        self.prompts_after_reader: list[str] = []
+        self.reader_calls = 0
+        self.prompts: list[str] = []
         self.events: list[Any] = []
         self.reader_finding: Any = None
+        self.act_result: dict[str, Any] = {}
+        self.act_elapsed_s = 0.0
 
 
 async def _run_once(
-    monkeypatch: pytest.MonkeyPatch, reader_reply: dict[str, Any], gene_name: str
+    monkeypatch: pytest.MonkeyPatch,
+    reader_reply: dict[str, Any],
+    gene_name: str,
+    *,
+    reader_delay_s: float = 0.0,
 ) -> _Run:
     run = _Run()
-    reader_answered = False
 
     async def _dispatch(*args: Any, **kwargs: Any) -> Any:
-        nonlocal reader_answered
         messages = kwargs.get("messages") or []
         joined = "\n".join(m.get("content") or "" for m in messages)
         if _READER_SYSTEM_PROMPT in joined:
-            reader_answered = True
+            run.reader_calls += 1
+            await asyncio.sleep(reader_delay_s)
             return fake_response(json.dumps(reader_reply))
-        if reader_answered:
-            run.prompts_after_reader.append(joined)
+        run.prompts.append(joined)
         if SYNTH_SYSTEM_INSTRUCTION in joined:
             return fake_response(compliant_synth_narrative(messages))
         return fake_response("ok")
@@ -172,9 +198,12 @@ async def _run_once(
         "seq": 0,
         "start_monotonic": time.monotonic(),
     }
+    act_started = time.monotonic()
     act_result = await graph_module.act_node(state)
+    run.act_elapsed_s = time.monotonic() - act_started
+    run.act_result = act_result
     run.events.extend(act_result["events"])
-    run.reader_finding = next(f for f in act_result["findings"] if f.source == "reader")
+    run.reader_finding = next((f for f in act_result["findings"] if f.source == "reader"), None)
     state.update({k: v for k, v in act_result.items() if k != "events"})
     write_result = await graph_module.write_node(state)
     run.events.extend(write_result["events"])
@@ -205,24 +234,55 @@ async def test_the_readers_output_reaches_no_answer(monkeypatch: pytest.MonkeyPa
     alpha = await _run_once(monkeypatch, _canaries("ALPHA"), "BRCA1 DNA repair associated")
     beta = await _run_once(monkeypatch, _canaries("BETA"), "BRCA1 DNA repair associated")
 
-    # Populate-check: the reader's output exists, carrying every canary.
-    carried = json.dumps(
-        [getattr(alpha.reader_finding, field) for field in _READER_FIELDS], default=str
-    )
-    for word in _canary_words("ALPHA"):
-        assert word in carried, f"populate-check: {word} never reached the reader's Finding"
-    assert alpha.prompts_after_reader, "populate-check: Write called a model after the reader"
+    # Step 8: the reader is not asked on the answer path at all, so its
+    # output cannot reach an answer. Checked first, so the arms below are
+    # read as what they now are.
+    for run in (alpha, beta):
+        assert run.reader_calls == 0, "the reader pass ran on the answer path"
+        assert run.reader_finding is None, "a reader Finding reached Write"
+    assert alpha.prompts, "populate-check: Write called a model"
 
     for run, tag in ((alpha, "ALPHA"), (beta, "BETA")):
         wire = _wire(run.events)
-        prompts = "\n".join(run.prompts_after_reader)
+        prompts = "\n".join(run.prompts)
         for word in _canary_words(tag):
             assert word not in wire, f"{word} reached an emitted event"
-            assert word not in prompts, f"{word} reached a model prompt after the reader"
+            assert word not in prompts, f"{word} reached a model prompt"
 
     assert _answer(alpha.events) == _answer(beta.events), (
         "two different reader outputs produced two different answers"
     )
+
+
+@pytest.mark.asyncio
+async def test_the_answer_does_not_wait_on_the_reader_pass(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Step 8's ticket, in the user's words: paper questions come up to 10
+    seconds faster, with the same answer. A reader that would take 9
+    simulated seconds is never called, Act returns in well under half of
+    that, and the Article row's quarantine pair is still assembled and
+    counted, so `done.total_tool_calls` reads as before."""
+    reader_real_s = _READER_SIMULATED_S / _SCALE
+    run = await _run_once(
+        monkeypatch,
+        _canaries("DELTA"),
+        "BRCA1 DNA repair associated",
+        reader_delay_s=reader_real_s,
+    )
+
+    assert run.reader_calls == 0, "the reader pass ran on the answer path"
+    assert run.act_elapsed_s < reader_real_s / 2, (
+        f"Act took {run.act_elapsed_s:.3f} s against a {reader_real_s:.1f} s reader: "
+        "the answer waited on the reader pass"
+    )
+    assert [f.source for f in run.act_result["findings"]] == ["structured_pass_through"]
+    assert run.act_result["findings_count"] == 2, (
+        "the quarantine pair is still assembled and counted"
+    )
+    done = next(e for e in run.events if e.type == "done")
+    assert done.payload["total_tool_calls"] == 2
+    assert done.payload["trust_outcome"] == "answer"
 
 
 @pytest.mark.asyncio

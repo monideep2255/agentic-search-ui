@@ -2392,6 +2392,13 @@ async def test_article_rows_keep_their_record_but_never_their_raw_title(
     second, isolated-reader-bound tool_call/result pair
     (`contains_untrusted_free_text=True`) for whatever future
     entity-extraction use that reader pass serves.
+
+    Build phase 8.7, step 8 (card 50, option K): that pair is still
+    assembled and counted, but `act_node` no longer hands it to the reader
+    on the answer path, so it yields no Finding and no model reads the
+    hostile title at all. Every assertion about the title never reaching a
+    field, a citation or an event holds unchanged: that protection is
+    `_sanitized_citeable_row`, never the reader.
     """
     output = CypherQueryOutput(
         status="ok",
@@ -2445,9 +2452,19 @@ async def test_article_rows_keep_their_record_but_never_their_raw_title(
     act_result = await graph_module.act_node(act_state)
 
     findings = act_result["findings"]
-    assert len(findings) == 2, "the Article row's free text is still quarantined into its own Finding"
+    assert len(findings) == 1, "the reader pass ran on the answer path (phase 8.7, step 8)"
+    assert act_result["findings_count"] == 2, (
+        "the Article row's free text is still quarantined into its own pair, and counted"
+    )
+    for call in _mock_litellm.call_args_list:
+        prompt = "\n".join(
+            m.get("content") or "" for m in (call.kwargs.get("messages") or [])
+        )
+        assert _HOSTILE_ARTICLE_TITLE not in prompt, (
+            "a model was handed the hostile title on the answer path"
+        )
 
-    structured_finding, reader_finding = findings
+    (structured_finding,) = findings
     assert structured_finding.source == "structured_pass_through"
     assert structured_finding.structured_fields["status"] == "ok"
     assert structured_finding.structured_fields["row_count"] == 2, (
@@ -2463,12 +2480,6 @@ async def test_article_rows_keep_their_record_but_never_their_raw_title(
         "the Article row's own field content must never reach structured_fields"
     )
     assert _HOSTILE_ARTICLE_TITLE not in str(structured_finding.structured_fields)
-
-    assert reader_finding.source == "reader"
-    assert reader_finding.structured_fields is None
-    assert _HOSTILE_ARTICLE_TITLE not in str(reader_finding.extracted_entities)
-    assert _HOSTILE_ARTICLE_TITLE not in str(reader_finding.normalized_ids)
-    assert _HOSTILE_ARTICLE_TITLE not in str(reader_finding.evidence_summary)
 
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     write_result = await graph_module.write_node(_write_state(query, findings))
