@@ -82,12 +82,15 @@ def _search_output(
 
 
 def _install_model(
-    monkeypatch: pytest.MonkeyPatch, entities: list[tuple[str, str]] | None = None
+    monkeypatch: pytest.MonkeyPatch,
+    entities: list[tuple[str, str]] | None = None,
+    **filters: Any,
 ) -> list[str]:
     classification = graph_module._ThinkClassification(
         query_class="exploratory",
         entities=[graph_module._ThinkExtractedEntity(text=t, entity_type=k) for t, k in (entities or [])],
         narrative="Asks for isolates carrying a gene family.",
+        **filters,
     )
     asked: list[str] = []
 
@@ -170,6 +173,118 @@ async def test_a_plain_gene_question_is_untouched(monkeypatch: pytest.MonkeyPatc
     result = await graph_module.think_node(_state(GENE_QUESTION))
     assert "isolate_question" not in result
     assert "BRCA1" in asked, "the model's spans ARE confirmed on an ordinary question"
+
+
+# ---------------------------------------------------------------------------
+# Card 20 (owner, 2026-10-09): Think's classification names the collection
+# years and place; code verifies them; the answer says when one could not be
+# applied. The model is faked, so these grade the wiring, not the model.
+# ---------------------------------------------------------------------------
+
+FILTERED_QUESTION = "Which E. coli isolates carry blaKPC genes in the USA since 2020?"
+
+
+@pytest.mark.asyncio
+async def test_the_models_year_and_place_narrow_the_planned_isolate_search(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MUTATION PROOF: dropping the `apply_filters` call in `_think` turns
+    every arm red: the search is planned with no year and no place."""
+    _install_model(monkeypatch, collection_year_min=2020, location="usa")
+    result = await graph_module.think_node(_state(FILTERED_QUESTION))
+    question = result["isolate_question"]
+    assert question.collection_year_min == 2020
+    assert question.collection_year_max is None
+    assert question.location == "USA", "the vocabulary's own spelling is kept"
+    assert question.filters_not_applied == ()
+    think = next(e for e in result["events"] if e.type == "think")
+    assert "collected in USA since 2020" in think.payload["narrative"]
+
+    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
+    planned = await graph_module.plan_node(
+        _state(
+            FILTERED_QUESTION,
+            resolved_entities=result["resolved_entities"],
+            query_class="exploratory",
+            isolate_question=question,
+        )
+    )
+    search = planned["tool_calls"][0].tool_input.root
+    assert search.location == "USA"
+    assert search.collection_year_min == 2020
+    assert search.collection_year_max is None
+
+
+@pytest.mark.asyncio
+async def test_a_place_the_file_never_spells_is_not_applied_and_is_said(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    text = "E. coli isolates with blaKPC from Atlantis"
+    _install_model(monkeypatch, location="Atlantis")
+    result = await graph_module.think_node(_state(text))
+    question = result["isolate_question"]
+    assert question.location is None
+    assert len(question.filters_not_applied) == 1
+    note = graph_module._isolate_disclosure_note({"isolate_question": question})
+    assert note is not None
+    assert "a place was asked for (Atlantis)" in note
+    assert "isolates from every place are counted" in note
+
+
+@pytest.mark.asyncio
+async def test_a_year_not_written_in_the_question_is_not_applied_and_is_said(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_model(monkeypatch, collection_year_min=2015, collection_year_max=2015)
+    result = await graph_module.think_node(_state(FILTERED_QUESTION))
+    question = result["isolate_question"]
+    assert question.collection_year_min is None and question.collection_year_max is None
+    assert question.filters_not_applied == (isolate_search.YEAR_NOT_APPLIED,)
+    think = next(e for e in result["events"] if e.type == "think")
+    assert "could not be confirmed as a four-digit year" in think.payload["narrative"]
+
+
+@pytest.mark.asyncio
+async def test_no_filter_named_plans_the_same_search_as_before(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Populate check: the golden question with no filter named keeps its
+    old call and its old disclosure, word for word."""
+    _install_model(monkeypatch)
+    result = await graph_module.think_node(_state(GOLDEN_QUESTION))
+    question = result["isolate_question"]
+    assert (question.collection_year_min, question.collection_year_max, question.location) == (
+        None,
+        None,
+        None,
+    )
+    assert question.filters_not_applied == ()
+    assert isolate_search.disclosure(question) == isolate_search.disclosure(_question())
+
+
+def test_a_reply_without_the_filter_keys_still_parses_and_asks_for_none() -> None:
+    parsed = graph_module._parse_think_classification(
+        '{"query_class": "lookup", "narrative": "n", "entities": []}'
+    )
+    assert (parsed.collection_year_min, parsed.collection_year_max, parsed.location) == (
+        None,
+        None,
+        None,
+    )
+    assert "collection_year_min" in graph_module._THINK_RETRY_KEY_LIST
+
+
+def test_thinks_system_message_stays_byte_identical_across_questions() -> None:
+    """The prefix-hash check (`prompt-cache-discipline`): TASK 6 is fixed
+    text, so two different questions send the same system message."""
+    import hashlib
+
+    first = graph_module._build_think_messages(FILTERED_QUESTION, [], "")
+    second = graph_module._build_think_messages(GOLDEN_QUESTION, [], "\n\nmemory")
+    digest = [hashlib.sha256(m[0]["content"].encode("utf-8")).hexdigest() for m in (first, second)]
+    assert digest[0] == digest[1]
+    assert "TASK 6, collection filters" in first[0]["content"]
+    assert FILTERED_QUESTION not in first[0]["content"]
 
 
 # ---------------------------------------------------------------------------

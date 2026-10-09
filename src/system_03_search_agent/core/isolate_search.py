@@ -47,6 +47,25 @@ Every taxonomy id in `ORGANISMS` was verified live against NCBI Taxonomy on
 FTP root listed the same day (probes.md, item A). Extend the table only from
 both sources.
 
+## Card 20 (2026-10-09): narrowing by collection year and place
+
+The owner's choice: "Think extracts the year and place from the question in
+the call it already makes; the answer says when a filter could not be
+applied." The model decides what the question asks; this module only
+verifies it, in `apply_filters`, and never reads a year or place from the
+question's words itself:
+
+- A year range is kept when every bound the model named is a whole year in
+  1900 to 2100 and lies within one of a four-digit number written in the
+  question (one either side, so an exclusive bound such as the year before
+  a named year is still anchored), and the lower bound is not above the
+  upper. Otherwise no year filter is applied and the disclosure says so.
+- A place is kept when it fits the tool's location shape and is a country
+  name in the INSDC geographic location vocabulary, `GEO_LOC_COUNTRIES`,
+  which is the vocabulary the file's `geo_loc_name` column is spelled in.
+  The kept value is the vocabulary's own spelling. Otherwise no place
+  filter is applied and the disclosure says so.
+
 Depends on:
     - system_03_search_agent.core.breadth_plan (PlannedCall)
     - system_03_search_agent.tools.ncbi_efetch_schemas (NcbiEfetchInput)
@@ -67,12 +86,15 @@ Depended by:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Final
 
 from system_03_search_agent.core.breadth_plan import PlannedCall
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
-from system_03_search_agent.tools.pathogen_detection_schemas import PathogenDetectionInput
+from system_03_search_agent.tools.pathogen_detection_schemas import (
+    PATHOGEN_LOCATION_PATTERN,
+    PathogenDetectionInput,
+)
 
 #: How many isolates the answer shows. The tool counts every match to the end
 #: of the file; this is the sample, chosen so the record table stays readable.
@@ -269,6 +291,13 @@ class IsolateQuestion:
     organism: Organism | None
     families: tuple[GeneFamily, ...]
     genes: tuple[str, ...]
+    # Card 20: the filters `apply_filters` verified, and a plain sentence
+    # for each one asked for that could not be applied. All empty for a
+    # question that asked for neither.
+    collection_year_min: int | None = None
+    collection_year_max: int | None = None
+    location: str | None = None
+    filters_not_applied: tuple[str, ...] = ()
 
     @property
     def prefixes(self) -> tuple[str, ...]:
@@ -352,6 +381,167 @@ def parse_isolate_question(text: str) -> IsolateQuestion | None:
     return IsolateQuestion(organism=organism, families=families, genes=genes)
 
 
+#: The INSDC geographic location vocabulary (country and ocean names, then
+#: the historical names it still accepts), as published at
+#: insdc.org/submitting-standards/geo_loc_name-qualifier-vocabulary and read
+#: on 2026-10-09. A `geo_loc_name` cell starts with one of these, so a place
+#: outside this list is one the file never spells. Verification data for
+#: `apply_filters`, never a source of decisions.
+GEO_LOC_COUNTRIES: Final[tuple[str, ...]] = (
+    "Afghanistan", "Albania", "Algeria", "American Samoa", "Andorra", "Angola",
+    "Anguilla", "Antarctica", "Antigua and Barbuda", "Arctic Ocean", "Argentina",
+    "Armenia", "Aruba", "Ashmore and Cartier Islands", "Atlantic Ocean", "Australia",
+    "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Baltic Sea", "Baker Island",
+    "Bangladesh", "Barbados", "Bassas da India", "Belarus", "Belgium", "Belize",
+    "Benin", "Bermuda", "Bhutan", "Bolivia", "Borneo", "Bosnia and Herzegovina",
+    "Botswana", "Bouvet Island", "Brazil", "British Virgin Islands", "Brunei",
+    "Bulgaria", "Burkina Faso", "Burundi", "Cambodia", "Cameroon", "Canada",
+    "Cape Verde", "Cayman Islands", "Central African Republic", "Chad", "Chile",
+    "China", "Christmas Island", "Clipperton Island", "Cocos Islands", "Colombia",
+    "Comoros", "Cook Islands", "Coral Sea Islands", "Costa Rica", "Cote d'Ivoire",
+    "Croatia", "Cuba", "Curacao", "Cyprus", "Czechia",
+    "Democratic Republic of the Congo", "Denmark", "Djibouti", "Dominica",
+    "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea",
+    "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Europa Island",
+    "Falkland Islands (Islas Malvinas)", "Faroe Islands", "Fiji", "Finland", "France",
+    "French Guiana", "French Polynesia", "French Southern and Antarctic Lands",
+    "Gabon", "Gambia", "Gaza Strip", "Georgia", "Germany", "Ghana", "Gibraltar",
+    "Glorioso Islands", "Greece", "Greenland", "Grenada", "Guadeloupe", "Guam",
+    "Guatemala", "Guernsey", "Guinea", "Guinea-Bissau", "Guyana", "Haiti",
+    "Heard Island and McDonald Islands", "Honduras", "Hong Kong", "Howland Island",
+    "Hungary", "Iceland", "India", "Indian Ocean", "Indonesia", "Iran", "Iraq",
+    "Ireland", "Isle of Man", "Israel", "Italy", "Jamaica", "Jan Mayen", "Japan",
+    "Jarvis Island", "Jersey", "Johnston Atoll", "Jordan", "Juan de Nova Island",
+    "Kazakhstan", "Kenya", "Kerguelen Archipelago", "Kingman Reef", "Kiribati",
+    "Kosovo", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho",
+    "Liberia", "Libya", "Liechtenstein", "Line Islands", "Lithuania", "Luxembourg",
+    "Macau", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta",
+    "Marshall Islands", "Martinique", "Mauritania", "Mauritius", "Mayotte",
+    "Mediterranean Sea", "Mexico", "Micronesia, Federated States of",
+    "Midway Islands", "Moldova", "Monaco", "Mongolia", "Montenegro", "Montserrat",
+    "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Navassa Island",
+    "Nepal", "Netherlands", "New Caledonia", "New Zealand", "Nicaragua", "Niger",
+    "Nigeria", "Niue", "Norfolk Island", "North Korea", "North Macedonia",
+    "North Sea", "Northern Mariana Islands", "Norway", "Oman", "Pacific Ocean",
+    "Pakistan", "Palau", "Palmyra Atoll", "Panama", "Papua New Guinea",
+    "Paracel Islands", "Paraguay", "Peru", "Philippines", "Pitcairn Islands",
+    "Poland", "Portugal", "Puerto Rico", "Qatar", "Republic of the Congo",
+    "Reunion", "Romania", "Ross Sea", "Russia", "Rwanda", "Saint Barthelemy",
+    "Saint Helena", "Saint Kitts and Nevis", "Saint Lucia", "Saint Martin",
+    "Saint Pierre and Miquelon", "Saint Vincent and the Grenadines", "Samoa",
+    "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia",
+    "Seychelles", "Sierra Leone", "Singapore", "Sint Maarten", "Slovakia",
+    "Slovenia", "Solomon Islands", "Somalia", "South Africa",
+    "South Georgia and the South Sandwich Islands", "South Korea", "South Sudan",
+    "Southern Ocean", "Spain", "Spratly Islands", "Sri Lanka", "State of Palestine",
+    "Sudan", "Suriname", "Svalbard", "Sweden", "Switzerland", "Syria", "Taiwan",
+    "Tajikistan", "Tanzania", "Tasman Sea", "Thailand", "Timor-Leste", "Togo",
+    "Tokelau", "Tonga", "Trinidad and Tobago", "Tromelin Island", "Tunisia",
+    "Turkey", "Turkmenistan", "Turks and Caicos Islands", "Tuvalu", "Uganda",
+    "Ukraine", "United Arab Emirates", "United Kingdom", "Uruguay", "USA",
+    "Uzbekistan", "Vanuatu", "Venezuela", "Viet Nam", "Virgin Islands",
+    "Wake Island", "Wallis and Futuna", "West Bank", "Western Sahara", "Yemen",
+    "Zambia", "Zimbabwe",
+    "Belgian Congo", "British Guiana", "Burma", "Czechoslovakia", "Czech Republic",
+    "East Timor", "Korea", "Macedonia", "Micronesia", "Netherlands Antilles",
+    "Serbia and Montenegro", "Siam", "Swaziland",
+    "The former Yugoslav Republic of Macedonia", "USSR", "Yugoslavia", "Zaire",
+)
+
+_GEO_LOC_BY_FOLDED: Final[dict[str, str]] = {name.casefold(): name for name in GEO_LOC_COUNTRIES}
+
+#: The calendar-year bound the tool schema's `collection_year_min` and
+#: `collection_year_max` share.
+_MIN_YEAR: Final[int] = 1900
+_MAX_YEAR: Final[int] = 2100
+
+#: A four-digit number standing alone in the question, the anchor a model's
+#: year must sit beside. Reads digits only, never the words around them.
+_FOUR_DIGITS: Final[re.Pattern[str]] = re.compile(r"(?<!\d)(\d{4})(?!\d)")
+
+YEAR_NOT_APPLIED: Final[str] = (
+    "a collection year was asked for, but it could not be confirmed as a "
+    "four-digit year in the question, so isolates from every year are counted"
+)
+
+
+def _place_not_applied(place: str | None) -> str:
+    named = f" ({place})" if place else ""
+    return (
+        f"a place was asked for{named}, but it is not a country name Pathogen "
+        "Detection uses, so isolates from every place are counted"
+    )
+
+
+def _year_is_anchored(year: object, written: set[int]) -> bool:
+    """A whole year in range that sits within one of a year written in the
+    question. `bool` is excluded explicitly, since it is an `int`."""
+    if not isinstance(year, int) or isinstance(year, bool):
+        return False
+    if not _MIN_YEAR <= year <= _MAX_YEAR:
+        return False
+    return any(abs(year - number) <= 1 for number in written)
+
+
+def _verified_place(location: str | None) -> tuple[str | None, bool]:
+    """The vocabulary's spelling of `location` and whether it is shape-safe
+    to name back to the person, or (None, ...) when it is not a country
+    name the file can spell."""
+    if location is None:
+        return None, False
+    stripped = location.strip()
+    if not stripped or len(stripped) > 100:
+        return None, False
+    shape_ok = re.fullmatch(PATHOGEN_LOCATION_PATTERN, stripped) is not None
+    if not shape_ok:
+        return None, False
+    canonical = _GEO_LOC_BY_FOLDED.get(stripped.casefold())
+    if canonical is None or re.fullmatch(PATHOGEN_LOCATION_PATTERN, canonical) is None:
+        return None, True
+    return canonical, True
+
+
+def apply_filters(
+    question: IsolateQuestion,
+    *,
+    year_min: object,
+    year_max: object,
+    location: str | None,
+    question_text: str,
+) -> IsolateQuestion:
+    """The question with the model's year range and place kept only where
+    code can verify them, and a sentence for each one that was asked for
+    and could not be applied. See this module's "Card 20" section.
+    """
+    not_applied: list[str] = []
+    kept_min: int | None = None
+    kept_max: int | None = None
+    if year_min is not None or year_max is not None:
+        written = {int(number) for number in _FOUR_DIGITS.findall(question_text)}
+        bounds_ok = all(
+            bound is None or _year_is_anchored(bound, written) for bound in (year_min, year_max)
+        )
+        if bounds_ok and isinstance(year_min, int) and isinstance(year_max, int):
+            bounds_ok = year_min <= year_max
+        if bounds_ok:
+            kept_min = year_min if isinstance(year_min, int) else None
+            kept_max = year_max if isinstance(year_max, int) else None
+        else:
+            not_applied.append(YEAR_NOT_APPLIED)
+    kept_place: str | None = None
+    if location is not None and location.strip():
+        kept_place, nameable = _verified_place(location)
+        if kept_place is None:
+            not_applied.append(_place_not_applied(location.strip() if nameable else None))
+    return replace(
+        question,
+        collection_year_min=kept_min,
+        collection_year_max=kept_max,
+        location=kept_place,
+        filters_not_applied=tuple(not_applied),
+    )
+
+
 def plan_calls(question: IsolateQuestion) -> list[PlannedCall]:
     """The two calls an isolate question plans, in order, and no graph call.
 
@@ -364,20 +554,27 @@ def plan_calls(question: IsolateQuestion) -> list[PlannedCall]:
     if question.organism is None or not question.prefixes:
         raise ValueError("an isolate question with a clarification pending plans no call")
     organism = question.organism
+    tool_input: dict[str, object] = {
+        "mode": "isolate_search",
+        "taxon": organism.taxon_folder,
+        "amr_gene_prefixes": list(question.prefixes),
+        "max_isolates": ISOLATES_SHOWN,
+    }
+    # Card 20: verified filters only, omitted rather than sent as None, so a
+    # question with neither plans exactly the call it planned before.
+    if question.collection_year_min is not None:
+        tool_input["collection_year_min"] = question.collection_year_min
+    if question.collection_year_max is not None:
+        tool_input["collection_year_max"] = question.collection_year_max
+    if question.location is not None:
+        tool_input["location"] = question.location
     return [
         PlannedCall(
             tool="pathogen_detection",
             layer="layer_2_api",
             prefix="pd",
             purpose="isolate_search",
-            tool_input=PathogenDetectionInput.model_validate(
-                {
-                    "mode": "isolate_search",
-                    "taxon": organism.taxon_folder,
-                    "amr_gene_prefixes": list(question.prefixes),
-                    "max_isolates": ISOLATES_SHOWN,
-                }
-            ),
+            tool_input=PathogenDetectionInput.model_validate(tool_input),
         ),
         PlannedCall(
             tool="ncbi_efetch",
@@ -397,18 +594,40 @@ def disclosure(question: IsolateQuestion) -> str:
     "searching Escherichia coli isolates in Pathogen Detection for AMR
     genotypes starting blaCTX-M; blaTEM and blaSHV alleles were not
     searched: ..."
+
+    Card 20: a verified place and year range are named in the same clause
+    as the genes ("..., collected in USA since 2020"), and each filter
+    asked for that could not be applied is said after it.
     """
     assert question.organism is not None
-    parts = [
-        (
-            f"searching {question.organism.label} isolates in Pathogen Detection for AMR "
-            f"genotypes starting {', '.join(question.prefixes)}"
-        )
-    ]
+    lead = (
+        f"searching {question.organism.label} isolates in Pathogen Detection for AMR "
+        f"genotypes starting {', '.join(question.prefixes)}"
+    )
+    lead += _filters_clause(question)
+    parts = [lead]
     for family in question.families:
         if family.omitted:
             parts.append(family.omitted)
+    parts.extend(question.filters_not_applied)
     return "; ".join(parts)
+
+
+def _filters_clause(question: IsolateQuestion) -> str:
+    """", collected in USA since 2020", or "" with no verified filter."""
+    low, high = question.collection_year_min, question.collection_year_max
+    if low is not None and high is not None:
+        years = f" in {low}" if low == high else f" from {low} to {high}"
+    elif low is not None:
+        years = f" since {low}"
+    elif high is not None:
+        years = f" in or before {high}"
+    else:
+        years = ""
+    place = f" in {question.location}" if question.location else ""
+    if not years and not place:
+        return ""
+    return f", collected{place}{years}"
 
 
 def count_sentence(organism_label: str, shown: int, total: int, complete: bool) -> str:

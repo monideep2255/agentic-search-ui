@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-10-08.
+Last updated: 2026-10-09.
 
 Every entry has the same three parts:
 
@@ -845,12 +845,31 @@ Queries to try:
 
 What you should see:
 
-- A follow-up after an isolate search carries the organism and gene forward, and is honest about what it can and cannot do yet.
-- Honestly stated for the first version: a year filter is not built, and a follow-up does not yet carry an isolate search forward the way it carries a gene forward.
+- A follow-up after an isolate search is honest about what it can and cannot do yet.
+- Since card 20 (2026-10-09) a year and place filter is built, for a question that names its organism and gene in the same message (query 110). A follow-up still does not carry an isolate search forward the way it carries a gene forward, so this follow-up cannot use it yet.
 - The answer asks which organism to search, or which gene, rather than pretending to filter.
 - It never repeats the same full list as if it had been filtered to 2023, and never invents a filtered list.
-- If the answer instead lists 2023 isolates that were genuinely filtered, that is a later version working, not this one; note it as a pleasant surprise rather than a pass.
+- If the answer instead lists 2023 isolates that were genuinely filtered, a follow-up carrying the search forward has been built; note it as a pleasant surprise rather than a pass.
+- Retyping the whole question with the year, `Which E. coli isolates in Pathogen Detection carry ESBL genes collected in 2023?`, is filtered to 2023 (query 110).
 - Why it matters: a follow-up that silently ignores part of the question, while looking like it answered it, is more dangerous than one that admits it cannot filter yet.
+
+### 110. An isolate search narrowed by year and place (card 20)
+
+Queries to try, each as a new search:
+
+- `Which E. coli isolates carry blaKPC genes in the USA since 2020?`
+- `Which E. coli isolates in Pathogen Detection carry ESBL genes collected in 2023?`
+- `E. coli isolates with blaKPC from Atlantis`
+- Control: `Which E. coli isolates carry blaKPC genes?`
+
+What you should see:
+
+- The first: every isolate shown has a collection date in 2020 or later and a place starting with USA. The note under the answer says "collected in USA since 2020", and the count is the count of that narrowed set.
+- The second: only isolates collected in 2023, and the note says "collected in 2023".
+- The third: the note says a place was asked for (Atlantis) but it is not a country name Pathogen Detection uses, so isolates from every place are counted. It never looks as if the list were from Atlantis.
+- The control: the same answer as before this card, with no year or place in the note and a larger count than the first query.
+- Known: a model reads the year and place from the question, so a borderline wording can go either way; code keeps a year only when it is a four-digit year written in the question, and a place only when it is a country name the file uses.
+- Why it matters: a person asking for recent US isolates should not receive isolates from every year and country that merely look like an answer.
 
 ### 42. The existing single-isolate lookup still works (isolate query 10)
 
@@ -2010,6 +2029,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 20 | An isolate search narrows by collection year and place, and the answer says when a filter could not be applied | Queries 110 and 41 |
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
 | card 67 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now" | Query 100 |
 | card 104 | An answer lists one record once in its tables and Plain language list | Query 107 |

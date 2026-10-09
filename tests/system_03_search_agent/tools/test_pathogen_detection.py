@@ -1058,13 +1058,46 @@ def _search_input(
     taxon: str = "Escherichia_coli_Shigella",
     prefixes: list[str] | None = None,
     max_isolates: int = 20,
+    location: str | None = None,
+    collection_year_min: int | None = None,
+    collection_year_max: int | None = None,
 ) -> PathogenDetectionInput:
-    return PathogenDetectionInput(
-        mode="isolate_search",
-        taxon=taxon,
-        amr_gene_prefixes=prefixes if prefixes is not None else ["blaCTX-M"],
-        max_isolates=max_isolates,
-    )
+    payload: dict[str, object] = {
+        "mode": "isolate_search",
+        "taxon": taxon,
+        "amr_gene_prefixes": prefixes if prefixes is not None else ["blaCTX-M"],
+        "max_isolates": max_isolates,
+    }
+    if location is not None:
+        payload["location"] = location
+    if collection_year_min is not None:
+        payload["collection_year_min"] = collection_year_min
+    if collection_year_max is not None:
+        payload["collection_year_max"] = collection_year_max
+    return PathogenDetectionInput(**payload)
+
+
+def _row(
+    biosample_acc: str,
+    amr_genotypes: str,
+    *,
+    geo_loc_name: str = "USA:AZ",
+    collection_date: str = "2013-03-05",
+) -> dict[str, str]:
+    """A Metadata row (card 28), the same shape `_amr_row` builds, with
+    `geo_loc_name`/`collection_date` overridable for the location and
+    collection-year filter tests below.
+    """
+    return {
+        "biosample_acc": biosample_acc,
+        "Run": f"SRR{biosample_acc[-6:]}",
+        "strain": f"strain-{biosample_acc}",
+        "serovar": "NULL",
+        "geo_loc_name": geo_loc_name,
+        "collection_date": collection_date,
+        "AMR_genotypes": f'"{amr_genotypes}"',
+        "AST_phenotypes": "NULL",
+    }
 
 
 @pytest.mark.asyncio
@@ -1464,3 +1497,263 @@ async def test_isolate_search_any_prefix_in_the_list_matches(
     )
 
     assert matched == ["SAMN00000001", "SAMN00000002"]
+
+
+# ---------------------------------------------------------------------------
+# Card 28 (2026-09-25): location and collection-year filters on isolate_search.
+#
+# Coverage statement: location alone, collection-year alone (min only, max
+# only, both), both filters together, boundary-aware location matching (a
+# short country code must never match a longer one), each of the three
+# collection_date precisions (bare year, year-month, full date), and every
+# named "missing" shape (NULL, "missing", "not collected", "not applicable",
+# empty) never counting as a match against an active year filter. Not
+# covered here (out of this file's scope, per its own stated gap above):
+# `pathogen_ftp_transport.py`'s own streaming and header parsing.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_location_filters_by_country_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A `location="USA"` filter keeps only rows whose geo_loc_name starts
+    with USA, boundary-aware: a `"USAX"`-shaped value (not real, but the
+    boundary rule must reject it) must never match.
+    """
+    _install_snapshot(monkeypatch)
+    table = [
+        _row("SAMN00000001", "blaKPC", geo_loc_name="USA: California"),
+        _row("SAMN00000002", "blaKPC", geo_loc_name="United Kingdom"),
+        _row("SAMN00000003", "blaKPC", geo_loc_name="USA:AZ"),
+        _row("SAMN00000004", "blaKPC", geo_loc_name="USAX: Nowhere"),  # boundary check
+    ]
+    _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(_search_input(prefixes=["blaKPC"], location="USA"))
+
+    assert output.status == "ok", output.error
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001", "SAMN00000003"]
+    assert output.total_available == 2
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_location_is_case_insensitive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_snapshot(monkeypatch)
+    table = [_row("SAMN00000001", "blaKPC", geo_loc_name="usa: texas")]
+    _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(_search_input(prefixes=["blaKPC"], location="USA"))
+
+    assert output.status == "ok", output.error
+    assert output.isolate_count == 1
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_location_excludes_missing_geo_loc_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A NULL geo_loc_name is not evidence the isolate is anywhere in
+    particular, so it must never count as a match, never be treated as an
+    absence disguised as a positive result.
+    """
+    _install_snapshot(monkeypatch)
+    table = [_row("SAMN00000001", "blaKPC", geo_loc_name="NULL")]
+    _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(_search_input(prefixes=["blaKPC"], location="USA"))
+
+    assert output.status == "empty", output.error
+    assert output.isolate_count == 0
+    assert output.total_available == 0
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_collection_year_min_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_snapshot(monkeypatch)
+    table = [
+        _row("SAMN00000001", "blaKPC", collection_date="2019-06-01"),
+        _row("SAMN00000002", "blaKPC", collection_date="2020-01-01"),
+        _row("SAMN00000003", "blaKPC", collection_date="2022-07-04"),
+    ]
+    _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(
+        _search_input(prefixes=["blaKPC"], collection_year_min=2020)
+    )
+
+    assert output.status == "ok", output.error
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000002", "SAMN00000003"]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_collection_year_max_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_snapshot(monkeypatch)
+    table = [
+        _row("SAMN00000001", "blaKPC", collection_date="2019-06-01"),
+        _row("SAMN00000002", "blaKPC", collection_date="2020-01-01"),
+        _row("SAMN00000003", "blaKPC", collection_date="2022-07-04"),
+    ]
+    _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(
+        _search_input(prefixes=["blaKPC"], collection_year_max=2020)
+    )
+
+    assert output.status == "ok", output.error
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001", "SAMN00000002"]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_collection_year_range_both_bounds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_snapshot(monkeypatch)
+    table = [
+        _row("SAMN00000001", "blaKPC", collection_date="2018-06-01"),
+        _row("SAMN00000002", "blaKPC", collection_date="2020-01-01"),
+        _row("SAMN00000003", "blaKPC", collection_date="2020-12-31"),
+        _row("SAMN00000004", "blaKPC", collection_date="2023-07-04"),
+    ]
+    _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(
+        _search_input(prefixes=["blaKPC"], collection_year_min=2019, collection_year_max=2021)
+    )
+
+    assert output.status == "ok", output.error
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000002", "SAMN00000003"]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_collection_date_mixed_precision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The three real precisions: a bare year, a year-month, a full date,
+    all correctly placed inside a 2020-only range.
+    """
+    _install_snapshot(monkeypatch)
+    table = [
+        _row("SAMN00000001", "blaKPC", collection_date="2020"),
+        _row("SAMN00000002", "blaKPC", collection_date="2020-05"),
+        _row("SAMN00000003", "blaKPC", collection_date="2020-05-14"),
+        _row("SAMN00000004", "blaKPC", collection_date="2021"),
+    ]
+    _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(
+        _search_input(prefixes=["blaKPC"], collection_year_min=2020, collection_year_max=2020)
+    )
+
+    assert output.status == "ok", output.error
+    assert [i.biosample_acc for i in output.isolates] == [
+        "SAMN00000001",
+        "SAMN00000002",
+        "SAMN00000003",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_missing_collection_date_never_counts_as_a_match(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every named "missing" shape (NULL, "missing", "not collected", "not
+    applicable", empty), plus a genuinely unparseable value, must all be
+    excluded from a year-filtered search rather than silently counted.
+    """
+    _install_snapshot(monkeypatch)
+    table = [
+        _row("SAMN00000001", "blaKPC", collection_date="NULL"),
+        _row("SAMN00000002", "blaKPC", collection_date="missing"),
+        _row("SAMN00000003", "blaKPC", collection_date="Not Collected"),
+        _row("SAMN00000004", "blaKPC", collection_date="not applicable"),
+        _row("SAMN00000005", "blaKPC", collection_date=""),
+        _row("SAMN00000006", "blaKPC", collection_date="unspecified-format"),
+        _row("SAMN00000007", "blaKPC", collection_date="2020-05-14"),  # the one real match
+    ]
+    _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(
+        _search_input(prefixes=["blaKPC"], collection_year_min=2000, collection_year_max=2100)
+    )
+
+    assert output.status == "ok", output.error
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000007"]
+    assert output.total_available == 1
+
+
+@pytest.mark.asyncio
+async def test_isolate_search_location_and_collection_year_together(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The headline case from the ticket: blaKPC, USA, since 2020. A row
+    matching only one of the two additive filters must still be excluded.
+    """
+    _install_snapshot(monkeypatch)
+    table = [
+        _row("SAMN00000001", "blaKPC", geo_loc_name="USA:AZ", collection_date="2021-01-01"),
+        _row(
+            "SAMN00000002", "blaKPC", geo_loc_name="United Kingdom", collection_date="2021-01-01"
+        ),  # right year, wrong location
+        _row("SAMN00000003", "blaKPC", geo_loc_name="USA:AZ", collection_date="2019-01-01"),
+        # right location, wrong year
+        _row("SAMN00000004", "blaEC", geo_loc_name="USA:AZ", collection_date="2021-01-01"),
+        # right location and year, wrong gene
+    ]
+    _install_predicate_scan(monkeypatch, table)
+
+    output = await pathogen_detection(
+        _search_input(prefixes=["blaKPC"], location="USA", collection_year_min=2020)
+    )
+
+    assert output.status == "ok", output.error
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001"]
+    assert output.total_available == 1
+
+
+def test_collection_year_range_min_over_max_is_rejected_at_construction() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        PathogenDetectionInput(
+            mode="isolate_search",
+            taxon="Escherichia_coli_Shigella",
+            amr_gene_prefixes=["blaKPC"],
+            collection_year_min=2021,
+            collection_year_max=2020,
+        )
+
+
+def test_location_field_rejects_shell_and_regex_metacharacters() -> None:
+    from pydantic import ValidationError
+
+    for bad in ("USA;pkill -9 all", "USA*", "USA/../etc", ""):
+        with pytest.raises(ValidationError):
+            PathogenDetectionInput(
+                mode="isolate_search",
+                taxon="Escherichia_coli_Shigella",
+                amr_gene_prefixes=["blaKPC"],
+                location=bad,
+            )
+
+
+def test_collection_year_bounds_are_enforced_at_the_schema_layer() -> None:
+    from pydantic import ValidationError
+
+    for bad_kwargs in (
+        {"collection_year_min": 1899},
+        {"collection_year_max": 2101},
+    ):
+        with pytest.raises(ValidationError):
+            PathogenDetectionInput(
+                mode="isolate_search",
+                taxon="Escherichia_coli_Shigella",
+                amr_gene_prefixes=["blaKPC"],
+                **bad_kwargs,
+            )

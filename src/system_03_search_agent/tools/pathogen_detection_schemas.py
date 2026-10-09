@@ -109,6 +109,48 @@ how much of the file was actually read. See
 `pathogen_detection.py`'s module docstring for the scan design and the
 live numbers behind it.
 
+Design decision 6, two additive `isolate_search` filters, `location` and
+`collection_year_min`/`collection_year_max` (card 28, product-owner
+decision 2026-09-25, DECISIONS.md): "An isolate question can narrow by
+location and collection year, not only by resistance gene." Both are
+optional, both default to `None`, so every existing `isolate_search`
+construction site keeps working unchanged, the same additive-within-v1
+discipline design decisions 4 and 5 already apply.
+
+`location` matches a country name at the START of the row's `geo_loc_name`
+cell, boundary-aware the same way an AMR gene prefix matches
+(`pathogen_detection.py`'s `_amr_item_matches_prefix`, reused): real
+`geo_loc_name` values are shaped `"USA: California"` or `"USA:AZ"`
+(`test_pathogen_detection.py`'s own `_amr_row` fixture), a colon-or-nothing
+delimited country name followed by an optional subregion, per the INSDC
+`geo_loc_name` controlled vocabulary NCBI's own BioSample attribute
+definitions use. This module does not, and per DECISIONS.md 2026-09-24
+("no hardcoded decisions") must not, ship a country-name alias table
+mapping a person's own words ("the United States") to that vocabulary's
+own spelling ("USA"). The `location` value a caller supplies here is
+compared to the file's own spelling directly; producing that value from a
+question's free text is Think's job, not this schema's: since card 20
+(2026-10-09) Think's classification model names the place and code in
+`core/isolate_search.py` (`apply_filters`) checks it against the INSDC
+country vocabulary before it reaches this field.
+
+`collection_year_min`/`collection_year_max` bound the `collection_date`
+cell's year component. `collection_date` is mixed precision in the real
+file, a bare year (`"2020"`), a year and month (`"2020-05"`), or a full
+date (`"2020-05-14"`); `pathogen_detection.py`'s `_parse_collection_year`
+reads the leading four-digit year off whichever precision is present, and
+a bare `NULL`, `"missing"`, `"not collected"`, `"not applicable"`, or an
+empty/unparseable value NEVER counts as a match when a year filter is
+active, since a missing collection date is not evidence the isolate falls
+inside any range asked about (`decide-from-the-users-chair`: a confident
+wrong record is worse than a missing one). `ge=1900, le=2100` bounds both
+fields to a plausible calendar year, a shape check with no live network
+call, matching every other numeric bound in this file
+(`max_snp_distance`'s `ge=1, le=50`). A `model_validator` below rejects a
+payload where `collection_year_min` exceeds `collection_year_max`, since
+that range can never match a row and is a caller error worth surfacing at
+construction time rather than as a silent empty result.
+
 Depends on:
     - Nothing repo-local. `PATHOGEN_TAXON_PATTERN` and
       `PATHOGEN_SOURCE_URL_PATTERN` are defined here, not imported from
@@ -142,7 +184,7 @@ from __future__ import annotations
 import re
 from typing import Annotated, Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field, RootModel, model_validator
 
 # Design decision 2: ASCII letters, digits, underscore, hyphen only, no
 # path separators, no leading digit-only ambiguity avoided by requiring an
@@ -158,6 +200,16 @@ PATHOGEN_TAXON_PATTERN: Final = r"^[A-Za-z][A-Za-z0-9_-]{0,49}$"
 # Section 6.6 line ~1339 (the output schema's `isolates[].source_url`
 # property), copied verbatim.
 PATHOGEN_SOURCE_URL_PATTERN: Final = r"^https://(www\.)?ncbi\.nlm\.nih\.gov/pathogens/"
+
+# The shape of a `location` filter value on the `isolate_search` branch
+# (design decision 6). A `geo_loc_name` country/subregion name: ASCII
+# letters, digits, spaces, and the punctuation a real INSDC country name
+# uses (`Cote d'Ivoire`, `Korea, South`, `Congo, the Democratic Republic
+# of the`). No `.`, `(`, `)` or regex metacharacters, since a location
+# filter has no `_amr_item_matches_prefix`-shaped need for them; this value
+# is compared to the file's own text with a plain, case-folded boundary
+# check, never compiled as a regex.
+PATHOGEN_LOCATION_PATTERN: Final = r"^[A-Za-z][A-Za-z0-9 ,'.\-]*$"
 
 # The shape of one AMR gene-name prefix on the `isolate_search` branch
 # (design decision 5). ASCII letters, digits, underscore, parentheses,
@@ -275,6 +327,55 @@ class PathogenIsolateSearchInput(BaseModel):
         Field(min_length=1, max_length=10),
     ]
     max_isolates: Annotated[int, Field(ge=1, le=100)] = 20
+    # Design decision 6 (card 28). Both optional, both None by default, so
+    # every construction site that predates these filters still validates
+    # unchanged.
+    location: Annotated[
+        str | None,
+        Field(
+            default=None,
+            min_length=1,
+            max_length=100,
+            pattern=PATHOGEN_LOCATION_PATTERN,
+            description=(
+                "A geo_loc_name country name, matched at the start of the "
+                "cell (e.g. 'USA' matches 'USA: California'). Compared to "
+                "the file's own spelling directly; never a caller's free-text "
+                "synonym resolved here."
+            ),
+        ),
+    ] = None
+    collection_year_min: Annotated[
+        int | None,
+        Field(
+            default=None,
+            ge=1900,
+            le=2100,
+            description="Earliest collection year to include, inclusive.",
+        ),
+    ] = None
+    collection_year_max: Annotated[
+        int | None,
+        Field(
+            default=None,
+            ge=1900,
+            le=2100,
+            description="Latest collection year to include, inclusive.",
+        ),
+    ] = None
+
+    @model_validator(mode="after")
+    def _year_range_is_sane(self) -> PathogenIsolateSearchInput:
+        if (
+            self.collection_year_min is not None
+            and self.collection_year_max is not None
+            and self.collection_year_min > self.collection_year_max
+        ):
+            raise ValueError(
+                f"collection_year_min ({self.collection_year_min}) must not exceed "
+                f"collection_year_max ({self.collection_year_max})"
+            )
+        return self
 
 
 _PathogenActionUnion = (
@@ -565,6 +666,38 @@ for _sample in _AMR_PREFIX_ACCEPT_SAMPLES:
 for _sample in _AMR_PREFIX_REJECT_SAMPLES:
     assert re.fullmatch(PATHOGEN_AMR_PREFIX_PATTERN, _sample) is None, (
         f"PATHOGEN_AMR_PREFIX_PATTERN wrongly accepts an unsafe prefix: {_sample!r}"
+    )
+del _sample
+
+_LOCATION_ACCEPT_SAMPLES: Final[tuple[str, ...]] = (
+    "USA",
+    "United Kingdom",
+    "Korea, South",
+    "Cote d'Ivoire",
+    "U.S.A.",
+)
+_LOCATION_REJECT_SAMPLES: Final[tuple[str, ...]] = (
+    # Regex metacharacters and shell/path punctuation must never validate,
+    # the same discipline as the AMR prefix pattern above.
+    "USA*",
+    "USA;rm -rf",
+    "USA/../etc",
+    # A leading digit is rejected: the pattern's own first character class
+    # is a letter.
+    "1USA",
+    # Trailing newline must never validate, the same Python-`re`
+    # `$`-before-newline trap design decision 2 covers.
+    "USA\n",
+    "",
+)
+
+for _sample in _LOCATION_ACCEPT_SAMPLES:
+    assert re.fullmatch(PATHOGEN_LOCATION_PATTERN, _sample) is not None, (
+        f"PATHOGEN_LOCATION_PATTERN wrongly rejects a real country name: {_sample!r}"
+    )
+for _sample in _LOCATION_REJECT_SAMPLES:
+    assert re.fullmatch(PATHOGEN_LOCATION_PATTERN, _sample) is None, (
+        f"PATHOGEN_LOCATION_PATTERN wrongly accepts an unsafe location value: {_sample!r}"
     )
 del _sample
 

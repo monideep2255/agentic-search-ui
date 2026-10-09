@@ -7,8 +7,13 @@ Pathogen Detection PDG snapshot tree (T-3.5-05).
 - `cluster_snp_neighbors`: every isolate in a PDS cluster within a SNP
   distance of another member.
 - `isolate_search`: which isolates of a taxon carry an AMR gene in a named
-  family. Added 2026-09-22 (G-035), additive to Section 6.6's two locked
-  branches, and described in full below.
+  family, optionally narrowed by collection location and/or a
+  collection-year range. Added 2026-09-22 (G-035), additive to Section
+  6.6's two locked branches, and described in full below. The two
+  additional filters (card 28, product-owner decision 2026-09-25) were
+  added 2026-09-25: `_isolate_search_predicate` combines the gene test with
+  an optional location prefix match (`_location_matches`) and an optional
+  collection-year range (`_parse_collection_year`), all ANDed together.
 
 ## isolate_search: a bounded sample with a real total behind it
 
@@ -547,6 +552,117 @@ def _amr_prefix_predicate(prefixes: Sequence[str]) -> Callable[[dict[str, str]],
         return False
 
     return _row_carries_a_named_gene
+
+
+# F-3.5-A-13's own values a "missing" collection_date can genuinely take in
+# the real file, per the INSDC/NCBI BioSample `collection_date` controlled
+# vocabulary for a value the submitter never supplied. Checked case-folded.
+# None of these, and no unparseable value, is ever treated as satisfying a
+# collection-year filter: a missing date is not evidence an isolate falls
+# inside any range asked about (`decide-from-the-users-chair`).
+_MISSING_DATE_TOKENS: Final[frozenset[str]] = frozenset(
+    {"missing", "not collected", "not applicable", "n/a", "na", "unknown"}
+)
+
+# A leading 4-digit year, optionally followed by `-MM` or `-MM-DD` (the
+# collection_date column's three real precisions: a bare year, a
+# year-month, or a full date). Anchored at the START only, never `$`: a
+# malformed suffix after a genuine leading year (rare, but not this
+# function's job to reject) still yields a real year rather than nothing.
+_COLLECTION_DATE_YEAR_PATTERN: Final[re.Pattern[str]] = re.compile(r"^(\d{4})(?:-\d{2}(?:-\d{2})?)?$")
+
+
+def _parse_collection_year(raw: str | None) -> int | None:
+    """The row's collection year, or None when the value is missing,
+    NULL-shaped, or not a recognizable year-leading date.
+
+    Design decision 6 (`pathogen_detection_schemas.py`): `collection_date`
+    is mixed precision in the real file, a bare year (`"2020"`), a
+    year-month (`"2020-05"`), or a full date (`"2020-05-14"`). This reads
+    the leading four digits off whichever precision is present. A bare
+    `NULL` (the same F-3.5-03 sentinel `_parse_pathogen_list_field` already
+    treats as absent), one of `_MISSING_DATE_TOKENS`, an empty/whitespace
+    value, or any string this function cannot parse a leading year from,
+    all return None, NEVER a fabricated year: a row with None here is
+    excluded from a collection-year filter rather than counted as a match,
+    the same withhold-not-guess discipline `_cap_or_withhold` uses for
+    every other free-text field in this module.
+    """
+    if raw is None:
+        return None
+    value = raw.strip()
+    if not value or value.upper() == "NULL" or value.casefold() in _MISSING_DATE_TOKENS:
+        return None
+    match = _COLLECTION_DATE_YEAR_PATTERN.match(value)
+    if match is None:
+        return None
+    year = int(match.group(1))
+    if year < 1900 or year > 2100:
+        # A 4-digit leading token that is not a plausible calendar year
+        # (e.g. a malformed cell) is not a year, matching this schema's own
+        # `ge=1900, le=2100` bound on the filter fields.
+        return None
+    return year
+
+
+def _location_matches(geo_loc_name: str | None, location_folded: str) -> bool:
+    """True when `geo_loc_name` names the requested location at its start,
+    boundary-aware the same way `_amr_item_matches_prefix` matches an AMR
+    gene prefix: `location_folded` must be the whole cell, or the character
+    immediately after it must not be a letter or digit. Real values are
+    shaped `"USA: California"` or `"USA:AZ"` (colon-delimited), so
+    `"USA"` matches both and `"US"` never matches `"USA: California"`
+    (the next character after `"US"` is `A`, alphanumeric).
+    """
+    if geo_loc_name is None:
+        return False
+    value = geo_loc_name.strip()
+    if not value or value.upper() == "NULL":
+        return False
+    value_folded = value.casefold()
+    if not value_folded.startswith(location_folded):
+        return False
+    if len(value_folded) == len(location_folded):
+        return True
+    return not value_folded[len(location_folded)].isalnum()
+
+
+def _isolate_search_predicate(
+    prefixes: Sequence[str],
+    *,
+    location: str | None,
+    collection_year_min: int | None,
+    collection_year_max: int | None,
+) -> Callable[[dict[str, str]], bool]:
+    """The row predicate `isolate_search` hands to the transport: the AMR
+    gene-prefix test every call makes (`_amr_prefix_predicate`), ANDed with
+    an optional location filter and an optional collection-year range
+    (card 28, design decision 6). Both filters are additive and default to
+    no-op (`location=None`, both year bounds `None`), so a call with
+    neither behaves exactly as `_amr_prefix_predicate` alone did before
+    this ticket.
+    """
+    gene_matches = _amr_prefix_predicate(prefixes)
+    location_folded = location.casefold() if location else None
+
+    def _row_matches(row: dict[str, str]) -> bool:
+        if not gene_matches(row):
+            return False
+        if location_folded is not None:
+            geo_loc_name = _first_present(row, _GEO_COLUMN_CANDIDATES)
+            if not _location_matches(geo_loc_name, location_folded):
+                return False
+        if collection_year_min is not None or collection_year_max is not None:
+            year = _parse_collection_year(_first_present(row, _COLLECTION_DATE_COLUMN_CANDIDATES))
+            if year is None:
+                return False
+            if collection_year_min is not None and year < collection_year_min:
+                return False
+            if collection_year_max is not None and year > collection_year_max:
+                return False
+        return True
+
+    return _row_matches
 
 
 def _build_isolate(
@@ -1194,7 +1310,12 @@ def _isolate_search_timeout_output(
     never reports the cutoff as an absence, which is the whole point of
     `status: "timeout"` existing separately from `status: "empty"`
     (F-3.5-A-09).
+
+    Card 28: `_filters_applied_clause` names location/collection-year
+    filters here too, since a caller reading this message should see every
+    condition the scan was testing for, not only the gene list.
     """
+    filters_clause = _filters_applied_clause(action)
     return PathogenDetectionOutput(
         status="timeout",
         mode=action.mode,
@@ -1206,15 +1327,39 @@ def _isolate_search_timeout_output(
         scan_complete=False,
         error=_cap(
             f"pathogen_detection's {_TOTAL_BUDGET_S:.0f}s shared wall-clock budget ran "
-            f"out while scanning {taxon}'s isolate metadata, after reading "
-            f"{rows_scanned} row(s), and no isolate carrying one of the named genes had "
-            "been found in the portion scanned. This does NOT mean none exists: the "
-            "scan never reached the end of the file. A shorter gene list would not "
-            "help, since the cost is the file's size rather than the query's "
+            f"out while scanning {taxon}'s isolate metadata{filters_clause}, after "
+            f"reading {rows_scanned} row(s), and no isolate carrying one of the named "
+            "genes had been found in the portion scanned. This does NOT mean none "
+            "exists: the scan never reached the end of the file. A shorter gene list "
+            "would not help, since the cost is the file's size rather than the query's "
             "specificity; retrying may land on a faster network path.",
             _MAX_ERROR_CHARS,
         ),
     )
+
+
+def _filters_applied_clause(action: PathogenIsolateSearchInput) -> str:
+    """Card 28: the clause naming which of the two additive filters this
+    call applied, so the tool's own `error` messages (and any caller that
+    reuses this text) state what was searched rather than leaving location
+    and collection-year silently implied. Empty string when neither filter
+    was set, so the message this feeds into reads exactly as it did before
+    this ticket.
+    """
+    parts: list[str] = []
+    if action.location:
+        parts.append(f"location starting {action.location!r}")
+    if action.collection_year_min is not None and action.collection_year_max is not None:
+        parts.append(
+            f"collected {action.collection_year_min}-{action.collection_year_max}"
+        )
+    elif action.collection_year_min is not None:
+        parts.append(f"collected since {action.collection_year_min}")
+    elif action.collection_year_max is not None:
+        parts.append(f"collected through {action.collection_year_max}")
+    if not parts:
+        return ""
+    return " (filtered to " + ", ".join(parts) + ")"
 
 
 async def _isolate_search(
@@ -1224,12 +1369,22 @@ async def _isolate_search(
     deadline: float,
     client: httpx.AsyncClient,
 ) -> PathogenDetectionOutput:
-    """Which isolates of this taxon carry an AMR gene in the named family.
+    """Which isolates of this taxon carry an AMR gene in the named family,
+    optionally narrowed by collection location and/or collection-year range
+    (card 28, `pathogen_detection_schemas.py` design decision 6).
 
     One streamed scan of the taxon's Metadata TSV, keeping the first
     `max_isolates` matching rows and counting every match to end of file or
     the shared deadline. See the module docstring for the design and the
-    live numbers behind it.
+    live numbers behind it. `location` and the two `collection_year_*`
+    bounds are additive AND conditions applied by the same predicate that
+    tests the AMR gene prefixes (`_isolate_search_predicate`): a row must
+    satisfy every filter set, not just the gene test, to be counted or
+    shown. Neither filter changes the exact-count/`scan_complete`
+    discipline the module docstring documents: the scan still counts every
+    accepted row to end of file or the deadline, whichever comes first, so
+    the count and the "at least" wording behave identically whether zero,
+    one, or both filters are set.
 
     The four dispositions, and the one that matters most:
 
@@ -1251,7 +1406,12 @@ async def _isolate_search(
     try:
         scan = await pathogen_ftp_transport.stream_predicate_tsv_rows(
             _metadata_url(taxon, snapshot),
-            predicate=_amr_prefix_predicate(action.amr_gene_prefixes),
+            predicate=_isolate_search_predicate(
+                action.amr_gene_prefixes,
+                location=action.location,
+                collection_year_min=action.collection_year_min,
+                collection_year_max=action.collection_year_max,
+            ),
             deadline=deadline,
             client=client,
             max_rows=min(action.max_isolates, _MAX_ISOLATES),
@@ -1301,6 +1461,7 @@ async def _isolate_search(
 
     if scan.match_count == 0:
         gene_list = ", ".join(action.amr_gene_prefixes)
+        filters_clause = _filters_applied_clause(action)
         return PathogenDetectionOutput(
             status="empty",
             mode=action.mode,
@@ -1312,8 +1473,9 @@ async def _isolate_search(
             scan_complete=True,
             error=_cap(
                 f"None of the {scan.total_rows_scanned} {taxon} isolates in this "
-                f"snapshot carries a gene named {gene_list}. The whole file was read, "
-                "so this is an exact answer rather than a scan that ran out of time.",
+                f"snapshot{filters_clause} carries a gene named {gene_list}. The whole "
+                "file was read, so this is an exact answer rather than a scan that ran "
+                "out of time.",
                 _MAX_ERROR_CHARS,
             ),
             fields_withheld=fields_withheld,

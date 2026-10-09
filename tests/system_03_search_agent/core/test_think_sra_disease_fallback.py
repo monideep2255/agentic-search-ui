@@ -351,6 +351,10 @@ async def test_the_parse_retry_asks_for_every_schema_key(monkeypatch: pytest.Mon
         "narrative",
         "entities",
         "record_type",
+        # Card 20 (2026-10-09): the isolate collection filters.
+        "collection_year_min",
+        "collection_year_max",
+        "location",
     }
 
 

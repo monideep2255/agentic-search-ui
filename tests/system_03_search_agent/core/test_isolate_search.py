@@ -25,6 +25,8 @@ Depends on:
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from system_03_search_agent.core import isolate_search as module
@@ -304,3 +306,137 @@ def test_every_family_prefix_matches_its_real_genes_in_the_tools_matcher(
             row = {"AMR_genotypes": f'"aph(3\'\')-Ib,{gene},sul2"'}
             assert predicate(row), f"{family.key}: prefix {prefix!r} does not match {gene!r}"
         assert not predicate({"AMR_genotypes": '"aph(3\'\')-Ib,sul2"'}), prefix
+
+
+# ---------------------------------------------------------------------------
+# Card 20 (owner, 2026-10-09): `apply_filters` verifies the year range and
+# place Think's model named. Code reads no year or place from the words.
+# ---------------------------------------------------------------------------
+
+_FILTER_TEXT = "Which E. coli isolates carry blaKPC genes in the USA since 2020?"
+
+
+def _base() -> module.IsolateQuestion:
+    question = module.parse_isolate_question(_FILTER_TEXT)
+    assert question is not None
+    return question
+
+
+def test_the_recogniser_reads_no_year_or_place_from_the_words() -> None:
+    """The parked card 28 regexes are not back: the parse alone names no
+    filter even when the question states both."""
+    question = _base()
+    assert (question.collection_year_min, question.collection_year_max, question.location) == (
+        None,
+        None,
+        None,
+    )
+
+
+@pytest.mark.parametrize(
+    ("year_min", "year_max", "text", "kept"),
+    [
+        (2020, None, _FILTER_TEXT, (2020, None)),
+        (2018, 2020, "E. coli isolates with blaKPC between 2018 and 2020", (2018, 2020)),
+        (2023, 2023, "E. coli isolates with blaKPC from 2023", (2023, 2023)),
+        # One either side of a written year anchors an exclusive bound.
+        (None, 2014, "E. coli isolates with blaKPC before 2015", (None, 2014)),
+    ],
+)
+def test_a_year_anchored_in_the_question_is_kept(
+    year_min: int | None, year_max: int | None, text: str, kept: tuple[Any, Any]
+) -> None:
+    question = module.apply_filters(
+        _base(), year_min=year_min, year_max=year_max, location=None, question_text=text
+    )
+    assert (question.collection_year_min, question.collection_year_max) == kept
+    assert question.filters_not_applied == ()
+
+
+@pytest.mark.parametrize(
+    ("year_min", "year_max", "text"),
+    [
+        # Not written in the question at all.
+        (2015, 2015, _FILTER_TEXT),
+        # Written, but a count rather than a year is still out of range.
+        (3000, None, "E. coli isolates with blaKPC in 3000 patients"),
+        # The bounds reversed.
+        (2021, 2019, "E. coli isolates with blaKPC 2019 to 2021"),
+        # Not a whole year.
+        ("2020", None, _FILTER_TEXT),
+        (True, None, _FILTER_TEXT),
+        # One bound good, one bad: the range is dropped whole.
+        (2020, 2030, _FILTER_TEXT),
+    ],
+)
+def test_a_year_that_cannot_be_verified_is_not_applied_and_is_said(
+    year_min: Any, year_max: Any, text: str
+) -> None:
+    question = module.apply_filters(
+        _base(), year_min=year_min, year_max=year_max, location=None, question_text=text
+    )
+    assert question.collection_year_min is None and question.collection_year_max is None
+    assert question.filters_not_applied == (module.YEAR_NOT_APPLIED,)
+    assert module.YEAR_NOT_APPLIED in module.disclosure(question)
+
+
+@pytest.mark.parametrize(("given", "kept"), [("USA", "USA"), ("usa", "USA"), (" Viet Nam ", "Viet Nam")])
+def test_a_country_the_file_spells_is_kept_in_its_own_spelling(given: str, kept: str) -> None:
+    question = module.apply_filters(
+        _base(), year_min=None, year_max=None, location=given, question_text=_FILTER_TEXT
+    )
+    assert question.location == kept
+    assert question.filters_not_applied == ()
+
+
+@pytest.mark.parametrize(
+    ("given", "named"),
+    [
+        ("Atlantis", True),
+        ("the United States", True),
+        # Unsafe shape: never echoed back to the person.
+        ("USA; drop table", False),
+        ("x" * 101, False),
+    ],
+)
+def test_a_place_the_file_never_spells_is_not_applied_and_is_said(given: str, named: bool) -> None:
+    question = module.apply_filters(
+        _base(), year_min=None, year_max=None, location=given, question_text=_FILTER_TEXT
+    )
+    assert question.location is None
+    (note,) = question.filters_not_applied
+    assert "isolates from every place are counted" in note
+    assert (given in note) is named
+
+
+def test_an_empty_place_is_no_filter_and_no_note() -> None:
+    question = module.apply_filters(
+        _base(), year_min=None, year_max=None, location="  ", question_text=_FILTER_TEXT
+    )
+    assert question.location is None and question.filters_not_applied == ()
+
+
+def test_verified_filters_reach_the_planned_call_and_the_disclosure() -> None:
+    question = module.apply_filters(
+        _base(), year_min=2020, year_max=None, location="USA", question_text=_FILTER_TEXT
+    )
+    search = module.plan_calls(question)[0].tool_input.root
+    assert (search.location, search.collection_year_min, search.collection_year_max) == (
+        "USA",
+        2020,
+        None,
+    )
+    assert module.disclosure(question) == (
+        "searching Escherichia coli isolates in Pathogen Detection for AMR genotypes "
+        "starting blaKPC, collected in USA since 2020"
+    )
+
+
+def test_no_filter_plans_the_same_call_as_before() -> None:
+    dumped = module.plan_calls(_base())[0].tool_input.root.model_dump(exclude_none=True)
+    assert set(dumped) == {"mode", "taxon", "amr_gene_prefixes", "max_isolates"}
+
+
+def test_the_vocabulary_holds_the_names_the_tool_matches() -> None:
+    assert "USA" in module.GEO_LOC_COUNTRIES
+    assert len(set(module.GEO_LOC_COUNTRIES)) == len(module.GEO_LOC_COUNTRIES)
