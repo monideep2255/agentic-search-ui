@@ -834,7 +834,16 @@ async def _dispatch_tier_call(
         HarnessCallError: the call timed out, or failed and exhausted its
             retry (both classified; see `harness.harness.Harness`).
     """
-    cost_control.check_per_query_cap(harness, trace_id, tier)  # type: ignore[arg-type]
+    # F-8.7-J04, F-8.7-A06: checked on the prompt this call sends and its
+    # whole output ceiling, so the call it admits cannot pass the cap.
+    cost_control.check_per_query_cap(
+        harness,
+        trace_id,
+        tier,  # type: ignore[arg-type]
+        messages=messages,
+        cache_prefix=cache_prefix,
+        max_tokens=max_tokens,
+    )
     return await harness.enforce_timeout(
         step,
         harness.call_tier(  # type: ignore[arg-type]
@@ -10106,26 +10115,38 @@ def _listing_uncitable(
     return [finding for finding in prompt_findings if finding.citation_id not in cited]
 
 
-def _two_drafts_fit_cap(harness: Harness, trace_id: str) -> bool:
+def _two_drafts_fit_cap(
+    harness: Harness,
+    trace_id: str,
+    first_messages: list[Message],
+    second_messages: list[Message],
+) -> bool:
     """Whether two writer calls started together stay inside the per-query cap.
 
-    Each call's own pre-flight check (`_dispatch_tier_call`) reads the
-    running cost, which cannot see a call still in flight. So the second
-    draft starts beside the first only when the running cost plus TWO
-    writer-call estimates fits the cap, each priced exactly as the cap check
-    prices it, at the answering model's real price
-    (`cost_control.estimate_next_call_cost_usd`). Otherwise it waits for
-    the first, as before, and its own check then sees the first call's real
-    cost.
+    Each call's own pre-flight check (`_dispatch_tier_call`) also counts a
+    call still in flight (`Harness.in_flight_usd`), so the cap holds either
+    way; this decides only whether the second draft is worth starting now.
+    It starts beside the first only when the running cost, every call
+    still in flight, and the bound of BOTH drafts fit the cap, each draft
+    priced exactly as its own check will price it: its prompt counted and
+    its whole output ceiling, at the answering model's real price
+    (`cost_control.estimate_next_call_cost_usd`, F-8.7-J04). Otherwise it
+    waits for the first, as before, and its own check then sees the first
+    call's real cost.
 
-    That estimate also bounds what a dropped draft is metered at: a
-    cancelled call is charged the writer tier's full output ceiling at its
-    output price (`Harness.call_tier`, F-2.1-B02), which the estimate's
-    bounding profile exceeds, so a draft that is started and then dropped
-    can never carry a question past the cap that admitted it.
+    That bound also covers what a dropped draft is metered at: a cancelled
+    call is charged the writer tier's full output ceiling at its output
+    price (`Harness.call_tier`, F-2.1-B02), which its bound includes, so a
+    draft that is started and then dropped can never carry a question past
+    the cap that admitted it.
     """
-    per_call = cost_control.estimate_next_call_cost_usd(harness, "synth")
-    projected = harness.get_query_cost_usd(trace_id) + 2 * per_call
+    in_flight_of = getattr(harness, "in_flight_usd", None)
+    in_flight = float(in_flight_of(trace_id)) if in_flight_of is not None else 0.0
+    projected = harness.get_query_cost_usd(trace_id) + in_flight
+    for messages in (first_messages, second_messages):
+        projected += cost_control.estimate_next_call_cost_usd(
+            harness, "synth", messages=messages, cache_prefix=_STABLE_PREFIX
+        )
     return projected <= cost_control.per_query_cost_cap_usd()
 
 
@@ -13771,26 +13792,39 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     # answering model's price (`_two_drafts_fit_cap`); otherwise the
     # completeness draft waits for the first, as before.
     uncitable = _listing_uncitable(prompt_findings, listing_grounding)
-    if uncitable and not cap_hit and _two_drafts_fit_cap(harness, trace_id):
-        _start_second_draft(
-            harness,
-            _dispatch_tier_call(
-                harness,
-                trace_id,
-                "synth",
-                "write",
-                build_synth_messages(
-                    query.text,
-                    prompt_findings,
-                    query.audience_depth,
-                    completeness_directive=build_listing_gap_directive(uncitable),
-                    answer_ref_indices=answer_ref_indices,
-                    topic_question=bool(state.get("topic_search_term")),
-                    clinical_features_asked=clinical_features_asked,
-                ),
-                budget_s=write_budget_s,
-            ),
+    # T-4.5-07: the depth the caller asked for reaches synthesis here and
+    # nowhere else. It was carried on `Query` from build phase 1.0 and
+    # dropped at this line until phase 4.5.
+    first_draft_messages = build_synth_messages(
+        query.text,
+        prompt_findings,
+        query.audience_depth,
+        answer_ref_indices=answer_ref_indices,
+        topic_question=bool(state.get("topic_search_term")),
+        clinical_features_asked=clinical_features_asked,
+    )
+    if uncitable and not cap_hit:
+        second_draft_messages = build_synth_messages(
+            query.text,
+            prompt_findings,
+            query.audience_depth,
+            completeness_directive=build_listing_gap_directive(uncitable),
+            answer_ref_indices=answer_ref_indices,
+            topic_question=bool(state.get("topic_search_term")),
+            clinical_features_asked=clinical_features_asked,
         )
+        if _two_drafts_fit_cap(harness, trace_id, first_draft_messages, second_draft_messages):
+            _start_second_draft(
+                harness,
+                _dispatch_tier_call(
+                    harness,
+                    trace_id,
+                    "synth",
+                    "write",
+                    second_draft_messages,
+                    budget_s=write_budget_s,
+                ),
+            )
 
     writer_failed = False
     try:
@@ -13799,17 +13833,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             trace_id,
             "synth",
             "write",
-            # T-4.5-07: the depth the caller asked for reaches synthesis here
-            # and nowhere else. It was carried on `Query` from build phase
-            # 1.0 and dropped at this line until phase 4.5.
-            build_synth_messages(
-                query.text,
-                prompt_findings,
-                query.audience_depth,
-                answer_ref_indices=answer_ref_indices,
-                topic_question=bool(state.get("topic_search_term")),
-                clinical_features_asked=clinical_features_asked,
-            ),
+            first_draft_messages,
             budget_s=write_budget_s,
         )
     except cost_control.QueryCapExceededError:

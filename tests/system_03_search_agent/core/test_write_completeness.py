@@ -721,7 +721,7 @@ async def test_a_cost_cap_hit_during_the_repair_is_disclosed(
     original_check = graph_module.cost_control.check_per_query_cap
     synth_preflights = {"count": 0}
 
-    def _capped(harness: object, trace_id: str, tier: str) -> None:
+    def _capped(harness: object, trace_id: str, tier: str, **_kwargs: object) -> None:
         if tier == "synth":
             synth_preflights["count"] += 1
             if synth_preflights["count"] >= 2:

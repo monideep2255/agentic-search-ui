@@ -822,10 +822,12 @@ async def test_an_unneeded_second_draft_is_dropped_and_never_waited_for(
 async def test_two_opus_drafts_never_start_together_under_a_25_cent_cap(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Priced at Opus's real price, two writer calls are estimated at $0.264,
-    over a 25-cent cap, so the second waits for the first and its own check
-    sees the first call's real cost. The old static estimate ($0.025 a call)
-    would have started both together."""
+    """Priced at Opus's real price, each writer call is bounded at its
+    prompt (the stable prefix alone counts about 12,000 tokens) plus its
+    4,000-token output ceiling, about $0.14 here, so two are over a 25-cent
+    cap: the second waits for the first and its own check sees the first
+    call's real cost. The old static estimate ($0.025 a call) would have
+    started both together."""
     monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "0.25")
     _listing_cannot_cite(monkeypatch, 4)
     calls = _models(monkeypatch, first=ANSWERING, first_delay_s=0.2, price=OPUS_PRICE)
@@ -854,12 +856,13 @@ def test_the_drafts_price_bounds_what_a_dropped_draft_is_metered_at() -> None:
     price `_two_drafts_fit_cap` admits each draft at must be at least that,
     or a draft started and then dropped could carry a question past the cap
     that admitted it."""
+    harness = harness_module.Harness(trace_id="trace-dropped")
+    harness.price_per_token = lambda tier: OPUS_PRICE  # type: ignore[method-assign]
+    messages = build_synth_messages("Which diseases?", [_synth_finding(1, "d")], "researcher")
 
-    class _OpusHarness:
-        def price_per_token(self, tier: str) -> tuple[float, float]:
-            return OPUS_PRICE
-
-    per_draft = cost_control.estimate_next_call_cost_usd(_OpusHarness(), "synth")  # type: ignore[arg-type]
+    per_draft = cost_control.estimate_next_call_cost_usd(
+        harness, "synth", messages=messages, cache_prefix=graph_module._STABLE_PREFIX
+    )
     metered_if_dropped = harness_module._TIER_MAX_TOKENS["synth"] * OPUS_PRICE[1]
     assert per_draft >= metered_if_dropped, (per_draft, metered_if_dropped)
     assert per_draft > cost_control.estimate_call_cost_usd("synth")
@@ -959,3 +962,114 @@ async def test_a_client_that_asks_gets_placement_and_the_early_listing(
     assert next(t for t in tokens if t["placement"] == "summary")["text"].startswith(
         COUNT_LINE_START
     )
+
+
+# ---------------------------------------------------------------------------
+# Fix round, F-8.7-J04 and F-8.7-A06: the cap is a bound.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_call_that_could_pass_the_cap_is_never_sent_and_the_note_shows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The adversary's 27-cent question, made to fail the old estimate. At
+    $1 and $50 per million tokens, the first draft is admitted (its bound,
+    prompt plus 4,000 output tokens, is about $0.21) and costs $0.06. The
+    old estimate priced the repair at 2,000 output tokens, $0.123, and
+    admitted it; it then wrote 3,900 tokens and the question ended at
+    $0.256 on a 25-cent cap. Priced at its prompt and its whole output
+    ceiling the repair is never sent, the question stays under the cap, and
+    the reader is told why the answer was not widened. Mutation that turns
+    this red: price output at the profile's 2,000 tokens, or check the
+    writer call without its prompt."""
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "0.25")
+    price = (1e-6, 50e-6)
+    _listing_cannot_cite(monkeypatch, 4)
+    calls: list[str] = []
+
+    async def _dispatch(*_args: object, **kwargs: object):
+        joined = _joined(kwargs.get("messages"))
+        if REQUIREMENT in joined or CORRECTION in joined:
+            calls.append("repair")
+            return _fake_response(ANSWERING, prompt_tokens=1_000, completion_tokens=3_900)
+        if SYNTH_SYSTEM_INSTRUCTION in joined:
+            calls.append("first")
+            return _fake_response(ANSWERING, prompt_tokens=10_000, completion_tokens=1_000)
+        calls.append("guard")
+        return _fake_response("not an option")
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", AsyncMock(side_effect=_dispatch))
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": price[0], "output_cost_per_token": price[1]},
+    )
+
+    result = await graph_module.write_node(_write_state(audience_depth="researcher"))
+    events = result["events"]
+
+    assert calls.count("first") == 1 and "repair" not in calls, calls
+    assert _done(events)["total_cost_usd"] <= 0.25, _done(events)
+    assert any(note.startswith(graph_module._build_repair_cap_note()[:60]) for note in _notes(events)), _notes(events)
+
+
+@pytest.mark.asyncio
+async def test_a_call_still_in_flight_counts_against_the_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two calls running at once can never each be admitted against a total
+    that leaves out the other: a call `call_tier` has sent and not yet
+    metered is held at its bound. Mutation that turns this red: stop adding
+    `Harness.in_flight_usd` in `check_per_query_cap`."""
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 50e-6},
+    )
+    release = asyncio.Event()
+
+    async def _slow(**_kwargs: object):
+        await release.wait()
+        return _fake_response("ok", prompt_tokens=10, completion_tokens=5)
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", AsyncMock(side_effect=_slow))
+    harness = harness_module.Harness(trace_id="trace-in-flight")
+    messages = [{"role": "user", "content": "Which diseases?"}]
+    bound = harness.call_cost_bound_usd("synth", messages)
+    cap = bound * 1.5
+
+    cost_control.check_per_query_cap(
+        harness, "trace-in-flight", "synth", query_cap_usd=cap, messages=messages
+    )
+    first = asyncio.ensure_future(harness.call_tier("synth", messages))
+    await asyncio.sleep(0)
+    assert harness.in_flight_usd("trace-in-flight") == pytest.approx(bound)
+    with pytest.raises(cost_control.QueryCapExceededError):
+        cost_control.check_per_query_cap(
+            harness, "trace-in-flight", "synth", query_cap_usd=cap, messages=messages
+        )
+    release.set()
+    await first
+    assert harness.in_flight_usd("trace-in-flight") == 0.0
+
+
+@pytest.mark.asyncio
+async def test_a_call_is_checked_on_the_prompt_it_actually_sends(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A writer prompt far above the 23,000-token profile is priced on its
+    own size: at Opus's price, 240,000 characters of prompt cannot fit 25
+    cents with its output ceiling, so the call is never sent, although the
+    profile alone ($0.172) would have admitted it. Mutation that turns this
+    red: drop `messages` from `_dispatch_tier_call`'s cap check."""
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "0.25")
+    calls = _models(monkeypatch, price=OPUS_PRICE)
+    harness = harness_module.Harness(trace_id="trace-big-prompt")
+    messages = [{"role": "user", "content": "BRCA1 record. " * 17_000}]
+
+    with pytest.raises(cost_control.QueryCapExceededError):
+        await graph_module._dispatch_tier_call(
+            harness, "trace-big-prompt", "synth", "write", messages, budget_s=5.0
+        )
+    assert calls == [], calls
