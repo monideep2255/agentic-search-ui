@@ -439,6 +439,25 @@ def _next_call_price(harness: Harness, tier: Tier) -> tuple[float, float] | None
         return None
 
 
+def estimate_next_call_cost_usd(harness: Harness, tier: Tier) -> float:
+    """The estimate `check_per_query_cap` adds for the next `tier` call on
+    this question: priced at the real price of the model the question
+    resolved for `tier`, never below the static figure.
+
+    Public for a caller that must price a call before it can be checked
+    (build phase 8.7, card 50): the Write step's second draft starts beside
+    the first, while the first is still in flight, so the first's real cost
+    is not yet on the running total that `check_per_query_cap` reads. The
+    caller adds this estimate once per call it is about to start. The same
+    computation as the cap check's own, so the two can never price one call
+    differently.
+
+    Raises:
+        UnknownTierError: for a tier outside {"guard", "plan", "synth"}.
+    """
+    return estimate_call_cost_usd(tier, _next_call_price(harness, tier))
+
+
 def _model_for(harness: Harness, tier: Tier) -> str:
     """The model id `tier` resolved to, for a log line only."""
     model_of = getattr(harness, "model_for", None)
