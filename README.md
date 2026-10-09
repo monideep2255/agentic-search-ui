@@ -49,6 +49,7 @@ How the two deploy:
 - Develop: merging to `develop` deploys the develop app.
 - Production: moves only when a release branch is cut from `develop` and merged into `production`.
 - A release also creates: a version tag, a changelog entry and a GitHub Release.
+- The changelog reaches `develop` through a pull request the release opens. The release job never pushes to `production`.
 
 The full procedure is [`docs/build/Release_flow.md`](docs/build/Release_flow.md).
 
@@ -69,7 +70,6 @@ It is a PROTOTYPE. What that means in practice, stated because a demo link invit
 # Prerequisites
 python 3.11+
 node 22+ (for React frontend)
-redis (for caching)
 postgresql 15+ (local, for the user-data database: auth, sessions, interactions)
 # No local AGE knowledge graph needed - Layer 1 connects to the remote Hetzner VPS
 
@@ -96,13 +96,15 @@ cd frontend
 npm install
 npm run dev
 
-# Run tests
-pytest tests/
+# Run the unit tests, the same command CI's unit gate runs. The integration
+# tests (-m integration) reach the live graph, and some a live model, so they
+# need those credentials.
+pytest -m "not integration"
 ```
 
 ## Use it from a terminal or an AI agent
 
-The web app is one of six ways in. The Integrations page prints the exact commands for each: the REST API with its event stream, GraphQL, MCP, the `s3` command line and KGX export. See it on [production](https://search-agent-web-production.up.railway.app/integrations) or [develop](https://search-agent-web-develop-2aeb.up.railway.app/integrations).
+The web app is one of six ways in. The Integrations page prints the exact commands for the REST API with its event stream, GraphQL, MCP and the `s3` command line. KGX export has no command to paste: a KGX file comes from the operator, who runs the exporter with graph credentials only they hold. See it on [production](https://search-agent-web-production.up.railway.app/integrations) or [develop](https://search-agent-web-develop-2aeb.up.railway.app/integrations).
 
 - Command line and local MCP server: `pip install "git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli"`, with Python 3.11 or newer, in a virtualenv.
 - Depth: the command line takes `--depth`, and MCP's ask tool takes `audience_depth`. MCP answers at researcher depth unless the agent asks for another.
@@ -114,8 +116,8 @@ This is System 3 of a three-system project. System 1 (ETL pipelines) and System 
 | Layer | What | Access method | Latency |
 |-------|------|---------------|---------|
 | Layer 1: knowledge graph | 5 NCBI databases (Gene, ClinVar, MedGen, PubMed, Taxonomy) pre-ingested into PostgreSQL + AGE | Cypher queries via psycopg2 (read-only) | <10ms per query |
-| Layer 2: on-demand NCBI APIs | 30+ databases reached at query time via EFetch, ELink, dbSNP REST | httpx async calls | 200-500ms per call |
-| Layer 3: enrichment APIs | PubTator3, LitVar2, LitSense, ClinicalTrials.gov | httpx async calls | 500ms-2s per call |
+| Layer 2: on-demand NCBI APIs | 30+ databases reached at query time via E-utilities (EFetch, ELink), Datasets, PubChem, dbSNP and Pathogen Detection | httpx async calls | 200-500ms per call |
+| Layer 3: enrichment APIs | PubTator3, LitVar2, ClinicalTrials.gov | httpx async calls | 500ms-2s per call |
 
 Agent loop for every query:
 
@@ -138,7 +140,7 @@ flowchart LR
   a <--> l3[Layer 3 enrichment APIs]
 ```
 
-Multi-model harness routes each step to the appropriate model tier (guard, plan, or synth) based on cost and capability.
+Multi-model harness routes each model call to the appropriate model tier (guard, plan, or synth) based on cost and capability. The Plan step itself picks its tools in code.
 
 ## Tech stack
 
@@ -146,10 +148,10 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-----------|-----------|
 | Backend API | FastAPI + Uvicorn |
 | Agent orchestration | LangGraph |
-| LLM access | LiteLLM (multi-provider: Anthropic, OpenAI) |
+| LLM access | LiteLLM (multi-provider, one configured model per tier) |
 | Knowledge graph | PostgreSQL 15 + Apache AGE on Hetzner CPX42 |
 | User data | PostgreSQL (separate instance) |
-| Caching | Redis |
+| Caching | In-process caches only. A Redis service is provisioned on Railway, but no code under `src/` reads it yet |
 | Frontend | React |
 | Auth | PyJWT (HS256 access tokens), argon2-cffi (argon2id password hashing) |
 | Observability | LangSmith, PostHog, an append-only JSONL tool-call audit log |
@@ -199,8 +201,8 @@ agentic-search-ui/
       adapters/
         web_sse/                # FastAPI plus SSE, the public API surface
         graphql/                # Strawberry schema over the same core
-        mcp/                    # MCP server, outbound-only
-        cli/                    # Thin REST client, the `s3` command
+        mcp/                    # The hosted MCP server at /mcp, four tools. Outbound only: the agent serves MCP and calls no MCP server
+        cli/                    # Thin REST client, the `s3` command, and `s3 mcp`, a local MCP server over stdio that forwards to /mcp
       auth/                     # Signup, login, refresh, logout, guest sessions, preferences
       data/                     # Postgres models: auth, guest sessions, interactions, cq_candidates
   frontend/                     # React 19, Vite, TypeScript, MUI
@@ -222,9 +224,9 @@ agentic-search-ui/
   requirements/                 # Plan.md, PRD.md, Technical_specification.md, Strategic_memo.md, Evaluation_playbook.md
   tracker/                      # Phase ledgers, check_doc_drift.py, and the build board frozen at phase 6.2 (BOARD.md, render_board.py)
   alembic/                      # Migrations for the user-data schema
-  .claude/                      # Claude Code rules, skills, agents, hooks
+  .claude/                      # Rules, skills, agents and hooks for the LLM CLI tooling
   .github/                      # CI workflow (ci.yml) and one script per Section 24 gate (gates/)
-  CLAUDE.md                     # Claude Code instructions
+  CLAUDE.md                     # Instructions for the LLM CLI tooling
   AGENTS.md                     # Instructions for other AI agents
   DECISIONS.md                  # Decision log
   LEARNINGS.md                  # What broke during the build and what fixed it
@@ -249,6 +251,7 @@ The reference documents are indexed in [`docs/README.md`](docs/README.md) and de
 | Doc | What it covers |
 |-----|---------------|
 | [Graph data hand over, 2026-09-25](docs/data-engineering/Graph_data_hand_over_2026-09-25.md) | Measured graph-data gaps handed from System 3 to the data-engineering repository: source-vocabulary disease names, missing phenotype edges, no MeSH term names, an empty Gene vertex |
+| [Agent mods guide](docs/Agent_mods.md) | Every agent mod, how it starts, what it blocks, and how to turn one off |
 | [Build workflow cadence](docs/build/Build_workflow_cadence.md) | Since 2026-09-25 a pointer holding the provider mapping, the tier-to-model table. It was the quick reference for how a build phase runs, with its stages, who acts at each, and the model and effort per stage. Its stage 5 premise gate, mandatory and blocking for a model-generating phase, was retired on 2026-09-24 for everything except answer behaviour. The build loop now lives in [the bossman-mode skill](.claude/skills/bossman-mode/SKILL.md), one cadence with a risk dial |
 | [CI gate scripts](.github/gates/README.md) | Why the CI workflow contains no inline shell: one script per Section 24 gate, and the premise-gate defeats that forced the design |
 
@@ -260,7 +263,7 @@ Estimated monthly cost for the full System 3 deployment:
 |------|---------------|
 | Knowledge graph hosting (Hetzner CPX42, 8 vCPU, 16 GB, 320 GB NVMe), including tax | ~$35/month |
 | Railway Hobby plan: eight services across two projects, four per deployment | $5/month today, up to ~$20 under sustained traffic. Build phase 4.15 doubled the service count by giving the develop deployment its own database and cache |
-| LLM API costs (Anthropic + OpenAI, depending on query volume) | ~$10-50/month |
+| LLM API costs (depending on query volume) | ~$10-50/month |
 | Domain + TLS, once a custom domain replaces the `*.up.railway.app` subdomains | ~$1/month |
 | Total | ~$51-101/month |
 
@@ -293,17 +296,17 @@ Cost caps enforced per-query via the multi-model harness. Guard tier uses the ch
 
 ## Connection to System 1 and System 2
 
-- The knowledge graph that System 3 queries was built by the data engineering repo (System 1 + System 2).
-- That repo is symlinked at `reference/agentic-search-data-engineering` for documentation access.
+- The knowledge graph that System 3 queries was built by the data engineering repository (System 1 + System 2).
+- That repository is symlinked at `reference/agentic-search-data-engineering` for documentation access.
 - System 3 connects to the graph as a read-only client via psycopg2.
 
-Do not add any of these to this repo:
+Do not add any of these to this repository:
 
 - ETL pipeline code
 - Graph loading code
 - Data ingestion logic
 
-That belongs in the data engineering repo.
+That belongs in the data engineering repository.
 
 ## License
 

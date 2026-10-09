@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 *.egg-info/
 dist/
-# Anchored to the repo root. A bare build/ also matches docs/build/, which
+# Anchored to the repository root. A bare build/ also matches docs/build/, which
 # silently blocked committing the build workflow docs on 2026-07-26.
 /build/
 venv/
@@ -66,8 +66,11 @@ security/
 # Agent worktrees (transient, created by bossman-mode builders)
 .claude/worktrees/
 
+# Agent mods: the engine regenerates each mod's type declarations on every load.
+.claude/skills/mod-*/.claude-plugin/types/
+
 # Personal dev-workflow note (API keys/env-var setup for alternate model
-# backends). Not repo doc content, stays local only.
+# backends). Not repository doc content, stays local only.
 docs/Claude_Code_model_fallback_setup.md
 
 # Multi-model build-harness material (plan, cadence visualization). Names real
@@ -78,7 +81,7 @@ docs/build/multi-model-harness/
 # macOS Finder/Archive Utility duplicate-copy artifacts (e.g. "env 2.py").
 # These appear when a file is copied into a directory that already has a
 # same-named file: Finder "Keep Both", or a zip extracted on top of an
-# existing folder. Never a legitimate filename in this repo (verified
+# existing folder. Never a legitimate filename in this repository (verified
 # 2026-07-28: no tracked file matches this shape). Root cause is moving files
 # between a bossman-mode worktree and main via Finder/archive instead of git;
 # this entry is the safety net, not the fix.
@@ -146,3 +149,39 @@ testing/User-feedback/
 
 # Internal NCBI proposal, budget, and strategy notes: owner's machine only, never committed.
 requirements/context/Private_NCBI_context.md
+
+# Reference material linked in on the owner's machine: only the two links below
+# are committed. Anything else placed in reference/ stays local, whatever its
+# name, so a link to a private repository can never be committed and its name
+# never has to be written here.
+reference/*
+!reference/agentic-search-data-engineering
+!reference/ncbi_ai_agents-ncbi-kg
+
+# Secrets: never commit. Added October 4, 2026; keep example files committable.
+.env
+.env.*
+*.env
+!.env.example
+!.env.sample
+!env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+id_rsa*
+id_ed25519*
+credentials.json
+**/credentials/
+client_secret*.json
+secrets.json
+secrets.yaml
+secrets.yml
+secrets.toml
+service-account*.json
+service_account*.json
+token.json
+.netrc
+.pypirc
+.claude/settings.local.json

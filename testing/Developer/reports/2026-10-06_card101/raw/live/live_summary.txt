@@ -1,0 +1,50 @@
+{"label": "gp1", "shown": 5, "risk_factor": 0, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 22.5, "cost_usd": 0.0166, "outcome": "answer"}
+   [reworded] The typical symptoms of GERD are heartburn and regurgitation of stomach contents into the throat or mouth [1].
+   [reworded] GERD is a condition where stomach contents flow back into the esophagus or mouth, causing symptoms or complications [1].
+   [reworded] It can affect quality of life and may lead to erosive esophagitis, esophageal strictures, and Barrett esophagus, which is a precursor to esophageal cancer [1].
+   [reworded] In children, reflux is often a normal process that resolves on its own, but when it becomes a disease causing troublesome symptoms, it may need medical treatment [2].
+   [reworded] In young children, the signs of GERD are varied and nonspecific, requiring careful diagnostic evaluation [2].
+{"label": "gp2", "shown": 5, "risk_factor": 0, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 25.8, "cost_usd": 0.0139, "outcome": "answer"}
+   [reworded] The typical symptoms of GERD are heartburn and regurgitation of stomach contents into the throat [1].
+   [reworded] GERD happens when stomach contents flow back into the esophagus or mouth [1].
+   [reworded] GERD can lead to complications including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can precede esophageal cancer [1].
+   [reworded] Young children show varied and nonspecific signs, so careful evaluation is needed [2].
+   [reworded] The condition is most effectively treated with proton-pump inhibitors, though long-term use carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection [1].
+{"label": "gp3", "shown": 7, "risk_factor": 1, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 25.0, "cost_usd": 0.0175, "outcome": "answer"}
+   [reworded] GERD happens when stomach contents flow back into the esophagus or mouth, causing symptoms or complications [1].
+   [reworded, risk factor] Risk factors for GERD in children include hiatal hernia, defects in the lining that protects the esophagus, and problems with movement and clearing of the esophagus and stomach [2].
+   [reworded] In young children the symptoms are varied and nonspecific, so careful evaluation is needed [2].
+   [copied] Publication pmid 33351044 is included [3].
+   [copied] Publication pmid 36170502 is included [4].
+   [copied] Publication pmid 37034973 is included [5].
+   [copied] Publication pmid 37516506 is included [6].
+{"label": "gp4", "shown": 4, "risk_factor": 0, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 18.9, "cost_usd": 0.0163, "outcome": "answer"}
+   [reworded] The typical symptoms of GERD are heartburn and regurgitation of stomach contents into the throat [1].
+   [reworded] GERD happens when stomach contents flow back into the esophagus or mouth, causing symptoms or complications [1].
+   [reworded] It can affect quality of life and may lead to erosive esophagitis, esophageal strictures, and Barrett esophagus, which is a precursor to esophageal adenocarcinoma [1].
+   [reworded] Long-term use of proton-pump inhibitors, the most effective treatment for GERD, is associated with bone fractures, kidney disease, pneumonia, and intestinal infection [1].
+{"label": "gp5", "shown": 5, "risk_factor": 0, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 20.0, "cost_usd": 0.0164, "outcome": "answer"}
+   [reworded] The typical symptoms of GERD are heartburn and regurgitation of stomach contents into the throat or mouth [1].
+   [reworded] The condition happens when stomach contents flow back into the esophagus or mouth, causing symptoms or complications [1].
+   [reworded] It can lower quality of life and may lead to inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can be a precursor to esophageal cancer [1].
+   [reworded] In young children, the signs of GERD are varied and nonspecific, so careful evaluation is needed [2].
+   [reworded] GERD is most effectively treated with proton-pump inhibitors, but long-term use of these drugs is associated with bone fractures, kidney disease, pneumonia, and intestinal infection [1].
+{"label": "gp6", "shown": 5, "risk_factor": 1, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 37.8, "cost_usd": 0.0196, "outcome": "answer"}
+   [reworded] GERD is a condition where stomach contents flow back into the esophagus or mouth, causing symptoms or complications [1].
+   [reworded] The typical symptoms are heartburn and regurgitation of stomach contents into the throat [1].
+   [reworded, risk factor] Factors that contribute to GERD include defects in the lining that protects the esophagus, problems with movement and clearing of the esophagus and stomach, and anatomical defects of the barrier between the stomach and esophagus such as hiatal hernia [2].
+   [reworded] Symptoms in young children are varied and nonspecific, requiring careful evaluation [2].
+   [reworded] GERD can affect quality of life and may lead to complications including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which is a precursor to esophageal cancer [1].
+{"label": "gr1", "shown": 7, "risk_factor": 1, "transient_kept": 1, "young_dropped": 0, "hedge_dropped": 0, "seconds": 17.0, "cost_usd": 0.0185, "outcome": "answer"}
+   [reworded] Gastroesophageal reflux disease (GERD) is a gastrointestinal motility disorder resulting from the reflux of stomach contents into the esophagus or oral cavity, producing symptoms or complications [1].
+   [copied] The typical symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx [1].
+   [copied] In young children, clinical manifestations are varied and nonspecific, prompting the necessity for careful diagnostic evaluation [2].
+   [copied] GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma [1].
+   [reworded, risk factor] Pathogenic factors include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, abnormal transient relaxations of the lower esophageal sphincter, and anatomical defects of the lower esophageal reflux barrier such as hiatal hernia [2].
+   [reworded] Long-term use of proton-pump inhibitors is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal infection [1].
+   [copied] GERD is most effectively treated with proton-pump inhibitors [1].
+{"label": "gr2", "shown": 4, "risk_factor": 1, "transient_kept": 1, "young_dropped": 0, "hedge_dropped": 0, "seconds": 16.6, "cost_usd": 0.0162, "outcome": "answer"}
+   [reworded] Gastroesophageal reflux disease (GERD) is a gastrointestinal motility disorder arising from reflux of stomach contents into the esophagus or oral cavity, producing symptoms or complications [1].
+   [reworded] The hallmark symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx [1].
+   [reworded] In young children, clinical manifestations are varied and nonspecific, requiring careful diagnostic evaluation [2].
+   [reworded, risk factor] Pathogenetic factors include abnormal transient relaxations of the lower esophageal sphincter, impaired esophageal mucosal defense, impaired esophageal and gastric motility and clearance, and anatomical defects of the lower esophageal reflux barrier such as hiatal hernia [2].

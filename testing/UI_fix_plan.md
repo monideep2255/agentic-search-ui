@@ -1,15 +1,24 @@
 # UI fix plan
 
-The board for the UI fix loop. An item starts in To do, moves to Build in
-progress when someone starts it, and moves to Retest once it is live on
-develop. When you approve it, it leaves the board.
+The board for the UI fix loop. An item starts in To do and moves to Build in
+progress when someone starts it. Once it is live on develop it moves to
+"Waiting for your retest" in `testing/UI_fixes_done.md`, and your verdict
+closes it.
 
 This board is the source of truth for what gets worked on: an item is written
-here before it is built. The detail behind the architecture cards sits under
-To do, below its table. Every other item's detail, every closed item and every
-note behind the board are in `testing/UI_fixes_done.md`.
+here before it is built.
 
-Last updated: 2026-09-27.
+- A review finding goes on this board only if a person using the product would
+  notice it; anything else is fixed in that review round or recorded in the
+  phase ledger (`DECISIONS.md`, 2026-10-05).
+- Engineering work no user would notice lives in `testing/Future.md`.
+- The order every card is built in, and what blocks what, is
+  `testing/Board_plan.md`.
+- The detail behind the architecture cards sits under To do, below its table.
+- Every other item's detail, every closed item and every note behind the board
+  are in `testing/UI_fixes_done.md`.
+
+Last updated: 2026-10-08.
 
 ## To do
 
@@ -17,7 +26,13 @@ In priority order.
 
 | # | Feature, in plain words | Item | Waiting on |
 |---|---|---|---|
-| 63 | Every one of eight live answers on develop came back "not yet confirmed" because a background PubMed or ClinVar search did not finish, and an answer marked that way is never saved, so none of those searches can be reopened from history or through MCP | Phase 8.10's product review, 2026-09-27, PR-8.10-12 and PR-8.10-10 (`tracker/phase_8.10.md`): the `s3` run shows `pubmed_search` and `clinvar_search` ending "error - search: 0 id(s)", and `feedback/capture.py:74` saves only confirmed answers | Nobody on it: an answer-path diagnosis first, of whether those searches fail on develop only or on production too, and of whether a not-yet-confirmed answer should be saved |
+| 56 | A question about SARS-CoV-2 is answered about the disease SARS, so a person gets a confident wrong record and no sequencing runs | Card 56 diagnosis (`testing/Developer/reports/2026-10-05_card56/diagnosis.md`); the fix (#173) passed 3 of 3 local Think and Plan runs but failed on develop on 2026-10-05 (`testing/Developer/reports/2026-10-05_final_test_queries/results.md`) | Part live once merged (#186 or the next number): the plain SARS-CoV-2 question no longer binds the SARS disease (0 of 20 live runs, 5 of 26 before). Still open, for a design with you first: "SARS CoV-2" typed with a space still binds SARS; after a gene in the same conversation a missed SARS-CoV-2 question uses the remembered gene; "SRA runs from AML-derived cell lines" can lose its leukaemia match; the "Illumina" refusal (7 of 20 runs). Evidence: `testing/Developer/reports/2026-10-06_card56/` |
+| 101 | A reworded sentence can reach the screen without passing the sentence check: a bronchiolitis answer said "For babies with severe bronchiolitis" where its record says children, and that sentence was never among the check's candidates. Re-aimed 2026-10-06 from card 99's sentence cost, whose writer line measured no gain | `testing/Developer/reports/2026-10-06_card101/fix_round.md`, "For the owner" | Part live, 2026-10-08 (#204, in Retest): a sentence whose copied piece the sentence check holds back, or cannot read in full, is dropped whole, never shown cut; earlier, every sentence the writer rewords goes to the check (#193). Still open on develop: an abbreviation followed by a capital ("S. Typhimurium", "U.S. FDA") still lets a copied sentence through unchecked (A4-101-01); a sentence inside a multi-sentence quotation (A4-101-02); a writer that quotes its own copied words beside a record passage over 600 characters (J5-101-01). Production still runs the older checker mode. Evidence: `testing/Developer/reports/2026-10-06_card101/judge_r5.md`, `adversary_r5.md` |
+| 94 | Isolate questions answer with a table of isolates and their resistance genes: the default mode often shows names without genes, the blaCTX-M note is missing, a colistin question returns a suspicious zero, and a single-isolate answer lacks its details (queries 33, 35, 36, 44 and the isolate workflow); some counts differ only because the snapshot is newer | G-035; failed the batch retest of 2026-09-29 (`testing/Developer/reports/2026-09-29_retest/`) | Part live, 2026-10-05: the colistin search matches mcr genes (#158), the isolate table shows in Plain language beside the organism record (#165, #174) and the answer says which gene families were searched (#169); in Retest. Still open: the place and accession columns, a follow-up such as "from 2023", and a single-isolate lookup (wave 4 of `testing/Board_plan.md`) |
+| 84 | R-10's guardrail fixes on their own | Built, then stopped at the owner's choice on 2026-09-29 after its adversary found an off-topic question and a disguised injection admitted when the provider rate-limits (F-84-A05, A07); its branch (tip 5a0adc02) deleted on 2026-10-08 after the design described every commit; records in `testing/Developer/reports/2026-09-29_card84/` | The guardrail design is written for your yes or no (`testing/Developer/reports/2026-10-08_guardrail_design/design.md`, seven questions); the parked branch `fix/card84-r10-sound-parts` is deleted, every commit described in the design's appendix and its reviews kept in `testing/Developer/reports/2026-09-29_card84/`. Develop's guardrail stays as it is until you answer |
+| 72 | A search fails with "a temporary error" because the guard model did not answer in time, twice: 4 of 150 golden runs on 2026-09-29. The first hedged design lost searches in a slow spell and let an off-topic question through on the relevancy check (F-72-V08), and was not merged | Diagnosis: `testing/Developer/reports/2026-09-29_card72/diagnosis.md`; the deleted branch's verifier (`testing/Developer/reports/2026-09-29_card72/verifier.md`): F-72-V06 and V08 | Part live, 2026-10-05: one log line per guard and Jev call (#159). Next: the guardrail design with card 84, written 2026-10-08 for your yes or no (`testing/Developer/reports/2026-10-08_guardrail_design/design.md`); the parked branch `fix/card72-r10-guardrail` is deleted, its reviews kept in `testing/Developer/reports/2026-09-29_card72/` |
+| 75 | An AI agent that sends an unknown argument whose name contains "bearer token" makes `s3 mcp` tell the person to log in again, and two Authorization headers or an empty "Bearer " get the wrong fixed message | Card 62's adversary F-62-A06 and judge F-62-J06; the fix `3842019f` was dropped because production does not send the field it keyed on (F-62-V03, `DECISIONS.md` 2026-09-29) | Factory's next card (`docs/build/Factory_onboarding.md`, card 75), from card 61's review (#190): after a sign-in renewal reply that cannot be read, a second request through the same bridge resends the spent token and production signs the person out of the command line and the web app (on develop today too). The fix latches the bridge after an unreadable or refused renewal, so it never calls /auth/refresh again in that process, tested with two calls. The older items in this row stay out of that section: they wait for the server's `data.reason` refusal field to land and reach production first, then the client change |
+| 85 | Small accuracy fixes, one card: two page sentences still false on some paths (the layer 3 stop names three kinds of question searched another way where there are five, and the About walk says BRCA1's live searches run at the same time as the graph, where four of thirteen run in a second round); and behind the scenes, the facts checker's remaining gaps and three logging gaps (a crash's reason on the lines after its trace id, step-level failures that log no reason, and an older database warning that logs a full error message) | Folded from cards 76, 78, 81, 82 and 83 at the owner's choice, 2026-09-29; detail in `testing/Developer/reports/2026-09-29_card53/verifier.md` and `testing/Developer/reports/2026-09-29_card73/` | Part live, 2026-10-05: the two page sentences (#167), in Retest. Still open: the facts checker's remaining gaps and three logging gaps |
 | 2 | Every answer opens with the code-built "Found N ... records for X" line, whatever the writing model, so its first sentence never answers the question | `testing/Developer/reports/2026-09-25_writer_bench/results.md` and the 8.1 product review; the design: `testing/Developer/reports/2026-09-26_phase_8.7/design.md`; phase 8.10's product review, PR-8.10-02 (`tracker/phase_8.10.md`): the Plain language BRCA1 answer opens "I found 4 conditions related to BRCA1" and names no disease | You said go, 2026-09-25, and on 2026-09-26 the answer speed plan joined it (`DECISIONS.md`): phase 8.7, next after 8.6's follow-up, carries cards 2 and 50 together |
 | 4 | Tell the reader when the system wrote its own search rather than using a checked one | the drafted search | Nobody on it |
 | 5 | Models chosen per task by tier: open source where an equivalent is available, frontier models where they are needed | [direction, point d](#the-product-owners-direction-on-the-model-architecture-2026-09-23) | Your decision of 2026-09-27 (`DECISIONS.md`): Claude Opus 5.5 at minimal effort becomes the writer if the bench's finalist round confirms it. Phase 8.7 builds the per-model effort setting and raises the per-question cap to 25 cents, on develop first. Bench: `testing/Developer/reports/2026-09-26_writer_bench_3/`. Earlier: Your decision of 2026-09-26 (`DECISIONS.md`): frontier models from Anthropic, OpenAI, xAI and Google are candidates, chosen by measured quality and speed. A third bench follows the answer speed diagnosis (card 50) and covers the tiers it names; its spend comes to you first. Earlier: Your decision, after phase 8.9: the second bench (`testing/Developer/reports/2026-09-26_writer_bench_2/results.md`) favours Kimi K2.5 on cost, but its Opus rows measured a request bug, and the writer is not the constraint while its input lacks the answer |
@@ -25,24 +40,17 @@ In priority order.
 | 7 | Hard and soft edges over a fuller graph, "connecting the dots" | [11.29](#detail-1129) | Nobody on it |
 | 8 | The trust-line wording | 9.9; built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop | You chose, 2026-09-25: say what was checked. Planned: phase 8.9, from the parked 8.4 commit with "which differ" corrected |
 | 9 | Judge answer quality once answering is reliable | 10.4 | Nobody on it |
-| 10 | A lock file for the Python build | the lock file; decided 2026-09-25, not built | Nobody on it |
 | 11 | The same question does not always return the same papers: six identical PubMed searches returned two different sets, and `reflux disease` found nothing on one run in six | Where we stopped, notes carried over from the old tracker; tried 2026-09-25, not reproducible, fix reverted: `tracker/phase_8.1.md` F-8.1-03 | Nobody on it |
 | 12 | The trust verdict under an answer changes with nothing else changed: five runs on identical evidence gave `flag` four times and `ask` once | Where we stopped, Next, in order; tried 2026-09-25, the fix labelled correct answers as disagreeing and was reverted: F-8.1-A13 | Nobody on it |
-| 13 | `What genes are associated with MODY?` failed its citation check on 5 of 6 runs on 2026-09-20, and nobody owns it | Shipped days, 2026-09-20; tried 2026-09-25, the fix weakened the citation check and was reverted: F-8.1-J01 | Nobody on it |
 | 14 | One search took 127 seconds against a median of 14, and nobody owns it | Shipped days, 2026-09-20; diagnosed 2026-09-25, a timeout that stops the wait but not the work: F-8.1-05 | Nobody on it |
-| 15 | Close the remaining path where the system writes its own graph search, or ask the reader instead; card 7 only tells them | L-01 | Nobody on it |
+| 15 | Close the remaining path where the system writes its own graph search, or ask the reader instead; card 7 only tells them | L-01 | Step 1 live, 2026-10-05 (#171): a question about one paper uses a checked graph search. Next steps: the remaining anchors, per the owner's decision D5 (no model-written search except true count questions) |
 | 16 | Three golden questions get nothing from the graph: G-005 and G-022 find nothing, and G-036 never searches it | Where we stopped, loose ends | Nobody on it |
-| 17 | A reworded sentence that switches papers can point at the wrong paper when the only title word it shares is a generic one, such as "patients" | 12.16 part 4; built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop | Nobody on it |
-| 18 | A record with several sentences shows as several list rows under one heading, and no test covers it | Where we stopped, loose ends; a helper is on the 8.4 branch, its wiring in `core/graph.py` is not built | Nobody on it |
+| 17 | A reworded sentence that switches papers can point at the wrong paper when the only title word it shares is a generic one, such as "patients" | 12.16 part 4; built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop | Nobody on it: a guard was tried in #161's build and taken out, because treating any title word another record shares as generic deleted good sentences ("disease", "children"); it needs its own design (`testing/Developer/reports/2026-10-05_wave0/card88.md`) |
+| 18 | A record with several sentences shows as several list rows under one heading, and no test covers it | Where we stopped, loose ends; a helper is on the 8.4 branch, its wiring in `core/graph.py` is not built | Out of Factory's lane on 2026-10-06: its wiring is in `core/graph.py`, the lead's lane, which card 56 is changing. Before: Nobody on it |
 | 19 | The paced handoff may show a false writing step on some other path, and nobody has checked | 11.28 | Nobody on it |
 | 20 | An isolate search can filter only by gene prefix | Shipped days, 2026-09-22; year from the question built on the 8.4 branch, location needs the plan step | Nobody on it |
-| 22 | One answer shows several different totals and never says which is which | D-2, Shipped days, 2026-09-20; the screen half is on the 8.4 branch, the backend wording is not built; phase 8.10's product review, PR-8.10-08: one Researcher screen says "Found 4 disease records", 18 sources in the meta line and "Based on 17 sources" in the trust line | Your decision |
-| 23 | The provenance note under the variant-to-disease table | Where we stopped, waiting on the product owner; a helper is on the 8.4 branch, its wiring in `core/graph.py` is not built | Your decision |
-| 24 | Where the Plain language and Researcher toggle goes | Where we stopped, waiting on the product owner; built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop | Your decision |
-| 25 | Install the public USWDS package, the base of the NCBI design system: yes or no | 2.13; decided 2026-09-25, not built | Nobody on it |
-| 26 | Seven test files the deletion inventory set aside | Where we stopped, loose ends; decided 2026-09-25; the deletion was reverted because one file pinned three controls (F-8.5-V08) | Nobody on it |
-| 27 | Merge bossman mode's two modes, due with the next build phase | Session history, 2026-09-24 evening | Nobody on it |
-| 28 | Something deleted a tracked file from the working tree during a session, and the cause is unknown | Where we stopped, loose ends; lead found 2026-09-25: a process makes " 2" copies inside the repository mid-session (a ref file, `.git/index 2`), likely iCloud Desktop sync; the product owner keeps the repository where it is (2026-09-25) | Nobody on it |
+| 24 | Where the Plain language and Researcher toggle goes | Where we stopped, waiting on the product owner; built on the unmerged branch `phase/8.4-answers-worth-reading`, not on develop | Your decision of 2026-10-06: the switch sits beside the answer's header, its cost shown on click (D21). Factory's card after 75 (`docs/build/Factory_onboarding.md`, card 24): it ports the switch built in commit `df7d7a2c`, kept under the local tag `parked/phase-8.4-2026-09-25` since the branch left the remote, and adds the cost shown on click |
+| 25 | Install the public USWDS package, the base of the NCBI design system: yes or no | 2.13; decided 2026-09-25, not built | Out of Factory's lane on 2026-10-06: a new package needs your approval and a supply-chain review first. Before: Nobody on it |
 | 29 | Under each cited paper, show the one sentence of its own abstract that answers the question, quoted and cited (replaces the LitSense route, closed 2026-09-25: LitSense cannot be pointed at a paper) | [13.1](#detail-131), DECISIONS.md 2026-09-25 | Built: the sentence finder and the source card, parked on the local tag `parked/phase-8.8-snippets-2026-09-25`; wired into answers after phase 8.6 |
 | 30 | `Which BRCA1 variants are pathogenic?` lists 40 unclassified variants and the model's honest caveat is stripped | `tracker/phase_8.1.md` F-8.1-A16, found 2026-09-25, older than that night | Nobody on it |
 | 32 | A graph search column named `clinical_features` would be read as MedGen's clinical features | F-8.1-V02 | Nobody on it |
@@ -51,27 +59,15 @@ In priority order.
 | 36 | A picked "How far back" window is lost after a restart or deploy, and nothing tells the person | F-8.2-V02 | Nobody on it |
 | 37 | `What is rs334 and what condition is it associated with?` lists rs334348, rs334353 and rs334773 as if they were rs334: they are different variants that only share its first digits. The rs334 record itself is named by its list of clinical significance values, with no gene or condition | the phase 8.7 design, row G-024; `tools/litvar2_lookup.py` keeps LitVar2's near misses by design (F-3.3-A-01) and nothing downstream drops them | Planned: phase 8.9, after 8.6 |
 | 38 | Some answers list records that cannot answer what was asked: TP53's orthologs carry no species, CFTR's papers carry no title, and the ESBL isolates do not say which gene each carries. Not yet known whether the graph lacks the field or the search does not ask for it | the phase 8.7 design, rows G-016, G-021 and G-035 | Answered by the product harness review: the graph has paper titles and the harness strips them; the rs334 row carries its gene. Planned: phase 8.9, after 8.6 |
-| 39 | A visualization deep dive of the architecture as it now stands: the models in use, the harness, and how they interact with the rest of the system | the product owner, 2026-09-25; stored in `visualizations/`, beside `Architecture_diagram.md` and `Schema_visualization.md` | Queued: a background agent starts once phase 8.6 merges and both harness reviews are in, so it draws the architecture after them |
-| 40 | Make the harness work well: carry out what the two harness reviews recommend, for the product's question-to-answer harness and for the build harness | the product owner, 2026-09-25: "you take charge and implement the improvement"; the reviews: `testing/Developer/reports/2026-09-25_harness_review/` | Being built: the build-harness fixes on two branches; the product-harness fixes in phase 8.6 (T-8.6-07 to 09), then phase 8.9. Your yes is needed for the hooks and the always-loaded rules |
-| 41 | The graph server's address sits beside its root login command in nine tracked files, public since 2026-09-24: the server reference, `env.example`, a meeting note, two deploy scripts, a test and three old ledgers; the address alone is also in `CLAUDE.md` | `tracker/phase_8.6.md` F-8.6-J09; the 2026-07-29 decision row is already redacted | Queued: the lead replaces the address with `<server-ip>` in documents and has the deploy scripts read it from a setting, after the current merges; rewriting git history is your call |
+| 40 | Make the harness work well: carry out what the two harness reviews recommend, for the product's question-to-answer harness and for the build harness | the product owner, 2026-09-25: "you take charge and implement the improvement"; the reviews: `testing/Developer/reports/2026-09-25_harness_review/` | Your decision of 2026-10-06: the lead brings you an itemized list of every hook and always-loaded rule change, each approved or refused on its own; nothing in the security layer changes before that |
 | 42 | The build team checks the product the way a person uses it, so the owner's retest confirms rather than discovers: it writes the code, verifies it, runs the judge and the adversary, checks the result against a `/design` of what the owner wants, and ends with a `/verify` of the QA and UI work. Two months of building left more than 100 UI fix items for the owner to find | the product owner, 2026-09-26: "for the QA and UI checks you depend on me, I do not like that, ideally I would want you to be confident on the UI check and me not have to give you the instructions everytime" and "the bossman mode team should be able to write the code, verify the code, judge, averserial, then have a /design for what I want and in the end /verify the QA work. This whole end to end is what we need to build." Inspired by the talk "Building verification loops in Claude Code" (https://www.youtube.com/watch?v=mQZB0l-rhxE) | Queued by the owner behind the running work: phase 8.6's golden run, the build-harness and hook-gap pull requests, card 39 and phase 8.9's opening. Proposal: `docs/build/Verify_loop_proposal.md`, waiting for the owner's yes before anything is built |
-| 43 | On a phone, an answer that cites a long variant name scrolls sideways: the page is 449 pixels wide on a 390 pixel screen because the name `NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG` does not wrap and pushes a citation chip off the screen | Found by the first `/verify` run, 2026-09-26: `testing/Developer/reports/2026-09-26_verify_home_and_answer/report.md`, the answer at 390 | Nobody on it: a layout card, dial position 1 |
-| 44 | Two small controls are harder to read than the accessibility minimum allows: the "Take the tour" button (contrast 4.39) and a green citation chip (4.05), where 4.5 is the minimum | Found by the first `/verify` run, 2026-09-26: the same report, the axe scan at 390 | Nobody on it: a colour change reads from the design tokens, so check `frontend/src/theme.ts` against the design system first |
-| 46 | When a question hits its cost or call limit, the person sees a note saying "the answer below reflects a partial result gathered so far", but nothing appears below it: no findings and no citations | Found by card 39's fact-check, 2026-09-26: the note in `harness/cost_control.py`, and `core/graph.py`'s early return in `write_node` | Nobody on it: rewording the note is a wording card; showing what was gathered changes behaviour |
-| 47 | The design prototype still draws the navy home hero and full-width example rows that the owner replaced on 2026-09-12 with the light home page and white example chips, so `/verify` flags the live home page as a difference | The first `/verify` run, 2026-09-26, and the owner's answer the same evening (`DECISIONS.md`) | Nobody on it: a design-file card, dial position 1. Bring `docs/build/design/design-system/prototype/app.html` and `screens/home.html` in line with commit cbb04cc |
 | 48 | A fuzzy question such as "Tell me about the tree of life." or "How do birds fly?" gets a list of loosely matched papers; the owner wants it to ask which aspect the person means first | The product owner, 2026-09-26: "When there are fuzzy questions like this, clarify." Measured by the re-land's adversary, F-8.6-RA04 in `tracker/phase_8.6.md` | Nobody on it: an answer-path card, dial position 2. It extends Think's ask-back decision, which Jev makes, never a list of words. Designed as ticket T-06 of card 52's phase, and it can lift out as its own card sooner |
 | 50 | Nobody waits in silence: an answer shows its records within seconds, then its sentences one by one as each passes its check, and most answers finish near 20 seconds without giving up a correct one. Twenty seconds is a guide, not a hard limit (`DECISIONS.md`) | The product owner, 2026-09-26: "at most, it should take in my opinion 20 seconds" (`DECISIONS.md`). The re-land's golden run: median 17.1 s, p90 24.9 s, worst 31.3 s, and the answer text appears all at once at the end (F-8.6-P11). Follows card 3; phase 8.10's product review, PR-8.10-14: the web showed each answer at about 30 seconds while its own meta line said about 11, and `s3` and MCP took 14 to 15 | Diagnosed, 2026-09-26: `testing/Developer/reports/2026-09-26_answer_speed/report.md`. Being built in phase 8.7 with card 2, next after 8.6's follow-up (`DECISIONS.md`). A writer bench of frontier and open models runs beside it, up to 30 dollars. Found by card 58's builder, 2026-09-27: the screen lags the stream itself. Replaying 11 saved develop streams through the pacing rules, the first sentence shows up to 13 s after the server finished (G-013: server done at 17.3 s, first word on screen at 30.1 s). Phase 8.7's answer-screen ticket takes that lag out |
-| 51 | Nothing the app tells people about itself goes stale as the backend changes: the About, Architecture, Integrations and home pages, the tour and the access notes, and the reference documents that repeat the same facts | The product owner, 2026-09-26: "the information that we are providing on the UI is not stale and it reflects the current uh, updates ... this could just be part of the verify skill" (`DECISIONS.md`). Extends card 42 | Built: #122 put the facts checker in `/verify`, and phase 8.10 corrected the About, Architecture and tour pages. Eight page claims still go unchecked until card 53 rewrites the checker's patterns |
+| 51 | Nothing the app tells people about itself goes stale as the backend changes: the About, Architecture, Integrations and home pages, the tour and the access notes, and the reference documents that repeat the same facts | The product owner, 2026-09-26: "the information that we are providing on the UI is not stale and it reflects the current uh, updates ... this could just be part of the verify skill" (`DECISIONS.md`). Extends card 42 | Part live, 2026-10-05: the facts checker's two patterns broken by the 2026-10-04 rewording (#156). Still open: the page claims it does not yet check |
 | 52 | Every answer, whatever the question, ends by offering the next useful step, decided from that answer's own context and never from a template or a topic list. For example "Would you like the clinical trials recruiting for GERD, or the genes linked to it?", and a click continues the same conversation with its context. Today an answer ends on its table, and the only offer is "go deeper" into records it left out | The product owner, 2026-09-26, after asking "GERD" beside a general AI search answer that ended "Would you like me to put together a sample 1-day meal plan ... or would you prefer a list of safe ingredient swaps": "It is beautiful orchestration of continuing the discussion and searching for the next thing or guiding the user in the conversation. Ideally my ai agent system needs to be able to do this. This will help with the follow up too." Then: "GERD was an example of the follow up, do not hard code." Builds on the next-step offer of 2026-09-01 and 2026-09-13 (`DECISIONS.md`) and sits beside card 48 | Designed, 2026-09-26: `testing/Developer/reports/2026-09-26_conversation_next_steps/design.md`. The writing model proposes at most three follow-up questions from the answer's own findings, code checks each is answerable and names a record the answer found, and Jev decides it asks what records hold, not advice. No fixed menu. A numbered phase after 8.6's follow-up, 8.7 and 8.9, at dial position 3 (event schema). Five decisions for you when it opens, the lead recommending yes to each |
-| 53 | Five facts are stale only in documents or a copy in code: CLAUDE.md, AGENTS.md and README name LitSense, which nothing calls, and leave PubChem, Datasets and Pathogen Detection out of layer 2; the architecture diagram and the deep dive say Plan and Act make no model call; `tools/catalogue.py` says 30 s and 60 s where the code enforces 90 s and 120 s | The first run of the facts checker, pull request #118, 2026-09-26: `testing/Developer/reports/2026-09-26_ui_facts/report.md` (on that branch until it merges); phase 8.10's product review, PR-8.10-05 to 07: About still says a question "starts here" and that Layer 3 is called "never by default", and eight page claims go unchecked because the checker's patterns look for sentences phase 8.10 replaced; the README pass of 2026-09-27: "node 18+" where `frontend/package.json` needs 22, "no release has been cut yet", and "CI is advisory" now that rulesets protect `develop` | Nobody on it: the lead's documents pass once #118 merges, so the checker confirms each fix. The screen facts are phase 8.10's T-8.10-08. The graph's 90 s becomes 30 s with R-09; the Pathogen Detection limit, 120 s in code against 60 s in the rule, needs a diagnosis first |
-| 54 | Reopening a long past answer loses every citation after the fiftieth, so markers such as [77] point at nothing; the REST citations export stops at 50 the same way | Builder Q of phase 8.10, 2026-09-26: the answer capture and the REST export both cap at 50, while one run can emit up to 100 (`_MAX_FINDINGS_FOR_DISPLAY`). MCP and GraphQL were raised to 100 in 8.10 | Nobody on it: it touches how an answer is stored, so it needs a diagnosis of the capture's bound and its database column first |
 | 55 | Work counts as done when the test queries document passes, run automatically by the team, not when the golden count holds: every feature's "what you should see" is checked, and an expert checks the facts in a few key answers | The product owner, 2026-09-26: "what we should be actually trusting ... is running the test queries and workflow document that should be the barrier that needs to pass" (`DECISIONS.md`) | Being designed, 2026-09-26: how each entry becomes checks, the runner, the cost and the first baseline run. Then built on a branch, since it changes `.claude/`. The golden run stays the blocking gate until this one has run once. The expert review is the owner's to arrange; the lead prepares the answers to check |
-| 56 | "Find SRA runs of SARS-CoV-2 sequenced on Illumina from clinical respiratory samples" is refused in some runs, because the question's subject is not recognised and no search runs at all | Golden runs: G-005 answered 3 of 3 at the floor (phase 8.2), 2 of 3 in 8.6's re-land and 1 of 3 after its follow-up. In each miss Think returned no entity and Plan planned no call (`testing/Developer/reports/2026-09-26_phase_8.6-followup_golden/raw/G-005_run1.json`) | Nobody on it: an answer-path diagnosis first, of why Think's recognition of the organism varies run to run |
-| 57 | A cited sentence can show a quote that does not contain its own numbers: "Changes in this gene account for about 40% of inherited breast cancers and over 80% ..." cites a quote about BRCA1 being a tumour suppressor. The trust line also said 22 sources beside 23 citations over 21 records | Phase 8.10's adversary, 2026-09-27, a live Plain language BRCA1 answer on develop through `s3 --json` (F-8.10-A11 in `tracker/phase_8.10.md`). The sentence check requires every number in the sentence to be in its quote, so either the check did not see this pair or the quote shown differs from the quote checked | Nobody on it: an answer-path diagnosis first. The fact itself is true of NCBI's BRCA1 summary, so the question is whether the reader is shown the words that support it |
-| 59 | A question stopped after the server had already finished shows "Search stopped" on screen, yet comes back as answered in history after a reload, and the conversation remembers it | Card 58's builder, 2026-09-27: the server records the run as answered, and the screen, which lags the stream, discards it on Stop; card 58's verifier, F-58-V02: the same stop also leaves the turn in session memory, so it can decide what the next "it" refers to, and the history rail can show the answer without a reload (F-58-A05) | Nobody on it: it needs the run's record and session memory to learn about a stop that came after the answer, in `feedback/` and `core/session_memory.py` |
-| 61 | Ten small edge cases the phase 8.10 verifier found in the command line and the MCP bridge: a queued agent request can give up while the server keeps working on it; a comment of only an invisible character erases an earlier rating; a bracketed year counts as a missing citation; an unsafe sign-in file gets the wrong error and prints its own path; an empty reply exits with no reason; the MCP card promises follow-up offers "coming next"; plus four notes on renewal errors, one schema bound, a `params: null` request and the bare `s3` command | `tracker/phase_8.10.md`, F-8.10-V01 to V10; the owner merged phase 8.10 with them named, 2026-09-27 (`DECISIONS.md`) | Nobody on it: dial position 2, `adapters/cli/` and `adapters/mcp/`, plus the MCP card's wording |
-| 62 | Someone outside the project installs and connects on the first try: today the Integrations page's KGX command is not in the package it installs, the page names neither Python 3.11 nor a virtualenv, a desktop agent app cannot find the bare `s3` in its configuration, `s3` prints `[ask]` under a finished answer with no trust line to explain it, and a guest over MCP is told their token is malformed rather than that an account is needed | Phase 8.10's product review, 2026-09-27, PR-8.10-03, 04, 09, 01 and 11 (`tracker/phase_8.10.md`) | Nobody on it: dial position 2, the Integrations page, `clients/system3-cli/` and `adapters/cli/render.py` |
-| 64 | One of card 58's Stop tests, "keeps Stop on through the writing wait", passes only because its fake-time loop runs longer than a real timer's remaining delay, so on a faster machine it would fail though Stop works | Card 58's fresh verifier, F-58-V01, `testing/Developer/reports/2026-09-27_card58_stop/review.md`: 6 of 6 passes at the committed loop step, 1 of 6 at a longer one | Nobody on it: test only, switch to fake timers before the run arrives and give the arm the 30 second timeout its siblings have |
+| 71 | A reopened answer does not look like the answer you read: the live E. coli isolate answer paged its table ten rows at a time and showed no "could not be verified" note, while its saved copy shows all twenty rows and adds that note; the saved screen also drops the Sources section and the "High-risk claim" tag; and a question asked twice is listed once in Your searches | Card 63's test queries 100 and 67 on develop, 2026-09-29, both passed: `testing/Developer/reports/2026-09-29_card63_test_queries/results.md`, "Differences between a live answer and its saved copy" | Part live, 2026-10-08 (#203, in Retest): reopened tables page ten rows at a time and stack on a phone. Still open: the "High-risk claim" tag on a reopened answer needs its tier stored, a new column, which is a migration; your yes of 2026-10-08, built in a daytime session with you present. A question asked twice listed once in Your searches is not reproduced. Evidence: `testing/Developer/reports/2026-10-08_card71/` |
+| 100 | Between 721 and 900 pixels wide, the top bar runs off the screen when the signed-in email is very long | Found by the lead's check of cards 43 and 44 on 2026-10-06 with a 50-character test email; a real long email was not tried | Your decision of 2026-10-06: low priority, a Factory screen card after card 24 |
 
 Below sits the detail behind architecture cards 8 to 13 and card 14, 11.11.
 It moved here from `testing/UI_fixes_done.md` on 2026-09-24 without a word
@@ -111,24 +107,28 @@ knowledge-graph model?
 Status: Discussion, not started
 
 Raised 2026-09-20. A DISCUSSION ITEM, deliberately not a build item, and it
-needs its own session rather than a slot in the fix loop. Three things are worth
-settling before it opens. FIRST, most of the premise is not this repository's to
-decide: "everything is in the graph" is Systems 1 and 2, which live in a
-separate repository, and `.claude/rules/file-protection.md` forbids this
-repository writing into the graph at all, by direction of data flow.
+needs its own session rather than a slot in the fix loop.
 
-System 3 can only read. SECOND, vector embeddings, RAG pipelines and
-knowledge-graph federation sit on the v1 out-of-scope and fast-follow lists in
-`.claude/rules/v1-scope-boundary.md`; external non-NCBI federation has NO named
-trigger at all, so it stops and asks by rule. Discussing is free, building is
-not. THIRD, the multi-hop half is already real and measured rather than
-hypothetical: the live graph rejects edge alternation, `[:a|b|c]` fails with
-SyntaxError, so the broad search traverses `participates_in` alone and GO
-molecular activities and cellular components are not reached
-(`2026-09-19_breadth_wiring/build.md`).
+Three things are worth settling before it opens.
 
-That is a soft-edge limitation sitting in the product today, and it costs one
-graph call per edge to widen . THE PRODUCT OWNER'S OWN FRAMING, given 2026-09-20
+- FIRST, most of the premise is not this repository's to decide: "everything
+  is in the graph" is Systems 1 and 2, which live in a separate repository, and
+  `.claude/rules/file-protection.md` forbids this repository writing into the
+  graph at all, by direction of data flow. System 3 can only read.
+- SECOND, vector embeddings, RAG pipelines and knowledge-graph federation sit
+  on the v1 out-of-scope and fast-follow lists in
+  `.claude/rules/v1-scope-boundary.md`; external non-NCBI federation has NO
+  named trigger at all, so it stops and asks by rule. Discussing is free,
+  building is not.
+- THIRD, the multi-hop half is already real and measured rather than
+  hypothetical: the live graph rejects edge alternation, `[:a|b|c]` fails with
+  SyntaxError, so the broad search traverses `participates_in` alone and GO
+  molecular activities and cellular components are not reached
+  (`2026-09-19_breadth_wiring/build.md`). That is a soft-edge limitation
+  sitting in the product today, and it costs one graph call per edge to
+  widen .
+
+THE PRODUCT OWNER'S OWN FRAMING, given 2026-09-20
 when asked whether the product fails because the data is absent or because we
 cannot find the path between things that are present: BOTH, and the headline
 verdict is blunter than either: "the answers all look surface level and most
@@ -161,28 +161,33 @@ seven tools and their transports, so under `.claude/rules/v1-scope-boundary.md`
 it is scoped against that section and signed off before any work starts, never
 the other way round.
 
-Two questions to settle when it is scoped, neither decided here. Whether an
-internal MCP server is a TRANSPORT SWAP underneath the existing seven tools,
-which would leave every tool schema and call site unchanged the way build phase
-4.11's HTTPS graph service did, or a RE-CUT of what the tools are, which is a
-contract-version event under `system-design-patterns` pattern 10. And what it
-buys over the direct calls the tools make today, since
-`.claude/rules/supply-chain-security.md` treats every MCP server as an execution
-surface running with the app's own credentials, so the answer has to be worth
-that.
+Two questions to settle when it is scoped, neither decided here.
+
+- Whether an internal MCP server is a TRANSPORT SWAP underneath the existing
+  seven tools, which would leave every tool schema and call site unchanged the
+  way build phase 4.11's HTTPS graph service did, or a RE-CUT of what the tools
+  are, which is a contract-version event under `system-design-patterns`
+  pattern 10.
+- And what it buys over the direct calls the tools make today, since
+  `.claude/rules/supply-chain-security.md` treats every MCP server as an
+  execution surface running with the app's own credentials, so the answer has
+  to be worth that.
 
 ANSWERED 2026-09-22, when the product owner asked directly whether wrapping
 Layer 2 and Layer 3 in MCP would be faster and more reliable. The honest answer
 splits their question in two, because the valuable half is not the MCP half.
 
-On speed, no, and this is measured rather than argued. MCP is a protocol for one
-process to offer tools to another. It does not change what NCBI returns or how
-fast NCBI returns it, so wrapping our own calls in it adds a hop rather than
-removing one. Item 11.4 measured where the wait actually is: the searches take
-about a second, and the wait was the writing step. Item 11.8 then cut the median
-answer from 26.5 to 19.7 seconds by working on that step, not on the transport.
-Under `.claude/rules/attack-the-constraint.md`, the transport is not the
-constraint, so optimising it buys nothing a person would feel.
+On speed, no, and this is measured rather than argued.
+
+- MCP is a protocol for one process to offer tools to another.
+- It does not change what NCBI returns or how fast NCBI returns it, so
+  wrapping our own calls in it adds a hop rather than removing one.
+- Item 11.4 measured where the wait actually is: the searches take about a
+  second, and the wait was the writing step.
+- Item 11.8 then cut the median answer from 26.5 to 19.7 seconds by working on
+  that step, not on the transport.
+- Under `.claude/rules/attack-the-constraint.md`, the transport is not the
+  constraint, so optimising it buys nothing a person would feel.
 
 On reliability, yes, and the product owner's instinct is right, but the thing
 that buys it is the half of their sentence that does not mention MCP:
@@ -258,12 +263,14 @@ third is writing, and Jev cannot do it at all.
 | Writing the answer | The Synth tier writes prose with inline citations | NO. It emits no free-form text. Not a candidate, at any price |
 
 ON "ZERO HALLUCINATIONS", which is on the vendor's front page and should be read
-carefully rather than quoted. The honest version of that claim is structural: a
-decision constrained to a fixed option set cannot return an option outside the
-set. That is real and it is worth something here, since this product's failures
-include the model reading MODY as an organism (item 11.19). It is NOT a claim
-that the chosen option is correct, and it must never be repeated to a user as
-though it were.
+carefully rather than quoted.
+
+- The honest version of that claim is structural: a decision constrained to a
+  fixed option set cannot return an option outside the set.
+- That is real and it is worth something here, since this product's failures
+  include the model reading MODY as an organism (item 11.19).
+- It is NOT a claim that the chosen option is correct, and it must never be
+  repeated to a user as though it were.
 
 WHY THE INSTINCT IS SOUND, independently of which model it turns out to be. The
 loop currently makes three decisions that are taken as if certain and are not:
@@ -278,23 +285,31 @@ A calibrated confidence turns each of those from a silent guess into a number
 that can be acted on, and the third one is the trust moat: a product that can
 say "I am not sure" honestly is worth more than one that is fluent and wrong.
 
-WHAT IS CHEAP AND WHAT IS NOT, since these are usually conflated. A CORRECTION
-FIRST, recorded rather than quietly fixed: on the night of 2026-09-22 the
-assistant said trying this model would be a config change under
-`system-design-patterns` pattern 11, reversible in one edit. That was said
-before the model was identified and it is WRONG for this model. Jev answers on
-its own `/api/alpha/decisions` endpoint, not on chat completions, so
-`resolve_model()` pointing a tier at it does nothing. A trial needs a new client
-path in the harness, which is a small build rather than a config edit. The cost
-estimate moves with it.
+WHAT IS CHEAP AND WHAT IS NOT, since these are usually conflated.
 
-What remains cheap: the trial is still bounded and reversible, because the two
-candidate call sites are decisions with closed option sets, and either can fall
-back to today's path on any error. Output tokens being free makes a
-side-by-side shadow run, where Jev decides in parallel and its answer is only
-recorded rather than acted on, unusually affordable. That shadow run is the
-right first step, because it produces this product's own calibration data
-instead of a vendor benchmark.
+A CORRECTION FIRST, recorded rather than quietly fixed:
+
+- on the night of 2026-09-22 the assistant said trying this model would be a
+  config change under `system-design-patterns` pattern 11, reversible in one
+  edit.
+- That was said before the model was identified and it is WRONG for this
+  model.
+- Jev answers on its own `/api/alpha/decisions` endpoint, not on chat
+  completions, so `resolve_model()` pointing a tier at it does nothing.
+- A trial needs a new client path in the harness, which is a small build
+  rather than a config edit.
+- The cost estimate moves with it.
+
+What remains cheap:
+
+- the trial is still bounded and reversible, because the two candidate call
+  sites are decisions with closed option sets, and either can fall back to
+  today's path on any error.
+- Output tokens being free makes a side-by-side shadow run, where Jev decides
+  in parallel and its answer is only recorded rather than acted on, unusually
+  affordable.
+- That shadow run is the right first step, because it produces this product's
+  own calibration data instead of a vendor benchmark.
 
 What is NOT cheap: ACTING on a confidence number. A threshold anywhere in the
 loop is a new control with its own failure modes, it must be calibrated against
@@ -323,7 +338,7 @@ Status: Not started. Decided 2026-09-25 (`DECISIONS.md`): add the card, probe fi
 
 - The source: NCBI's LitSense, sentence-level search over PubMed abstracts and PMC full text, with the index hosted by NCBI. The locked technical specification already names it as a Layer 3 source in Section 5; nothing in the code calls it yet.
 - The probe, first: about ten golden literature questions sent to LitSense live, measuring whether the returned sentences answer the question and how long each call takes.
-- The build, in phase 8.4 of `testing/Overnight_build_plan_2026-09-25.md` if the probe holds: the answering sentences shown quoted under each paper, each cited. Verbatim sentences pass the cite-or-refuse gate by construction.
+- The build, if the probe holds: the answering sentences shown quoted under each paper, each cited. Verbatim sentences pass the cite-or-refuse gate by construction.
 - Not built: chunking or embedding full texts ourselves, which is a data-pipeline project for the data repository.
 - Budgets: one of the twenty per-query calls, a 15-second timeout, and the provisional 5 requests per second throttle, since LitSense publishes no rate limit.
 
@@ -380,16 +395,18 @@ kept separate from the quote above:
 - Point b), NCBI APIs and enrichment calls as MCP-style functions: item 11.32,
   parked as a discussion that precedes a build.
 - THE MODEL CHECK: a decision point added on 2026-09-23 under items 12.9 and
-  12.10, approved by the product owner the same evening. A guard-tier model
-  decides whether a sentence the answer model REWORDED says anything more than
-  the exact record words it quotes, after code has verified the quote is in
-  the record character for character, the numbers are in the quote and the
-  negation matches. It fails closed. It is exactly the kind of yes-or-no
-  decision point point c) names, and a candidate for Jev's Bool question type
-  once a shadow run has calibrated it. It amends the first constraint above
-  (the cite-or-refuse gate stays deterministic) for that one bounded case: the
-  rule text changes in pull request #101, and the reasoning is in DECISIONS.md
-  on 2026-09-23.
+  12.10, approved by the product owner the same evening.
+  - A guard-tier model decides whether a sentence the answer model REWORDED
+    says anything more than the exact record words it quotes, after code has
+    verified the quote is in the record character for character, the numbers
+    are in the quote and the negation matches.
+  - It fails closed.
+  - It is exactly the kind of yes-or-no decision point point c) names, and a
+    candidate for Jev's Bool question type once a shadow run has calibrated
+    it.
+  - It amends the first constraint above (the cite-or-refuse gate stays
+    deterministic) for that one bounded case: the rule text changes in pull
+    request #101, and the reasoning is in DECISIONS.md on 2026-09-23.
 
 ONE STANDING RULE TO HOLD AGAINST IT, `system-design-patterns` pattern 11 again:
 on a recurring failure, iterate the harness first and swap the model second. So
@@ -400,64 +417,9 @@ as the answer to a failure the harness has not been worked on yet.
 
 | What | Cards | Where |
 |---|---|---|
-| Phase 8.7: the first sentence answers the question, the records show at about 8 seconds, and Opus writes | 2, 50, 5 | `tracker/phase_8.7.md`, branch `phase/8.7-answers-sooner`; builders A and C running; merges overnight only if its golden run holds, and PubMed is down at NCBI |
-| Card 63: every "not yet confirmed" answer saved, and a search down at NCBI said so | 63 | branch `fix/card63-tested`: built and tested, judge reviewing, adversary PASS; a golden run when PubMed is back |
-| Card 53: stale facts on the pages and in the documents | 53 | branch `fix/card53-stale-facts`, builder running |
-| Card 62: install and connect from the Integrations page on the first try | 62 | branch `fix/card62-install-first-try`, builder running |
+| Phase 8.7: the first sentence answers the question, the records show at about 8 seconds, and Opus writes | 2, 50, 5 | `tracker/phase_8.7.md`, branch `phase/8.7-answers-sooner`; parked 2026-09-27 with its three builders part-way, each listed in `HANDOFF.md` |
 | Two reviews of the harness, since "I do not think our harness works well right now": the product's, which turns a question into an answer, and the build's, which is how the product gets built; each ends in ranked changes and questions for you | the product owner, 2026-09-25 | `testing/Developer/reports/2026-09-25_harness_review/product_harness.md` and `build_harness.md` |
 
 ## Retest
 
-Built and live on develop, newest first. The queries to type and what you
-should see are in `testing/Test_queries_and_workflows.md`, by the number in
-the last column.
-
-| # | What to check, in plain words | Item | Queries |
-|---|---|---|---|
-| 1 | Stop works until the first sentence of the answer is on screen, and a stop in that window shows "Search stopped" and nothing of the answer | card 58 | 98 |
-| 2 | The web app carries its libraries' license notices: React, React DOM and MUI, each with its version and license text | card 60 | 99 |
-| 3 | The command line and an AI agent do what the web does, installed and run as the Integrations page prints them; what the product review found is cards 61, 62 and 63 | cards 49 and 21, phase 8.10 | 90 to 97, and 60 |
-| 4 | An answer about something else never says "MedGen lists no clinical features for ..." | card 1, T-8.6-06 | 87 |
-| 5 | At Researcher depth, a question about a disease's features names them in the written answer too | card 31, T-8.6-06 | 81 |
-| 6 | A question carrying hidden instructions, or asking to change the graph, is refused, and Jev makes that call | T-8.6-04, T-8.6-05, R-02 | 88, 89 |
-| 7 | A graph search that cannot finish gives up after 30 seconds, not 90 | card 45, R-09 | 59 |
-| 8 | The second writing call runs only when it can change the answer | card 3, T-8.6-07 | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-07 |
-| 9 | Jev's and DeepSeek's picks are compared offline instead of racing the answer | card 34, T-8.6-03 | Nothing to try by hand: `tracker/phase_8.6.md`, T-8.6-03 |
-| 10 | The Answer modes card gives each mode its own block and says what the mode gives, never who the reader is; on a phone it now fits on screen | 13.2 | 86 |
-| 11 | A question the biomedical word list does not know is judged by the classifier, not refused: the tree of life is answered, pizza is refused, and off-topic follow-ups are refused | Jev as the classifier, golden row G-038 | 83 |
-| 12 | "Recent papers" asks how far back to search, and the choice narrows the papers | 12.15 | 84 |
-| 13 | Whether a question wants papers is a classifier's choice, not a word list | 12.16 part 3 | 85 |
-| 14 | Jev makes the small choices on develop and DeepSeek's pick is recorded beside it: read the comparison table | Jev, the probability model trial | Nothing to try by hand: `testing/Developer/reports/2026-09-25_phase_8.2_golden/decisions_comparison.md` |
-| 15 | The NCBI and enrichment calls are listed once as typed functions the classifier can choose from | 11.32, the function catalogue | Nothing to try by hand: `src/system_03_search_agent/tools/catalogue.py` |
-| 16 | Golden row G-035 accepts the Taxonomy link the product cites | the golden rows | Nothing to try by hand |
-| 17 | The graph's data gaps are handed to the repository that writes the graph | disease names, the hand-over | Nothing to try by hand: read `docs/data-engineering/Graph_data_hand_over_2026-09-25.md` |
-| 18 | The design card's four type values match the shipped code | 2.13, the four type values | Nothing to try by hand |
-| 19 | `/phase-checkpoint` names the counts line by what it holds | the checkpoint line | Nothing to try by hand |
-| 20 | A question about a disease's features names them, each cited to MedGen: in the written answer at Plain language, in the list at Researcher | 12.14 | 81 |
-| 21 | A good question is never refused because the think step's reply was malformed | 12.17 | 80 |
-| 22 | An answer can cite up to 30 sources, and a question about papers reaches them | the ceiling, the byte ceiling | 82 |
-| 23 | An NCBI outage no longer turns the build red | the live NCBI unit test | Nothing to try by hand: CI's unit gate deselects the live test |
-| 24 | "Based on N sources" equals the SOURCES count on the page | 12.11, 12.8 | 74 |
-| 25 | No broken sentences and no restatement paragraph | 12.12 | 75 |
-| 26 | The answer answers the question in plain sentences drawn from the papers, each cited | 12.10 | 73 |
-| 27 | A search clicked in the history rail, in the same tab, opens its saved answer | 12.13 | 67 |
-| 28 | Plain language and researcher differ on every question | 12.9 | 72 |
-| 29 | A one-to-three-word question is asked back, with choices written for its subject | 12.3 | 76 |
-| 30 | The seven questions your skip manager asked all answer | 12.1 | 68, 69, 73 |
-| 31 | A literature question typed in lowercase is not refused as "Outside biomedical research" | 12.2 | 70 |
-| 32 | A refusal says "Ask another question" | 12.4 | 71 |
-| 33 | A question naming no gene and no disease finds the papers, each shown once | 12.7 | 69 |
-| 34 | The MCP configuration on the Integrations page connects, and never sends you to an `http://` address | 11.30 | 60 |
-| 35 | History shows the saved answer at once, with Run again | 10.2 | 67 |
-| 36 | MeSH terms show as real terms, each linked to its MeSH record | G-019 | 64 |
-| 37 | The opening sentence's count agrees with the list beneath it | the opening count | 65 |
-| 38 | The Marfan phenotype question no longer says "I could not find evidence"; what it answers instead is 12.14 in To do | the phenotype template | 66 |
-| 39 | Two questions keep their own graph search: MLH1 and MSH2, and GEO datasets for TP53 | G-033, G-037 | 24, 25 |
-| 40 | A chromosome range is answered with its genes and records, and a range with no assembly asks which | the coordinate range | 27, 28, 29 |
-| 41 | An answer never lists the question's own words as diseases it did not address | the question's own words | 23, 25 |
-| 42 | A BioProject or BioSample accession is answered, and an unknown one is named as not found | the accessions | 30, 31, 32 |
-| 43 | Pathogen Detection isolate questions answer with a table of isolates and their resistance genes | G-035 | 33, 35, 36, 38, 39, 40, 44, and `testing/Product/queries/Isolate_search_queries_and_workflow.md` |
-| 44 | Copy an answer and paste it somewhere: no "Source 1, layer 2" text | 11.14 | 6 |
-| 45 | Open the answer-modes info button: no promise of a word count | 11.36 | 3 |
-| 46 | Change the mode while a search is running: it cannot change mid-search | 9.12 | 4 |
-| 47 | Open the app twice: different scientists, the same answer | 8.4 | 9 |
+Moved on 2026-10-06, at the product owner's request, to `testing/UI_fixes_done.md`, section "Waiting for your retest". A card that is built and live waits there for your verdict; it is not work to do and is not counted here.

@@ -239,8 +239,13 @@ class _ToolSpy:
         gds_ids: list[str] | None = None,
         search_status: str = "ok",
         summary_raises: bool = False,
+        failing: dict[tuple[str, str], str] | None = None,
     ) -> None:
         self.efetch_inputs: list[dict[str, Any]] = []
+        # Card 63 (F-63-A01): `(action, db)` to the `failure_kind` that call
+        # answers with, `status: "error"`. Lets a test fail ONE step after
+        # the search on the same database succeeded.
+        self.failing = dict(failing or {})
         # Fix-plan item 1: what a GEO DataSets search answers, two real
         # series uids, given lowest first so the sort is visible.
         self.gds_ids = ["200315234", "200346694"] if gds_ids is None else gds_ids
@@ -268,6 +273,13 @@ class _ToolSpy:
         async def _efetch(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
             root = tool_input.root
             self.efetch_inputs.append(root.model_dump())
+            failing_kind = self.failing.get((root.action, getattr(root, "db", "") or ""))
+            if failing_kind is not None:
+                return NcbiEfetchOutput(
+                    status="error", action=root.action, records=[], record_count=0,
+                    total_available=None, truncated=False, error=_NCBI_OUTAGE_TEXT,
+                    failure_kind=failing_kind,
+                )
             if root.action == "search":
                 if search_status != "ok":
                     return NcbiEfetchOutput(
@@ -560,6 +572,305 @@ async def test_a_failed_search_closes_its_follow_ups_empty_and_the_run_still_ans
     done = next(e for e in events if e.type == "done")
     assert done.payload["trust_outcome"] in ("answer", "ask"), done.payload
     assert "https://www.ncbi.nlm.nih.gov/medgen/C1" in _sources(events)
+
+
+#: Card 63: the body NCBI served for every ESearch from 02:24 UTC on
+#: 2026-09-27, as the tool's untrusted `error` text. Here to prove it
+#: reaches no event, no summary and no note.
+_NCBI_OUTAGE_TEXT = (
+    "Search Backend failed: Search is temporarily unavailable. "
+    "Cannot connect to SOLR"
+)
+
+
+@pytest.mark.asyncio
+async def test_a_search_down_at_ncbi_says_so_in_our_words_and_says_try_later(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 63, end to end through the real loop with every tool faked.
+
+    PubMed's search answers the way it did during the 2026-09-27 outage:
+    `status: "error"` with `failure_kind: "service_down"` (what
+    `ncbi_eutils_actions.search` now returns for that body, proven in
+    `tests/system_03_search_agent/tools/test_ncbi_eutils_actions.py`).
+    ClinVar and OMIM answer normally. What a person and a developer see:
+
+    - the search's `tool_result` summary says the service is down at NCBI,
+      where it used to say "search: 0 id(s)";
+    - `failed_searches[].reason` carries those same words, with the kind
+      and the database beside it;
+    - the note under the answer names PubMed, says the answer may be missing
+      papers from it and says "Try again later", never "Ask again to retry";
+    - none of NCBI's own text appears anywhere in the stream.
+    """
+    _ModelSpy(monkeypatch)
+    _install_lookup(monkeypatch)
+    _ToolSpy(monkeypatch)
+    spy_efetch = graph_module.ncbi_efetch
+
+    async def _pubmed_down(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
+        root = tool_input.root
+        if root.action == "search" and root.db == "pubmed":
+            return NcbiEfetchOutput(
+                status="error", action="search", records=[], record_count=0,
+                total_available=None, truncated=False, error=_NCBI_OUTAGE_TEXT,
+                failure_kind="service_down",
+            )
+        return await spy_efetch(tool_input, **kwargs)
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _pubmed_down)
+
+    recorded: list[list[dict[str, str]]] = []
+    real_builder = graph_module._build_failed_search_note
+
+    def _recording_builder(failed_searches: list[dict[str, str]]) -> str:
+        recorded.append([dict(item) for item in failed_searches])
+        return real_builder(failed_searches)
+
+    monkeypatch.setattr(graph_module, "_build_failed_search_note", _recording_builder)
+
+    events = await _events(_GENE_QUESTION)
+
+    search_errors = [r for r in _results(events) if r["summary"].startswith("search error")]
+    assert [r["summary"] for r in search_errors] == ["search error: the service is down at NCBI"]
+    assert search_errors[0]["status"] == "error"
+    # POPULATE CHECK: the other searches ran and answered, so the one error
+    # above is PubMed's and not every search failing at once.
+    assert any(r["summary"].startswith("search: ") for r in _results(events))
+
+    assert recorded, "write_node never built a failed-search note"
+    pubmed = [item for item in recorded[-1] if item.get("source") == "pubmed"]
+    assert pubmed == [
+        {
+            "tool": "ncbi_efetch",
+            "layer": "layer_2_api",
+            "reason": "search error: the service is down at NCBI",
+            "kind": "service_down",
+            "source": "pubmed",
+        }
+    ], recorded[-1]
+
+    notes = [
+        e.payload["text"] for e in events
+        if e.type == "token" and e.payload.get("kind") == "note"
+    ]
+    down_notes = [n for n in notes if n.startswith("PubMed is down at NCBI right now")]
+    assert len(down_notes) == 1, notes
+    assert down_notes[0].startswith(
+        "PubMed is down at NCBI right now, so this answer may be missing papers from it."
+    )
+    assert down_notes[0].endswith("Try again later.")
+    assert not any("ask again" in note.lower() for note in notes), notes
+
+    stream = json.dumps([e.payload for e in events], default=str)
+    for fragment in ("SOLR", "temporarily unavailable", "Search Backend"):
+        assert fragment not in stream, fragment
+
+    done = next(e for e in events if e.type == "done")
+    assert done.payload["trust_outcome"] in ("ask", "flag"), done.payload
+    # The answer still stands on what did respond.
+    assert "https://www.ncbi.nlm.nih.gov/medgen/C1" in _sources(events)
+
+
+def _direct_efetch_call(action: str, db: str) -> Any:
+    """One planned `ncbi_efetch` call of the given action, the shape
+    `_execute_planned_call` branches on, with no breadth purpose so it takes
+    the fetch, summary and link branch and not the search branch."""
+    from system_03_search_agent.contracts.events import ToolCall
+    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
+
+    if action == "link":
+        payload: dict[str, Any] = {"action": "link", "dbfrom": "gene", "db": db, "ids": ["672"]}
+    else:
+        payload = {"action": action, "db": db, "ids": ["672"]}
+    return graph_module._PlannedNcbiEfetchToolCall(
+        tool_call=ToolCall(tool="ncbi_efetch", call_id=f"ef-{action}", layer="layer_2_api"),
+        ncbi_efetch_input=NcbiEfetchInput.model_validate(payload),
+    )
+
+
+class _DirectHarness:
+    """Just enough harness for the `ncbi_efetch` branch: it runs the call
+    to completion, as `enforce_timeout` does when nothing times out."""
+
+    async def enforce_timeout(self, step: str, coro: Any, budget_s: float) -> Any:
+        return await coro
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("action", "db"), [("fetch", "pubmed"), ("summary", "clinvar"), ("link", "pubmed")]
+)
+async def test_a_failed_fetch_summary_or_link_names_the_failure_and_carries_its_kind(
+    monkeypatch: pytest.MonkeyPatch, action: str, db: str
+) -> None:
+    """F-63-J02: the second card 63 summary branch of `_execute_planned_call`,
+    the one for a record fetch, a summary or a link. Its summary is the
+    failure in OUR words, never the tool's own text, and its `failure_kind`
+    and `failure_source` are what `failed_searches` records."""
+
+    async def _down(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
+        return NcbiEfetchOutput(
+            status="error", action=tool_input.root.action, records=[], record_count=0,
+            total_available=None, truncated=False, error=_NCBI_OUTAGE_TEXT,
+            failure_kind="service_down",
+        )
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _down)
+    outcome = await graph_module._execute_planned_call(
+        _DirectHarness(), "single_hop", _direct_efetch_call(action, db)  # type: ignore[arg-type]
+    )
+    assert outcome.status == "error"
+    assert outcome.summary == f"{action} error: the service is down at NCBI", outcome.summary
+    assert outcome.failure_kind == "service_down"
+    assert outcome.failure_source == db
+    for fragment in ("SOLR", "temporarily unavailable", "Search Backend"):
+        assert fragment not in outcome.summary, fragment
+
+
+@pytest.mark.asyncio
+async def test_a_fetch_that_succeeds_keeps_its_record_count_and_records_no_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The populate check for the arm above: the SAME call answering `ok`
+    keeps the pre-card summary and records no kind, so the arm above reads
+    the failure and not a branch that always words it."""
+
+    async def _ok(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
+        return NcbiEfetchOutput(
+            status="ok", action="fetch",
+            records=[
+                NcbiEfetchRecord(
+                    id="672", db="pubmed", fields={"title": "t"},
+                    source_url="https://pubmed.ncbi.nlm.nih.gov/672/",
+                )
+            ],
+            record_count=1, total_available=1, truncated=False,
+        )
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _ok)
+    outcome = await graph_module._execute_planned_call(
+        _DirectHarness(), "single_hop", _direct_efetch_call("fetch", "pubmed")  # type: ignore[arg-type]
+    )
+    assert outcome.status == "ok"
+    assert outcome.summary == "fetch: 1 record(s)", outcome.summary
+    assert outcome.failure_kind is None
+    assert outcome.failure_source == ""
+
+
+@pytest.mark.asyncio
+async def test_an_ncbi_efetch_timeout_records_the_timed_out_kind(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-63-J03: the ncbi_efetch per-step timeout path records `timed_out`
+    in `failed_searches`, not `other`. Through the real loop: the PubMed
+    search never answers within a shortened per-step budget."""
+    import asyncio
+
+    _ModelSpy(monkeypatch)
+    _install_lookup(monkeypatch)
+    _ToolSpy(monkeypatch)
+    spy_efetch = graph_module.ncbi_efetch
+
+    async def _pubmed_search_hangs(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
+        root = tool_input.root
+        if root.action == "search" and root.db == "pubmed":
+            await asyncio.sleep(30)
+        return await spy_efetch(tool_input, **kwargs)
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _pubmed_search_hangs)
+    monkeypatch.setattr(graph_module, "_NCBI_EFETCH_ACT_TIMEOUT_SECONDS", 0.2)
+
+    recorded: list[list[dict[str, str]]] = []
+    real_builder = graph_module._build_failed_search_note
+
+    def _recording_builder(failed_searches: list[dict[str, str]]) -> str:
+        recorded.append([dict(item) for item in failed_searches])
+        return real_builder(failed_searches)
+
+    monkeypatch.setattr(graph_module, "_build_failed_search_note", _recording_builder)
+    events = await _events(_GENE_QUESTION)
+
+    assert recorded, "write_node never built a failed-search note"
+    timed_out = [item for item in recorded[-1] if item.get("kind") == "timed_out"]
+    assert len(timed_out) == 1, recorded[-1]
+    assert timed_out[0]["tool"] == "ncbi_efetch"
+    assert not any(item.get("kind") == "other" for item in recorded[-1]), recorded[-1]
+    # A timeout still says asking again can help, and now says which source.
+    notes = [
+        e.payload["text"] for e in events
+        if e.type == "token" and e.payload.get("kind") == "note"
+    ]
+    assert any(
+        "NCBI records" in note and "took too long" in note and "Ask again" in note
+        for note in notes
+    ), notes
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("action", "db", "name", "missing"),
+    [
+        ("fetch", "pubmed", "PubMed", "papers"),
+        ("summary", "clinvar", "ClinVar", "variant records"),
+    ],
+    ids=["pubmed_fetch_down", "clinvar_summary_down"],
+)
+async def test_an_outage_after_a_successful_search_never_says_the_answer_has_none(
+    monkeypatch: pytest.MonkeyPatch, action: str, db: str, name: str, missing: str
+) -> None:
+    """F-63-A01, the regression: the search on a database SUCCEEDS and finds
+    records, then the fetch or the summary on that database fails with an
+    outage. The records are on screen above the note, and the note must not
+    contradict them. It never says the answer "has no" papers or variant
+    records and never says a "search is down"; it says NCBI is down and the
+    answer MAY be missing them. The same words must be in what is saved,
+    which reopens later beside the same records."""
+    from system_03_search_agent.feedback.capture import answer_markdown_from
+
+    _ModelSpy(monkeypatch)
+    _install_lookup(monkeypatch)
+    spy = _ToolSpy(monkeypatch, failing={(action, db): "service_down"})
+    events = await _events(_GENE_QUESTION)
+
+    # POPULATE CHECK: the failing step really ran and failed, AFTER its own
+    # database's search ran and succeeded, so the failure is not the search's.
+    searches = [i for i in spy.efetch_inputs if i["action"] == "search" and i["db"] == db]
+    assert len(searches) == 1, spy.efetch_inputs
+    results = _results(events)
+    assert any(r["summary"] == "search: 3 id(s)" for r in results), results
+    assert [r["summary"] for r in results if r["summary"].startswith(f"{action} error")] == [
+        f"{action} error: the service is down at NCBI"
+    ], results
+    assert not any(r["summary"].startswith("search error") for r in results), results
+
+    expected = (
+        f"{name} is down at NCBI right now, so this answer may be missing {missing} "
+        "from it. Try again later."
+    )
+    notes = [
+        e.payload["text"] for e in events
+        if e.type == "token" and e.payload.get("kind") == "note"
+    ]
+    assert expected in notes, notes
+    saved = answer_markdown_from(events)
+    assert saved is not None
+    for text in [*notes, saved]:
+        assert "has no " not in text, text
+        assert "search is down" not in text, text
+        assert "searches are down" not in text, text
+    assert expected in saved, saved
+
+    # The records the successful search found are still shown, beside the note.
+    sources = _sources(events)
+    if db == "pubmed":
+        assert "https://pubmed.ncbi.nlm.nih.gov/30000003/" in sources, sources
+    assert "https://www.ncbi.nlm.nih.gov/medgen/C1" in sources, sources
+    # The saved answer lists the very records the note is about: the papers
+    # for a PubMed outage, the ClinVar table for a ClinVar one.
+    assert ("PMID:30000003" if db == "pubmed" else "## Clinvar records found") in saved, saved
+    done = next(e for e in events if e.type == "done")
+    assert done.payload["trust_outcome"] in ("ask", "flag"), done.payload
 
 
 @pytest.mark.asyncio
@@ -1137,3 +1448,74 @@ async def test_a_dataset_question_reaches_the_answer_with_geo_series_cited(
     plain_events = await _events(_GENE_QUESTION, session_id="s-plain")
     assert not [i for i in plain_spy.efetch_inputs if i.get("db") == "gds"], plain_spy.efetch_inputs
     assert not [s for s in _sources(plain_events) if "/gds/" in s]
+
+
+#: One realistic record per breadth purpose, as the tool that fills it builds
+#: one. A purpose missing here fails `test_every_breadth_purpose_has_a_record`.
+_REALISTIC_BREADTH_RECORDS: dict[str, tuple[str, dict[str, Any], str | None]] = {
+    "pubmed_abstracts": ("pubmed", {"title": "BRCA1 and breast cancer risk."}, None),
+    "clinvar_summary": (
+        "clinvar",
+        {"title": "NM_007294.4(BRCA1):c.5266dup (p.Gln1756fs)", "genes": [{"symbol": "BRCA1"}]},
+        None,
+    ),
+    "omim_summary": ("omim", {"title": "GLUCOKINASE; GCK", "locus": "7p13"}, "GCK"),
+    "gds_summary": ("gds", {"title": "Expression profiling of TP53 knockouts"}, None),
+    "clinvar_overlap": (
+        "clinvar",
+        {"title": "NM_007294.4(BRCA1):c.5266dup", "gene_symbol": ["BRCA1"], "chr_start": 1},
+        None,
+    ),
+    "dbvar_overlap": (
+        "dbvar",
+        {
+            "chr": "17", "chr_start": 43115725, "chr_end": 43125364, "assembly": "GRCh38",
+            "variant_type": ["copy number variation"], "gene_name": ["BRCA1", "NBR2"],
+        },
+        None,
+    ),
+    "bioproject_summary": ("bioproject", {"project_title": "Salmonella surveillance"}, None),
+    "biosample_summary": ("biosample", {"title": "Salmonella enterica isolate"}, None),
+    "nuccore_summary": (
+        "nuccore", {"title": "Homo sapiens KIR2DL5B mRNA", "accessionversion": "NM_001018081.2"}, None,
+    ),
+    "sra_summary": ("sra", {"runs": '<Run acc="SRR9496657" total_spots="118"/>'}, None),
+    "assembly_summary": ("assembly", {"assemblyname": "ASM584v2"}, None),
+    "taxonomy_summary": ("taxonomy", {"scientificname": "Escherichia coli"}, None),
+    "medgen_summary": (
+        "medgen", {"title": "Cystic fibrosis", "definition": {"value": "A genetic disorder."}}, None,
+    ),
+}
+
+
+def test_every_breadth_purpose_has_a_record() -> None:
+    assert set(_REALISTIC_BREADTH_RECORDS) == set(graph_module._BREADTH_FIELDS_BY_PURPOSE)
+
+
+@pytest.mark.parametrize("purpose", sorted(_REALISTIC_BREADTH_RECORDS))
+def test_every_breadth_purpose_turns_a_realistic_record_into_a_finding(purpose: str) -> None:
+    """Card 92: a first field that was a list dropped every dbVar row without
+    a word. One realistic record per purpose must reach a citable value."""
+    from system_03_search_agent.synthesis.findings import _citable_value_for_row
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    db, fields, gene = _REALISTIC_BREADTH_RECORDS[purpose]
+    output = NcbiEfetchOutput(
+        status="ok", action="summary", record_count=1, total_available=1, truncated=False,
+        records=[
+            NcbiEfetchRecord(
+                id="1", db=db, fields=fields,
+                source_url=f"https://www.ncbi.nlm.nih.gov/{db}/1/",
+            )
+        ],
+    )
+    shaped = graph_module._ncbi_efetch_output_to_structured_fields(output, purpose, gene)
+    assert shaped["rows"], purpose
+    name, value, _suspect, curie_fallback = _citable_value_for_row(
+        shaped["rows"][0], graph_module._pick_representative_field,
+        apply_vocabulary_artifact_check=False,
+    )
+    assert name and value and not curie_fallback, (purpose, shaped["rows"][0])

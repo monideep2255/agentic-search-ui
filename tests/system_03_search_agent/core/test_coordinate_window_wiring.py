@@ -317,7 +317,7 @@ def _overlap_output(db: str) -> NcbiEfetchOutput:
     ("db", "purpose", "leading_field", "withheld"),
     [
         ("clinvar", "clinvar_overlap", "title", "requested_assembly"),
-        ("dbvar", "dbvar_overlap", "variant_type", "chr"),
+        ("dbvar", "dbvar_overlap", "title", "chr"),
     ],
 )
 def test_an_overlap_record_becomes_a_row_with_its_allowlisted_fields_and_its_url(
@@ -331,6 +331,33 @@ def test_an_overlap_record_becomes_a_row_with_its_allowlisted_fields_and_its_url
     assert withheld not in row["fields"]
     assert set(row["fields"]) <= set(graph_module._BREADTH_FIELDS_BY_PURPOSE[purpose])
     assert row["fields"]["assembly"] == "GRCh38"
+
+
+def test_a_dbvar_record_becomes_a_citable_row_with_a_readable_title() -> None:
+    """Card 92: the list-valued `variant_type` and `gene_name` made every dbVar
+    row unusable, so the write step dropped all of them."""
+    from system_03_search_agent.synthesis.findings import _citable_value_for_row
+
+    (row,) = graph_module._ncbi_efetch_output_to_structured_fields(
+        _overlap_output("dbvar"), "dbvar_overlap"
+    )["rows"]
+    name, value, _suspect, curie_fallback = _citable_value_for_row(
+        row, graph_module._pick_representative_field, apply_vocabulary_artifact_check=False
+    )
+    assert (name, curie_fallback) == ("title", False)
+    assert value == "copy number loss overlapping BRCA1, NBR2 (chr17:43000000-43200000, GRCh38)"
+    assert row["fields"]["variant_type"] == "copy number loss"
+    assert row["fields"]["gene_name"] == "BRCA1, NBR2"
+    assert not any(isinstance(v, (list, dict)) for v in row["fields"].values())
+
+
+def test_a_dbvar_title_only_states_what_the_record_carries() -> None:
+    bare = graph_module._dbvar_overlap_fields({"variant_type": ["deletion"]})
+    assert bare["title"] == "deletion"
+    assert graph_module._dbvar_overlap_fields({"variant_type": None, "gene_name": None}) == {
+        "variant_type": "",
+        "gene_name": "",
+    }
 
 
 

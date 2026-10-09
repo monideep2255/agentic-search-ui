@@ -64,7 +64,9 @@ The adversary is the unscripted half. It uses the running system in hostile ways
 - It over-reports on purpose, because for a biomedical user a false alarm is cheap and a missed wrong answer is not.
 - It files every finding to the ledger AS IT FINDS IT, not in a batch at the end, and stops there. It never fixes, triages or closes its own findings.
 
-This is the maker-cannot-sign-off split of `self-eval-loop.md` applied to verification itself: the finder is never the closer. Source: the Personal Space autonomous build harness, analyzed in the personal-os Reference-repos set, which pairs a scripted qa role with a separate unscripted adversary.
+This is the maker-cannot-sign-off split of `self-eval-loop.md` applied to verification itself: the finder is never the closer.
+
+What the lead does with a finding left open after the fix round, the owner's rule of 2026-10-05: it becomes a card on the owner's board, `testing/UI_fix_plan.md`, only if a person using the product would notice it. Anything else is fixed in that round or stays in the phase ledger or the card's report folder, and engineering work worth keeping goes to `testing/Future.md`.
 
 ## The review loop has a budget
 

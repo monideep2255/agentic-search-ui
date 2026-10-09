@@ -1,11 +1,13 @@
 ---
 name: phase-checkpoint
-description: "Sync planning, build and UI-fix-loop docs at a phase boundary. Runs at a planning sub-phase or phase end, a build phase's PR merge to develop or a UI-fix-loop session boundary. Its first step is a decision guard: it reads the DECISIONS.md rows added since the last checkpoint and updates the living-documents registry (tracker/Living_documents.md) before writing anything, so a product-owner decision that reshapes a document is never overruled by a stale instruction. Every mode rewrites HANDOFF.md in place and refreshes PROGRESS.md. Build mode also bumps Plan.md status. UI-fix-loop mode also refreshes the board and the done file. Distinct from /ship, which commits and pushes: this updates artifacts and runs before /ship, never touching git."
+description: "Sync planning, build, and UI-fix-loop documents at a phase boundary: reads new DECISIONS.md rows, then rewrites HANDOFF.md and refreshes PROGRESS.md. Run before /ship. Unlike /ship, it updates artifacts and never touches git."
 scope: project
 depends_on:
   - tracker/Living_documents.md
   - tracker/check_living_docs.py
+  - tracker/check_doc_sync.py
   - HANDOFF.md
+  - docs/build/Handoff_history.md
   - requirements/Plan.md
   - DECISIONS.md
   - tracker/BOARD.md
@@ -72,7 +74,7 @@ Every fact this checkpoint touches has exactly one owner file. A checkpoint upda
 | Fact | Single owner | Everywhere else |
 |------|--------------|-------------------|
 | Which documents this skill keeps current, and their current shape | `tracker/Living_documents.md` | Nowhere else. This skill names jobs, the registry names sections |
-| What a fresh session needs: what is live, what awaits the product owner, the one next action, pointers | `HANDOFF.md`, under about 80 lines, rewritten in place | Nowhere else. It states no fact another file owns beyond its pointers, and never a count |
+| What a fresh session needs: what is live, what awaits the product owner, the one next action, pointers | `HANDOFF.md`, at most about 4 KB, rewritten in place; the outgoing version moves to `docs/build/Handoff_history.md` | Nowhere else. It states no fact another file owns beyond its pointers, and never a count |
 | Per-phase tickets, findings, evidence | `tracker/phase_N.M.md` | A pointer, never a copy |
 | Phase status and open flags | For a numbered phase, its ledger `tracker/phase_N.M.md`: ticket statuses and open findings. `tracker/BOARD.md` holds them for build phases 1.0 through 6.2 only, frozen on 2026-09-25 | A pointer. Nothing writes the frozen board |
 | What is not yet started, what is being built now, and what is live awaiting retest | The board, `testing/UI_fix_plan.md`, one card per item in the column its status says | Nowhere else. `tracker/BOARD.md` does NOT track UI fix items and is not expected to |
@@ -156,11 +158,12 @@ What it holds, and only this, in the sections the registry names for it:
 - What is live: develop's product commit and production's tag, whether anything is being built between sessions, and whether CI is running. Hashes and tags, never counts.
 - What awaits the product owner: retests and decisions, stated as pointers into the board's columns rather than as copied lists.
 - The one next action: one line, naming where its reasons live.
-- Where the facts live: the pointer table, one row per owner file.
+- Where the facts live: the pointer list, one line per owner file.
 
 Rules:
 
-- Under about 80 lines. If it is longer, it is restating something an owner file already says: move the fact to its owner and leave a pointer.
+- At most about 4 KB, checked with `wc -c HANDOFF.md` before the step ends (owner decision, 2026-10-04). Every session that reads it first loads it whole, so its size is paid at every session start. If it is longer, it is restating something an owner file already says, or carrying history: move the fact to its owner and leave a pointer.
+- Before the rewrite, move the outgoing `HANDOFF.md` into `docs/build/Handoff_history.md`, verbatim, under a new `## Handoff as of <date>` heading placed first among the dated headings, with its own headings moved down one level and its table of contents entry added in the same edit. The history file is never loaded automatically and is never rewritten, only added to. The new-laptop setup steps live there too, under "Starting on another computer", and `HANDOFF.md` only points to them.
 - Rewritten in place, never appended to. Every sentence describing a state this session superseded is deleted, not left below the new one. This is the failure the rule exists to prevent: after five build phases handled as appends instead of rewrites, the old continuation prompt described build phase 2.1 in five contradictory sections at once, and its own copy-paste block told the next agent not to open build phase 2.2, the phase that was actually next.
 - No history. What landed goes to Plan.md's Revision history (Step 5) and, in the UI fix loop, the done file's session table (Step 5a). No counts: none is stated in any document, and `python3 tracker/check_doc_drift.py --counts` computes them on demand.
 - Set its date line to today. It is the one document every session end rewrites, so it is the one document dated at every session end.
@@ -232,6 +235,14 @@ Before the exit checklist, verify the structure of every document this checkpoin
 - Status current: the handoff, the Plan.md status table, and any progress table name the correct current phase. No finished phase is labeled "next", and no just-merged build phase is labeled "not started".
 - Titles and filenames current: a session doc or meeting note whose title or filename names fewer steps than it now covers is retitled, and the file renamed with `mv` (never `rm`) if the step span in the name is wrong.
 
+### Step 6b: the documents agree with each other (all modes)
+
+Run `python3 tracker/check_doc_sync.py`. It compares the board, the done file's "Waiting for your retest", the test queries, the board plan, the Factory brief, `HANDOFF.md` and the registry with each other, and prints each disagreement as `file:line: rule: what disagrees, and the fix`. It exists because cards 44 and 47 stayed in To do after they merged on 2026-10-06 while every per-file check was green.
+
+- Exit 1: fix every finding in this checkpoint, in the document the finding names, then rerun until it exits 0. A finding never waits for the next session.
+- Exit 2: the check could not run, because a document, section or table it reads is missing. That is never a pass. If the section moved on purpose, the registry and the check catch up first, through Step 0's decision guard.
+- Never edit the check so it passes. A rule that is wrong is reported to the product owner.
+
 ### Step 7: the two checks (all modes)
 
 - `python3 tracker/check_doc_drift.py --check`. It checks the structure of every tracked document (tables of contents, duplicate phase headings, a "Last updated" line older than a date in its own body, the two append-only tables) and its phase and pull request references, and fails on a defect or on a fact it could not compute. It compares no count and runs no tests, so it takes seconds.
@@ -258,7 +269,7 @@ Before declaring the checkpoint done, verify:
 - [ ] Step 0 ran first: every DECISIONS.md row below the watermark was read, every shape or process change it made is in the registry with its "Set by" cell, the watermark moved, and no red `--shape` line is unexplained.
 - [ ] Every decision made this session is in DECISIONS.md (append-only).
 - [ ] Planning-phase mode: the phase session doc has a section for each sub-phase closed, and a dated meeting note exists with an action-items section.
-- [ ] `HANDOFF.md` is rewritten in place, under about 80 lines, dated today, with no count and no fact another file owns beyond its pointers, and no sentence describing a state this session superseded.
+- [ ] `HANDOFF.md` is rewritten in place, at most about 4 KB (`wc -c`), dated today, its outgoing version moved verbatim to `docs/build/Handoff_history.md`, with no count and no fact another file owns beyond its pointers, and no sentence describing a state this session superseded.
 - [ ] The fresh-session test: from `HANDOFF.md` alone, a new session can state what is live on develop and production, what awaits the product owner, and the one next action.
 - [ ] UI-fix-loop mode: every card sits in the column its item's status says, every item that went live has its card in the retest column and its detail moved to the done file with its row in the index of finished features, and the done file's cutoff section is rewritten in place, naming what is parked and why.
 - [ ] UI-fix-loop mode: the board carries only its title, intro, date line and the registered columns, and the not-started column's order matches the done file's ordered next actions.
@@ -273,6 +284,7 @@ Before declaring the checkpoint done, verify:
 - [ ] Every touched doc's table of contents, status, titles, and filenames are current: no missing ToC entry, no finished phase labeled "next", no title or filename naming fewer steps than the file covers.
 - [ ] All modes: every failure the session hit is a row in LEARNINGS.md.
 - [ ] All modes: no document this checkpoint touched states a test, decision or learning count as current, and no edit this checkpoint made only moved a date.
+- [ ] `python3 tracker/check_doc_sync.py` exits 0: every finding was fixed in this checkpoint.
 - [ ] `python3 tracker/check_doc_drift.py --check` exits 0.
 - [ ] `python3 tracker/check_living_docs.py --shape` exits 0, or the only red line is a shape the registry marks `unpinned` and the report says so.
 

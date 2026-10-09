@@ -1,0 +1,10 @@
+model call point=guardrail.injection trace=probe56-56e82dac kind=jev elapsed_ms=328 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-56e82dac kind=guard elapsed_ms=1518 outcome=ok attempt=1 provider=StreamLake
+model call point=plan.literature trace=probe56-56e82dac kind=jev elapsed_ms=284 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-56e82dac kind=jev elapsed_ms=308 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-56e82dac kind=jev elapsed_ms=346 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.injection trace=probe56-4512313c kind=jev elapsed_ms=364 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-4512313c kind=guard elapsed_ms=2823 outcome=ok attempt=1 provider=GMICloud
+model call point=plan.literature trace=probe56-4512313c kind=jev elapsed_ms=264 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-4512313c kind=jev elapsed_ms=267 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-4512313c kind=jev elapsed_ms=415 outcome=ok attempt=1 provider=unknown

@@ -694,6 +694,27 @@ async def _drain_into_entry(
         await stream.aclose()
 
 
+def _cancel_unless_finished(entry: RunEntry) -> bool:
+    """Cancel `entry`'s task unless the run already finished; return
+    whether it cancelled.
+
+    Card 59, owner decision D18: an answer that finished before Stop
+    arrived stands. `run_streaming` sends `done` to readers FIRST and only
+    then writes session memory and the history row, so the task is still
+    running after a reader already has the answer. Cancelling it there cut
+    those writes short: the screen showed the answer while memory and
+    history lost it. Once `done` is on the read path the run is finished
+    for every purpose, so neither a stop (`cancel_run`) nor the
+    abandonment timer (`_cancel_if_still_abandoned`) touches it.
+    """
+    if entry.task.done():
+        return False
+    if any(event.type == "done" for event in entry.events):
+        return False
+    entry.task.cancel()
+    return True
+
+
 class RunRegistry:
     """In-process registry of streaming runs. See the module docstring."""
 
@@ -785,8 +806,13 @@ class RunRegistry:
         entry = self._runs.get(run_id)
         if entry is None:
             return
-        if entry.subscriber_count == 0 and not entry.task.done():
-            entry.task.cancel()
+        if entry.subscriber_count == 0:
+            # Card 59, J-59-02: the same guard a stop goes through. The
+            # browser closes its stream the moment `done` arrives, so every
+            # finished run is unwatched while its memory write and history
+            # row are still to come; cancelling it here cut them short just
+            # as a late Stop used to.
+            _cancel_unless_finished(entry)
 
     @property
     def max_active_runs_per_owner(self) -> int:
@@ -1054,13 +1080,21 @@ class RunRegistry:
             raise RunNotOwnedError(run_id)
         return entry
 
-    def cancel_run(self, run_id: str) -> None:
-        """Cancel `run_id`'s background task.
+    def cancel_run(self, run_id: str) -> bool:
+        """Cancel `run_id`'s background task, and say whether it did.
 
         Idempotent for a known run: calling this on a run whose task has
         already finished (successfully or not) or has already been
         cancelled is a no-op, never raising, matching the
-        production-standards.md retry-safety gate.
+        production-standards.md retry-safety gate. A run that already sent
+        `done` is finished for this purpose too (card 59, D18): its answer
+        stands and its memory and history writes are left to complete.
+
+        Returns:
+            True if the run was still working and is now being stopped;
+            False if it had already finished, so nothing was stopped.
+            Every stop surface reports this rather than a fixed literal
+            (card 59, A-59-01 and A-59-03).
 
         Raises:
             RunNotFoundError: `run_id` was never created by this
@@ -1068,9 +1102,7 @@ class RunRegistry:
                 been cancelled, which is the idempotent no-op case
                 above).
         """
-        entry = self.get_run(run_id)
-        if not entry.task.done():
-            entry.task.cancel()
+        return _cancel_unless_finished(self.get_run(run_id))
 
     async def subscribe(self, run_id: str, *, after_seq: int = -1) -> AsyncIterator[Event]:
         """Yield every event `run_id` has produced with `seq > after_seq`,

@@ -1,0 +1,63 @@
+No search limit in effect yet
+Which diseases are associated with BRCA1?
+New search
+
+? Answered12.0s · 13 tools · 22 sources from 2 layers
+
+Show work ▾
+
+Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.⁠1–4
+
+BRCA1 is associated with Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4 The gene symbol BRCA1 corresponds to the gene name BRCA1.⁠5, 6
+
+DISEASE RECORDS FOUND
+DISEASE	IDENTIFIER	
+Familial cancer of breast	MedGen:C0346153	⁠1
+Familial breast-ovarian cancer susceptibility 1	MedGen:C2676676	⁠2
+Pancreatic cancer susceptibility 4	MedGen:C3280442	⁠3
+Fanconi anemia complementation group S	MedGen:C4554406	⁠4
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+BRCA1	NCBIGene:672	⁠5
+BRCA1	NCBIGene:672	⁠6
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+BRCA1 and implications for response to chemotherapy in ovarian cancer.	PMID:19168207	⁠7
+BRCA1: An Endocrine and Metabolic Regulator.	PMID:35432218	⁠11
+Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.	PMID:36914836	⁠14
+Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection.	PMID:39261728	⁠17
+Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors.	PMID:39265497	⁠20
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_007294.4(BRCA1):c.5243_5277+2788del	VCV000267740	⁠8
+NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG	VCV000267741	⁠12
+NG_005905.2:g.(147057_150288)_(160933_166866)del	VCV000373892	⁠15
+GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3	VCV004823850	⁠18
+NM_007294.4(BRCA1):c.2145C>G (p.Thr715=)	VCV004848411	⁠21
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	omim 113705	⁠9
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	omim 113705	⁠9
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer	NCT00590109	COMPLETED	⁠10
+BRCA1 Haploinsufficiency and Gene Expression	NCT00597987	COMPLETED	⁠13
+Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma	NCT00617656	TERMINATED	⁠16
+Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation	NCT00673335	COMPLETED	⁠19
+Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations	NCT00700778	TERMINATED	⁠22
+▶
+SOURCES
+22
+Based on 22 sources, not yet confirmed
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

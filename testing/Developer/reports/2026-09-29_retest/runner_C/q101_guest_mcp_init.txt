@@ -1,0 +1,14 @@
+HTTP/2 200 
+cache-control: no-cache, no-transform
+content-type: text/event-stream
+date: Wed, 30 Sep 2026 02:02:37 GMT
+server: railway-hikari
+vary: Origin
+x-accel-buffering: no
+x-railway-request-id: PNrVmZXWSvewezxAY53eZw
+x-railway-edge: iad1
+x-hikari-trace: iad1.trg5
+
+event: message
+data: {"jsonrpc":"2.0","id":1,"result":{"capabilities":{"experimental":{},"prompts":{"listChanged":false},"resources":{"listChanged":false,"subscribe":false},"tools":{"listChanged":false}},"instructions":"Ask a biomedical research question with ask_biomedical_question. It returns a cited answer assembled from the NCBI knowledge graph and live NCBI APIs, or an honest refusal. To ask a follow-up, pass back the session_id the previous answer returned. When clarifying_question is set, the answer is a question back to you: reply with one of clarifying_options. list_past_searches, reopen_past_answer and send_answer_feedback read your own past searches, reopen a saved answer, and rate an answer.","protocolVersion":"2025-06-18","serverInfo":{"name":"system3-biomedical-search","version":"1.0.0"}}}
+

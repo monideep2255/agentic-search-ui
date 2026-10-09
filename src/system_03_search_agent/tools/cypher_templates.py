@@ -708,6 +708,55 @@ def _record_template(anchor_label: str, param_names: list[str]) -> CypherTemplat
     )
 
 
+# The edges the graph carries onto or off a PubMed Article that point at
+# other records: the MeSH terms assigned to it (`has_mesh_annotation`,
+# Article to OntologyClass) and the papers it cites and is cited by
+# (`cited_in`, Article to Article). Asserted documented at import like every
+# hop in `_HOPS`. The genes that mention the paper (`mentioned_in`, Gene to
+# Article) are NOT walked: matching that edge from its Article end timed out
+# at the 30-second statement limit on the live graph for PMID 11237011
+# (2026-10-05), the same timeout the model-written draft hit, while the three
+# branches below each finished in about two seconds or less.
+_ARTICLE_MESH_EDGE: Final[str] = "has_mesh_annotation"
+_ARTICLE_CITED_EDGE: Final[str] = "cited_in"
+_assert_hop_documented(_ARTICLE_MESH_EDGE, "Article", "OntologyClass")
+_assert_hop_documented(_ARTICLE_CITED_EDGE, "Article", "Article")
+
+
+def _article_links_template(article_param: str) -> CypherTemplate:
+    """The records one PubMed Article is linked to in the graph: the MeSH
+    terms assigned to it, the papers it cites and the papers that cite it,
+    one row each, cited to the linked record's own page.
+
+    The anchor of a question about one paper's linked data with no hop word
+    in it ("sequence data for PMID ...", golden G-006) used to reach the
+    model-written path, which found nothing on every pass of the 2026-09-29
+    run. Three single-edge matches joined by UNION ALL, each an inline id
+    match so each uses the id index (the form `_record_template` measured;
+    a WHERE on `a.id` walks the whole vertex table). Each branch carries its
+    own ORDER BY, the validator gives each its own LIMIT, and the branches
+    run in a fixed order: MeSH terms, cited papers, citing papers.
+    """
+    anchor = f"({_ANCHOR_VAR}:Article {{id: ${article_param}}})"
+    mesh = (
+        f"MATCH {anchor}-[:{_ARTICLE_MESH_EDGE}]->({_OTHER_VAR}:OntologyClass) "
+        f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
+    )
+    cites = (
+        f"MATCH {anchor}-[:{_ARTICLE_CITED_EDGE}]->({_OTHER_VAR}:Article) "
+        f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
+    )
+    cited_by = (
+        f"MATCH ({_OTHER_VAR}:Article)-[:{_ARTICLE_CITED_EDGE}]->{anchor} "
+        f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
+    )
+    return CypherTemplate(
+        name="article_links_one",
+        cypher=f"{mesh} UNION ALL {cites} UNION ALL {cited_by}",
+        edge_label=None,
+    )
+
+
 def select_template(
     tool_input: CypherQueryInput, entity_bindings: dict[str, str]
 ) -> CypherTemplate | None:
@@ -729,8 +778,11 @@ def select_template(
     3. With no shape matched, a `lookup` or an `exploratory` question about
        the entity is the record itself, and so is a `single_hop` or
        `multi_hop` question whose anchor is a Gene (2026-09-22, the
-       measured reasons are in the code below). An `aggregate` question
-       with no shape, or a Disease or Article anchor on the two hop
+       measured reasons are in the code below). So is an `aggregate`
+       question about a Gene that asks for no count (2026-10-05). ONE
+       Article on a hop class or a no-count `aggregate` takes the paper's
+       linked-records template (2026-10-05, card 15). An `aggregate`
+       question that asks for a count, or a Disease anchor on the two hop
        classes, is None, the model path.
     4. A matched hop on a question asking "how many" (any class), or on an
        `aggregate` question saying "count" or "number of", becomes the
@@ -785,6 +837,30 @@ def select_template(
             QueryClass.SINGLE_HOP, QueryClass.MULTI_HOP
         ):
             return _record_template(anchor_label, param_names)
+        # 2026-10-05 (card 91): the `aggregate` class is a model's guess and
+        # varies run to run for one question. A Gene question with no shape
+        # that asks for no count is not a count question, so it takes the
+        # record like the other classes; the generated query for it was
+        # rejected by the validator and no graph search ran. A count request
+        # (`_wants_count`) and a Disease or Article anchor keep the model path.
+        if (
+            anchor_label == "Gene"
+            and tool_input.query_class is QueryClass.AGGREGATE
+            and not _wants_count(tool_input)
+        ):
+            return _record_template(anchor_label, param_names)
+        # 2026-10-05 (card 15, decision D5): ONE Article with no shape word
+        # on a hop class, or on an `aggregate` question that asks for no
+        # count, is a question about the paper's linked data. It walks the
+        # paper's own edges instead of reaching the model-written path.
+        if (
+            anchor_label == "Article"
+            and len(param_names) == 1
+            and not _wants_count(tool_input)
+            and tool_input.query_class
+            in (QueryClass.SINGLE_HOP, QueryClass.MULTI_HOP, QueryClass.AGGREGATE)
+        ):
+            return _article_links_template(param_names[0])
         return None
     wants_count = _wants_count(tool_input)
     # The variant-to-disease shape (2026-09-14, decision D1): ONE gene with
@@ -822,6 +898,7 @@ def all_template_examples() -> list[CypherTemplate]:
         examples.append(_hop_template(shape, hop, anchor, one, count=False))
         examples.append(_hop_template(shape, hop, anchor, many, count=False))
         examples.append(_hop_template(shape, hop, anchor, one, count=True))
+    examples.append(_article_links_template("e_one"))
     for anchor in _SHAPES_BY_ANCHOR:
         examples.append(_record_template(anchor, one))
         examples.append(_record_template(anchor, many))

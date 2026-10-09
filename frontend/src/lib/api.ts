@@ -16,6 +16,8 @@
  * `signup` and `login` endpoints require no bearer token).
  */
 
+import { isLayer, layerNumber } from "./events";
+
 // UI fix set 9 (2026-09-13): `plain_language` added, additive. The web UI
 // offers Plain language and Researcher; the other two stay valid on the wire.
 export type AudienceDepth = "plain_language" | "researcher" | "clinical_brief" | "deep_technical";
@@ -508,19 +510,53 @@ export interface HistoryAnswerCitation {
   display_index: number;
   source: string;
   source_url: string;
-  layer: 1 | 2 | 3;
+  /**
+   * The design system's 1, 2 or 3, read from the stored wire string
+   * (`"layer_1_graph"`, `"layer_2_api"`, `"layer_3_enrichment"`) through
+   * `layerNumber`, the live answer's own mapping. `null` when the stored
+   * value is none of the three: the source still shows, with its link and
+   * no layer word, because a record a person can open is worth more than
+   * a layer label, and guessing a layer would be a confident wrong label.
+   */
+  layer: 1 | 2 | 3 | null;
   source_id?: string;
   entity_name?: string | null;
 }
 
-function isHistoryAnswerCitation(value: unknown): value is HistoryAnswerCitation {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value.display_index === "number" &&
-    typeof value.source === "string" &&
-    typeof value.source_url === "string" &&
-    (value.layer === 1 || value.layer === 2 || value.layer === 3)
-  );
+/**
+ * One stored citation as the saved-answer screen reads it, or `null` when
+ * it lacks what a source row needs: its number, its source name and its
+ * link.
+ *
+ * Card 102 (2026-10-07): this used to accept only the numbers 1, 2 or 3 as
+ * `layer`, while the endpoint returns the stored `CitationPayload`, whose
+ * `layer` is the wire string the live stream sends
+ * (`contracts/events.py`'s `Layer`). Every citation failed, so every
+ * reopened answer showed "Based on 21 sources cited" above no sources at
+ * all. The layer no longer decides whether a citation is kept: an
+ * unrecognised value keeps the source with a `null` layer, so a renamed or
+ * new layer can never empty the list again.
+ */
+function toHistoryAnswerCitation(value: unknown): HistoryAnswerCitation | null {
+  if (
+    !isRecord(value) ||
+    typeof value.display_index !== "number" ||
+    typeof value.source !== "string" ||
+    typeof value.source_url !== "string"
+  ) {
+    return null;
+  }
+  const citation: HistoryAnswerCitation = {
+    display_index: value.display_index,
+    source: value.source,
+    source_url: value.source_url,
+    layer: isLayer(value.layer) ? layerNumber(value.layer) : null,
+  };
+  if (typeof value.source_id === "string") citation.source_id = value.source_id;
+  if (typeof value.entity_name === "string" || value.entity_name === null) {
+    citation.entity_name = value.entity_name;
+  }
+  return citation;
 }
 
 /** `GET /v1/history/{trace_id}/answer`'s 200 body. */
@@ -593,7 +629,9 @@ export async function fetchHistoryAnswer(
     asked_at: typeof body.asked_at === "string" ? body.asked_at : "",
     depth: typeof body.depth === "string" ? body.depth : "",
     answer_markdown: body.answer_markdown,
-    citations: body.citations.filter(isHistoryAnswerCitation),
+    citations: body.citations
+      .map(toHistoryAnswerCitation)
+      .filter((citation): citation is HistoryAnswerCitation => citation !== null),
     trust_signal: typeof body.trust_signal === "string" ? body.trust_signal : "",
     trust_line: typeof body.trust_line === "string" ? body.trust_line : null,
   };

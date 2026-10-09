@@ -346,7 +346,7 @@ TP53_CHROMOSOME = "17"
 BRCA1_CURIE = "NCBIGene:672"
 
 # A real PubMed record. This PMID is the one build phase 3.0's gate uses for
-# its Q8 admit case, so it is already load-bearing elsewhere in the repo.
+# its Q8 admit case, so it is already load-bearing elsewhere in the repository.
 REAL_PMID = "21376230"
 
 # Deliberately nonexistent. PMIDs are assigned sequentially and this range is
@@ -405,7 +405,7 @@ INVALID_GENE_SYMBOL = "notarealgenesymbolxyzzy"
 
 # The record host, which is NOT the fetch host. Every action here calls
 # eutils.ncbi.nlm.nih.gov or api.ncbi.nlm.nih.gov, but a citation must resolve
-# to a page a human can open. This tool is the FIRST in the repo whose fetch
+# to a page a human can open. This tool is the FIRST in the repository whose fetch
 # host and record host differ, so this is a new failure surface, not a
 # restatement of cypher_query's.
 FETCH_HOSTS = ("eutils.ncbi.nlm.nih.gov", "api.ncbi.nlm.nih.gov")
@@ -562,7 +562,7 @@ async def test_03_dataset_report_resolves_symbol_without_eutils() -> None:
 @premise_gate
 @pytest.mark.asyncio
 async def test_04_fetch_pubmed_cites_the_record_host_not_the_fetch_host() -> None:
-    """Case 4. The cross-tool citation trap, first live instance in this repo.
+    """Case 4. The cross-tool citation trap, first live instance in this repository.
 
     `Tool_implementation_mechanics.md:265-270`. Every call this tool makes goes
     to eutils or api.ncbi.nlm.nih.gov, but a citation must resolve to a page a

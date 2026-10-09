@@ -114,6 +114,7 @@ import asyncio
 import logging
 import os
 import re
+import unicodedata
 import uuid
 from collections.abc import Callable
 from datetime import datetime
@@ -195,7 +196,35 @@ logger = logging.getLogger(__name__)
 _MAX_CITATIONS = 100
 _MAX_ANSWER_LENGTH = 8000
 
-_AUTH_FAILURE_MESSAGE = "missing, malformed, or invalid bearer token"
+# Card 62, PR-8.10-11 (`tracker/phase_8.10.md`): a guest holding the token
+# `POST /auth/guest` gave them was told "missing, malformed, or invalid
+# bearer token", while the Integrations page says MCP needs an account. Each
+# refusal now says which of the three it is, that an account is needed, and
+# how to get a token, in the page's own terms. Only the words changed: the
+# same two checks refuse the same callers at the same point.
+#
+# Every message keeps the words "bearer token". `s3 mcp` renews its sign-in
+# when a refusal names them (`adapters/cli/mcp_bridge.py`,
+# `_is_token_refusal`), and so does every copy of `s3` already installed.
+# None discloses which check an invalid token failed: "a guest token cannot
+# be used here" is the rule, said to every invalid token alike, never a
+# verdict on this one.
+_HOW_TO_GET_A_TOKEN = (
+    "The MCP server needs a System 3 account: sign in with POST /auth/login, "
+    "using the email and password of your account on the web (create one "
+    "there if you have none), and send the access token it returns as "
+    "Authorization: Bearer <token>. A token lasts 15 minutes."
+)
+_NO_TOKEN_MESSAGE = f"no bearer token on this request. {_HOW_TO_GET_A_TOKEN}"
+_MALFORMED_TOKEN_MESSAGE = (
+    "malformed bearer token: the Authorization header must be the word Bearer, "
+    f"a space, then the token. {_HOW_TO_GET_A_TOKEN}"
+)
+_INVALID_TOKEN_MESSAGE = (
+    "invalid bearer token: it is not a current access token for a System 3 "
+    "account. A guest token cannot be used here, and an account's token "
+    f"expires after 15 minutes. {_HOW_TO_GET_A_TOKEN}"
+)
 
 # F-4.10-J-04 / F-4.10-A-08 (judge and adversary round 1, build phase
 # 4.10). `RunRegistry.create_run` gained a per-principal concurrent-run
@@ -270,7 +299,7 @@ _FOLD_LOOP_TIMEOUT_S = 240.0
 # unsanitized `f"...{error_payload.message}"`). Keyed by `error_class`
 # exactly like `core/graph.py`'s own `_STEP_ERROR_END_USER_MESSAGES`
 # sanitizes a `HarnessCallError` before it becomes a client-visible
-# payload (F-2.0-12's precedent, the closest one this repo has for this
+# payload (F-2.0-12's precedent, the closest one this repository has for this
 # exact boundary; the REST/SSE surface itself does not yet sanitize
 # `ErrorPayload.message`, confirmed by reading `harness/cost_control.py`'s
 # `sanitize_event_for_end_user`, which redacts `total_cost_usd` only).
@@ -457,7 +486,7 @@ class PastSearch(BaseModel):
 
     trace_id: str = Field(..., max_length=64)
     question: str = Field(..., max_length=2000)
-    asked_at: datetime
+    asked_at: datetime = Field(..., json_schema_extra={"maxLength": 40})
     trust_signal: str = Field(..., max_length=20)
     citation_count: int = Field(..., ge=0)
     has_saved_answer: bool = False
@@ -499,7 +528,7 @@ class ReopenedAnswerOutput(BaseModel):
 
     trace_id: str = Field(..., max_length=64)
     question: str = Field(..., max_length=2000)
-    asked_at: datetime
+    asked_at: datetime = Field(..., json_schema_extra={"maxLength": 40})
     audience_depth: AudienceDepth
     answer_markdown: str = Field(..., max_length=32000)
     citations: list[CitationPayload] = Field(default_factory=list, max_length=_MAX_CITATIONS)
@@ -812,12 +841,16 @@ async def _authenticate_mcp_caller(ctx: Context) -> User:
     """
     authorization = _extract_bearer_header(ctx)
     if not has_bearer_scheme(authorization):
-        raise MCPError(code=INVALID_REQUEST, message=_AUTH_FAILURE_MESSAGE)
+        # Card 62: the same refusal as before; the words say whether a
+        # header was there at all. `_extract_bearer_header` reads two
+        # headers as none, which "send ... as Authorization" also covers.
+        message = _NO_TOKEN_MESSAGE if authorization is None else _MALFORMED_TOKEN_MESSAGE
+        raise MCPError(code=INVALID_REQUEST, message=message)
     with session_scope() as session:
         try:
             return resolve_user_from_bearer_token(authorization, session)
         except InvalidBearerTokenError:
-            raise MCPError(code=INVALID_REQUEST, message=_AUTH_FAILURE_MESSAGE) from None
+            raise MCPError(code=INVALID_REQUEST, message=_INVALID_TOKEN_MESSAGE) from None
 
 
 def _reject_unknown_arguments(
@@ -1519,10 +1552,10 @@ def _reopened_citations(
       valid as a `CitationPayload`, as before;
     - a marker in `answer_markdown` with no stored entry at all (build
       phase 8.10's fix round, F-8.10-J02 and A02). Capture stores at most
-      50 citations (`feedback/capture.py`'s `_MAX_CITATIONS`), so a
-      60-marker answer came back pointing [51] to [60] at nothing while
-      this said 0. That cap is card 54's; this only stops the count from
-      hiding it.
+      100 citations (`feedback/contracts.py`'s `MAX_CITATIONS_PER_ANSWER`,
+      raised from 50 by card 54), so a row stored before that, or an
+      answer past 100, can still point a marker at nothing while this
+      said 0. This only stops the count from hiding it.
 
     A marker whose entry was stored but left out is counted by the first
     rule and not again by the second."""
@@ -1607,6 +1640,16 @@ async def reopen_past_answer(
     )
 
 
+def _has_feedback_text(text: str | None) -> bool:
+    """Ignore isolated marks, controls and Hangul fillers, not real letters or emoji."""
+    return any(
+        not char.isspace()
+        and unicodedata.category(char)[0] not in {"C", "M"}
+        and unicodedata.normalize("NFKC", char) not in {"\u115f", "\u1160"}
+        for char in text or ""
+    )
+
+
 @server.tool(
     description=(
         "Tell the team what you thought of one answer: a thumbs up or down, a "
@@ -1671,8 +1714,8 @@ async def send_answer_feedback(
     # F-8.10-A08). Blank text is nothing too. The REST route is unchanged.
     if (
         rating is None
-        and not (comment and comment.strip())
-        and not (flagged_reason and flagged_reason.strip())
+        and not _has_feedback_text(comment)
+        and not _has_feedback_text(flagged_reason)
         and not citation_flags
     ):
         raise MCPError(code=INVALID_PARAMS, message=_NOTHING_TO_RECORD_MESSAGE)

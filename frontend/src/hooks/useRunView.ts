@@ -25,7 +25,8 @@
 
 import { useMemo } from "react";
 
-import type { AgentEvent, GuardPayload, Layer } from "../lib/events";
+import type { AgentEvent, GuardPayload } from "../lib/events";
+import { layerNumber } from "../lib/events";
 import { deriveStopEnabled } from "../components/chat/StopButton";
 import { CATEGORY_COPY } from "../components/chat/GuardrailBanner";
 import { isCapShapedError, CAP_MESSAGE_COPY } from "../components/chat/CapMessage";
@@ -77,17 +78,34 @@ const SYSTEM_NOTE_PREFIXES = [
   // (`TokenPayload.kind === "note"`), which is the classification this list
   // could never be. These stay for a producer that sends no `kind`.
   "Note: one further",
-  "Note: the written summary of these records could not be verified",
+  "Note: no written summary could be checked against the records",
+  "Note: this question reached its resource limit before it finished",
   "This is a research summary, not medical advice",
 ];
 
 /** The findings-tail note's opening words, `_FINDINGS_TAIL_NOTE` in core/graph.py. */
 export const FINDINGS_TAIL_NOTE_PREFIX = "Note: the records below were retrieved for this question";
 
+/**
+ * The opening words of the line under the variant-to-disease table,
+ * `VARIANT_TO_DISEASE_SOURCE_NOTE` in `synthesis/answer_layout.py`.
+ *
+ * Card 23's second part (J-23-01, A-23-01, 2026-10-07): the line describes one
+ * table, so it sits directly under that table in every case. A note otherwise
+ * attaches to the claim AFTER it, and when the table ended the answer there was
+ * none, so the line fell into the answer-wide Notes list. Matched by its words
+ * because nothing else on the wire tells it apart from an answer-wide note that
+ * also follows a table (the findings-tail note, "no written summary"); those
+ * keep their places. `test_answer_layout.py` holds this prefix to the backend
+ * constant, so a reworded line fails a test rather than moving silently.
+ */
+export const VARIANT_TABLE_SOURCE_NOTE_PREFIX = "Each row lists the conditions the variant's ClinVar record names";
+
 const isSystemNote = (text: string) =>
   SYSTEM_NOTE_PREFIXES.some((prefix) => text.trimStart().startsWith(prefix));
 import type { ReasoningStep, StepName, ToolCall } from "../components/screens/RunScreen";
 import type { Claim, Source, TrustSignal } from "../components/screens/AnswerScreen";
+import { citedSourceCounts } from "../components/screens/AnswerScreen";
 
 /**
  * How a source reads on a citation chip and a source card.
@@ -139,18 +157,6 @@ export function sourceDisplayName(source: string, sourceId: string): string {
     ? sourceId.slice(prefix.length)
     : sourceId;
   return `${source} ${deduped}`.trim();
-}
-
-/** The wire's layer strings, mapped to the design system's 1, 2, 3. */
-export function layerNumber(layer: Layer): 1 | 2 | 3 {
-  switch (layer) {
-    case "layer_1_graph":
-      return 1;
-    case "layer_2_api":
-      return 2;
-    default:
-      return 3;
-  }
 }
 
 /**
@@ -666,6 +672,12 @@ export function useRunView(events: AgentEvent[]): RunView {
     let pendingNotes: string[] = [];
     let pendingTableHeader: string[] | null = null;
     /*
+     * Card 23's second part: the last table row, while nothing but paragraph
+     * breaks has come after it. The variant-to-disease source line arriving
+     * then belongs under that table, whatever follows it, or nothing.
+     */
+    let openTableRow: Claim | null = null;
+    /*
      * 2026-09-14: true after the findings-tail note, until a heading. Every
      * claim in that span is a code-built record line ("Disease name: X"), so
      * the answer screen groups them into a record block instead of prose.
@@ -695,6 +707,7 @@ export function useRunView(events: AgentEvent[]): RunView {
       }
       if (kind === "heading") {
         nextParagraph();
+        openTableRow = null;
         inFindingsTail = false;
         const heading = event.payload.text.trim();
         if (heading) pendingHeading = heading;
@@ -704,13 +717,19 @@ export function useRunView(events: AgentEvent[]): RunView {
         const cells = event.payload.cells ?? [];
         // 2026-09-14: any column count; the Researcher table carries a third.
         pendingTableHeader = cells.length > 0 ? cells : null;
+        openTableRow = null;
         continue;
       }
       if (kind === "note") {
         nextParagraph();
         inFindingsTail = isFindingsTailNote(event.payload.text);
         const note = event.payload.text.trim();
-        if (note) pendingNotes.push(note);
+        if (note && openTableRow !== null && note.startsWith(VARIANT_TABLE_SOURCE_NOTE_PREFIX)) {
+          openTableRow.noteAfter = openTableRow.noteAfter ? `${openTableRow.noteAfter} ${note}` : note;
+        } else if (note) {
+          pendingNotes.push(note);
+        }
+        openTableRow = null;
         continue;
       }
       // R-08: a repeated marker_id must not produce a repeated chip.
@@ -820,6 +839,7 @@ export function useRunView(events: AgentEvent[]): RunView {
         }
         claimsInParagraph += 1;
       }
+      openTableRow = kind === "table_row" ? claim : null;
       claims.push(claim);
     }
     // Notes with no claim after them are disclosures about the whole answer.
@@ -1154,19 +1174,30 @@ export function useRunView(events: AgentEvent[]): RunView {
       }
     }
     /*
-     * Each figure NAMES what it counts (F-4.9-R-02).
+     * Each figure NAMES what it counts (F-4.9-R-02, card 22).
      *
      * The tools figure counts calls the run made; the layers figure counts
      * layers the answer actually rests on. Those are different bases, and the
      * old wording put them side by side as bare nouns, so "4 tools · 2 layers"
      * read as a contradiction of the reasoning log directly above it. Saying
      * "from N layers" ties the layer count to the sources it describes.
+     *
+     * Card 22 (owner, 2026-10-06): "18 sources" here counted numbered
+     * citations while "Based on 17 sources" and the Sources heading counted
+     * pages, on one screen. Every "sources" number now counts distinct pages
+     * under one key, read off the same grouping the Sources list renders
+     * (`citedSourceCounts`), so this reads "13 tool calls · 16 sources cited
+     * from 3 layers" and agrees with the list and the trust line. The layers
+     * figure counts every layer any cited page came from, which is the
+     * number of groups that list shows: a page cited from the graph and from
+     * a live fetch is one card, and both of its layers keep their group.
      */
+    const cited = citedSourceCounts(sources);
     const meta = landed
-      ? `${toolCalls.length} ${toolCalls.length === 1 ? "tool" : "tools"} · ` +
-        `${sources.length} ${sources.length === 1 ? "source" : "sources"}` +
-        (sources.length > 0
-          ? ` from ${layerCount} ${layerCount === 1 ? "layer" : "layers"}`
+      ? `${toolCalls.length} ${toolCalls.length === 1 ? "tool call" : "tool calls"} · ` +
+        `${cited.pages} ${cited.pages === 1 ? "source" : "sources"} cited` +
+        (cited.pages > 0
+          ? ` from ${cited.layers} ${cited.layers === 1 ? "layer" : "layers"}`
           : "")
       : "";
 

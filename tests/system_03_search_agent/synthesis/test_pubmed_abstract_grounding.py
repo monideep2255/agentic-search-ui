@@ -59,7 +59,10 @@ from system_03_search_agent.synthesis.findings import (
     build_synth_findings,
     render_findings_block,
 )
-from system_03_search_agent.synthesis.grounding import run_grounding_pass
+from system_03_search_agent.synthesis.grounding import (
+    SynthesisCandidate,
+    run_grounding_pass,
+)
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchOutput, NcbiEfetchRecord
 
 _ABSTRACT = (
@@ -133,8 +136,24 @@ def test_a_verbatim_abstract_excerpt_grounds_and_cites_its_own_paper() -> None:
     # excerpt itself grounds, so the sentence carries nothing else.
     narrative = f"{excerpt} [{abstract_finding.ref_index}]."
 
-    result = run_grounding_pass(narrative, synth_findings, question="What is known about BRCA1?")
-    assert result.grounded, "a verbatim excerpt of the retrieved abstract must ground"
+    # Card 101, round 4 (J3-101-01): the excerpt drops its record sentence's
+    # "Results:" label, so it is a cut, not a whole record sentence, and the
+    # sentence check reads it against the whole labelled sentence before it
+    # is shown. A colon is never a sentence start for the writer's copy:
+    # "Hypothesis:", "Myth:" or "RETRACTED:" are labels of the same shape.
+    question = "What is known about BRCA1?"
+    sink: list[SynthesisCandidate] = []
+    first = run_grounding_pass(narrative, synth_findings, question=question, candidate_sink=sink)
+    assert not first.grounded, "a cut is never shown before the check approves it"
+    assert [candidate.quotes for candidate in sink] == [
+        ("Results: " + excerpt + ".",)
+    ], "the check reads the whole labelled record sentence"
+
+    approved = frozenset(candidate.key for candidate in sink)
+    result = run_grounding_pass(
+        narrative, synth_findings, question=question, verified_syntheses=approved
+    )
+    assert result.grounded, "a verbatim excerpt the check approves must ground"
     assert result.stripped_count == 0, result
     assert any(excerpt in claim.claim_text for claim in result.claims), result.claims
 

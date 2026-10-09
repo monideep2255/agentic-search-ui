@@ -37,7 +37,7 @@ failure. That is safe in the security direction and wrong in the honest
 direction: a network blip is not evidence about the user's query, and
 reporting it as a refusal tells the user something false about what they
 asked. It would also make every outage look like a guardrail defect, which
-is a diagnostic confusion this repo has already paid for twice
+is a diagnostic confusion this repository has already paid for twice
 (`tracker/phase_2.2.md`, the environmental note).
 
 So a failure raises, the caller turns it into an `error` event, and the run
@@ -157,7 +157,7 @@ class InjectionClassification(BaseModel):
     # re-checked topicality after the pre-filter, so "What is the capital of
     # the USA?" was admitted with category="ok".
     #
-    # That is the F-2.1-J5-01 pattern this repo has already paid for once: a
+    # That is the F-2.1-J5-01 pattern this repository has already paid for once: a
     # confident comment asserting a property the code did not implement,
     # surviving review because a reader stops checking where the prose sounds
     # certain. The comment is now true because this field makes it true.
@@ -356,7 +356,7 @@ def build_messages(query_text: str) -> list[dict[str, str]]:
     ]
 
 
-def parse_classification(content: str) -> InjectionClassification:
+def parse_classification(content: str | None) -> InjectionClassification:
     """Deterministic accept-or-raise on the model's text.
 
     Never a fuzzy parse and never a partial read: `production-standards`
@@ -365,8 +365,12 @@ def parse_classification(content: str) -> InjectionClassification:
 
     Tolerates exactly one cosmetic deviation, a surrounding markdown code
     fence, because models add one routinely and it changes no field value.
-    Everything else raises.
+    Everything else raises. A reply with no content at all (`None`, as a
+    model returns when it ends on a tool call or a filter) is as unusable as
+    malformed text and raises the same way.
     """
+    if not isinstance(content, str):
+        raise ClassificationUnavailableError("the guard tier returned no content")
     stripped = content.strip()
     if stripped.startswith("```"):
         lines = [

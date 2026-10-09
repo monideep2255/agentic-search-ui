@@ -1,0 +1,10 @@
+items  1: calls  2, median 0.278 s, max 0.284 s
+items  2: calls  6, median 0.249 s, max 0.293 s
+items  3: calls  7, median 0.307 s, max 0.445 s
+items  4: calls 16, median 0.330 s, max 0.610 s
+items  5: calls 15, median 0.280 s, max 0.440 s
+items  6: calls 19, median 0.301 s, max 1.111 s
+items  7: calls 14, median 0.346 s, max 0.876 s
+items  8: calls 11, median 0.364 s, max 1.561 s
+items  9: calls  2, median 0.297 s, max 0.301 s
+items 10: calls  1, median 0.338 s, max 0.338 s

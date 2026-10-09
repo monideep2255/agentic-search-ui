@@ -40,17 +40,17 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.query import Query
 from system_03_search_agent.core.session_memory import _account_uuid, session_row_key
-from system_03_search_agent.feedback.contracts import InteractionRow
+from system_03_search_agent.feedback.contracts import MAX_CITATIONS_PER_ANSWER, InteractionRow
 from system_03_search_agent.feedback.coverage import coverage_tags_for
 from system_03_search_agent.feedback.rubric import rubric_outcome_for
 
 # Section 15's per-row cap on `normalized_entities`
 # (`InteractionRow.normalized_entities`, `max_length=20`) and on `citations`
-# (`max_length=50`). Enforced here too, not only left to the model
+# (`MAX_CITATIONS_PER_ANSWER`). Enforced here too, not only left to the model
 # validator, so a run that resolved or cited more than the cap is
 # truncated deterministically rather than raising at construction.
 _MAX_NORMALIZED_ENTITIES = 20
-_MAX_CITATIONS = 50
+_MAX_CITATIONS = MAX_CITATIONS_PER_ANSWER
 
 #: The stored bound on a saved answer, measured rather than picked. See
 #: `alembic/versions/0010_interactions_saved_answer.py`'s docstring for the
@@ -62,16 +62,30 @@ _MAX_CITATIONS = 50
 #: one they saw.
 MAX_ANSWER_MARKDOWN = 32000
 
-#: The two outcomes that actually put an answer on screen. A refusal or a
-#: clarifying question is deliberately NOT saved, and this is the narrow
-#: choice rather than the generous one. The answer screen renders those two
-#: outcomes from other events entirely (`useRunView.ts` strips a no-data
-#: refusal's own tokens from the claims list and renders the refusal message
-#: off the `trust_signal` payload instead), so saving their tokens would
-#: produce a stored view that differs from the screen the person saw. They
-#: fall back to today's behaviour, which costs that person nothing: someone
-#: who was refused wants to ask again anyway.
-_SAVEABLE_OUTCOMES = ("answer", "flag")
+#: The three outcomes that put an answer on screen: `answer`, `flag` and
+#: `ask`. Only `refuse` is not saved.
+#:
+#: `ask` WAS LEFT OUT UNTIL CARD 63 (2026-09-27), on a false premise: this
+#: comment called it "a clarifying question". It is not one. The locked
+#: specification's Section 8.3.3 defines `ask` as a high-stakes claim resting
+#: on a single independent-origin source, the web renders the whole `ask`
+#: answer with its "not yet confirmed" trust line, and an answer that lost a
+#: background search is floored to `ask` too. A clarifying question ends
+#: `trust_outcome="refuse"` (`core/graph.py`, `write_node`'s
+#: `clarification_needed` branch). About six answered searches in ten end
+#: `ask`, and none of them could be reopened from history or through MCP's
+#: `reopen_past_answer`.
+#: The product owner's decision of 2026-09-27: save every one of them, and
+#: change nothing about what counts as confirmed.
+#:
+#: A refusal, and so a clarifying question, is still deliberately NOT saved.
+#: The answer screen renders it from other events entirely (`useRunView.ts`
+#: strips a no-data refusal's own tokens from the claims list and renders
+#: the refusal message off the `trust_signal` payload instead), so saving
+#: its tokens would produce a stored view that differs from the screen the
+#: person saw. It falls back to today's behaviour, which costs that person
+#: nothing: someone who was refused wants to ask again anyway.
+_SAVEABLE_OUTCOMES = ("answer", "flag", "ask")
 
 
 def _cell(value: str) -> str:

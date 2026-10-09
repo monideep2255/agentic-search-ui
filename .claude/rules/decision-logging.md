@@ -3,11 +3,11 @@ description: "Log non-trivial decisions to DECISIONS.md when choosing between al
 scope: portable
 alwaysApply: false
 depends_on: [DECISIONS.md]
-paths: ["HANDOFF.md", "DECISIONS.md", "LEARNINGS.md", "testing/UI_fix_plan.md", "testing/UI_fixes_done.md", "docs/build/*", ".claude/skills/bossman-mode/*", ".claude/skills/bossman-mode/reference/*", "{tracker,requirements}/**/*"]
+paths: ["tracker/phase_*.md", ".claude/skills/phase-checkpoint/**/*", ".claude/skills/learnings/**/*"]
 ---
 ## Decision logging
 
-When a non-trivial choice is made between alternatives, log it to `DECISIONS.md` at the repo root.
+When a non-trivial choice is made between alternatives, log it to `DECISIONS.md` at the repository root.
 
 **What counts as a decision:**
 - Choosing one library/framework/tool over another
@@ -47,6 +47,4 @@ The `Why` cell is wrapped in a `<details>` dropdown, and every existing row foll
 - **Ask:** before logging something the user might consider too minor
 - **Deny:** never delete or modify existing decision entries (they're a historical record)
 
-**In software projects:** decisions accumulate fast. Log aggressively - the cost of re-debating a settled choice is always higher than the cost of one extra table row.
-
-**In documentation projects:** decisions are rarer and usually get promoted to rules. Log the ones that fall between "too small for a rule" and "too persistent for memory."
+Decisions accumulate fast in a software project. Log them: the cost of re-debating a settled choice is always higher than the cost of one extra table row.

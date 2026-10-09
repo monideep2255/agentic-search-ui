@@ -1,0 +1,63 @@
+For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies are linked to it? Mark each link as direct, inferred, or absent.
+New search
+
+✓ Answered23.0s · 12 tools · 13 sources from 1 layer
+
+Show work ▾
+
+I found 5 records, 2 research projects, 1 sequencing dataset and 5 genome assemblies related to PMID 11237011.⁠1–13
+
+WHERE THIS ANSWER COMES FROM
+Homo sapiens major histocompatibility complex, class II, DR beta 7 (pseudogene) (HLA-DRB7) on chromosome 6	⁠1
+Homo sapiens major histocompatibility complex, class II, DR beta 8 (pseudogene) (HLA-DRB8) on chromosome 6	⁠2
+Homo sapiens ribose 5-phosphate isomerase A pseudogene 1 (RPIAP1) on chromosome 18	⁠3
+Homo sapiens heat shock protein family D (Hsp60) member 1 pseudogene 11 (HSPD1P11) on chromosome 5	⁠4
+Homo sapiens heat shock protein family D (Hsp60) member 1 pseudogene (LOC100462988) on chromosome 12	⁠5
+RefSeq annotation of the human reference genome assembly	⁠6
+The Human Genome Project, currently maintained by the Genome Reference Consortium (GRC)	⁠7
+SRR9496657	⁠8
+GRCh38.p11	⁠9
+GRCh38.p14	⁠10
+Showing 1–10 of 13
+‹ Previous
+Page 1 of 2
+Next ›
+NOTES
+NCBI lists 1587 sequence records linked to PMID 11237011; this answer shows 10.
+NCBI lists no linked BioSamples for PMID 11237011.
+NCBI lists no linked GEO records for PMID 11237011.
+NCBI lists 29 genome assemblies linked to PMID 11237011; this answer shows 10.
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+13
+Based on 13 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- LINKS ---
+ -> https://www.ncbi.nlm.nih.gov/nuccore/1317049034
+ -> https://www.ncbi.nlm.nih.gov/nuccore/1317049037
+ -> https://www.ncbi.nlm.nih.gov/nuccore/1519474710
+ -> https://www.ncbi.nlm.nih.gov/nuccore/1519499590
+ -> https://www.ncbi.nlm.nih.gov/nuccore/1519499605
+ -> https://www.ncbi.nlm.nih.gov/bioproject/168
+ -> https://www.ncbi.nlm.nih.gov/bioproject/31257
+ -> https://www.ncbi.nlm.nih.gov/sra/8317276
+ -> https://www.ncbi.nlm.nih.gov/assembly/1132361
+ -> https://www.ncbi.nlm.nih.gov/assembly/11968211
+ -> https://www.ncbi.nlm.nih.gov/assembly/1493941
+ -> https://www.ncbi.nlm.nih.gov/assembly/2334371
+ -> https://www.ncbi.nlm.nih.gov/assembly/561668
+
+TIME_TO_ANSWER_SECONDS=24.2 askback=false

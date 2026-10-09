@@ -511,3 +511,63 @@ class TestAuth:
         run_id = result.structured_content["run_id"]
         entry = run_registry_module.default_registry.get_run(run_id)
         assert entry.user_id == user_id
+
+
+class TestARefusedTokenSaysWhatToDo:
+    """Card 62, PR-8.10-11: a guest who reached MCP with the token
+    `POST /auth/guest` gave them was told "missing, malformed, or invalid
+    bearer token", while the Integrations page says MCP needs an account.
+    Each refusal now says which of the three it is, that MCP needs an
+    account, and how to get a token. Only the words changed: who is let in
+    is pinned by `TestAuth` above and by `test_parity_tools.py`.
+
+    Mutation that turns these red: put back the one shared message."""
+
+    @staticmethod
+    def _says_how_to_get_a_token(message: str) -> None:
+        assert "needs a System 3 account" in message
+        assert "POST /auth/login" in message
+        # `s3 mcp` renews its sign-in when a refusal names the bearer token
+        # (`mcp_bridge._is_token_refusal`), and so does every copy already
+        # installed, so every refusal must keep saying it.
+        from system_03_search_agent.adapters.cli.mcp_bridge import _is_token_refusal
+
+        assert _is_token_refusal({"jsonrpc": "2.0", "id": 1, "error": {"message": message}})
+
+    @pytest.mark.asyncio
+    async def test_no_token_says_an_account_is_needed(self) -> None:
+        error = await _call_tool_expecting_mcp_error(None, {"query": "What gene is BRCA1?"})
+        assert error.message.startswith("no bearer token")
+        self._says_how_to_get_a_token(error.message)
+
+    @pytest.mark.asyncio
+    async def test_a_header_without_the_bearer_scheme_is_called_malformed(self) -> None:
+        error = await _call_tool_expecting_mcp_error(
+            {"Authorization": "Token abc.def.ghi"}, {"query": "What gene is BRCA1?"}
+        )
+        assert error.message.startswith("malformed bearer token")
+        self._says_how_to_get_a_token(error.message)
+
+    @pytest.mark.asyncio
+    async def test_a_token_that_does_not_verify_is_called_invalid(self) -> None:
+        error = await _call_tool_expecting_mcp_error(
+            {"Authorization": "Bearer this.is.not-a-real-jwt"}, {"query": "What gene is BRCA1?"}
+        )
+        assert error.message.startswith("invalid bearer token")
+        self._says_how_to_get_a_token(error.message)
+
+    @pytest.mark.asyncio
+    async def test_a_real_guest_token_is_told_an_account_is_needed(self) -> None:
+        async with httpx2.AsyncClient(
+            transport=httpx2.ASGITransport(app=app), base_url=_BASE_URL
+        ) as client:
+            minted = await client.post("/auth/guest")
+        assert minted.status_code == 201, "populate check: a real guest token was minted"
+
+        error = await _call_tool_expecting_mcp_error(
+            {"Authorization": f"Bearer {minted.json()['guest_token']}"},
+            {"query": "What gene is BRCA1?"},
+        )
+        assert error.message.startswith("invalid bearer token")
+        assert "guest token cannot be used" in error.message
+        self._says_how_to_get_a_token(error.message)

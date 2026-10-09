@@ -1,0 +1,79 @@
+QUESTION: Any trials for GERD?
+LANDED=answer SECONDS=49.8
+
+Any trials for GERD?
+New search
+
+? Answered47.1s · 8 tools · 12 sources from 2 layers
+
+Show work ▾
+
+I found 5 clinical trials related to GERD.⁠1–5
+
+WHERE THIS ANSWER COMES FROM
+Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease	⁠1
+Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339)	⁠2
+Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents	⁠3
+On Demand Treatment of Reflux Disease	⁠4
+Treatment Of Gastroesophageal Reflux Disease By Endoscopic Fundoplication, A Placebo-Controlled Study	⁠5
+Gastroesophageal Reflux Disease.	⁠6
+Gastroesophageal reflux (GERD)	⁠7
+Gastroesophageal Reflux	⁠8
+Gastroesophageal Reflux Disease.	⁠9
+Gastroesophageal Reflux Disease.	⁠10
+Showing 1–10 of 12
+‹ Previous
+Page 1 of 2
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+12
+Based on 12 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+BUTTONS:
+New search
+Show work ▾
+1–5
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+‹ Previous
+Next ›
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+
+LINKS:
+ -> https://pubmed.ncbi.nlm.nih.gov/29132520/
+ -> https://www.ncbi.nlm.nih.gov/medgen/1795938
+ -> https://pubmed.ncbi.nlm.nih.gov/33351044/
+ -> https://pubmed.ncbi.nlm.nih.gov/36170502/
+ -> https://pubmed.ncbi.nlm.nih.gov/37034973/
+ -> https://pubmed.ncbi.nlm.nih.gov/37516506/
+ -> https://clinicaltrials.gov/study/NCT00141960
+ -> https://clinicaltrials.gov/study/NCT00163306
+ -> https://clinicaltrials.gov/study/NCT00181805
+ -> https://clinicaltrials.gov/study/NCT00184522
+ -> https://clinicaltrials.gov/study/NCT00235677
+ -> https://www.ncbi.nlm.nih.gov/mesh/D005764

@@ -300,8 +300,10 @@ def _classify_as(monkeypatch: pytest.MonkeyPatch, query_class: str) -> None:
     longer exercises cypher_query's generated-Cypher path and its two
     plan-tier generation calls. The arms that pin that path classify the
     same question as `aggregate`, where the model path is still the
-    deliberate behaviour (a count is something a record cannot give; see
-    the 2026-09-22 consistency run, G-034).
+    deliberate behaviour for a question asking for a count (a count is
+    something a record cannot give; see the 2026-09-22 consistency run,
+    G-034; since 2026-10-05 an `aggregate` gene question with no count
+    request takes the record too).
     """
     import sys
 
@@ -426,7 +428,7 @@ async def _run_graph(query: Query, context: RequestContext) -> list[Event]:
     """Invoke the compiled graph directly (not via `core.run.run()`).
 
     Wrapped in `tracing_context(enabled=False)` for the same reason
-    `core.run.run()` itself is (see its module docstring): this repo's
+    `core.run.run()` itself is (see its module docstring): this repository's
     `.env` sets `LANGCHAIN_TRACING_V2=true` ahead of the real phase
     5.0/5.1 tracing integration, and invoking a compiled LangGraph graph
     without disabling tracing makes a real, noisy, failing outbound call
@@ -676,7 +678,7 @@ async def test_plan_calls_the_plan_tier_model_three_times_on_the_model_path(
     internal generate_cypher attempts after Think's own call, three
     plan-tier calls in all."""
     _classify_as(monkeypatch, "aggregate")
-    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    query = _valid_query(text=_GENE_COUNT_QUERY_TEXT)
     await _run_graph(query, _valid_context())
     plan_tier_calls = [
         call
@@ -803,7 +805,7 @@ async def test_exactly_one_of_five_model_path_calls_carries_the_stable_prefix(
     still exactly one, Write's, carrying the stable prefix, since the two
     generate_cypher calls never do (F-06)."""
     _classify_as(monkeypatch, "aggregate")
-    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    query = _valid_query(text=_GENE_COUNT_QUERY_TEXT)
     await _run_graph(query, _valid_context())
     loop_calls = _loop_calls(_mock_litellm)
     assert len(loop_calls) == 5
@@ -860,7 +862,7 @@ async def test_five_model_calls_fire_when_a_tool_runs_on_the_model_path(
     Counted without the classifier seam's decision calls (build phase 8.2).
     """
     _classify_as(monkeypatch, "aggregate")
-    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    query = _valid_query(text=_GENE_COUNT_QUERY_TEXT)
     await _run_graph(query, _valid_context())
     assert len(_loop_calls(_mock_litellm)) == 5
 
@@ -1569,6 +1571,110 @@ def test_truncated_answer_note_is_one_sentence_opening_with_note(
     assert note.startswith("Note:"), note
     assert "." not in note, f"an interior period fragments the note into uncited claims: {note!r}"
     assert ";" not in note, f"an interior semicolon fragments the note into uncited claims: {note!r}"
+
+
+@pytest.mark.asyncio
+async def test_truncation_note_and_more_to_show_count_record_pages_not_citations(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Card 22 fix round (2026-10-06, A-22-04): "truncated to N records" and
+    the "more to show" count both said records and counted numbered
+    citations, while every other total on the screen counts distinct pages.
+
+    150 rows past the display cap, where rows 0 and 1 cite one gene page,
+    once without and once with a trailing slash (the graph's and the live
+    Datasets builder's spellings of one link). The note's N and the offer's
+    remaining count must both count that page once. Mutation: pass
+    `len(citations)` again at either call site and its arm fails.
+    """
+    harness = harness_module.Harness(trace_id="test-trace-truncation-pages")
+    call = ToolCall(tool="cypher_query", call_id="call-truncation-pages", layer="layer_1_graph")
+    row_count = 150
+    rows = [_unique_citeable_row(i) for i in range(row_count)]
+    rows[1]["source_url"] = f"{rows[0]['source_url']}/"
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": rows,
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    citations = [event.payload for event in events if event.type == "citation"]
+    urls = [citation["source_url"] for citation in citations]
+    assert rows[0]["source_url"] in urls and rows[1]["source_url"] in urls, (
+        "populate-check: both spellings of the one gene page must be cited, "
+        "or a citation count and a page count cannot be told apart"
+    )
+    pages = len({url.rstrip("/") for url in urls})
+    assert pages == len(citations) - 1
+
+    note = next(
+        event.payload["text"]
+        for event in events
+        if event.type == "token" and "truncated to" in event.payload["text"]
+    )
+    assert f"truncated to {pages} of the {row_count} records" in note, note
+
+    done = next(event.payload for event in events if event.type == "done")
+    offer = done["next_step"]
+    assert offer is not None and str(row_count - pages) in offer, offer
+    assert str(row_count - len(citations)) not in offer, offer
+
+
+@pytest.mark.asyncio
+async def test_the_trust_line_is_computed_from_the_cited_claims_only(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Card 22 last round (V-22-01, V-22-03): "Confirmed by N independent
+    databases" may count only records the reader can open, so the write
+    step hands `answer_trust_line` the grounded claims, exactly the records
+    its citation events list, and no findings pool. 150 rows past the
+    display cap leave findings that are prepared but not cited, so a call
+    that passes the pool, or claims built from it, fails here.
+    """
+    seen: list[tuple[tuple[object, ...], dict[str, object]]] = []
+    real = graph_module.answer_trust_line
+
+    def spy(*args: object, **kwargs: object) -> str | None:
+        seen.append((args, kwargs))
+        return real(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(graph_module, "answer_trust_line", spy)
+    harness = harness_module.Harness(trace_id="test-trace-trust-line-wiring")
+    call = ToolCall(tool="cypher_query", call_id="call-trust-line-wiring", layer="layer_1_graph")
+    row_count = 150
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": [_unique_citeable_row(i) for i in range(row_count)],
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    assert len(seen) == 1, f"one trust line per answer, got {len(seen)} calls"
+    args, kwargs = seen[0]
+    assert kwargs == {}, f"no findings pool may reach the trust line: {sorted(kwargs)}"
+    assert len(args) == 3
+    claims = args[2]
+    cited_ids = {event.payload["citation_id"] for event in events if event.type == "citation"}
+    claim_ids = {claim.finding.citation_id for claim in claims}  # type: ignore[attr-defined]
+    assert cited_ids and claim_ids == cited_ids
+    assert len(cited_ids) < row_count, "populate-check: some prepared rows must go uncited"
 
 
 # ---------------------------------------------------------------------------
@@ -2983,6 +3089,10 @@ async def test_act_node_calls_coordinator_worker_execute_with_empty_lists_for_a_
 # ---------------------------------------------------------------------------
 
 _GRAPH_ANSWERABLE_QUERY_TEXT = "What gene is associated with BRCA1?"
+# A Gene count request with no shape: the one `aggregate` question that still
+# takes the model path (2026-10-05, card 91; a count is something a record
+# cannot give).
+_GENE_COUNT_QUERY_TEXT = "How many records does BRCA1 have?"
 
 
 @pytest.mark.asyncio
@@ -3705,7 +3815,7 @@ def test_leaked_vocabulary_names_are_recognised_as_artifacts(value: str) -> None
 
     They are source-vocabulary abbreviations that leaked into MedGen's name
     column during ingest. The data defect belongs to Layer 1; the confidence
-    signal this repo staples to it is ours, and asserting full confidence in
+    signal this repository staples to it is ours, and asserting full confidence in
     a value that names a vocabulary rather than a disease is the trust-signal
     defect F-2.1-B07 filed.
     """
@@ -5017,7 +5127,7 @@ def test_live_wins_for_currency_is_a_no_op_with_only_one_layer() -> None:
 # ---------------------------------------------------------------------------
 # T-3.4-06, Section 7.4: staleness auto-cross-verify
 # (_apply_layer1_staleness_notes). F-3.4-T06-01 (live-confirmed against the
-# real graph, 2026-08-09): no real Layer 1 field this repo's ingest returns
+# real graph, 2026-08-09): no real Layer 1 field this repository's ingest returns
 # matches VOLATILE_FIELD_EXAMPLES/STABLE_FIELD_EXAMPLES today (every vertex
 # label carries the identical generic id/name/xrefs/source/agent_type/
 # source_url/knowledge_level property set; see `_field_class_for_layer1_
@@ -5165,7 +5275,7 @@ def test_layer1_staleness_note_does_not_fire_when_fresh() -> None:
 
 def test_layer1_staleness_note_does_not_fire_on_an_unresolved_field_class() -> None:
     """F-3.4-T06-01: this is the real, live production shape today. Every
-    Layer 1 citation this repo can build carries a generic field name
+    Layer 1 citation this repository can build carries a generic field name
     ("name" among the fixed seven generic keys), never a VOLATILE_FIELD_
     EXAMPLES/STABLE_FIELD_EXAMPLES member, so this must never fire against
     real data, confirmed here with a snapshot old enough that it would
@@ -5484,6 +5594,59 @@ def test_citations_from_grounded_claims_leaves_both_none_when_absent(
     assert len(citations) == 1
     assert citations[0].snapshot_date is None
     assert citations[0].entity_name is None
+
+
+def test_a_record_cited_by_two_sentences_shows_the_words_behind_each() -> None:
+    """Card 57 (F-8.10-A11): "about 40% of inherited breast cancers [7]"
+    showed citation 7 as "The encoded protein participates in transcription",
+    the sentence before it, because the first clause won. Each sentence's
+    checked words must be on the citation it binds to: the copied sentence's
+    own text, and the reworded sentence's quote, numbers included."""
+    from system_03_search_agent.synthesis.findings import SynthFinding
+    from system_03_search_agent.synthesis.grounding import GroundedClaim, GroundingResult
+
+    source_url = "https://www.ncbi.nlm.nih.gov/gene/672"
+    summary = SynthFinding(
+        ref_index=1, citation_id="cq-1-1", layer="layer_1_graph", tool="cypher_query",
+        field="summary",
+        field_value=(
+            "The encoded protein participates in transcription, DNA repair of "
+            "double-stranded breaks, and recombination. Mutations in this gene are "
+            "responsible for approximately 40% of inherited breast cancers."
+        ),
+        source_url=source_url, curie="NCBIGene:672", entity_type="Gene",
+    )
+    first = "The encoded protein participates in transcription"
+    quote = "responsible for approximately 40% of inherited breast cancers"
+    grounding = GroundingResult(
+        narrative=f"{first} [1]. Changes in this gene cause about 40% of inherited breast cancers [1].",
+        claims=[
+            GroundedClaim(claim_text=first, finding=summary),
+            GroundedClaim(
+                claim_text="Changes in this gene cause about 40% of inherited breast cancers",
+                finding=summary, evidence_quote=quote,
+            ),
+        ],
+        stripped_count=0,
+        refused=False,
+    )
+    findings = [
+        _layer1_finding_with_row(call_id="cq-1", source_url=source_url, fields={"summary": "x"})
+    ]
+
+    citations = graph_module._citations_from_grounded_claims(grounding, findings)
+
+    assert len(citations) == 1
+    assert first in citations[0].claim_text
+    assert quote in citations[0].claim_text
+    assert "40%" in citations[0].claim_text
+
+
+def test_joined_checked_words_keep_each_entry_whole_within_the_bound() -> None:
+    long_entry = "a" * 990
+    assert graph_module._joined_checked_words([long_entry, "about 40% of cases"]) == long_entry
+    assert graph_module._joined_checked_words(["one", "two"]) == "one two"
+    assert len(graph_module._joined_checked_words(["b" * 1200])) == 1000
 
 
 def test_field_class_for_layer1_field_matches_real_graph_data_today() -> None:
@@ -7013,6 +7176,26 @@ async def test_a_decision_nobody_made_is_recorded_as_what_the_run_did(
     assert record.chosen == acted_on == spec.fail_open
     assert record.fallback_reason == "no_usable_pick"
     assert graph_module._done_decisions(harness) == [record]
+
+
+def test_ask_back_spec_says_a_subject_plus_a_wanted_kind_is_a_request() -> None:
+    """Card 87: a short message that names a subject and the kind of thing
+    wanted (including therapy options) is answered, not asked back.
+
+    This pins the spec text only. Which way the classifier picks is checked
+    by live runs against it (testing/Developer/reports/2026-10-05_wave1/
+    card87.md), which a unit test cannot do.
+    """
+    spec = graph_module._ASK_BACK
+    proceed = spec.criteria["proceed"]
+    ask_back = spec.criteria["ask_back"]
+
+    assert "therapy options" in proceed
+    assert "variants" in proceed, "the old example must not be dropped"
+    assert "followed by a word that names the wanted kind of information" in proceed
+    assert "is a request, not a bare subject" in proceed
+    assert "no word saying what to find out" in ask_back
+    assert spec.fail_open == "proceed"
 
 
 # ---------------------------------------------------------------------------

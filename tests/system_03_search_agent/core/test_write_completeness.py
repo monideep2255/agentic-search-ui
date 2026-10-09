@@ -372,6 +372,96 @@ async def test_a_repair_that_adds_without_dropping_is_kept(
     assert "further disease record" not in narrative
 
 
+def _install_drafts(monkeypatch: pytest.MonkeyPatch, first: str, repair: str) -> list[tuple[str, ...]]:
+    """Serve two hand-written drafts and record the grounded sentences that
+    reach the restatement step, which is the first thing downstream of the
+    draft choice. The record-value sentences these fixtures use are dropped
+    there as restatements of the listing, so the shipped prose alone cannot
+    show which draft won."""
+
+    async def _dispatch(*_args: object, **kwargs: object):
+        messages = kwargs.get("messages") or []
+        joined = "\n".join(m.get("content") or "" for m in messages)  # type: ignore[union-attr]
+        if _CORRECTION_MARKER in joined:
+            return _fake_response(repair)
+        if SYNTH_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(first)
+        return _fake_response("ok")
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", AsyncMock(side_effect=_dispatch))
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
+    )
+    chosen: list[tuple[str, ...]] = []
+    original = graph_module.drop_record_restatements
+
+    def _recording(grounding, findings):
+        chosen.append(tuple(grounding.sentences))
+        return original(grounding, findings)
+
+    monkeypatch.setattr(graph_module, "drop_record_restatements", _recording)
+    return chosen
+
+
+_FIRST_DRAFT = (
+    "Disease MedGen:C1, name: disease name number 1 [1]. "
+    "Disease MedGen:C2, name: disease name number 2 [2]."
+)
+
+
+@pytest.mark.asyncio
+async def test_a_repair_on_the_same_records_with_more_sentences_is_kept(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 88 (2026-10-05): a repair that keeps every reported record and
+    grounds more sentences wins. Measured locally on the GERD question: a
+    first draft with one surviving sentence beat a repair with three on the
+    same abstract, because the repair cited no NEW record.
+
+    MUTATION PROOF. On the code before card 88's repair change (the strict
+    superset alone) this arm is red: the first draft's two sentences reach
+    the restatement step, not the repair's three.
+    """
+    extra = "MedGen:C1 is disease name number 1 [1]."
+    chosen = _install_drafts(monkeypatch, _FIRST_DRAFT, f"{_FIRST_DRAFT} {extra}")
+    _tail_cannot_ground(monkeypatch)
+
+    await graph_module.write_node(_write_state())
+
+    assert chosen, "populate-check: the restatement step never ran"
+    assert len(chosen[0]) == 3, chosen
+    assert extra in chosen[0], chosen
+
+
+@pytest.mark.asyncio
+async def test_a_repair_with_more_sentences_that_drops_a_record_still_loses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-4.5-J-13 still holds: more sentences never buy a dropped record. The
+    repair grounds three sentences, all on record 2, and loses record 1.
+
+    MUTATION PROOF. Accepting on the sentence count alone
+    (`len(repaired_grounding.sentences) > len(grounding.sentences)`) turns
+    this arm red: record 1's sentence is gone from what reaches the
+    restatement step.
+    """
+    repair = (
+        "Disease MedGen:C2, name: disease name number 2 [2]. "
+        "MedGen:C2 is disease name number 2 [2]. "
+        "The name of MedGen:C2 is disease name number 2 [2]."
+    )
+    chosen = _install_drafts(monkeypatch, _FIRST_DRAFT, repair)
+    _tail_cannot_ground(monkeypatch)
+
+    await graph_module.write_node(_write_state())
+
+    assert chosen, "populate-check: the restatement step never ran"
+    assert any("disease name number 1" in sentence for sentence in chosen[0]), chosen
+    assert len(chosen[0]) == 2, chosen
+
+
 # ---------------------------------------------------------------------------
 # Speed fix (2026-09-14): the repair is skipped exactly when the code-built
 # lines will cite every finding the model left out.
@@ -888,8 +978,8 @@ async def test_the_fallback_note_and_the_incomplete_note_do_not_contradict(
 ) -> None:
     """Product-owner defect (2026-09-20): a live answer showed
 
-        Note: the written summary of these records could not be verified
-        against them, so this answer lists the records found instead
+        Note: no written summary could be checked against the records,
+        so the records found are listed below with their sources
         Note: 5 further pubmed records were found for this question and
         are not covered in the summary above
 
@@ -1436,3 +1526,59 @@ async def test_the_done_events_elapsed_time_covers_the_writing_step(
 
     done = next(event for event in result["events"] if event.type == "done")
     assert done.payload["elapsed_ms"] >= 300, done.payload["elapsed_ms"]
+
+
+@pytest.mark.asyncio
+async def test_the_fallback_note_is_one_plain_line_with_no_blame(synth_pair) -> None:
+    """Owner decision D1 (2026-10-05): when no written sentence survives, the
+    reader is told in plain words and the records are listed with sources."""
+    synth_pair(first=set(), repaired=set())
+    result = await graph_module.write_node(_write_state())
+    note = graph_module._build_structured_fallback_note()
+    assert note == (
+        "Note: no written summary could be checked against the records, "
+        "so the records found are listed below with their sources"
+    )
+    assert note in _narrative(result["events"])
+
+
+@pytest.mark.asyncio
+async def test_a_limit_hit_run_lists_what_was_gathered_with_citations(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 46: the note said "the answer below reflects a partial result"
+    over an empty page. A run that hit its limit after Act now lists the
+    findings gathered, one citation each, through the structured fallback,
+    makes no writing call, and says plainly why the list is what it is.
+
+    RED before the change: `write_node` returned only the limit note and a
+    `done`, with no citation event."""
+    mock = AsyncMock(side_effect=AssertionError("no model call after the limit"))
+    monkeypatch.setattr(harness_module.litellm, "acompletion", mock)
+    state = _write_state()
+    state["cap_exceeded"] = True
+    result = await graph_module.write_node(state)
+    events = result["events"]
+
+    assert mock.await_count == 0
+    citations = _events_of(events, "citation")
+    assert {c.payload["source_url"] for c in citations} == {row["source_url"] for row in _ROWS}
+    narrative = _narrative(events)
+    for row in _ROWS:
+        assert row["fields"]["name"] in narrative, narrative
+    assert graph_module._build_cap_list_note() in narrative
+    assert "written summary" not in narrative
+    done = _events_of(events, "done")[0].payload
+    assert done["trust_outcome"] == "ask", done
+
+
+@pytest.mark.asyncio
+async def test_a_limit_hit_run_with_nothing_gathered_keeps_the_limit_note() -> None:
+    state = _write_state()
+    state["cap_exceeded"] = True
+    state["findings"] = []
+    state["findings_count"] = 0
+    result = await graph_module.write_node(state)
+    events = result["events"]
+    assert not _events_of(events, "citation")
+    assert _events_of(events, "done")[0].payload["trust_outcome"] == "flag"

@@ -1,0 +1,36 @@
+A {'items': 18, 'before': 108, 'after': 109, 'fewer': 0, 'more': 1, 'changed': 4}
+F {'items': 144, 'before': 765, 'after': 737, 'fewer': 19, 'more': 6, 'changed': 31}
+B {'items': 23, 'before': 223, 'after': 227, 'fewer': 1, 'more': 3, 'changed': 8}
+R {'items': 20, 'before': 99, 'after': 103, 'fewer': 0, 'more': 3, 'changed': 5}
+A items with fewer pairs: none
+A d-med3-c1-i6 removed [] added ['most affected']
+A w-gp1-c2-i6 removed ['most commonly'] added ['commonly reported']
+A w-gp4-c2-i6 removed ['most commonly'] added ['commonly reported']
+A w-cm5-c1-i8 removed ['10 variants'] added ['variants seen']
+F items whose proposals shrink:
+  d-med1-c2-i2 removed ['infection oxidative', 'oxidative stressor'] added []
+  d-med2-c1-i1 removed ['infection oxidative', 'oxidative stressor'] added []
+  d-gerd2-c1-i5 removed ['gerd include', 'include defects'] added []
+  d-gerd3-c2-i3 removed ['outpatient setting'] added []
+  w-gp1-c1-i5 removed ['commonly reported', 'most commonly'] added []
+  w-gr1-c2-i2 removed ['gerd include', 'include defects'] added []
+  w-gr1-c2-i3 removed ['most effectively', 'treated with'] added []
+  w-gr3-c1-i6 removed ['gerd include', 'include defects'] added []
+  w-gr3-c1-i9 removed ['limit complications', 'to limit'] added []
+  w-gr4-c1-i4 removed ['most effectively', 'treated with'] added []
+  w-gr5-c1-i6 removed ['most effectively', 'treated with'] added []
+  w-md2-c1-i2 removed ['infection oxidative', 'oxidative stressor', 'stressor in'] added []
+  w-md2-c2-i1 removed ['affected worldwide'] added []
+  w-md2-c2-i3 removed ['contributes to', 'specific variant'] added []
+  w-md2-c2-i4 removed ['fmf variant'] added []
+  w-cp2-c1-i2 removed ['affects quality', 'gerd affects'] added []
+  w-cp3-c1-i5 removed ['most commonly', 'reported to'] added []
+  w-cr3-c2-i3 removed ['outpatient setting'] added []
+  w-cr4-c1-i6 removed ['gerd include', 'include defects'] added []
+F items whose proposals grow:
+  d-med3-c1-i1 removed [] added ['infection oxidative']
+  w-gr5-c2-i6 removed ['including proton', 'warrant referral'] added ['discuss clinical', 'symptoms including', 'that warrant']
+  w-md3-c2-i3 removed ['fever abdominal'] added ['mediterranean fever', 'recurrent fever']
+  w-md4-c1-i3 removed [] added ['infection oxidative']
+  w-md4-c2-i3 removed [] added ['specific variant', 'variant contributes']
+  w-cr3-c2-i6 removed [] added ['gastroenterology specialists']

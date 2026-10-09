@@ -1,0 +1,119 @@
+? Answered13.6s · 13 tool calls · 61 sources cited from 3 layers
+
+Show work ▾
+
+Found 38 sequence variant records for HNF1A, linked to 6 diseases: Maturity-onset diabetes of the young, Diabetes mellitus type 1, Type 2 diabetes mellitus, Maturity-onset diabetes of the young type 3, Type 1 diabetes mellitus 20 and Monogenic diabetes.⁠1–20
+
+DISEASE RECORDS FOUND
+Maturity-onset diabetes of the young⁠2
+MedGen:C0342276
+Diabetes mellitus type 1⁠4
+MedGen:C0011854
+Type 2 diabetes mellitus⁠5
+MedGen:C0011860
+Maturity-onset diabetes of the young type 3⁠6
+MedGen:C1838100
+Type 1 diabetes mellitus 20⁠7
+MedGen:C2675866
+Monogenic diabetes⁠9
+MedGen:C3888631
+VARIANT-TO-DISEASE MAPPING
+NM_000545.8(HNF1A):c.780G>A (p.Thr260=)⁠1, 2
+ClinVar:1025247
+Maturity-onset diabetes of the young
+NM_000545.8(HNF1A):c.1380_1406del (p.Gln460_Leu468del)⁠2–7
+ClinVar:1026109
+Diabetes mellitus type 1; Type 2 diabetes mellitus; Maturity-onset diabetes of the young; Maturity-onset diabetes of the young type 3; Type 1 diabetes mellitus 20
+NM_000545.8(HNF1A):c.58G>A (p.Gly20Arg)⁠2 +4
+ClinVar:1033090
+Maturity-onset diabetes of the young; Maturity-onset diabetes of the young type 3; Type 1 diabetes mellitus 20; Monogenic diabetes
+NM_000545.8(HNF1A):c.355G>A (p.Val119Ile)⁠10, 2
+ClinVar:1036297
+Maturity-onset diabetes of the young
+NM_000545.8(HNF1A):c.1524G>T (p.Glu508Asp)⁠11, 2
+ClinVar:1043641
+Maturity-onset diabetes of the young
+NM_000545.8(HNF1A):c.869C>A (p.Pro290His)⁠12
+ClinVar:1048822
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.1769-3C>T⁠13
+ClinVar:1051750
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.238G>T (p.Asp80Tyr)⁠14
+ClinVar:1098821
+None named: the ClinVar record says not specified
+NM_000545.8(HNF1A):c.681G>A (p.Glu227=)⁠15
+ClinVar:1104934
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.542G>C (p.Gly181Ala)⁠16
+ClinVar:1105252
+None named: the ClinVar record says not provided
+Showing 1–10 of 38
+‹ Previous
+Page 1 of 4
+Next ›
+
+Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI.
+
+GENE RECORDS FOUND
+HNF1A⁠45, 49
+NCBIGene:6927
+PUBMED RECORDS FOUND
+Genotype and phenotype correlations in 417 children with congenital hyperinsulinism.⁠46
+PMID:23275527
+HNF1A-AS1: A Tumor-associated Long Non-coding RNA.⁠51
+PMID:35619319
+Reduced penetrance of MODY-associated HNF1A/HNF4A variants but not GCK variants in clinically unselected cohorts.⁠54
+PMID:36257325
+HNF4A and HNF1A exhibit tissue specific target gene regulation in pancreatic beta cells and hepatocytes.⁠57
+PMID:38909044
+HNF1A and A1CF coordinate a beta cell transcription-splicing axis that is disrupted in type 2 diabetes.⁠60
+PMID:40774250
+CLINVAR RECORDS FOUND
+NM_000545.8(HNF1A):c.1134C>G (p.Pro378=)⁠47
+VCV004874044
+NM_000545.8(HNF1A):c.831C>G (p.Phe277Leu)⁠52
+VCV004882857
+NM_000545.8(HNF1A):c.1162A>G (p.Ser388Gly)⁠55
+VCV004882872
+NM_000545.8(HNF1A):c.1623+6G>T⁠58
+VCV004885757
+NM_000545.8(HNF1A):c.163G>A (p.Gly55Arg)⁠61
+VCV004885769
+OMIM RECORDS FOUND
+HNF1 HOMEOBOX A; HNF1A⁠48
+omim 142410
+CLINICAL TRIAL RECORDS FOUND
+Long Term Follow up of a Cohort of Children With TCF2 Mutation:Evolution of Endocrine and Renal Function⁠50
+NCT00760331
+ACTIVE_NOT_RECRUITING
+Using Pharmacogenetics to Improve Treatment in Early-onset Diabetes⁠53
+NCT01238380
+COMPLETED
+Modulation of Cerebral Blood Flow Using Iron Chelators⁠56
+NCT01365104
+COMPLETED
+Modulation of Cerebral Blood Flow Using Quercetin, a Nutritional Supplement⁠59
+NCT01376011
+COMPLETED
+The Effect of GIP and GLP-1 on Insulin and Glucagon Secretion in Patients With HNF1A-diabetes Treated With or Without Sulphonylurea⁠62
+NCT03081676
+COMPLETED
+NOTES
+Note: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query
+Note: no written summary could be checked against the records, so the records found are listed below with their sources
+39 variant links to ClinVar placeholder conditions ('not provided', 'not specified' or 'see cases') are not listed as diseases.
+▶
+SOURCES
+61
+Based on 61 sources cited, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

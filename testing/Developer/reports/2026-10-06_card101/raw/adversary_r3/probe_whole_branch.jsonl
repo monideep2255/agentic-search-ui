@@ -1,0 +1,32 @@
+{"probe": "semicolon: limit after '; however'", "shown_no_check": "Drug X is safe in children [1].", "to_check": []}
+{"probe": "semicolon: 'not' carried after semicolon", "shown_no_check": "Antibiotics shorten illness [1].", "to_check": []}
+{"probe": "question title read as statement", "shown_no_check": "Vitamin D supplementation prevents bronchiolitis in infants [1].", "to_check": []}
+{"probe": "question mark mid-abstract", "shown_no_check": "Does nebulized epinephrine reduce admissions [1].", "to_check": []}
+{"probe": "question sentence, statement form", "shown_no_check": "Nebulized epinephrine reduces admissions [1].", "to_check": []}
+{"probe": "colon: hypothesis label", "shown_no_check": "Montelukast reduces wheezing after bronchiolitis [1].", "to_check": []}
+{"probe": "colon: myth label", "shown_no_check": "Antibiotics treat viral bronchiolitis [1].", "to_check": []}
+{"probe": "colon: 'do not' guidance list, semicolons", "shown_no_check": "Give antibiotics routinely [1].", "to_check": []}
+{"probe": "colon: 'There is no evidence for the claim:'", "shown_no_check": "Aspirin prevents colorectal cancer in adults [1].", "to_check": []}
+{"probe": "abbreviation vs.", "shown_no_check": "Placebo reduces mortality in adults [1].", "to_check": []}
+{"probe": "abbreviation Dr.", "shown_no_check": "Smith's regimen cures leukemia in children [1].", "to_check": []}
+{"probe": "abbreviation et al.", "shown_no_check": "Reported that ribavirin shortens bronchiolitis, which we could not replicate [1].", "to_check": []}
+{"probe": "abbreviation e.g. inside a negated list", "shown_no_check": "Corticosteroids, are effective in infants [1].", "to_check": []}
+{"probe": "abbreviation approx.", "shown_no_check": "3 in 10 infants needed ventilation [1].", "to_check": []}
+{"probe": "abbreviation approx., hedge dropped", "shown_no_check": "30% of infants respond to bronchodilators [1].", "to_check": []}
+{"probe": "quote marks: quoted claim after colon", "shown_no_check": "Drug X cures cancer [1].", "to_check": []}
+{"probe": "quote marks: quoted sentence opening", "shown_no_check": "Vaccines cause autism [1].", "to_check": []}
+{"probe": "bracketed sentence", "shown_no_check": "Ribavirin was effective [1].", "to_check": []}
+{"probe": "bracket wraps a hedge removed", "shown_no_check": "", "to_check": ["Drug X reduces mortality"]}
+{"probe": "list item from record", "shown_no_check": "Use bronchodilators [1].", "to_check": []}
+{"probe": "pronoun sentence shifts subject across records", "shown_no_check": "Ribavirin is an antiviral drug [1]. It reduced hospitalization by 55% [2].", "to_check": []}
+{"probe": "pronoun sentence after semicolon, lowercase", "shown_no_check": "Ribavirin is an antiviral drug [1]. It reduced hospitalization by 55% [2].", "to_check": []}
+{"probe": "'This drug' sentence shifts subject", "shown_no_check": "Ribavirin is an antiviral drug [1]. This drug reduced hospitalization by 55% [2].", "to_check": []}
+{"probe": "two whole sentences joined in one writer sentence, different records", "shown_no_check": "Ribavirin is an antiviral drug [1], and It reduced hospitalization by 55% [2].", "to_check": []}
+{"probe": "whole sentence then a cut from another record", "shown_no_check": "Ribavirin is an antiviral drug [1].", "to_check": []}
+{"probe": "same sentence in two records with different limits, writer cites the one without", "shown_no_check": "Hypertonic saline shortens hospital stay [1].", "to_check": []}
+{"probe": "record sentence that is a negated fragment written as a whole", "shown_no_check": "Not in men [1].", "to_check": []}
+{"probe": "whole sentence via a second record sentence that is a heading-like line", "shown_no_check": "Drug X Cures Cancer [1].", "to_check": []}
+{"probe": "retraction notice as title prefix", "shown_no_check": "Drug X cures cancer in mice [1].", "to_check": []}
+{"probe": "first-letter case changes a proper noun to a word", "shown_no_check": "May improve symptoms [1].", "to_check": []}
+{"probe": "control: whole first sentence", "shown_no_check": "Earlier work found no benefit [1].", "to_check": []}
+{"probe": "control: head cut", "shown_no_check": "", "to_check": ["Aspirin prevents colorectal cancer in adults"]}

@@ -187,6 +187,39 @@ NCBI_SOURCE_URL_PATTERN = (
 )
 
 
+def source_page_key(source_url: str | None) -> str:
+    """The key that decides whether two citations point at the same page.
+
+    Card 22 (owner, 2026-10-06): every total a reader sees that says
+    "sources" counts distinct pages under this one key: the trust line's
+    "Based on N sources cited" (`synthesis/trust.py`), the opening line's
+    record count (`synthesis/answer_layout.py`), the truncation note and
+    the "more to show" count (`core/graph.py`), the history rail's count
+    after a reload (`feedback/history.py`) and the command line's
+    references block (`adapters/cli/render.py`). The web app applies the
+    identical rule in `sourcePageKey` (`frontend/src/components/screens/
+    AnswerScreen.tsx`); both are tested against the same cases.
+
+    It lives here, beside `NCBI_SOURCE_URL_PATTERN`, because it is a rule
+    about a citation's `source_url` and every consumer above already
+    imports this module; the command line in particular must not pay for
+    importing the synthesis package to print its references.
+
+    Narrow on purpose: surrounding whitespace and trailing slashes are
+    dropped, nothing else. That is the one difference measured live: the
+    graph's gene URL has no trailing slash (`cypher_provenance.py`) and the
+    live Datasets builder adds one (`ncbi_datasets_actions.py`), so the
+    BRCA1 answer of 2026-09-27 listed `.../gene/672` and `.../gene/672/` as
+    two sources. Case, query strings and fragments are left alone: a query
+    string can name a different record, and no measured duplicate differed
+    in them, so merging on them would be a guess.
+
+    An empty key means "no page"; callers fall back to their own id so a
+    record without a link is never merged with another one.
+    """
+    return (source_url or "").strip().rstrip("/")
+
+
 class GuardPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -412,7 +445,7 @@ class CitationPayload(BaseModel):
     # graph_snapshot_date_from_version`, already live-confirmed and wired
     # for T-3.4-06's staleness check). It is NOT a genuine per-row
     # ingestion timestamp: F-3.4-T06-01 confirmed no such field exists
-    # anywhere this repo's ingest can read (checked live against
+    # anywhere this repository's ingest can read (checked live against
     # `ag_catalog`; no ingest-metadata table is queryable). It is the
     # closest real, non-fabricated proxy this graph has for "when was this
     # graph data current", which is what Section 7's freshness argument

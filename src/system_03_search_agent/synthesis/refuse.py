@@ -33,11 +33,13 @@ REFUSE_MESSAGE = (
 # measured L-01 and its causes were read. A refusal must say what to type
 # next, and an answer that lost a search must say so, or the reader takes
 # "could not find" as "there is nothing on this" and a thinner answer as a
-# complete one. Three wordings, each true of exactly one situation:
+# complete one. Four wordings, each true of exactly one situation:
 #
 # - The question named nothing the product could look up. The graph tool's
 #   own error text says so (`NO_ENTITY_REASON_MARKER` is its opening
 #   clause), and the honest reply is to ask for a name.
+# - NCBI itself said a source is down (card 63, `SEARCH_DOWN_MESSAGE`
+#   below). The honest reply is to say so and ask the person to try later.
 # - A search failed for any other reason, a timeout being the measured one.
 #   The honest reply is to say so and invite a retry.
 # - Nothing failed and nothing was found: the original `REFUSE_MESSAGE`.
@@ -50,6 +52,24 @@ FAILED_SEARCH_MESSAGE = (
     "One of my searches did not finish, so I could not find grounded "
     "evidence this time. Ask again to retry, or try NCBI's cross-database "
     "search:"
+)
+# Card 63 (2026-09-27), decided from the user's chair on the day PubMed's
+# search was down at NCBI for hours. `FAILED_SEARCH_MESSAGE` invites a retry,
+# which is right for a timeout and wrong during an outage: asking again at
+# once sends the person straight back into it. So when the act step recorded
+# that NCBI itself said a source is down (`failed_searches[].kind ==
+# "service_down"`, decided in `tools/ncbi_transport.py` from a fixed list of
+# outage phrases), the refusal says so and asks them to try later. It is
+# decided from that typed value, never from the `reason` text, and every word
+# is ours: nothing NCBI wrote reaches it. It does not name the database, so
+# it stays true when more than one source is down, and it says "a source",
+# not "a search", because the failed call can equally be a record fetch, a
+# summary or a link (F-63-A02).
+SERVICE_DOWN_KIND = "service_down"
+SEARCH_DOWN_MESSAGE = (
+    "A source I needed is down at NCBI right now, so I could not find "
+    "grounded evidence this time. Try again later, or try NCBI's "
+    "cross-database search:"
 )
 # Fix-plan item 12.7 (2026-09-23). A question that named no gene and no
 # disease is now answered by searching the published literature for its own
@@ -173,7 +193,9 @@ def build_fallback_link(query_term: str) -> str:
 
 
 def refusal_message_for(
-    failed_searches: list[dict[str, str]] | None, topic_term: str | None = None
+    failed_searches: list[dict[str, str]] | None,
+    topic_term: str | None = None,
+    none_linked: str | None = None,
 ) -> str:
     """The refusal sentence that is true of what the act step recorded.
 
@@ -182,18 +204,36 @@ def refusal_message_for(
     own `reason`. A no-entity reason outranks any other, since a question
     the product could not read is the thing to fix before retrying.
 
+    Card 63: when any failed call carries `kind == "service_down"`, NCBI
+    itself said that source is down, so the refusal says so and asks the
+    person to try later (`SEARCH_DOWN_MESSAGE`) rather than to ask again.
+    "Any" rather than "all" matches the note under an answer that still
+    stands (`core/graph.py`'s `_build_failed_search_note`): asking again at
+    once cannot help while one of the sources is down. A mapping with no
+    `kind`, the shape every caller built before card 63, is read as a
+    failure asking again can help, so it keeps `FAILED_SEARCH_MESSAGE`.
+
     `topic_term` (fix-plan item 12.7) is set only when Plan took the topic
     path, meaning the question named no gene and no disease and the
     literature was searched for its own words instead. A FAILED search
     still outranks it, because "nothing was published" and "the search did
     not finish" are different facts and only one of them is this path's to
     report.
+
+    `none_linked` (card 74) is the plain sentence for a question about one
+    paper's linked data records when every link search ran and NCBI lists none.
+    A failed search still outranks it, for the same reason.
     """
-    reasons = [str(item.get("reason") or "") for item in (failed_searches or [])]
+    items = list(failed_searches or [])
+    reasons = [str(item.get("reason") or "") for item in items]
     if any(NO_ENTITY_REASON_MARKER in reason for reason in reasons):
         return UNRESOLVED_QUESTION_MESSAGE
+    if any(item.get("kind") == SERVICE_DOWN_KIND for item in items):
+        return SEARCH_DOWN_MESSAGE
     if reasons:
         return FAILED_SEARCH_MESSAGE
+    if none_linked:
+        return none_linked
     if topic_term:
         return topic_not_found_message(topic_term)
     return REFUSE_MESSAGE

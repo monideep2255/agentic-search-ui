@@ -24,7 +24,8 @@ Three jobs, read top to bottom:
   model: an isolate word, an organism from `ORGANISMS`, and either a gene
   family word from `GENE_FAMILIES` or an explicit gene token. Returns the
   organism, the gene prefixes to search, and the two clarifications the
-  shape can need (no organism, no gene).
+  shape can need (no organism; an organism but no gene, which asks which
+  kind of record about the organism is wanted).
 - `plan_calls`: the two calls the shape plans and no graph call: one
   `pathogen_detection` `isolate_search` over the organism's FTP taxon
   folder, then one `ncbi_efetch` summary of the organism's Taxonomy record,
@@ -172,7 +173,7 @@ GENE_FAMILIES: Final[tuple[GeneFamily, ...]] = (
         "colistin",
         "mobile colistin resistance (mcr) genes",
         (r"colistin", r"\bmcr\b"),
-        ("mcr-",),
+        ("mcr",),
     ),
     GeneFamily(
         "methicillin",
@@ -223,16 +224,32 @@ _GENERIC_RESISTANCE: Final[re.Pattern[str]] = re.compile(
 #: aside for it whatever else the sentence says.
 _PATHOGEN_RECORD_ID: Final[re.Pattern[str]] = re.compile(r"\bPD[TS]\d{6,}", re.IGNORECASE)
 
-#: The shape's own two clarifications, in the person's words.
+#: The shape's own clarifications, in the person's words: which organism,
+#: and, for a named organism with no gene, which kind of record
+#: (`record_question`).
 ORGANISM_QUESTION: Final[str] = (
     "Pathogen Detection is searched one organism at a time. Which organism do "
     f"you mean? For example {_EXAMPLE_ORGANISMS}."
 )
-GENE_QUESTION: Final[str] = (
-    "Which resistance gene or gene family should the isolates carry? For example "
-    "ESBL (the blaCTX-M family), carbapenemase (blaKPC, blaNDM, blaOXA-48, blaVIM, "
-    "blaIMP), colistin resistance (mcr), or a gene name such as blaCTX-M-15."
-)
+
+
+def record_question(organism: Organism) -> str:
+    """What to ask when the question names an organism and no gene.
+
+    Card 56 (2026-10-05). This used to ask "which resistance gene or gene
+    family should the isolates carry?", measured live on a question that
+    itself asked which AMR genes one isolate carries: the person cannot
+    answer it sensibly. The organism is their subject; what is missing is
+    which kind of record about it they want, so that is what is asked, with
+    the kinds this product can search named as examples.
+    """
+    label = organism.label
+    return (
+        f"Which kind of {label} record do you want? For example {label} genome "
+        f"assemblies, {label} SRA sequencing runs, or {label} isolates in "
+        "Pathogen Detection that carry a resistance gene family, such as ESBL or "
+        "carbapenemase genes."
+    )
 
 _MAX_PREFIXES: Final[int] = 10
 _MAX_PREFIX_CHARS: Final[int] = 40
@@ -268,7 +285,7 @@ class IsolateQuestion:
         if self.organism is None:
             return ORGANISM_QUESTION
         if not self.prefixes:
-            return GENE_QUESTION
+            return record_question(self.organism)
         return None
 
 

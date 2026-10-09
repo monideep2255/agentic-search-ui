@@ -1,8 +1,8 @@
 # Handoff
 
-What a fresh session needs, and nothing else. Rewritten in place at every `/phase-checkpoint`, never appended to. It states no fact another file owns beyond the pointers in the last section; history goes to `requirements/Plan.md`'s Revision history and `testing/UI_fixes_done.md`, never here.
+The current state a fresh session needs, and nothing else. `/phase-checkpoint` rewrites it in place at every session end and keeps it to about 4 KB. Earlier versions, and the setup steps for a new laptop, are in `docs/build/Handoff_history.md`.
 
-Last updated: 2026-09-26.
+Last updated: 2026-10-08.
 
 ## Table of contents
 
@@ -13,55 +13,43 @@ Last updated: 2026-09-26.
 
 ## What is live
 
-- Develop's product code is the overnight build of 2026-09-25 (phases 8.1, 8.5 and 8.2), unchanged since 654f2d2.
-  - Phase 8.6 merged as #108, then its product code came off develop through #111, because its golden run answered 99 of 150 against the floor of 102. Its ledger, decision rows and the server-address redaction stay.
-  - Merged the same day, with no product code: the build-harness fixes (#110), the four hook gaps (#112), and card 42's proposal (#113).
-  - Develop's API carries `CLASSIFIER_PROVIDER=jev`. Both Railway services redeploy on every push to `develop`.
-- Parked, not merged: phase 8.4 at the tag `parked/phase-8.4-2026-09-25`, and the paper-sentence work at `parked/phase-8.8-snippets-2026-09-25`.
-- Production: `v0.2.0`, tag `cde4f59`, released 2026-09-20. Nothing since is on it.
-- Rolling back: the tag `pre-overnight-2026-09-25` with `testing/Developer/scripts/bin_overnight.py --all`. Do not use its `--phase` mode on a merge that carries documents; restore the product paths instead (`LEARNINGS.md`, 2026-09-26).
-- Nothing is being built between sessions. Check `gh run list --branch develop --limit 3` before trusting that CI is green.
+- Develop: `29d8d8a0`, the merge of #208. Both Railway services redeploy on every push to `develop`; check `gh run list --branch develop --limit 3` before trusting CI.
+- Production: `v0.2.0`, tag `cde4f592`. The changelog fix, `testing/Future.md` row 53, lands before the next release.
+- Merged on the night of 2026-10-07 to 08, each behind CI and a fresh verifier finding nothing worse than develop, then its test queries on develop at 1280 and 390: cards 71 part (#203), 54 (#202), 101 part (#204), 103 and 104 (#205), 67 (#207, no live check possible), 59 (#208), and the overnight-development skill (#206). Detail: the done file's session table.
+- Not done that night: card 54's warning line for older answers, reverted for false alarms; card 67's dated first version, redone; the golden run, at the owner's choice.
+- The data engineering repository is released as `v1.1.0`, through its own release workflow.
+- GitHub holds `develop`, `production` and phase 8.7's four branches (`feat/8.7-s1` to `s3`, `phase/8.7-answers-sooner`), which wait on the OpenRouter top-up.
+- Locally, besides `develop`: nine old worktrees on merged branches, unchecked for untracked work because iCloud evicted their files: `asu-audit`, `asu-card22`, `asu-card56`, `asu-card56-r3`, `asu-card99`, `asu-factory-43`, `asu-factory-43b`, `asu-factory-44`, `asu-factory-47`.
+- Factory did no work on 2026-10-08; its next cards stay 75, 24 and 100 (`docs/build/Factory_onboarding.md`).
 
 ## What awaits the product owner
 
-Six decisions, each a yes, no or pick-one with a recommendation, asked on 2026-09-26:
-
-- Phase 8.6: accept its golden drop and re-land it, or keep it off until three problems are fixed. The drop and the problems are in `tracker/phase_8.6.md`, History and finding F-8.6-G01. Phase 8.9 waits on this.
-- The verify loop, card 42: `docs/build/Verify_loop_proposal.md`, its build order, and whether a `/verify` pass may close a wording or layout card on the seven-day clock.
-- Password login off on the graph server (`testing/Overnight_build_plan_2026-09-25.md`, "Waiting for the product owner").
-- Security-layer items named open:
-  - the secret scan's slowdown on a very long command, F02 on pull request #110;
-  - the hook shapes left open on #112: the secret check on file writes, and upper-case wrappers.
-- Retests: the Retest column of `testing/UI_fix_plan.md`, newest first.
+- Retests: "Waiting for your retest" in `testing/UI_fixes_done.md`, newest first, cards 59, 67, 103 and 104, 101 part, 54 and 71 part on top.
+- The guardrail design's seven yes or no questions: `testing/Developer/reports/2026-10-08_guardrail_design/design.md`.
+- The "High-risk claim" tag on a reopened answer (card 71): approved, a migration built in a daytime session with you present.
+- Card 40: the itemized hook and always-loaded rule changes, now with one git-workflow line (tags count, every session end, both repositories).
+- The decisions taken for you overnight: `DECISIONS.md`, rows dated 2026-10-08.
+- The nine evicted worktrees above: once iCloud restores them, the lead checks each and removes what clears all three checks.
+- From before: decisions D5 to D21 in `testing/Board_plan.md`, the OpenRouter top-up, the privacy hooks and `railway link` on the second laptop.
 
 ## The one next action
 
-The owner's answer on phase 8.6 decides it.
+Read the night's loose ends in `testing/UI_fixes_done.md` ("Where we stopped"), then build from the board's To do column top down: card 94's remaining isolate work next, since card 56 waits on a design with you.
 
-- Keep it off: fix the three problems as a re-split of 8.6 with its own review, rerun the golden run, then open phase 8.9 from `tracker/phase_8.9.md`.
-- Accept: revert #111's commit to bring the code back, then open phase 8.9.
-- Either way, card 39 (the visualization deep dive) goes out after that answer, since what it describes depends on it.
+How to start a session: read this file, then `git status --short` and `git worktree list`, then "Waiting for your retest" and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
 
 ## Where the facts live
 
-| Question | Owner |
-|---|---|
-| What is not started, being built, or live awaiting retest | `testing/UI_fix_plan.md`, the board |
-| The cutoff, the ordered next actions, what is parked and why, every closed item | `testing/UI_fixes_done.md`, starting at "Where we stopped" |
-| The exact queries to type and what a person should see | `testing/Test_queries_and_workflows.md` |
-| Phase 8.6's tickets, findings, triage, golden result and rollback | `tracker/phase_8.6.md` |
-| Phase 8.9's plan, tickets and dispatch plan, not yet opened | `tracker/phase_8.9.md` |
-| Earlier numbered phases | `tracker/phase_N.M.md`; `tracker/BOARD.md` is frozen at 6.2 |
-| The overnight build's plan, the owner's answers and the nights' log | `testing/Overnight_build_plan_2026-09-25.md` |
-| Which model does what, and how the calls hand off | `docs/architecture/Model_architecture.md` |
-| The golden runs and their floor | `testing/Developer/reports/<date>_phase_N.M_golden/summary.md`; the floor is phase 8.2's run |
-| The remaining work outside the UI fix loop | `testing/Future.md` |
-| Which documents the session-closing skills keep current | `tracker/Living_documents.md` |
-| Why something was decided | `DECISIONS.md`, newest rows last |
-| What broke and what fixed it | `LEARNINGS.md` |
-| The dated narrative of every phase and session | `requirements/Plan.md`, Revision history |
-| The plain-language state, for someone outside the build | `PROGRESS.md` |
-| How a phase or a card runs | `.claude/skills/bossman-mode/SKILL.md` and its `reference/` files |
-| How a release is cut | `docs/build/Release_flow.md` |
-
-How to start: read this file, then `git status --short` and `git worktree list` (local should carry only `develop`), then the board's Retest and To do columns, then "Where we stopped". Run `/phase-checkpoint` then `/ship` at the session's end.
+- The board, every card: `testing/UI_fix_plan.md`
+- The build order and progress: `testing/Board_plan.md`
+- Retests, the cutoff and every closed item: `testing/UI_fixes_done.md`; older history in `testing/UI_fixes_archive.md`
+- Queries to type and what a person sees: `testing/Test_queries_and_workflows.md`
+- Factory's brief: `docs/build/Factory_onboarding.md`
+- Work outside the board: `testing/Future.md`
+- A numbered phase's tickets and findings: `tracker/phase_N.M.md`
+- Models and how calls hand off: `docs/architecture/Model_architecture.md`
+- Why, and what broke: `DECISIONS.md`, `LEARNINGS.md`
+- The dated narrative: `requirements/Plan.md`, Revision history
+- How a card or phase runs: `.claude/skills/bossman-mode/SKILL.md`
+- Releases: `docs/build/Release_flow.md`
+- The living-documents registry and the sync check: `tracker/Living_documents.md`, `tracker/check_doc_sync.py`

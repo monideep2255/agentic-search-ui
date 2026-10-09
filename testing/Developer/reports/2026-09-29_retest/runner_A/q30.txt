@@ -1,0 +1,75 @@
+QUESTION: For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies, and tell me how to retrieve each.
+LANDED=answer SECONDS=18
+
++ New search
+
+YOUR SEARCHES
+
+For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies, and tell me how to retrieve each.
+4 tools · 4 sources from 1 layer
+What genes and ClinVar records are under chr7:117,480,025-117,668,665 on GRCh38?
+50 sources · Sep 29
+What is under chr17:43,044,295-43,125,364?
+0 sources · Sep 29
+What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+50 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+24 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+23 sources · Sep 29
+Compare what is known about MLH1 and MSH2 in colorectal cancer risk.
+25 sources · Sep 29
+What is rs334 and what condition is it associated with?
+5 sources · Sep 29
+Which diseases are associated with BRCA1?
+22 sources · Sep 29
+s3-retest-a-20260929@example.com
+No search limit in effect yet
+For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies, and tell me how to retrieve each.
+New search
+
+? Answered9.8s · 4 tools · 4 sources from 1 layer
+
+Show work ▾
+
+Found 1 bioproject record, 1 biosample record, 1 sra record and 1 assembly record: The Human Genome Project, currently maintained by the Genome Reference Consortium (GRC), Sample from Homo sapiens, SRR9496657 and GRCh38.p14.⁠1–4
+
+BIOPROJECT RECORDS FOUND
+RECORD	IDENTIFIER	REGISTERED	
+The Human Genome Project, currently maintained by the Genome Reference Consortium (GRC)	PRJNA31257	2009	⁠1
+BIOSAMPLE RECORDS FOUND
+RECORD	IDENTIFIER	PUBLISHED	
+Sample from Homo sapiens	SAMN12121739	2020	⁠2
+SRA RECORDS FOUND
+RECORD	IDENTIFIER	CREATED	
+SRR9496657	sra 8317276	2020	⁠3
+ASSEMBLY RECORDS FOUND
+RECORD	IDENTIFIER	STATUS	
+GRCh38.p14	GCF_000001405.40	Chromosome	⁠4
+▶
+SOURCES
+4
+Based on 4 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== LINKS ===
+https://www.ncbi.nlm.nih.gov/bioproject/31257
+https://www.ncbi.nlm.nih.gov/biosample/12121739
+https://www.ncbi.nlm.nih.gov/sra/8317276
+https://www.ncbi.nlm.nih.gov/assembly/11968211
+=== CITATION ARIA (first 6) ===
+Sources 1 to 4: Source 1, layer 2; Source 2, layer 2; Source 3, layer 2; Source 4, layer 2
+Sources
+Source 1, layer 2
+Sources
+Source 2, layer 2
+Sources

@@ -1,6 +1,6 @@
 ---
 name: learnings
-description: Capture and recall build-time failures in LEARNINGS.md, what broke, what was tried and what fixed it, written before the worker continues rather than reconstructed later. Use the moment something breaks during a build, and before opening any build phase. TRIGGER on "log this", "that broke", "add to learnings", "what do we know about X" or "have we hit this before". It also runs automatically at the start of any build phase. Distinct from DECISIONS.md, which records choices between alternatives, and from task-tracker, which records what is assigned rather than what went wrong.
+description: Capture and recall build-time failures in LEARNINGS.md: what broke, what was tried, what fixed it. TRIGGER on 'log this', 'that broke', 'add to learnings', 'have we hit this before'; also runs at the start of a build phase. Unlike DECISIONS.md (choices) and task-tracker (assignments).
 argument-hint: "[--log] [--recall <topic>] [--brief <phase>]"
 ---
 
@@ -8,7 +8,7 @@ argument-hint: "[--log] [--recall <topic>] [--brief <phase>]"
 
 A running log of what broke and what fixed it, with the dead ends in between. The point is not the file. The point is that it gets read before work starts, so the same wall is not hit twice.
 
-`LEARNINGS.md` at the repo root is already specified in `requirements/Plan.md` as the input to the Step 6.2 reconciliation and a seed for Phase 7 iteration. This skill is what writes and reads it.
+`LEARNINGS.md` at the repository root is the build-failure log, and a seed for Phase 7 iteration in `requirements/Plan.md`. This skill is what writes and reads it.
 
 ## Table of contents
 
@@ -85,7 +85,7 @@ A log nobody reads is filing, not learning. Reading is mandatory at these points
 - Before opening any build phase. The `task-tracker` open operation requires it. Filter by the phase's tools and layers.
 - Before retrying anything that failed once. Check whether the dead end is already recorded.
 - Before wiring any tool in the seven-tool roster, since API behavior traps accumulate here.
-- At the Step 6.2 reconciliation, where this file is the captured record that updates the PRD, tech spec, and strategic memo rather than doing it from memory.
+
 
 `--brief <phase>`: print only the entries tagged to that phase and to its tools and layers. This is the form a builder should receive, not the whole file.
 

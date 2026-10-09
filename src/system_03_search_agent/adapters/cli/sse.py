@@ -56,7 +56,7 @@ SseTuple = tuple[str | None, str, str | None]
 # F-4.2-A-25: the accumulator had no bound on a single event's `data:`
 # field, so a hostile or corrupted stream could grow one event's buffer
 # without limit before ever reaching a JSON-parse or Pydantic failure. 64
-# KiB is comfortably above any real envelope this repo's server can emit
+# KiB is comfortably above any real envelope this repository's server can emit
 # (contracts/events.py's own `max_length` caps put the largest realistic
 # payload, a full ThinkPayload with 20 ResolvedEntity items, at well under
 # 10 KiB) and far below a pathological multi-megabyte line
@@ -70,7 +70,7 @@ class SseFrameTooLargeError(Exception):
     flush) closed it. Raised eagerly, at the `data:` line that pushes the
     running total over the cap, rather than after buffering an unbounded
     amount and only failing later at JSON-parse time (F-4.2-A-25).
-    Actionable: no legitimate event from this repo's server approaches
+    Actionable: no legitimate event from this repository's server approaches
     this size, so a caller should abort the stream rather than retry the
     same connection; retrying the whole run from a fresh `s3 ask` is the
     reasonable next step if this recurs.
@@ -99,9 +99,9 @@ class _SseLineAccumulator:
     value` line with exactly one leading space after the colon stripped
     updates the named field. It deliberately does NOT implement the full
     grammar: no `retry:` field, no default-event-name fallback, no BOM
-    handling. This repo's server never emits those shapes, and a
+    handling. This repository's server never emits those shapes, and a
     spec-complete parser is strictly more untested surface than the wire
-    this repo actually writes.
+    this repository actually writes.
 
     `last_event_id` is intentionally NOT reset when an event dispatches:
     real `EventSource` semantics keep the "last event ID buffer" live
@@ -139,7 +139,7 @@ class _SseLineAccumulator:
         else:
             # A field-name-only line with no colon: the algorithm treats
             # this as the field set to the empty string. Not a shape this
-            # repo's server ever writes, but handled rather than silently
+            # repository's server ever writes, but handled rather than silently
             # dropped, since dropping it would be a different, undeclared
             # parsing decision.
             field, value = line, ""
@@ -159,7 +159,7 @@ class _SseLineAccumulator:
         elif field == "id":
             self._last_event_id = value
         # Any other field name (e.g. a hypothetical future `retry:`) is
-        # intentionally ignored: this repo's server never emits one, and
+        # intentionally ignored: this repository's server never emits one, and
         # silently dropping an unrecognized field matches the WHATWG
         # algorithm's own behavior more closely than raising on it.
         return None
@@ -186,7 +186,7 @@ class _SseLineAccumulator:
         """Dispatch whatever is buffered even without a trailing blank
         line, for a stream that ends (or is cut off) mid-event. Never
         called by `parse_sse_lines` in a way that changes its documented
-        behavior on well-formed input (every event in this repo's wire is
+        behavior on well-formed input (every event in this repository's wire is
         blank-line-terminated); it exists for `client.py`'s benefit, where
         a real connection can end without one.
         """

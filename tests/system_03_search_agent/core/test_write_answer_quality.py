@@ -285,7 +285,7 @@ async def test_researcher_drops_restatements_the_list_carries_and_keeps_a_cited_
         "disease name number 1", "disease name number 2", "disease name number 3",
         "BRCA1", "trial title number 1", "trial title number 2",
     ], list_rows
-    assert not any(t["kind"] == "note" and "could not be verified" in t["text"] for t in tokens), (
+    assert not any(t["kind"] == "note" and "no written summary could be checked" in t["text"] for t in tokens), (
         "restatements are not a grounding failure; the fallback note must not appear"
     )
     done = next(e.payload for e in result["events"] if e.type == "done")

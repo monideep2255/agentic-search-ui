@@ -1,0 +1,863 @@
+{
+ "initialize": {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+   "capabilities": {
+    "experimental": {},
+    "prompts": {
+     "listChanged": false
+    },
+    "resources": {
+     "listChanged": false,
+     "subscribe": false
+    },
+    "tools": {
+     "listChanged": false
+    }
+   },
+   "instructions": "Ask a biomedical research question with ask_biomedical_question. It returns a cited answer assembled from the NCBI knowledge graph and live NCBI APIs, or an honest refusal. To ask a follow-up, pass back the session_id the previous answer returned. When clarifying_question is set, the answer is a question back to you: reply with one of clarifying_options. list_past_searches, reopen_past_answer and send_answer_feedback read your own past searches, reopen a saved answer, and rate an answer.",
+   "protocolVersion": "2025-06-18",
+   "serverInfo": {
+    "name": "system3-biomedical-search",
+    "version": "1.0.0"
+   }
+  }
+ },
+ "tools_list": {
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+   "tools": [
+    {
+     "description": "Ask a biomedical research question about genes, variants, diseases, publications or sequencing records. Returns a cited answer assembled from the NCBI knowledge graph and live NCBI APIs, or an honest refusal. Every [n] marker in the answer resolves to an entry in citations. To ask a follow-up in the same conversation, pass the session_id this tool returned. When clarifying_question is set, the answer is a question back to you: send one of clarifying_options, or your own reply, as the next query with the same session_id.",
+     "inputSchema": {
+      "properties": {
+       "query": {
+        "description": "The question, in plain words, for example 'Which diseases are associated with BRCA1?'.",
+        "maxLength": 2000,
+        "title": "Query",
+        "type": "string"
+       },
+       "audience_depth": {
+        "default": "researcher",
+        "description": "Who the answer is written for. 'researcher' is the default here; 'plain_language' is the everyday wording the web app uses by default; 'clinical_brief' and 'deep_technical' are the product's other two depths.",
+        "enum": [
+         "plain_language",
+         "researcher",
+         "clinical_brief",
+         "deep_technical"
+        ],
+        "title": "Audience Depth",
+        "type": "string"
+       },
+       "session_id": {
+        "anyOf": [
+         {
+          "maxLength": 64,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "Leave this out to start a new conversation. To ask a follow-up, pass the session_id a previous answer returned, so 'it' or 'that gene' refers to what was just discussed.",
+        "title": "Session Id"
+       }
+      },
+      "required": [
+       "query"
+      ],
+      "type": "object",
+      "title": "ask_biomedical_questionArguments"
+     },
+     "name": "ask_biomedical_question",
+     "outputSchema": {
+      "properties": {
+       "answer": {
+        "maxLength": 8000,
+        "title": "Answer",
+        "type": "string"
+       },
+       "citations": {
+        "items": {
+         "$ref": "#/$defs/CitationPayload"
+        },
+        "maxItems": 100,
+        "title": "Citations",
+        "type": "array"
+       },
+       "trust_signal": {
+        "$ref": "#/$defs/TrustSignalPayload"
+       },
+       "run_id": {
+        "maxLength": 64,
+        "title": "Run Id",
+        "type": "string"
+       },
+       "persona_name": {
+        "anyOf": [
+         {
+          "maxLength": 64,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "title": "Persona Name"
+       },
+       "session_id": {
+        "anyOf": [
+         {
+          "maxLength": 64,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "The conversation this answer belongs to. Pass it back as session_id on the next ask_biomedical_question call to ask a follow-up, so 'it' or 'that gene' refers to what was just discussed.",
+        "title": "Session Id"
+       },
+       "trust_line": {
+        "anyOf": [
+         {
+          "maxLength": 200,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "The one plain sentence about how far this answer can be trusted, as the web app shows it.",
+        "title": "Trust Line"
+       },
+       "clarifying_question": {
+        "anyOf": [
+         {
+          "maxLength": 500,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "Set when the answer is a question back to you rather than an answer. Reply with one of clarifying_options, or your own words, as the next query with the same session_id.",
+        "title": "Clarifying Question"
+       },
+       "clarifying_options": {
+        "anyOf": [
+         {
+          "items": {
+           "maxLength": 220,
+           "type": "string"
+          },
+          "maxItems": 4,
+          "type": "array"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "Ready-made questions to send next when clarifying_question is set, or null.",
+        "title": "Clarifying Options"
+       }
+      },
+      "required": [
+       "answer",
+       "citations",
+       "trust_signal",
+       "run_id"
+      ],
+      "type": "object",
+      "$defs": {
+       "CitationPayload": {
+        "additionalProperties": false,
+        "properties": {
+         "citation_id": {
+          "maxLength": 64,
+          "title": "Citation Id",
+          "type": "string"
+         },
+         "display_index": {
+          "minimum": 1,
+          "title": "Display Index",
+          "type": "integer"
+         },
+         "source": {
+          "maxLength": 128,
+          "title": "Source",
+          "type": "string"
+         },
+         "source_id": {
+          "maxLength": 128,
+          "title": "Source Id",
+          "type": "string"
+         },
+         "source_url": {
+          "maxLength": 500,
+          "pattern": "^https://(?:([A-Za-z0-9-]+\\.)*ncbi\\.nlm\\.nih\\.gov/|(?:www\\.)?clinicaltrials\\.gov/study/|(?:www\\.)?omim\\.org/)[A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+,;=%]*$",
+          "title": "Source Url",
+          "type": "string"
+         },
+         "layer": {
+          "enum": [
+           "layer_1_graph",
+           "layer_2_api",
+           "layer_3_enrichment"
+          ],
+          "title": "Layer",
+          "type": "string"
+         },
+         "field": {
+          "maxLength": 128,
+          "title": "Field",
+          "type": "string"
+         },
+         "claim_text": {
+          "maxLength": 1000,
+          "title": "Claim Text",
+          "type": "string"
+         },
+         "evidence_kind": {
+          "maxLength": 64,
+          "title": "Evidence Kind",
+          "type": "string"
+         },
+         "assertion_confidence": {
+          "maxLength": 64,
+          "title": "Assertion Confidence",
+          "type": "string"
+         },
+         "population_ancestry_context": {
+          "anyOf": [
+           {
+            "maxLength": 256,
+            "type": "string"
+           },
+           {
+            "type": "null"
+           }
+          ],
+          "default": null,
+          "title": "Population Ancestry Context"
+         },
+         "license": {
+          "maxLength": 128,
+          "title": "License",
+          "type": "string"
+         },
+         "snapshot_date": {
+          "anyOf": [
+           {
+            "maxLength": 32,
+            "type": "string"
+           },
+           {
+            "type": "null"
+           }
+          ],
+          "default": null,
+          "title": "Snapshot Date"
+         },
+         "entity_name": {
+          "anyOf": [
+           {
+            "maxLength": 256,
+            "type": "string"
+           },
+           {
+            "type": "null"
+           }
+          ],
+          "default": null,
+          "title": "Entity Name"
+         }
+        },
+        "required": [
+         "citation_id",
+         "display_index",
+         "source",
+         "source_id",
+         "source_url",
+         "layer",
+         "field",
+         "claim_text",
+         "evidence_kind",
+         "assertion_confidence",
+         "license"
+        ],
+        "title": "CitationPayload",
+        "type": "object"
+       },
+       "TrustSignalPayload": {
+        "additionalProperties": false,
+        "description": "Section 8.3's per-claim verdict, and Section 8.4's refuse payload.\n\nThe four fields below `outcome` are additive within v1 (Section 2.6:\n\"a new optional field\" is an allowed in-version change; removing a\nfield or changing one's meaning would need a v2). Each is optional and\ndefaults to None, so every payload built before build phase 2.2\nvalidates unchanged.\n\n`citation_id` is the join key Section 9.1 specifies: a trust signal is\nnever a field ON a citation, it is its own event bound to one by shared\nid, so a surface can render a per-chip verdict (8.3.4) without the\ncitation having to be re-emitted to carry it. It is None on the\nanswer-level signal, which belongs to the whole response rather than to\nany one claim.\n\n`message` and `fallback_link` carry Section 8.4's refuse payload, whose\nexample in the spec shows exactly these two keys alongside `outcome`.\n`fallback_link` is host-pinned by the same pattern every `source_url`\nuses: a refusal that links somewhere other than NCBI is a worse failure\nthan a refusal with no link at all.\n\n`triangulated` is a tri-state on purpose. None means triangulation was\nnot evaluated (Section 8.3.3's \"not evaluated\" cell, i.e. every\nlow-risk claim), which is a different statement from False, meaning it\nran and did not concord.",
+        "properties": {
+         "outcome": {
+          "enum": [
+           "answer",
+           "flag",
+           "ask",
+           "refuse"
+          ],
+          "title": "Outcome",
+          "type": "string"
+         },
+         "risk_tier": {
+          "maxLength": 16,
+          "title": "Risk Tier",
+          "type": "string"
+         },
+         "grounded": {
+          "title": "Grounded",
+          "type": "boolean"
+         },
+         "triangulated": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "null"
+           }
+          ],
+          "default": null,
+          "title": "Triangulated"
+         },
+         "citation_id": {
+          "anyOf": [
+           {
+            "maxLength": 64,
+            "type": "string"
+           },
+           {
+            "type": "null"
+           }
+          ],
+          "default": null,
+          "title": "Citation Id"
+         },
+         "scope": {
+          "anyOf": [
+           {
+            "enum": [
+             "claim",
+             "answer"
+            ],
+            "type": "string"
+           },
+           {
+            "type": "null"
+           }
+          ],
+          "default": null,
+          "title": "Scope"
+         },
+         "message": {
+          "anyOf": [
+           {
+            "maxLength": 500,
+            "type": "string"
+           },
+           {
+            "type": "null"
+           }
+          ],
+          "default": null,
+          "title": "Message"
+         },
+         "fallback_link": {
+          "anyOf": [
+           {
+            "maxLength": 512,
+            "pattern": "^https://(?:([A-Za-z0-9-]+\\.)*ncbi\\.nlm\\.nih\\.gov/|(?:www\\.)?clinicaltrials\\.gov/study/|(?:www\\.)?omim\\.org/)[A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+,;=%]*$",
+            "type": "string"
+           },
+           {
+            "type": "null"
+           }
+          ],
+          "default": null,
+          "title": "Fallback Link"
+         }
+        },
+        "required": [
+         "outcome",
+         "risk_tier",
+         "grounded"
+        ],
+        "title": "TrustSignalPayload",
+        "type": "object"
+       }
+      },
+      "additionalProperties": false,
+      "description": "Section 13.2's locked `output_schema`, field for field.",
+      "title": "AskBiomedicalQuestionOutput"
+     }
+    },
+    {
+     "annotations": {
+      "readOnlyHint": true
+     },
+     "description": "List your own past searches, newest first: each one's trace_id, the question, when it was asked, its trust verdict, how many sources it cited, and whether its answer can be reopened with reopen_past_answer. Searches this account made on the web app, the command line or this server all appear.",
+     "inputSchema": {
+      "properties": {
+       "limit": {
+        "default": 20,
+        "description": "How many searches to return, 1 to 50. Defaults to 20.",
+        "maximum": 50,
+        "minimum": 1,
+        "title": "Limit",
+        "type": "integer"
+       }
+      },
+      "type": "object",
+      "title": "list_past_searchesArguments"
+     },
+     "name": "list_past_searches",
+     "outputSchema": {
+      "properties": {
+       "items": {
+        "items": {
+         "$ref": "#/$defs/PastSearch"
+        },
+        "maxItems": 50,
+        "title": "Items",
+        "type": "array"
+       },
+       "count": {
+        "minimum": 0,
+        "title": "Count",
+        "type": "integer"
+       },
+       "omitted_count": {
+        "default": 0,
+        "minimum": 0,
+        "title": "Omitted Count",
+        "type": "integer"
+       }
+      },
+      "required": [
+       "count"
+      ],
+      "type": "object",
+      "$defs": {
+       "PastSearch": {
+        "additionalProperties": false,
+        "description": "One of the caller's own past searches: `GET /v1/history`'s\n`HistoryItem`, field for field and bound for bound, restated here\nrather than imported because `adapters/web_sse/app.py` imports this\nmodule, so the reverse import would be circular.",
+        "properties": {
+         "trace_id": {
+          "maxLength": 64,
+          "title": "Trace Id",
+          "type": "string"
+         },
+         "question": {
+          "maxLength": 2000,
+          "title": "Question",
+          "type": "string"
+         },
+         "asked_at": {
+          "format": "date-time",
+          "title": "Asked At",
+          "type": "string"
+         },
+         "trust_signal": {
+          "maxLength": 20,
+          "title": "Trust Signal",
+          "type": "string"
+         },
+         "citation_count": {
+          "minimum": 0,
+          "title": "Citation Count",
+          "type": "integer"
+         },
+         "has_saved_answer": {
+          "default": false,
+          "title": "Has Saved Answer",
+          "type": "boolean"
+         }
+        },
+        "required": [
+         "trace_id",
+         "question",
+         "asked_at",
+         "trust_signal",
+         "citation_count"
+        ],
+        "title": "PastSearch",
+        "type": "object"
+       }
+      },
+      "additionalProperties": false,
+      "description": "`GET /v1/history`'s `HistoryResponse`, field for field: `count` is\nthe size of this page, never a total, and `omitted_count` is how many\nof the caller's own rows were withheld because they could not be shown\nhonestly (the REST route's own reasons, applied by the same guard).",
+      "title": "PastSearchesOutput"
+     }
+    },
+    {
+     "annotations": {
+      "readOnlyHint": true
+     },
+     "description": "Reopen the answer one of your past searches gave, by the trace_id list_past_searches returned, without running the search again. Only searches listed with has_saved_answer true can be reopened.",
+     "inputSchema": {
+      "properties": {
+       "trace_id": {
+        "description": "The trace_id of one of your past searches, from list_past_searches.",
+        "maxLength": 64,
+        "minLength": 1,
+        "title": "Trace Id",
+        "type": "string"
+       }
+      },
+      "required": [
+       "trace_id"
+      ],
+      "type": "object",
+      "title": "reopen_past_answerArguments"
+     },
+     "name": "reopen_past_answer",
+     "outputSchema": {
+      "properties": {
+       "trace_id": {
+        "maxLength": 64,
+        "title": "Trace Id",
+        "type": "string"
+       },
+       "question": {
+        "maxLength": 2000,
+        "title": "Question",
+        "type": "string"
+       },
+       "asked_at": {
+        "format": "date-time",
+        "title": "Asked At",
+        "type": "string"
+       },
+       "audience_depth": {
+        "enum": [
+         "plain_language",
+         "researcher",
+         "clinical_brief",
+         "deep_technical"
+        ],
+        "title": "Audience Depth",
+        "type": "string"
+       },
+       "answer_markdown": {
+        "maxLength": 32000,
+        "title": "Answer Markdown",
+        "type": "string"
+       },
+       "citations": {
+        "items": {
+         "$ref": "#/$defs/CitationPayload"
+        },
+        "maxItems": 100,
+        "title": "Citations",
+        "type": "array"
+       },
+       "citations_omitted": {
+        "default": 0,
+        "minimum": 0,
+        "title": "Citations Omitted",
+        "type": "integer"
+       },
+       "trust_signal": {
+        "maxLength": 20,
+        "title": "Trust Signal",
+        "type": "string"
+       },
+       "trust_line": {
+        "anyOf": [
+         {
+          "maxLength": 200,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "title": "Trust Line"
+       }
+      },
+      "required": [
+       "trace_id",
+       "question",
+       "asked_at",
+       "audience_depth",
+       "answer_markdown",
+       "trust_signal"
+      ],
+      "type": "object",
+      "$defs": {
+       "CitationPayload": {
+        "additionalProperties": false,
+        "properties": {
+         "citation_id": {
+          "maxLength": 64,
+          "title": "Citation Id",
+          "type": "string"
+         },
+         "display_index": {
+          "minimum": 1,
+          "title": "Display Index",
+          "type": "integer"
+         },
+         "source": {
+          "maxLength": 128,
+          "title": "Source",
+          "type": "string"
+         },
+         "source_id": {
+          "maxLength": 128,
+          "title": "Source Id",
+          "type": "string"
+         },
+         "source_url": {
+          "maxLength": 500,
+          "pattern": "^https://(?:([A-Za-z0-9-]+\\.)*ncbi\\.nlm\\.nih\\.gov/|(?:www\\.)?clinicaltrials\\.gov/study/|(?:www\\.)?omim\\.org/)[A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+,;=%]*$",
+          "title": "Source Url",
+          "type": "string"
+         },
+         "layer": {
+          "enum": [
+           "layer_1_graph",
+           "layer_2_api",
+           "layer_3_enrichment"
+          ],
+          "title": "Layer",
+          "type": "string"
+         },
+         "field": {
+          "maxLength": 128,
+          "title": "Field",
+          "type": "string"
+         },
+         "claim_text": {
+          "maxLength": 1000,
+          "title": "Claim Text",
+          "type": "string"
+         },
+         "evidence_kind": {
+          "maxLength": 64,
+          "title": "Evidence Kind",
+          "type": "string"
+         },
+         "assertion_confidence": {
+          "maxLength": 64,
+          "title": "Assertion Confidence",
+          "type": "string"
+         },
+         "population_ancestry_context": {
+          "anyOf": [
+           {
+            "maxLength": 256,
+            "type": "string"
+           },
+           {
+            "type": "null"
+           }
+          ],
+          "default": null,
+          "title": "Population Ancestry Context"
+         },
+         "license": {
+          "maxLength": 128,
+          "title": "License",
+          "type": "string"
+         },
+         "snapshot_date": {
+          "anyOf": [
+           {
+            "maxLength": 32,
+            "type": "string"
+           },
+           {
+            "type": "null"
+           }
+          ],
+          "default": null,
+          "title": "Snapshot Date"
+         },
+         "entity_name": {
+          "anyOf": [
+           {
+            "maxLength": 256,
+            "type": "string"
+           },
+           {
+            "type": "null"
+           }
+          ],
+          "default": null,
+          "title": "Entity Name"
+         }
+        },
+        "required": [
+         "citation_id",
+         "display_index",
+         "source",
+         "source_id",
+         "source_url",
+         "layer",
+         "field",
+         "claim_text",
+         "evidence_kind",
+         "assertion_confidence",
+         "license"
+        ],
+        "title": "CitationPayload",
+        "type": "object"
+       }
+      },
+      "additionalProperties": false,
+      "description": "One past answer, as `GET /v1/history/{trace_id}/answer` returns it.\n\nTwo deliberate differences from the REST shape, both in the caller's\nfavour and neither a new fact:\n\n- `audience_depth` reports the stored depth as one of the four values\n  `ask_biomedical_question` takes, so an agent can ask again at the same\n  depth. REST folds three of them onto `researcher` only because its\n  pinned wire contract declares two values.\n- `citations` are validated one by one as `CitationPayload`, and any\n  stored entry that no longer validates is left out and counted in\n  `citations_omitted`, never published half-formed and never allowed\n  to fail the whole answer (REST drops a non-dict entry the same way).\n  A marker in `answer_markdown` that no stored citation answers is\n  counted there too (`_reopened_citations`), so the count says how many\n  of the answer's markers point at nothing here.",
+      "title": "ReopenedAnswerOutput"
+     }
+    },
+    {
+     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "readOnlyHint": false
+     },
+     "description": "Tell the team what you thought of one answer: a thumbs up or down, a comment, a reason it was wrong, or the citations that do not support their claim. Send at least one of them. run_id is the one ask_biomedical_question returned. Sending feedback again for the same answer replaces the earlier one.",
+     "inputSchema": {
+      "properties": {
+       "run_id": {
+        "description": "The run_id ask_biomedical_question returned for the answer you are rating.",
+        "maxLength": 64,
+        "minLength": 1,
+        "title": "Run Id",
+        "type": "string"
+       },
+       "rating": {
+        "anyOf": [
+         {
+          "enum": [
+           "up",
+           "down"
+          ],
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "'up' if the answer helped, 'down' if it did not.",
+        "title": "Rating"
+       },
+       "comment": {
+        "anyOf": [
+         {
+          "maxLength": 2000,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "Anything you want the team to read about this answer.",
+        "title": "Comment"
+       },
+       "flagged_reason": {
+        "anyOf": [
+         {
+          "maxLength": 200,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "A short reason the answer is wrong or unsafe, if it is.",
+        "title": "Flagged Reason"
+       },
+       "citation_flags": {
+        "anyOf": [
+         {
+          "items": {
+           "$ref": "#/$defs/FeedbackCitationFlag"
+          },
+          "maxItems": 50,
+          "type": "array"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "Citations that do not support their claim: each a citation_id and a reason.",
+        "title": "Citation Flags"
+       }
+      },
+      "required": [
+       "run_id"
+      ],
+      "type": "object",
+      "$defs": {
+       "FeedbackCitationFlag": {
+        "additionalProperties": false,
+        "description": "One entry in `FeedbackPayload.citation_flags`: which citation, and why.\n\nExists for the same reason `CompressedFinding.citation_ids` in\n`contracts/query.py` needed its own per-item validator (F-4.5-J-19): a\n`max_length` on the surrounding list bounds how MANY entries arrive and\nsays nothing about how big one entry is, or what keys it carries.\n`citation_flags` used to be a bare `list[dict[str, str]]` with\n`max_length=50` on the list only, so fifty entries of two megabytes\neach, or fifty entries carrying arbitrary keys instead of\n`citation_id`/`reason`, both validated cleanly and were accepted with a\n204 (F-4.6-A-07, the adversary round that found this: 100 MB of caller\nJSON accepted). This model closes both holes: only the two named keys\nare accepted (`extra=\"forbid\"`), and each is bounded on its own.",
+        "properties": {
+         "citation_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Citation Id",
+          "type": "string"
+         },
+         "reason": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+         }
+        },
+        "required": [
+         "citation_id",
+         "reason"
+        ],
+        "title": "FeedbackCitationFlag",
+        "type": "object"
+       }
+      },
+      "title": "send_answer_feedbackArguments"
+     },
+     "name": "send_answer_feedback",
+     "outputSchema": {
+      "properties": {
+       "run_id": {
+        "maxLength": 64,
+        "title": "Run Id",
+        "type": "string"
+       },
+       "recorded": {
+        "title": "Recorded",
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "run_id",
+       "recorded"
+      ],
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What `send_answer_feedback` returns once the feedback is stored.\nREST answers 204 with no body; a tool must return something, so it\nreturns the run it rated and that the write happened.",
+      "title": "FeedbackRecordedOutput"
+     }
+    }
+   ]
+  }
+ }
+}

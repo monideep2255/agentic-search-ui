@@ -1,0 +1,5071 @@
+{
+ "question": "Find GEO expression datasets studying TP53 in human tumour samples.",
+ "seconds": 16.2,
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 0,
+   "ts": "2026-10-05T16:31:14.741763Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 2,
+   "ts": "2026-10-05T16:31:18.742755Z",
+   "payload": {
+    "narrative": "The query asks for datasets from a single database (GEO) filtered by gene (TP53), organism (human), and sample type (tumour samples), which can be resolved with one or two API calls.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "TP53",
+      "curie": "NCBIGene:7157",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 4,
+   "ts": "2026-10-05T16:31:18.778818Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:7157. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-de87b5153e49",
+      "layer": "layer_1_graph",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-673141626b33",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-f3fe0a898ac1",
+      "layer": "layer_3_enrichment",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-45ae8c837e58",
+      "layer": "layer_3_enrichment",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-2b7f99f6902f",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b26ebf0ad31a",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-36a9a20243bb",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-32f7bb3952c5",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-8a94a72d43f7",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-06b9f3373b87",
+      "layer": "layer_3_enrichment",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-02269d438ba6",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-db3eb576620f",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-c01a212a1419",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d21fccb01a95",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-21e571d16e60",
+      "layer": "layer_1_graph",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "TP53",
+      "curie": "NCBIGene:7157",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 6,
+   "ts": "2026-10-05T16:31:18.785478Z",
+   "payload": {
+    "call_id": "cq-de87b5153e49",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 7,
+   "ts": "2026-10-05T16:31:18.785542Z",
+   "payload": {
+    "call_id": "ne-673141626b33",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 8,
+   "ts": "2026-10-05T16:31:18.785559Z",
+   "payload": {
+    "call_id": "pa-f3fe0a898ac1",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 9,
+   "ts": "2026-10-05T16:31:18.785573Z",
+   "payload": {
+    "call_id": "ct-45ae8c837e58",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 10,
+   "ts": "2026-10-05T16:31:18.785586Z",
+   "payload": {
+    "call_id": "ne-2b7f99f6902f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 11,
+   "ts": "2026-10-05T16:31:18.785599Z",
+   "payload": {
+    "call_id": "ne-b26ebf0ad31a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 12,
+   "ts": "2026-10-05T16:31:18.785611Z",
+   "payload": {
+    "call_id": "ne-36a9a20243bb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 13,
+   "ts": "2026-10-05T16:31:18.785624Z",
+   "payload": {
+    "call_id": "ne-32f7bb3952c5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 14,
+   "ts": "2026-10-05T16:31:18.785637Z",
+   "payload": {
+    "call_id": "ne-8a94a72d43f7",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 15,
+   "ts": "2026-10-05T16:31:18.785650Z",
+   "payload": {
+    "call_id": "pa-06b9f3373b87",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 16,
+   "ts": "2026-10-05T16:31:18.785663Z",
+   "payload": {
+    "call_id": "ne-02269d438ba6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 17,
+   "ts": "2026-10-05T16:31:18.785676Z",
+   "payload": {
+    "call_id": "ne-db3eb576620f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 18,
+   "ts": "2026-10-05T16:31:18.785689Z",
+   "payload": {
+    "call_id": "ne-c01a212a1419",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 19,
+   "ts": "2026-10-05T16:31:18.785702Z",
+   "payload": {
+    "call_id": "ne-d21fccb01a95",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 20,
+   "ts": "2026-10-05T16:31:18.785715Z",
+   "payload": {
+    "call_id": "cq-21e571d16e60",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 21,
+   "ts": "2026-10-05T16:31:18.815957Z",
+   "payload": {
+    "call_id": "ne-2b7f99f6902f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "error",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "search error: rate limited by NCBI",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 22,
+   "ts": "2026-10-05T16:31:18.821203Z",
+   "payload": {
+    "call_id": "ne-b26ebf0ad31a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "error",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "search error: rate limited by NCBI",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 23,
+   "ts": "2026-10-05T16:31:18.826487Z",
+   "payload": {
+    "call_id": "ne-36a9a20243bb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "error",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "search error: rate limited by NCBI",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 24,
+   "ts": "2026-10-05T16:31:18.831781Z",
+   "payload": {
+    "call_id": "ne-32f7bb3952c5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "error",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "search error: rate limited by NCBI",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 25,
+   "ts": "2026-10-05T16:31:18.836360Z",
+   "payload": {
+    "call_id": "ne-d21fccb01a95",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "error",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "summary error: rate limited by NCBI",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 26,
+   "ts": "2026-10-05T16:31:19.275008Z",
+   "payload": {
+    "call_id": "cq-de87b5153e49",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 27,
+   "ts": "2026-10-05T16:31:19.431529Z",
+   "payload": {
+    "call_id": "ct-45ae8c837e58",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 28,
+   "ts": "2026-10-05T16:31:20.465475Z",
+   "payload": {
+    "call_id": "cq-21e571d16e60",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "59 row(s) of 124",
+    "result_count": 59,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 29,
+   "ts": "2026-10-05T16:31:20.845870Z",
+   "payload": {
+    "call_id": "ne-673141626b33",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 30,
+   "ts": "2026-10-05T16:31:20.852060Z",
+   "payload": {
+    "call_id": "pa-f3fe0a898ac1",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 31,
+   "ts": "2026-10-05T16:31:20.867089Z",
+   "payload": {
+    "call_id": "ne-8a94a72d43f7",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "no ids to fetch: the pubmed_search search did not complete",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 32,
+   "ts": "2026-10-05T16:31:20.867146Z",
+   "payload": {
+    "call_id": "pa-06b9f3373b87",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "no ids to fetch: the pubmed_search search did not complete",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 33,
+   "ts": "2026-10-05T16:31:20.867186Z",
+   "payload": {
+    "call_id": "ne-02269d438ba6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "no ids to fetch: the clinvar_search search did not complete",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 34,
+   "ts": "2026-10-05T16:31:20.867203Z",
+   "payload": {
+    "call_id": "ne-db3eb576620f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "no ids to fetch: the omim_search search did not complete",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 35,
+   "ts": "2026-10-05T16:31:20.867218Z",
+   "payload": {
+    "call_id": "ne-c01a212a1419",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "no ids to fetch: the gds_search search did not complete",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 36,
+   "ts": "2026-10-05T16:31:20.898731Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 37,
+   "ts": "2026-10-05T16:31:29.224030Z",
+   "payload": {
+    "text": "Found 1 gene record for TP53, of 125 available: tumor protein p53 [2]. ",
+    "marker_ids": [
+     "cq-de87b5153e49-1"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "tumor protein p53",
+     "TP53"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 38,
+   "ts": "2026-10-05T16:31:29.224116Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 39,
+   "ts": "2026-10-05T16:31:29.224127Z",
+   "payload": {
+    "text": "Gene Identity\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 40,
+   "ts": "2026-10-05T16:31:29.224136Z",
+   "payload": {
+    "text": "The gene symbol is TP53 [1], corresponding to Gene NCBIGene:7157, name: tumor protein p53 [2]. ",
+    "marker_ids": [
+     "ne-673141626b33-2",
+     "cq-de87b5153e49-1"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "tumor protein p53",
+     "TP53"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 41,
+   "ts": "2026-10-05T16:31:29.224147Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 42,
+   "ts": "2026-10-05T16:31:29.224157Z",
+   "payload": {
+    "text": "Gene records found\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 43,
+   "ts": "2026-10-05T16:31:29.224167Z",
+   "payload": {
+    "text": "",
+    "marker_ids": [],
+    "kind": "table_header",
+    "cells": [
+     "Gene",
+     "Identifier"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 44,
+   "ts": "2026-10-05T16:31:29.224178Z",
+   "payload": {
+    "text": "Gene NCBIGene:7157, name: tumor protein p53 [2]. ",
+    "marker_ids": [
+     "cq-de87b5153e49-1"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "tumor protein p53",
+     "NCBIGene:7157"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 45,
+   "ts": "2026-10-05T16:31:29.224189Z",
+   "payload": {
+    "text": "Gene symbol: TP53 [1]. ",
+    "marker_ids": [
+     "ne-673141626b33-2"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "TP53",
+     "NCBIGene:7157"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 46,
+   "ts": "2026-10-05T16:31:29.224199Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 47,
+   "ts": "2026-10-05T16:31:29.224209Z",
+   "payload": {
+    "text": "Literature entity records found\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 48,
+   "ts": "2026-10-05T16:31:29.224218Z",
+   "payload": {
+    "text": "",
+    "marker_ids": [],
+    "kind": "table_header",
+    "cells": [
+     "Record",
+     "Identifier"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 49,
+   "ts": "2026-10-05T16:31:29.224229Z",
+   "payload": {
+    "text": "Literature entity name: TP53 [3]. ",
+    "marker_ids": [
+     "pa-f3fe0a898ac1-3"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "TP53",
+     "@GENE_TP53"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 50,
+   "ts": "2026-10-05T16:31:29.224240Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 51,
+   "ts": "2026-10-05T16:31:29.224250Z",
+   "payload": {
+    "text": "Clinical trial records found\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 52,
+   "ts": "2026-10-05T16:31:29.224260Z",
+   "payload": {
+    "text": "",
+    "marker_ids": [],
+    "kind": "table_header",
+    "cells": [
+     "Trial",
+     "Identifier",
+     "Status"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 53,
+   "ts": "2026-10-05T16:31:29.224271Z",
+   "payload": {
+    "text": "Clinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [4]. ",
+    "marker_ids": [
+     "ct-45ae8c837e58-4"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Biomarker Monitoring in TP53 Mutation Carriers",
+     "NCT02289326",
+     "COMPLETED"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 54,
+   "ts": "2026-10-05T16:31:29.224283Z",
+   "payload": {
+    "text": "Clinical trial name: Study of SNX-5422 in TP53 Null Cancers [6]. ",
+    "marker_ids": [
+     "ct-45ae8c837e58-6"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Study of SNX-5422 in TP53 Null Cancers",
+     "NCT02612285",
+     "TERMINATED"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 55,
+   "ts": "2026-10-05T16:31:29.224293Z",
+   "payload": {
+    "text": "Clinical trial name: The p53 Colorectal Cancer Trial [8]. ",
+    "marker_ids": [
+     "ct-45ae8c837e58-8"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "The p53 Colorectal Cancer Trial",
+     "NCT03149679",
+     "TERMINATED"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 56,
+   "ts": "2026-10-05T16:31:29.224303Z",
+   "payload": {
+    "text": "Clinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [10]. ",
+    "marker_ids": [
+     "ct-45ae8c837e58-10"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "The Role of Hypoxia as a Selective Pressure for TP53 Mutations",
+     "NCT03466034",
+     "TERMINATED"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 57,
+   "ts": "2026-10-05T16:31:29.224313Z",
+   "payload": {
+    "text": "Clinical trial name: Treatment of Carrying TP53 Harmful Mutations [12]. ",
+    "marker_ids": [
+     "ct-45ae8c837e58-12"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Treatment of Carrying TP53 Harmful Mutations",
+     "NCT03645200",
+     "UNKNOWN"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 58,
+   "ts": "2026-10-05T16:31:29.224323Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 59,
+   "ts": "2026-10-05T16:31:29.224332Z",
+   "payload": {
+    "text": "Biological process records found\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 60,
+   "ts": "2026-10-05T16:31:29.224338Z",
+   "payload": {
+    "text": "",
+    "marker_ids": [],
+    "kind": "table_header",
+    "cells": [
+     "Record",
+     "Identifier"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 61,
+   "ts": "2026-10-05T16:31:29.224345Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [5]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-5"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "negative regulation of transcription by RNA polymerase II",
+     "GO:0000122"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 62,
+   "ts": "2026-10-05T16:31:29.224352Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0002244, name: hematopoietic progenitor cell differentiation [7]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-7"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "hematopoietic progenitor cell differentiation",
+     "GO:0002244"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 63,
+   "ts": "2026-10-05T16:31:29.224358Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0006289, name: nucleotide-excision repair [9]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-9"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "nucleotide-excision repair",
+     "GO:0006289"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 64,
+   "ts": "2026-10-05T16:31:29.224366Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0006355, name: regulation of DNA-templated transcription [11]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-11"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "regulation of DNA-templated transcription",
+     "GO:0006355"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 65,
+   "ts": "2026-10-05T16:31:29.224373Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0006357, name: regulation of transcription by RNA polymerase II [13]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-13"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "regulation of transcription by RNA polymerase II",
+     "GO:0006357"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 66,
+   "ts": "2026-10-05T16:31:29.224380Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0006914, name: autophagy [14]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-14"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "autophagy",
+     "GO:0006914"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 67,
+   "ts": "2026-10-05T16:31:29.224387Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0006915, name: apoptotic process [15]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-15"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "apoptotic process",
+     "GO:0006915"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 68,
+   "ts": "2026-10-05T16:31:29.224393Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0006974, name: DNA damage response [16]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-16"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "DNA damage response",
+     "GO:0006974"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 69,
+   "ts": "2026-10-05T16:31:29.224400Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0006979, name: response to oxidative stress [17]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-17"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "response to oxidative stress",
+     "GO:0006979"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 70,
+   "ts": "2026-10-05T16:31:29.224407Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0006983, name: ER overload response [18]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-18"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "ER overload response",
+     "GO:0006983"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 71,
+   "ts": "2026-10-05T16:31:29.224414Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0007265, name: Ras protein signal transduction [19]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-19"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Ras protein signal transduction",
+     "GO:0007265"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 72,
+   "ts": "2026-10-05T16:31:29.224421Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0007623, name: circadian rhythm [20]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-20"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "circadian rhythm",
+     "GO:0007623"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 73,
+   "ts": "2026-10-05T16:31:29.224428Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0008104, name: intracellular protein localization [21]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-21"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "intracellular protein localization",
+     "GO:0008104"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 74,
+   "ts": "2026-10-05T16:31:29.224434Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0008285, name: negative regulation of cell population proliferation [22]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-22"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "negative regulation of cell population proliferation",
+     "GO:0008285"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 75,
+   "ts": "2026-10-05T16:31:29.224441Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0008340, name: determination of adult lifespan [23]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-23"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "determination of adult lifespan",
+     "GO:0008340"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 76,
+   "ts": "2026-10-05T16:31:29.224448Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0009299, name: mRNA transcription [24]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-24"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "mRNA transcription",
+     "GO:0009299"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 77,
+   "ts": "2026-10-05T16:31:29.224455Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0009410, name: response to xenobiotic stimulus [25]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-25"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "response to xenobiotic stimulus",
+     "GO:0009410"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 78,
+   "ts": "2026-10-05T16:31:29.224461Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0009411, name: response to UV [26]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-26"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "response to UV",
+     "GO:0009411"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 79,
+   "ts": "2026-10-05T16:31:29.224468Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0010212, name: response to ionizing radiation [27]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-27"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "response to ionizing radiation",
+     "GO:0010212"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 80,
+   "ts": "2026-10-05T16:31:29.224475Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0010332, name: response to gamma radiation [28]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-28"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "response to gamma radiation",
+     "GO:0010332"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 81,
+   "ts": "2026-10-05T16:31:29.224483Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0010628, name: positive regulation of gene expression [29]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-29"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "positive regulation of gene expression",
+     "GO:0010628"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 82,
+   "ts": "2026-10-05T16:31:29.224490Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0016032, name: viral process [30]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-30"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "viral process",
+     "GO:0016032"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 83,
+   "ts": "2026-10-05T16:31:29.224497Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0030308, name: negative regulation of cell growth [31]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-31"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "negative regulation of cell growth",
+     "GO:0030308"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 84,
+   "ts": "2026-10-05T16:31:29.224504Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0030330, name: DNA damage response, signal transduction by p53 class mediator [32]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-32"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "DNA damage response, signal transduction by p53 class mediator",
+     "GO:0030330"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 85,
+   "ts": "2026-10-05T16:31:29.224511Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0031571, name: mitotic G1 DNA damage checkpoint signaling [33]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-33"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "mitotic G1 DNA damage checkpoint signaling",
+     "GO:0031571"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 86,
+   "ts": "2026-10-05T16:31:29.224520Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0032211, name: negative regulation of telomere maintenance via telomerase [34]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-34"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "negative regulation of telomere maintenance via telomerase",
+     "GO:0032211"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 87,
+   "ts": "2026-10-05T16:31:29.224531Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0033209, name: tumor necrosis factor-mediated signaling pathway [35]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-35"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "tumor necrosis factor-mediated signaling pathway",
+     "GO:0033209"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 88,
+   "ts": "2026-10-05T16:31:29.224542Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0034644, name: cellular response to UV [36]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-36"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "cellular response to UV",
+     "GO:0034644"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 89,
+   "ts": "2026-10-05T16:31:29.224552Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0042149, name: cellular response to glucose starvation [37]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-37"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "cellular response to glucose starvation",
+     "GO:0042149"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 90,
+   "ts": "2026-10-05T16:31:29.224563Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0042771, name: intrinsic apoptotic signaling pathway in response to DNA damage by p53 class mediator [38]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-38"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "intrinsic apoptotic signaling pathway in response to DNA damage by p53 class mediator",
+     "GO:0042771"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 91,
+   "ts": "2026-10-05T16:31:29.224573Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0042981, name: regulation of apoptotic process [39]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-39"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "regulation of apoptotic process",
+     "GO:0042981"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 92,
+   "ts": "2026-10-05T16:31:29.224582Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0043065, name: positive regulation of apoptotic process [40]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-40"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "positive regulation of apoptotic process",
+     "GO:0043065"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 93,
+   "ts": "2026-10-05T16:31:29.224593Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0043066, name: negative regulation of apoptotic process [41]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-41"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "negative regulation of apoptotic process",
+     "GO:0043066"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 94,
+   "ts": "2026-10-05T16:31:29.224602Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0043153, name: entrainment of circadian clock by photoperiod [42]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-42"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "entrainment of circadian clock by photoperiod",
+     "GO:0043153"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 95,
+   "ts": "2026-10-05T16:31:29.224613Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0045815, name: transcription initiation-coupled chromatin remodeling [43]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-43"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "transcription initiation-coupled chromatin remodeling",
+     "GO:0045815"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 96,
+   "ts": "2026-10-05T16:31:29.224623Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0045892, name: negative regulation of DNA-templated transcription [44]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-44"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "negative regulation of DNA-templated transcription",
+     "GO:0045892"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 97,
+   "ts": "2026-10-05T16:31:29.224631Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0045893, name: positive regulation of DNA-templated transcription [45]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-45"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "positive regulation of DNA-templated transcription",
+     "GO:0045893"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 98,
+   "ts": "2026-10-05T16:31:29.224638Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0045899, name: positive regulation of RNA polymerase II transcription preinitiation complex assembly [46]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-46"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "positive regulation of RNA polymerase II transcription preinitiation complex assembly",
+     "GO:0045899"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 99,
+   "ts": "2026-10-05T16:31:29.224644Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0045944, name: positive regulation of transcription by RNA polymerase II [47]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-47"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "positive regulation of transcription by RNA polymerase II",
+     "GO:0045944"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 100,
+   "ts": "2026-10-05T16:31:29.224651Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0046677, name: response to antibiotic [48]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-48"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "response to antibiotic",
+     "GO:0046677"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 101,
+   "ts": "2026-10-05T16:31:29.224658Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0048147, name: negative regulation of fibroblast proliferation [49]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-49"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "negative regulation of fibroblast proliferation",
+     "GO:0048147"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 102,
+   "ts": "2026-10-05T16:31:29.224664Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0048512, name: circadian behavior [50]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-50"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "circadian behavior",
+     "GO:0048512"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 103,
+   "ts": "2026-10-05T16:31:29.224670Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0048539, name: bone marrow development [51]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-51"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "bone marrow development",
+     "GO:0048539"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 104,
+   "ts": "2026-10-05T16:31:29.224676Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0051053, name: negative regulation of DNA metabolic process [52]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-52"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "negative regulation of DNA metabolic process",
+     "GO:0051053"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 105,
+   "ts": "2026-10-05T16:31:29.224683Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0051097, name: negative regulation of helicase activity [53]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-53"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "negative regulation of helicase activity",
+     "GO:0051097"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 106,
+   "ts": "2026-10-05T16:31:29.224689Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0051262, name: protein tetramerization [54]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-54"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "protein tetramerization",
+     "GO:0051262"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 107,
+   "ts": "2026-10-05T16:31:29.224696Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0051726, name: regulation of cell cycle [55]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-55"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "regulation of cell cycle",
+     "GO:0051726"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 108,
+   "ts": "2026-10-05T16:31:29.224703Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0060218, name: hematopoietic stem cell differentiation [56]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-56"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "hematopoietic stem cell differentiation",
+     "GO:0060218"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 109,
+   "ts": "2026-10-05T16:31:29.224710Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0060333, name: type II interferon-mediated signaling pathway [57]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-57"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "type II interferon-mediated signaling pathway",
+     "GO:0060333"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 110,
+   "ts": "2026-10-05T16:31:29.224717Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0062100, name: positive regulation of programmed necrotic cell death [58]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-58"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "positive regulation of programmed necrotic cell death",
+     "GO:0062100"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 111,
+   "ts": "2026-10-05T16:31:29.224723Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0065003, name: protein-containing complex assembly [59]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-59"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "protein-containing complex assembly",
+     "GO:0065003"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 112,
+   "ts": "2026-10-05T16:31:29.224730Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0070059, name: intrinsic apoptotic signaling pathway in response to endoplasmic reticulum stress [60]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-60"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "intrinsic apoptotic signaling pathway in response to endoplasmic reticulum stress",
+     "GO:0070059"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 113,
+   "ts": "2026-10-05T16:31:29.224737Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0070245, name: positive regulation of thymocyte apoptotic process [61]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-61"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "positive regulation of thymocyte apoptotic process",
+     "GO:0070245"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 114,
+   "ts": "2026-10-05T16:31:29.224743Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0071456, name: cellular response to hypoxia [62]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-62"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "cellular response to hypoxia",
+     "GO:0071456"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 115,
+   "ts": "2026-10-05T16:31:29.224750Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0071466, name: cellular response to xenobiotic stimulus [63]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-63"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "cellular response to xenobiotic stimulus",
+     "GO:0071466"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 116,
+   "ts": "2026-10-05T16:31:29.224756Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0071479, name: cellular response to ionizing radiation [64]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-64"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "cellular response to ionizing radiation",
+     "GO:0071479"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 117,
+   "ts": "2026-10-05T16:31:29.224763Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0071480, name: cellular response to gamma radiation [65]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-65"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "cellular response to gamma radiation",
+     "GO:0071480"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 118,
+   "ts": "2026-10-05T16:31:29.224769Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0072331, name: signal transduction by p53 class mediator [66]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-66"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "signal transduction by p53 class mediator",
+     "GO:0072331"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 119,
+   "ts": "2026-10-05T16:31:29.224775Z",
+   "payload": {
+    "text": "BiologicalProcess GO:0072332, name: intrinsic apoptotic signaling pathway by p53 class mediator [67]. ",
+    "marker_ids": [
+     "cq-21e571d16e60-67"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "intrinsic apoptotic signaling pathway by p53 class mediator",
+     "GO:0072332"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 120,
+   "ts": "2026-10-05T16:31:29.224831Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 121,
+   "ts": "2026-10-05T16:31:29.224837Z",
+   "payload": {
+    "text": "Note: this answer was truncated because only 60 of the 125 records that matched this question in the graph were retrieved",
+    "marker_ids": [],
+    "kind": "note",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 122,
+   "ts": "2026-10-05T16:31:29.224843Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 123,
+   "ts": "2026-10-05T16:31:29.224850Z",
+   "payload": {
+    "text": "One of the background searches did not finish, so this answer may be missing sources. Ask again to retry.",
+    "marker_ids": [],
+    "kind": "note",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 124,
+   "ts": "2026-10-05T16:31:29.224875Z",
+   "payload": {
+    "citation_id": "ne-673141626b33-2",
+    "display_index": 1,
+    "source": "gene",
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157/",
+    "layer": "layer_2_api",
+    "field": "symbol",
+    "claim_text": "The gene symbol is TP53",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 125,
+   "ts": "2026-10-05T16:31:29.224897Z",
+   "payload": {
+    "citation_id": "cq-de87b5153e49-1",
+    "display_index": 2,
+    "source": "NCBIGene",
+    "source_id": "NCBIGene:7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "corresponding to Gene NCBIGene:7157, name: tumor protein p53",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "tumor protein p53"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 126,
+   "ts": "2026-10-05T16:31:29.224906Z",
+   "payload": {
+    "citation_id": "pa-f3fe0a898ac1-3",
+    "display_index": 3,
+    "source": "ncbi_gene",
+    "source_id": "@GENE_TP53",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Literature entity name: TP53",
+    "evidence_kind": "literature_mention",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "publisher_copyright_abstract_only",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 127,
+   "ts": "2026-10-05T16:31:29.224915Z",
+   "payload": {
+    "citation_id": "ct-45ae8c837e58-4",
+    "display_index": 4,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT02289326",
+    "source_url": "https://clinicaltrials.gov/study/NCT02289326",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: Biomarker Monitoring in TP53 Mutation Carriers",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 128,
+   "ts": "2026-10-05T16:31:29.224929Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-5",
+    "display_index": 5,
+    "source": "GO",
+    "source_id": "GO:0000122",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "negative regulation of transcription by RNA polymerase II"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 129,
+   "ts": "2026-10-05T16:31:29.224941Z",
+   "payload": {
+    "citation_id": "ct-45ae8c837e58-6",
+    "display_index": 6,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT02612285",
+    "source_url": "https://clinicaltrials.gov/study/NCT02612285",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: Study of SNX-5422 in TP53 Null Cancers",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 130,
+   "ts": "2026-10-05T16:31:29.224952Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-7",
+    "display_index": 7,
+    "source": "GO",
+    "source_id": "GO:0002244",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0002244, name: hematopoietic progenitor cell differentiation",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "hematopoietic progenitor cell differentiation"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 131,
+   "ts": "2026-10-05T16:31:29.224964Z",
+   "payload": {
+    "citation_id": "ct-45ae8c837e58-8",
+    "display_index": 8,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT03149679",
+    "source_url": "https://clinicaltrials.gov/study/NCT03149679",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: The p53 Colorectal Cancer Trial",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 132,
+   "ts": "2026-10-05T16:31:29.224972Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-9",
+    "display_index": 9,
+    "source": "GO",
+    "source_id": "GO:0006289",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0006289, name: nucleotide-excision repair",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "nucleotide-excision repair"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 133,
+   "ts": "2026-10-05T16:31:29.224979Z",
+   "payload": {
+    "citation_id": "ct-45ae8c837e58-10",
+    "display_index": 10,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT03466034",
+    "source_url": "https://clinicaltrials.gov/study/NCT03466034",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 134,
+   "ts": "2026-10-05T16:31:29.224987Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-11",
+    "display_index": 11,
+    "source": "GO",
+    "source_id": "GO:0006355",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0006355, name: regulation of DNA-templated transcription A live NCBI value for this field is more current per Section 7.1 ('TP53'); see citation [1].",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "regulation of DNA-templated transcription"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 135,
+   "ts": "2026-10-05T16:31:29.224994Z",
+   "payload": {
+    "citation_id": "ct-45ae8c837e58-12",
+    "display_index": 12,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT03645200",
+    "source_url": "https://clinicaltrials.gov/study/NCT03645200",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: Treatment of Carrying TP53 Harmful Mutations",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 136,
+   "ts": "2026-10-05T16:31:29.225001Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-13",
+    "display_index": 13,
+    "source": "GO",
+    "source_id": "GO:0006357",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0006357, name: regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "regulation of transcription by RNA polymerase II"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 137,
+   "ts": "2026-10-05T16:31:29.225008Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-14",
+    "display_index": 14,
+    "source": "GO",
+    "source_id": "GO:0006914",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0006914, name: autophagy",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "autophagy"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 138,
+   "ts": "2026-10-05T16:31:29.225015Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-15",
+    "display_index": 15,
+    "source": "GO",
+    "source_id": "GO:0006915",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0006915, name: apoptotic process",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "apoptotic process"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 139,
+   "ts": "2026-10-05T16:31:29.225023Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-16",
+    "display_index": 16,
+    "source": "GO",
+    "source_id": "GO:0006974",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0006974, name: DNA damage response",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "DNA damage response"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 140,
+   "ts": "2026-10-05T16:31:29.225034Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-17",
+    "display_index": 17,
+    "source": "GO",
+    "source_id": "GO:0006979",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0006979, name: response to oxidative stress",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "response to oxidative stress"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 141,
+   "ts": "2026-10-05T16:31:29.225045Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-18",
+    "display_index": 18,
+    "source": "GO",
+    "source_id": "GO:0006983",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0006983, name: ER overload response",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "ER overload response"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 142,
+   "ts": "2026-10-05T16:31:29.225055Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-19",
+    "display_index": 19,
+    "source": "GO",
+    "source_id": "GO:0007265",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0007265, name: Ras protein signal transduction",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "Ras protein signal transduction"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 143,
+   "ts": "2026-10-05T16:31:29.225065Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-20",
+    "display_index": 20,
+    "source": "GO",
+    "source_id": "GO:0007623",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0007623, name: circadian rhythm",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "circadian rhythm"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 144,
+   "ts": "2026-10-05T16:31:29.225076Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-21",
+    "display_index": 21,
+    "source": "GO",
+    "source_id": "GO:0008104",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0008104, name: intracellular protein localization",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "intracellular protein localization"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 145,
+   "ts": "2026-10-05T16:31:29.225087Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-22",
+    "display_index": 22,
+    "source": "GO",
+    "source_id": "GO:0008285",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0008285, name: negative regulation of cell population proliferation",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "negative regulation of cell population proliferation"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 146,
+   "ts": "2026-10-05T16:31:29.225099Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-23",
+    "display_index": 23,
+    "source": "GO",
+    "source_id": "GO:0008340",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0008340, name: determination of adult lifespan",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "determination of adult lifespan"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 147,
+   "ts": "2026-10-05T16:31:29.225109Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-24",
+    "display_index": 24,
+    "source": "GO",
+    "source_id": "GO:0009299",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0009299, name: mRNA transcription",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "mRNA transcription"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 148,
+   "ts": "2026-10-05T16:31:29.225119Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-25",
+    "display_index": 25,
+    "source": "GO",
+    "source_id": "GO:0009410",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0009410, name: response to xenobiotic stimulus",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "response to xenobiotic stimulus"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 149,
+   "ts": "2026-10-05T16:31:29.225130Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-26",
+    "display_index": 26,
+    "source": "GO",
+    "source_id": "GO:0009411",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0009411, name: response to UV",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "response to UV"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 150,
+   "ts": "2026-10-05T16:31:29.225141Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-27",
+    "display_index": 27,
+    "source": "GO",
+    "source_id": "GO:0010212",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0010212, name: response to ionizing radiation",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "response to ionizing radiation"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 151,
+   "ts": "2026-10-05T16:31:29.225152Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-28",
+    "display_index": 28,
+    "source": "GO",
+    "source_id": "GO:0010332",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0010332, name: response to gamma radiation",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "response to gamma radiation"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 152,
+   "ts": "2026-10-05T16:31:29.225163Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-29",
+    "display_index": 29,
+    "source": "GO",
+    "source_id": "GO:0010628",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0010628, name: positive regulation of gene expression",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "positive regulation of gene expression"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 153,
+   "ts": "2026-10-05T16:31:29.225173Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-30",
+    "display_index": 30,
+    "source": "GO",
+    "source_id": "GO:0016032",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0016032, name: viral process",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "viral process"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 154,
+   "ts": "2026-10-05T16:31:29.225184Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-31",
+    "display_index": 31,
+    "source": "GO",
+    "source_id": "GO:0030308",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0030308, name: negative regulation of cell growth",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "negative regulation of cell growth"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 155,
+   "ts": "2026-10-05T16:31:29.225195Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-32",
+    "display_index": 32,
+    "source": "GO",
+    "source_id": "GO:0030330",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0030330, name: DNA damage response, signal transduction by p53 class mediator",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "DNA damage response, signal transduction by p53 class mediator"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 156,
+   "ts": "2026-10-05T16:31:29.225207Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-33",
+    "display_index": 33,
+    "source": "GO",
+    "source_id": "GO:0031571",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0031571, name: mitotic G1 DNA damage checkpoint signaling",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "mitotic G1 DNA damage checkpoint signaling"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 157,
+   "ts": "2026-10-05T16:31:29.225219Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-34",
+    "display_index": 34,
+    "source": "GO",
+    "source_id": "GO:0032211",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0032211, name: negative regulation of telomere maintenance via telomerase",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "negative regulation of telomere maintenance via telomerase"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 158,
+   "ts": "2026-10-05T16:31:29.225231Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-35",
+    "display_index": 35,
+    "source": "GO",
+    "source_id": "GO:0033209",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0033209, name: tumor necrosis factor-mediated signaling pathway",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "tumor necrosis factor-mediated signaling pathway"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 159,
+   "ts": "2026-10-05T16:31:29.225242Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-36",
+    "display_index": 36,
+    "source": "GO",
+    "source_id": "GO:0034644",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0034644, name: cellular response to UV",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "cellular response to UV"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 160,
+   "ts": "2026-10-05T16:31:29.225253Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-37",
+    "display_index": 37,
+    "source": "GO",
+    "source_id": "GO:0042149",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0042149, name: cellular response to glucose starvation",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "cellular response to glucose starvation"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 161,
+   "ts": "2026-10-05T16:31:29.225264Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-38",
+    "display_index": 38,
+    "source": "GO",
+    "source_id": "GO:0042771",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0042771, name: intrinsic apoptotic signaling pathway in response to DNA damage by p53 class mediator",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "intrinsic apoptotic signaling pathway in response to DNA damage by p53 class mediator"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 162,
+   "ts": "2026-10-05T16:31:29.225275Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-39",
+    "display_index": 39,
+    "source": "GO",
+    "source_id": "GO:0042981",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0042981, name: regulation of apoptotic process",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "regulation of apoptotic process"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 163,
+   "ts": "2026-10-05T16:31:29.225314Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-40",
+    "display_index": 40,
+    "source": "GO",
+    "source_id": "GO:0043065",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0043065, name: positive regulation of apoptotic process",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "positive regulation of apoptotic process"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 164,
+   "ts": "2026-10-05T16:31:29.225325Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-41",
+    "display_index": 41,
+    "source": "GO",
+    "source_id": "GO:0043066",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0043066, name: negative regulation of apoptotic process",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "negative regulation of apoptotic process"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 165,
+   "ts": "2026-10-05T16:31:29.225336Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-42",
+    "display_index": 42,
+    "source": "GO",
+    "source_id": "GO:0043153",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0043153, name: entrainment of circadian clock by photoperiod",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "entrainment of circadian clock by photoperiod"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 166,
+   "ts": "2026-10-05T16:31:29.225348Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-43",
+    "display_index": 43,
+    "source": "GO",
+    "source_id": "GO:0045815",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0045815, name: transcription initiation-coupled chromatin remodeling",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "transcription initiation-coupled chromatin remodeling"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 167,
+   "ts": "2026-10-05T16:31:29.225358Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-44",
+    "display_index": 44,
+    "source": "GO",
+    "source_id": "GO:0045892",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0045892, name: negative regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "negative regulation of DNA-templated transcription"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 168,
+   "ts": "2026-10-05T16:31:29.225370Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-45",
+    "display_index": 45,
+    "source": "GO",
+    "source_id": "GO:0045893",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0045893, name: positive regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "positive regulation of DNA-templated transcription"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 169,
+   "ts": "2026-10-05T16:31:29.225381Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-46",
+    "display_index": 46,
+    "source": "GO",
+    "source_id": "GO:0045899",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0045899, name: positive regulation of RNA polymerase II transcription preinitiation complex assembly",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "positive regulation of RNA polymerase II transcription preinitiation complex assembly"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 170,
+   "ts": "2026-10-05T16:31:29.225392Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-47",
+    "display_index": 47,
+    "source": "GO",
+    "source_id": "GO:0045944",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0045944, name: positive regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "positive regulation of transcription by RNA polymerase II"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 171,
+   "ts": "2026-10-05T16:31:29.225403Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-48",
+    "display_index": 48,
+    "source": "GO",
+    "source_id": "GO:0046677",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0046677, name: response to antibiotic",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "response to antibiotic"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 172,
+   "ts": "2026-10-05T16:31:29.225414Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-49",
+    "display_index": 49,
+    "source": "GO",
+    "source_id": "GO:0048147",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0048147, name: negative regulation of fibroblast proliferation",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "negative regulation of fibroblast proliferation"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 173,
+   "ts": "2026-10-05T16:31:29.225425Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-50",
+    "display_index": 50,
+    "source": "GO",
+    "source_id": "GO:0048512",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0048512, name: circadian behavior",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "circadian behavior"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 174,
+   "ts": "2026-10-05T16:31:29.225450Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-51",
+    "display_index": 51,
+    "source": "GO",
+    "source_id": "GO:0048539",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0048539, name: bone marrow development",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "bone marrow development"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 175,
+   "ts": "2026-10-05T16:31:29.225462Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-52",
+    "display_index": 52,
+    "source": "GO",
+    "source_id": "GO:0051053",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0051053, name: negative regulation of DNA metabolic process",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "negative regulation of DNA metabolic process"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 176,
+   "ts": "2026-10-05T16:31:29.225474Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-53",
+    "display_index": 53,
+    "source": "GO",
+    "source_id": "GO:0051097",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0051097, name: negative regulation of helicase activity",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "negative regulation of helicase activity"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 177,
+   "ts": "2026-10-05T16:31:29.225485Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-54",
+    "display_index": 54,
+    "source": "GO",
+    "source_id": "GO:0051262",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0051262, name: protein tetramerization",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "protein tetramerization"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 178,
+   "ts": "2026-10-05T16:31:29.225496Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-55",
+    "display_index": 55,
+    "source": "GO",
+    "source_id": "GO:0051726",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0051726, name: regulation of cell cycle",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "regulation of cell cycle"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 179,
+   "ts": "2026-10-05T16:31:29.225507Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-56",
+    "display_index": 56,
+    "source": "GO",
+    "source_id": "GO:0060218",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0060218, name: hematopoietic stem cell differentiation",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "hematopoietic stem cell differentiation"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 180,
+   "ts": "2026-10-05T16:31:29.225518Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-57",
+    "display_index": 57,
+    "source": "GO",
+    "source_id": "GO:0060333",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0060333, name: type II interferon-mediated signaling pathway",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "type II interferon-mediated signaling pathway"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 181,
+   "ts": "2026-10-05T16:31:29.225529Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-58",
+    "display_index": 58,
+    "source": "GO",
+    "source_id": "GO:0062100",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0062100, name: positive regulation of programmed necrotic cell death",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "positive regulation of programmed necrotic cell death"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 182,
+   "ts": "2026-10-05T16:31:29.225540Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-59",
+    "display_index": 59,
+    "source": "GO",
+    "source_id": "GO:0065003",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0065003, name: protein-containing complex assembly",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "protein-containing complex assembly"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 183,
+   "ts": "2026-10-05T16:31:29.225551Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-60",
+    "display_index": 60,
+    "source": "GO",
+    "source_id": "GO:0070059",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0070059, name: intrinsic apoptotic signaling pathway in response to endoplasmic reticulum stress",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "intrinsic apoptotic signaling pathway in response to endoplasmic reticulum stress"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 184,
+   "ts": "2026-10-05T16:31:29.225562Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-61",
+    "display_index": 61,
+    "source": "GO",
+    "source_id": "GO:0070245",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0070245, name: positive regulation of thymocyte apoptotic process",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "positive regulation of thymocyte apoptotic process"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 185,
+   "ts": "2026-10-05T16:31:29.225575Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-62",
+    "display_index": 62,
+    "source": "GO",
+    "source_id": "GO:0071456",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0071456, name: cellular response to hypoxia",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "cellular response to hypoxia"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 186,
+   "ts": "2026-10-05T16:31:29.225587Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-63",
+    "display_index": 63,
+    "source": "GO",
+    "source_id": "GO:0071466",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0071466, name: cellular response to xenobiotic stimulus",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "cellular response to xenobiotic stimulus"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 187,
+   "ts": "2026-10-05T16:31:29.225598Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-64",
+    "display_index": 64,
+    "source": "GO",
+    "source_id": "GO:0071479",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0071479, name: cellular response to ionizing radiation",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "cellular response to ionizing radiation"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 188,
+   "ts": "2026-10-05T16:31:29.225609Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-65",
+    "display_index": 65,
+    "source": "GO",
+    "source_id": "GO:0071480",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0071480, name: cellular response to gamma radiation",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "cellular response to gamma radiation"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 189,
+   "ts": "2026-10-05T16:31:29.225621Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-66",
+    "display_index": 66,
+    "source": "GO",
+    "source_id": "GO:0072331",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0072331, name: signal transduction by p53 class mediator",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "signal transduction by p53 class mediator"
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 190,
+   "ts": "2026-10-05T16:31:29.225632Z",
+   "payload": {
+    "citation_id": "cq-21e571d16e60-67",
+    "display_index": 67,
+    "source": "GO",
+    "source_id": "GO:0072332",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "field": "name",
+    "claim_text": "BiologicalProcess GO:0072332, name: intrinsic apoptotic signaling pathway by p53 class mediator",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": "2026-04-22",
+    "entity_name": "intrinsic apoptotic signaling pathway by p53 class mediator"
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 191,
+   "ts": "2026-10-05T16:31:29.225656Z",
+   "payload": {
+    "outcome": "flag",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-673141626b33-2",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 192,
+   "ts": "2026-10-05T16:31:29.225676Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-de87b5153e49-1",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 193,
+   "ts": "2026-10-05T16:31:29.225688Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "pa-f3fe0a898ac1-3",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 194,
+   "ts": "2026-10-05T16:31:29.225700Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-45ae8c837e58-4",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 195,
+   "ts": "2026-10-05T16:31:29.225712Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-5",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 196,
+   "ts": "2026-10-05T16:31:29.225724Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-45ae8c837e58-6",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 197,
+   "ts": "2026-10-05T16:31:29.225735Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-7",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 198,
+   "ts": "2026-10-05T16:31:29.225748Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-45ae8c837e58-8",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 199,
+   "ts": "2026-10-05T16:31:29.225760Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-9",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 200,
+   "ts": "2026-10-05T16:31:29.225772Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-45ae8c837e58-10",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 201,
+   "ts": "2026-10-05T16:31:29.225784Z",
+   "payload": {
+    "outcome": "flag",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-11",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 202,
+   "ts": "2026-10-05T16:31:29.225796Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-45ae8c837e58-12",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 203,
+   "ts": "2026-10-05T16:31:29.225808Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-13",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 204,
+   "ts": "2026-10-05T16:31:29.225821Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-14",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 205,
+   "ts": "2026-10-05T16:31:29.225833Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-15",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 206,
+   "ts": "2026-10-05T16:31:29.225845Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-16",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 207,
+   "ts": "2026-10-05T16:31:29.225857Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-17",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 208,
+   "ts": "2026-10-05T16:31:29.225869Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-18",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 209,
+   "ts": "2026-10-05T16:31:29.225883Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-19",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 210,
+   "ts": "2026-10-05T16:31:29.225894Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-20",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 211,
+   "ts": "2026-10-05T16:31:29.225906Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-21",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 212,
+   "ts": "2026-10-05T16:31:29.225919Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-22",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 213,
+   "ts": "2026-10-05T16:31:29.225930Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-23",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 214,
+   "ts": "2026-10-05T16:31:29.225942Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-24",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 215,
+   "ts": "2026-10-05T16:31:29.226013Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-25",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 216,
+   "ts": "2026-10-05T16:31:29.226024Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-26",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 217,
+   "ts": "2026-10-05T16:31:29.226037Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-27",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 218,
+   "ts": "2026-10-05T16:31:29.226048Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-28",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 219,
+   "ts": "2026-10-05T16:31:29.226061Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-29",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 220,
+   "ts": "2026-10-05T16:31:29.226073Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-30",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 221,
+   "ts": "2026-10-05T16:31:29.226084Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-31",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 222,
+   "ts": "2026-10-05T16:31:29.226097Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-32",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 223,
+   "ts": "2026-10-05T16:31:29.226109Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-33",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 224,
+   "ts": "2026-10-05T16:31:29.226122Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-34",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 225,
+   "ts": "2026-10-05T16:31:29.226134Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-35",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 226,
+   "ts": "2026-10-05T16:31:29.226146Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-36",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 227,
+   "ts": "2026-10-05T16:31:29.226159Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-37",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 228,
+   "ts": "2026-10-05T16:31:29.226171Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-38",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 229,
+   "ts": "2026-10-05T16:31:29.226183Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-39",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 230,
+   "ts": "2026-10-05T16:31:29.226196Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-40",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 231,
+   "ts": "2026-10-05T16:31:29.226208Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-41",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 232,
+   "ts": "2026-10-05T16:31:29.226220Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-42",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 233,
+   "ts": "2026-10-05T16:31:29.226233Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-43",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 234,
+   "ts": "2026-10-05T16:31:29.226245Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-44",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 235,
+   "ts": "2026-10-05T16:31:29.226257Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-45",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 236,
+   "ts": "2026-10-05T16:31:29.226269Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-46",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 237,
+   "ts": "2026-10-05T16:31:29.226283Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-47",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 238,
+   "ts": "2026-10-05T16:31:29.226295Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-48",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 239,
+   "ts": "2026-10-05T16:31:29.226307Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-49",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 240,
+   "ts": "2026-10-05T16:31:29.226319Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-50",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 241,
+   "ts": "2026-10-05T16:31:29.226331Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-51",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 242,
+   "ts": "2026-10-05T16:31:29.226344Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-52",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 243,
+   "ts": "2026-10-05T16:31:29.226356Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-53",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 244,
+   "ts": "2026-10-05T16:31:29.226368Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-54",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 245,
+   "ts": "2026-10-05T16:31:29.226379Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-55",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 246,
+   "ts": "2026-10-05T16:31:29.226391Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-56",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 247,
+   "ts": "2026-10-05T16:31:29.226404Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-57",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 248,
+   "ts": "2026-10-05T16:31:29.226415Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-58",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 249,
+   "ts": "2026-10-05T16:31:29.226427Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-59",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 250,
+   "ts": "2026-10-05T16:31:29.226439Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-60",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 251,
+   "ts": "2026-10-05T16:31:29.226452Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-61",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 252,
+   "ts": "2026-10-05T16:31:29.226464Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-62",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 253,
+   "ts": "2026-10-05T16:31:29.226475Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-63",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 254,
+   "ts": "2026-10-05T16:31:29.226487Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-64",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 255,
+   "ts": "2026-10-05T16:31:29.226499Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-65",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 256,
+   "ts": "2026-10-05T16:31:29.226511Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-66",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 257,
+   "ts": "2026-10-05T16:31:29.226524Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "cq-21e571d16e60-67",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 258,
+   "ts": "2026-10-05T16:31:29.226547Z",
+   "payload": {
+    "outcome": "ask",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "7d447c9a-c96f-48ac-b924-26bd474f7950",
+   "seq": 260,
+   "ts": "2026-10-05T16:31:29.226789Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 15890,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 7 sources, not yet confirmed",
+    "layer_calls_used": 8,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 388
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 126
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 136
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.36,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 168
+     }
+    ]
+   }
+  }
+ ]
+}

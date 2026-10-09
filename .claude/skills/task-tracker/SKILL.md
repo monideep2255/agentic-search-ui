@@ -1,6 +1,6 @@
 ---
 name: task-tracker
-description: Maintain the in-repo build record, the phase ledgers under tracker/ (tickets, acceptance criteria, status, evidence, an append-only history per ticket) beside the board of cards in testing/UI_fix_plan.md. Use when opening a numbered phase, when a builder finishes or blocks, when the product owner asks what the status is, and at every checkpoint. TRIGGER on "open the ledger", "what is in flight", "status of phase N", "add a ticket", "mark done". Distinct from phase-checkpoint (planning documents at a boundary) and from LEARNINGS.md (what broke, not what is assigned).
+description: Maintain the phase ledgers under tracker/ and the UI fix board: tickets, status, evidence, history. TRIGGER on 'open the ledger', 'what is in flight', 'status of phase N', 'add a ticket', 'mark done'. Unlike phase-checkpoint (planning documents) and LEARNINGS.md (failures).
 argument-hint: "[--open N.M] [--status] [--close TICKET-ID]"
 ---
 
@@ -191,37 +191,7 @@ Treat it the way a real team treats its board. A ticket is added when work is id
 
 That only works if updating it is cheap, which a markdown ledger and a markdown board are.
 
-### Rendering: the frozen board's page
 
-`tracker/render_board.py` is the only thing that ever wrote the HTML views, and it parses `tracker/BOARD.md` alone. Since the board is frozen, the renderer runs only if the frozen record is corrected, which it should not be.
-
-```bash
-python3 tracker/render_board.py           # render both views
-python3 tracker/render_board.py --check   # parse and report, write nothing
-```
-
-The renderer refuses to write when the board is malformed, and exits non-zero. That is deliberate: a stale page is better than a page that silently drops a phase. It rejects:
-
-- An unknown status.
-- An unknown group.
-- A duplicate phase id.
-- A row with the wrong column count.
-- A flag count that disagrees with the Open flags table.
-
-The hook that ran the renderer on every Edit or Write under `tracker/` is removed from `.claude/settings.json` under the product owner's item-by-item approval of 2026-09-25 (DECISIONS.md), the board file staying as history. The hook's known hole is recorded in `LEARNINGS.md` (2026-07-26): it fired on the Edit and Write tools only, so an edit made through Bash left the page stale.
-
-Publish (`--publish`): render, then publish `tracker/board.body.html` as the artifact, republishing to the same URL so a link shared once keeps working. Publish `board.body.html`, not `board.html`: the published page is wrapped in its own document shell, so it must not carry a doctype of its own. With the board frozen this is a republish of a record, on request only.
-
-### What the frozen board's page encodes visually
-
-Form carries state, not just number, so what needs attention reads at a glance:
-
-- Status is a column and a color: done, in progress, blocked, to do.
-- Group is a tag: planning, prototype, v1.
-- Dependencies are chips, so a phase that cannot start yet shows why.
-- Gates are chips, marking a phase that had to clear `eval-harness`, `dev-standards`, or Playwright before it shipped.
-- Product owner required is its own chip, deliberately not a flag. It is a property of the phase, not a problem to resolve, and conflating the two makes the open-flag count lie.
-- Flags are unresolved problems that block their phase. This count must reconcile with the flags table.
 
 ## What a ticket must carry before work starts
 

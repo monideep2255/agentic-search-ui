@@ -42,10 +42,12 @@
  * change emits a shape this file was not updated for.
  */
 
-import { Fragment, type ReactElement } from "react";
-import { Box, Typography } from "@mui/material";
+import { Fragment, useState, type ReactElement } from "react";
+import { Box, Typography, useMediaQuery } from "@mui/material";
 
 import { designTokens } from "../../theme";
+import { RECORDS_PAGE_SIZE, RecordsPaginationBar } from "../answer/RecordsPaginationBar";
+import { PHONE_LAYOUT_QUERY } from "./AnswerScreen";
 
 type Block =
   | { kind: "heading"; text: string }
@@ -215,6 +217,111 @@ const SAM_LIST_ITEM_SX = {
 } as const;
 
 /**
+ * One saved table. Pages ten rows at a time with the live answer's bar, and
+ * on a phone stacks each row the way the live phone view does (card 71).
+ */
+function SavedTable({ index, header, rows }: { index: number; header: string[]; rows: string[][] }): ReactElement {
+  const phone = useMediaQuery(PHONE_LAYOUT_QUERY, { noSsr: true });
+  const [page, setPage] = useState(0);
+  const totalRows = rows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / RECORDS_PAGE_SIZE));
+  const isPaginated = totalRows > RECORDS_PAGE_SIZE;
+  const currentPage = Math.min(page, totalPages - 1);
+  const visibleRows = isPaginated
+    ? rows.slice(currentPage * RECORDS_PAGE_SIZE, currentPage * RECORDS_PAGE_SIZE + RECORDS_PAGE_SIZE)
+    : rows;
+  const bar = isPaginated ? (
+    <RecordsPaginationBar
+      testIdBase={`saved-answer-table-${index}`}
+      currentPage={currentPage}
+      totalPages={totalPages}
+      totalRows={totalRows}
+      onGo={setPage}
+    />
+  ) : null;
+  if (phone) {
+    return (
+      <>
+        <Box
+          component="ul"
+          data-testid={`saved-answer-table-${index}`}
+          sx={{ listStyle: "none", m: isPaginated ? "0" : "0 0 16px", p: 0 }}
+        >
+          {visibleRows.map((row, r) => (
+            <Box
+              component="li"
+              key={r}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "2px",
+                py: "10px",
+                borderBottom: `1px solid ${designTokens.line}`,
+                "&:last-child": { borderBottom: 0 },
+              }}
+            >
+              <Box
+                component="span"
+                sx={{ fontSize: 15, lineHeight: 1.45, color: designTokens.ink, overflowWrap: "anywhere" }}
+              >
+                {row[0] ?? ""}
+              </Box>
+              {row.slice(1).map((cell, c) => {
+                const label = header[c + 1];
+                return (
+                  <Box
+                    component="span"
+                    key={c}
+                    sx={{ fontSize: 13.5, lineHeight: 1.45, color: designTokens.inkMuted, overflowWrap: "anywhere" }}
+                  >
+                    {label ? `${label}: ` : ""}
+                    {cell || "\u2013"}
+                  </Box>
+                );
+              })}
+            </Box>
+          ))}
+        </Box>
+        {bar}
+      </>
+    );
+  }
+  return (
+    <>
+      <Box sx={{ overflowX: "auto", m: isPaginated ? "0" : "0 0 16px" }}>
+        <Box component="table" data-testid={`saved-answer-table-${index}`} sx={SAM_TABLE_SX}>
+          {header.length > 0 ? (
+            <thead>
+              <tr>
+                {header.map((label, c) => (
+                  <Box component="th" key={c} scope="col" sx={SAM_TABLE_HEAD_SX}>
+                    {label}
+                  </Box>
+                ))}
+              </tr>
+            </thead>
+          ) : null}
+          <tbody>
+            {visibleRows.map((row, r) => (
+              <Fragment key={r}>
+                <Box component="tr">
+                  {row.map((cell, c) => (
+                    <Box component="td" key={c} sx={SAM_TABLE_CELL_SX}>
+                      {cell}
+                    </Box>
+                  ))}
+                </Box>
+              </Fragment>
+            ))}
+          </tbody>
+        </Box>
+      </Box>
+      {bar}
+    </>
+  );
+}
+
+/**
  * `answer_markdown`, rendered as React elements. Never
  * `dangerouslySetInnerHTML`: every construct below is a typed React node,
  * so JSX's own escaping is the XSS control, exactly as
@@ -233,36 +340,9 @@ export function SavedAnswerMarkdown({ markdown }: { markdown: string }): ReactEl
           );
         }
         if (block.kind === "table") {
-          return (
-            <Box key={index} sx={{ overflowX: "auto", m: "0 0 16px" }}>
-              <Box component="table" data-testid={`saved-answer-table-${index}`} sx={SAM_TABLE_SX}>
-                {block.header.length > 0 ? (
-                  <thead>
-                    <tr>
-                      {block.header.map((label, c) => (
-                        <Box component="th" key={c} scope="col" sx={SAM_TABLE_HEAD_SX}>
-                          {label}
-                        </Box>
-                      ))}
-                    </tr>
-                  </thead>
-                ) : null}
-                <tbody>
-                  {block.rows.map((row, r) => (
-                    <Fragment key={r}>
-                      <Box component="tr">
-                        {row.map((cell, c) => (
-                          <Box component="td" key={c} sx={SAM_TABLE_CELL_SX}>
-                            {cell}
-                          </Box>
-                        ))}
-                      </Box>
-                    </Fragment>
-                  ))}
-                </tbody>
-              </Box>
-            </Box>
-          );
+          // Keyed by content so a different table or answer opens on page 1.
+          const contentKey = `${index}:${block.header.join("\u241f")}:${block.rows.map((r) => r.join("\u241f")).join("\u241e")}`;
+          return <SavedTable key={contentKey} index={index} header={block.header} rows={block.rows} />;
         }
         if (block.kind === "list") {
           return (

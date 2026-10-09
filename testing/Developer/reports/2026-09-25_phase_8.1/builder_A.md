@@ -48,7 +48,7 @@ Fix, `core/graph.py` only:
    own purpose.
 
 Unit tests added, `tests/system_03_search_agent/core/test_disease_breadth.py`
-(the file that already owns every other MedGen-shape test in this repo):
+(the file that already owns every other MedGen-shape test in this repository):
 `test_clinical_features_reach_the_row_as_a_quotable_string` (the populated
 case, red against the pre-fix allowlist by construction: the old filter
 drops the key entirely, so the assertion would `KeyError`, not fail),

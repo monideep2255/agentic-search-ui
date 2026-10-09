@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Runs the CI gates locally before anything is staged. Syncs the four canonical docs and commits with a Conventional Commit subject. Pushes to develop for a card alone at risk-dial position one or two, or to a branch for a numbered phase or position three. Proves the remote advanced and confirms the deploy. Clears away leftover agent worktrees. Use when ending a work block or after a logical milestone.
+description: Run CI gates locally, scan the push for secrets, sync the canonical documents, commit, push to develop or a branch by risk position, and confirm the deploy. Use when ending a work block or after a milestone.
 ---
 
 # /ship - gates, docs-sync, git-sync, then worktree cleanup
@@ -41,14 +41,54 @@ A chain like `pytest ... | tail -3 && git commit` reports `tail`'s exit code, no
 - `bash .github/gates/gate04_unit_suite.sh`: whenever any Python file under `src/`, `tests/`, `services/` or `tracker/` changed. Roughly five minutes. A docs-only change skips this and the report says so.
 - `npm run build` in `frontend/`: whenever any file under `frontend/` changed. Railway's own build is what fails silently otherwise, and this is the only local check that would catch it first.
 - `python3 tracker/check_doc_drift.py --check`: always. It checks document structure (tables of contents, the two append-only tables, phase and pull request references), compares no count and runs no tests, so it takes seconds. A fact it could not compute is a failure line naming why, never an "ok".
+- `python3 tracker/check_doc_sync.py`: always. It compares the key documents with each other (a card in one place only, each retest row naming a real query, every card the board plan, the Factory brief and `HANDOFF.md` name on a list, Factory's cards not already built, the handoff's develop commit in history, every registered path on disk) and takes well under a second. Exit 1 is a disagreement and blocks the push: fix the document it names, as `/phase-checkpoint` Step 6b does. Exit 2 is that it could not run, which is never a pass.
+- `python3 .claude/skills/ship/scripts/check_public_leaks.py`: always, and last, because it is the final check before anything is pushed. It fetches the base, then scans every outgoing commit, the working tree and untracked files for a secret or a private value (see the subsection below). Exit 0 is clean; 1 is a finding, a file too large to scan, or a machine without the private-name check; 2 is that it could not run, which is never a pass. Gate on that code, never through a pipe.
 
 ### A red gate stops the ship
 
 Fix the cause, then make a NEW commit. Never `--amend`.
 
+### The public-leak scan
+
+This repository is public, so a push is permanent and world-readable. The scan reads what the push would publish and stops it when a line looks like a leak. It prints a location, a category and a mask (first character and length), never a value or a line of content.
+
+What it reads:
+
+- It runs `git fetch` for the base first (`origin/develop`, or `--base <ref>`), so a stale or force-pushed remote cannot hide a commit. `--no-fetch` skips that on purpose, for example offline.
+- Every commit in `origin/develop..HEAD`, ONE AT A TIME: every added line, the name of every file it adds, its message, and its author and committer email. A value added in one commit and deleted in a later one is still published, so it is still a finding, reported as `commit <sha> file:line`. A merge commit is read through its remerge diff, so a change made while resolving it is read too.
+- The staged diff, the unstaged diff, and every untracked file git does not ignore, whole, with its name.
+- Nothing is skipped silently. No line is cut short. `.gitattributes` cannot hide a file, because any file git calls binary is read from its blob and judged by content. UTF-16 and text with a stray NUL byte are decoded and read. A text file over 2 MB FAILS the scan: shrink or split it.
+
+What it catches, each reported as `FAIL <where> [category] <mask>`:
+
+- Secrets by shape: PEM and PGP private key blocks, AWS access key ids, GitHub, GitLab, Hugging Face, npm and Stripe tokens, `sk-` provider keys, Slack tokens and webhooks, Discord webhooks, Google keys, JWTs, `Bearer` and `Basic` authorization values, a password inside a URL of any length that is not a placeholder, a password assigned in code or config, and a key, secret, token or credential assigned a long high-entropy value.
+- Local machine paths: a home directory that names a person, with or without a trailing slash, in its slash, Windows, WSL, escaped, URL-encoded and dash-encoded (`-Users-<name>-`) forms, a Desktop, Documents or Downloads path under the home folder, and pytest's `pytest-of-<name>`. `<user>` and CI names such as `runner` are fine.
+- Personal emails, and any author or committer email that is not a GitHub noreply address.
+- IPv4 and IPv6 addresses outside loopback, documentation and range names, `ssh <user>@<host>` and `git@<host>` on a host that is not a public forge, and URLs or addresses on an internal host (`.internal`, `.corp`, `.local` and the like).
+
+What blocks and what does not: every FAIL line blocks, exit 1, and so does a TOO LARGE line. A `NOT SCANNED` line does not block; it names a genuinely binary file (a screenshot, an archive, a database) whose printable text was read but whose picture or compressed content cannot be. Screenshots are the one kind of file the scan cannot read: a person looks at each one before the push. Author and committer display names are not scanned, because the owner's name is public and other names cannot be listed in a public file.
+
+The private-name check. A private name, the owner's work identity or an employer-internal term cannot be listed in a public file, so the scan runs the owner's machine-local check. It trusts only a script named exactly `verify_no_local_refs.py` on the `exec` line of `.git/hooks/pre-commit`, and runs it twice: over every line, file name and message the scan read (its `--message` mode), and over the whole tracked tree (its `--all` mode). It prints only that check's verdict and its check names, mapped to the scan's own locations, never its raw output. A finding in a file already on the base says so and needs the owner told. When the hook or the script is missing, is some other script, or cannot run, the scan prints `private-name check NOT RUN on this machine` and exits 1, so a machine without it is never treated as clean. `--allow-missing-private-check` accepts that on purpose, for example in CI.
+
+What it still cannot catch, so a clean run is necessary and not sufficient:
+
+- A secret that fits none of the shapes above, such as one base64-wrapped or split across two string literals.
+- The inside of a screenshot or an archive (the `NOT SCANNED` lines).
+- An email written out in words (`name at domain dot com`), and an internal ticket key on its own.
+- An annotated tag's message. /ship does not push tags; push one only after reading its message.
+- A leak already public on `develop`, `production` or another pushed branch. Removing one needs the owner, since it means rewriting history.
+
+A finding stops the push. Where it is decides the fix:
+
+- In a commit in the range: take it out of THAT commit. A later commit that deletes the line does not unpublish it, and pull requests here merge without squashing. Nothing in the range is pushed yet, so for example `git reset --soft <merge base>` (the scan prints it), fix the files, and make one fresh commit. That is not an amend of a published commit.
+- In the working tree or an untracked file: remove the line before committing.
+- `local-refs: allow` on the same physical line exempts a genuinely public path, address or host, the same marker the local hook honours. It never exempts a secret: a secret can only be removed. A secret that reached a pushed commit needs the owner and a rotation, not an edit.
+
+The scan runs twice: last in Step 0, and again in Step 2 after the commit and before the push, because docs-sync edits files and the commit and its message exist only after Step 0.
+
 ### CI runs after the push, so check it before claiming it
 
-CI runs failed from 2026-09-22 into 2026-09-24 while the account's billing setting blocked Actions, and completed green on `develop` again on 2026-09-25 and 2026-09-26 (`gh run list --branch develop`). Check `gh run list --branch develop --limit 3` for the pushed commit before claiming CI ran on it. A push that changes only Markdown runs no workflow (`paths-ignore` in `.github/workflows/ci.yml`), so for a documentation-only push the local gates are the only evidence, and the report says so rather than imply CI backed it up.
+Check `gh run list --branch develop --limit 3` for the pushed commit before claiming CI ran on it. A push that changes only Markdown runs no workflow (`paths-ignore` in `.github/workflows/ci.yml`), so for a documentation-only push the local gates are the only evidence, and the report says so rather than imply CI backed it up.
 
 ## Step 1: docs-sync agent
 
@@ -57,7 +97,7 @@ Dispatch the `docs-sync` sub-agent (`.claude/agents/docs-sync.md`).
 It will:
 
 1. Run `git status --short` to see what changed
-2. Use its routing to identify which canonical docs need updating (CLAUDE.md, AGENTS.md, README.md, DECISIONS.md)
+2. Use its routing to identify which canonical docs need updating (CLAUDE.md, AGENTS.md, `.claude/README.md`, README.md, DECISIONS.md)
 3. Read only affected docs
 4. Make surgical edits, not rewrites
 5. Report what changed (or "no changes needed")
@@ -66,7 +106,7 @@ Wait for docs-sync to complete before proceeding. Its edits may add files to the
 
 ### What docs-sync owns, and what it must not touch
 
-docs-sync edits only CLAUDE.md, AGENTS.md, README.md and DECISIONS.md. Everything else a session boundary changes is owned by `/phase-checkpoint`, and the list of those documents is not written here: it is every row of `tracker/Living_documents.md` whose owner is `/phase-checkpoint` (the handoff, the board, the done file, the test queries, Plan.md and PROGRESS.md, as of 2026-09-26).
+docs-sync edits only CLAUDE.md, AGENTS.md, `.claude/README.md`, README.md and DECISIONS.md. Everything else a session boundary changes is owned by `/phase-checkpoint`, and the list of those documents is not written here: it is every row of `tracker/Living_documents.md` whose owner is `/phase-checkpoint` (the handoff, the board, the done file, the test queries, Plan.md and PROGRESS.md, as of 2026-09-26).
 
 A push does not need `/phase-checkpoint` first. One thing does, at a session end only: `HANDOFF.md` is rewritten before the push (`/phase-checkpoint` Step 4 is the procedure), so the next session starts from what is true. Every other document is edited when its fact changes, not because a date is due, and nothing here checks that a document carries today's date.
 
@@ -183,7 +223,8 @@ It will:
 2. Show the file list before committing
 3. Stage specific files (never `git add -A`)
 4. Commit with a descriptive message (why, not what)
-5. Push to origin
+5. Run the public-leak scan, `python3 .claude/skills/ship/scripts/check_public_leaks.py`, and stop on any exit code but 0
+6. Push to origin
 
 Additional context to pass to git-sync:
 
@@ -193,6 +234,7 @@ Additional context to pass to git-sync:
   - A card alone at position one or two: `develop` directly, once its position's steps have run.
   - A numbered phase, at any position: the `phase/N.M-...` branch with `-u`, then offer the pull request.
   - Position three, auth, the graph credential, the event schema, or anything under `.claude/`, hooks or settings: a `chore/` or `fix/` branch with a pull request.
+- Run the public-leak scan once more after the commit and before the push (step 5 above), and push only on exit 0. It now sees the new commit, its message, its author identity and any file docs-sync edited. Paste its last lines into the report.
 - Prove the push: compare `git rev-parse HEAD` with `git rev-parse origin/<branch>` and require equality; never a verbose curl trace (`docs/rules/Sandbox_diagnosis.md`).
 - After a push to develop, confirm the Railway deploy for that commit reached SUCCESS (the `develop` project's API service; a deploy takes two to three minutes) before telling the product owner anything is live; a push is not a deploy.
 
@@ -245,6 +287,7 @@ This step is deletion, so it follows `file-protection`: say what is going before
 - Do NOT push with an unexplained stray file in the tree. Every path from BOTH of Step 1b's sources, `git status --porcelain` and the filesystem walk, is classified there, or the push waits. A clean `git status` is not evidence the tree is clean, since `.gitignore` hides the duplicate-copy family from it.
 - Do NOT push if pre-commit hooks fail. Fix the cause and create a NEW commit (never `--amend` after a hook failure)
 - Do NOT push with any Step 0 gate red or unrun
+- Do NOT push with a public-leak finding, a TOO LARGE line, or with the scan unrun or exiting 2. A finding in a commit is taken out of that commit, not deleted by a later one. Only genuinely public information is marked `local-refs: allow`, and a secret never is. Never bypass the scan or the local hook (`--no-verify`) to get a push through
 - Do NOT push at a session end until `HANDOFF.md` has been rewritten this session (`/phase-checkpoint` Step 4); its `Last updated:` line reading today's date is the proof. No other document needs a date to be pushed
 
 ## Output
@@ -252,11 +295,12 @@ This step is deletion, so it follows `file-protection`: say what is going before
 After all steps complete, report:
 
 1. Step 0 gate results: each command and its exit code, and which were skipped and why
-2. Files changed (count + list)
-3. Commit hash
-4. Push status (pushed / nothing to push / blocked)
-5. The hash comparison proving the remote advanced (`git rev-parse HEAD` versus `git rev-parse origin/<branch>`)
-6. Deploy status (Railway deploy reached SUCCESS, or not confirmed, and why)
-7. Every untracked path that was found, and what happened to each: staged, ignored, removed, or left with a question
-8. Worktrees and `worktree-agent-*` branches removed, and anything skipped with the reason
-9. One-line summary of what was shipped
+2. The public-leak scan, both runs: exit code, its summary line, the private-name check line (PASS, or NOT RUN and why), every `NOT SCANNED` file a person must look at, and whether `--allow-missing-private-check` or `--no-fetch` was passed and why
+3. Files changed (count + list)
+4. Commit hash
+5. Push status (pushed / nothing to push / blocked)
+6. The hash comparison proving the remote advanced (`git rev-parse HEAD` versus `git rev-parse origin/<branch>`)
+7. Deploy status (Railway deploy reached SUCCESS, or not confirmed, and why)
+8. Every untracked path that was found, and what happened to each: staged, ignored, removed, or left with a question
+9. Worktrees and `worktree-agent-*` branches removed, and anything skipped with the reason
+10. One-line summary of what was shipped

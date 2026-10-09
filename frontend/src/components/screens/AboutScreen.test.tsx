@@ -99,6 +99,19 @@ describe("AboutScreen: what happens to your question", () => {
     });
   });
 
+  it("shows the three layer cards before the walk-through, as the design does", () => {
+    // Card 80. Mutation that turns this red: put the cards back after the walk.
+    render(<AboutScreen />);
+
+    const cardsBox = screen.getByTestId("about-layer-cards");
+    const walk = screen.getByTestId("about-journey");
+    expect(within(cardsBox).getAllByRole("heading", { level: 2 })).toHaveLength(3);
+    expect(
+      cardsBox.compareDocumentPosition(walk) & Node.DOCUMENT_POSITION_FOLLOWING,
+      "the layer cards come before the walk",
+    ).toBeTruthy();
+  });
+
   it("names all three data layers on the Act stop, each with its own tools", () => {
     render(<AboutScreen />);
 

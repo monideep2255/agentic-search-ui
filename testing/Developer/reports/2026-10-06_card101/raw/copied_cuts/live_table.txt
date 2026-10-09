@@ -1,0 +1,9 @@
+answer | seconds | cost usd | shown | check calls | copied cuts asked | approved | held
+br1 | 26.1 | 0.0155 | 3 | 2 | 0 | 0 | 0
+br2 | 16.0 | 0.0166 | 4 | 2 | 0 | 0 | 0
+br3 | 16.6 | 0.018 | 3 | 2 | 0 | 0 | 0
+ge1 | 17.9 | 0.0221 | 4 | 2 | 0 | 0 | 0
+ge2 | 21.3 | 0.0259 | 4 | 2 | 0 | 0 | 0
+ge3 | 15.8 | 0.0242 | 4 | 2 | 0 | 0 | 0
+
+copied cuts asked 0, approved 0, answers with no prose 0

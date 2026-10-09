@@ -3,7 +3,7 @@ alpha decisions endpoint (build phase 8.2, DECISIONS.md 2026-09-25, cards
 8, 9, 10 and 13).
 
 Depends on:
-    - httpx (already a repo dependency via litellm's own transports),
+    - httpx (already a repository dependency via litellm's own transports),
       called directly here rather than through `litellm.acompletion`,
       because the decisions endpoint is not a chat-completions call and
       carries its own request and response shape.

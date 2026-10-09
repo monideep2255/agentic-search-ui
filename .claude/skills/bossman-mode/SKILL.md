@@ -1,6 +1,6 @@
 ---
 name: bossman-mode
-description: "Autonomous execution for System 3, one cadence with a risk dial: a copy or layout fix gets builder, clerk and product review; runnable behaviour adds the judge and the adversary; auth, the graph credential, the event schema or .claude/ adds a branch and a pull request. Picked by what a person sees first, capped at 8 hours and 8 dispatches, ending on a product review of develop. TRIGGER on 'bossman mode', 'run the phase', 'go build this', 'let's execute', 'run the UI fix loop'. DO NOT TRIGGER in architecture or planning discussions, nor for one bounded edit or a status question."
+description: "Autonomous build execution with a risk dial: copy fixes get a builder and product review, runnable behavior adds a judge and adversary, sensitive areas add a branch and pull request. TRIGGER on 'bossman mode', 'run the phase', 'go build this'. Not for planning or one-off edits."
 argument-hint: "[--phase N.M] [--ui] [--status] [--stop]"
 ---
 
@@ -18,15 +18,7 @@ This file and its four reference files are the one home of the build loop. Since
 
 It points at the one reference file the current stage needs, so a review round does not pay for the dispatch instructions and a single card does not pay for either.
 
-Redesigned on 2026-09-24 from `docs/build/Bossman_mode_redesign.md`, whose eight decisions the product owner accepted in full ("Accept all eight"). They are the last eight rows of `DECISIONS.md` dated that day. What the old loop did:
-
-- It ran a premise gate on every phase.
-- Its cap on review rounds could be authorised away.
-- It never looked at the deployed product.
-
-It certified 35 phases, after which the golden questions answered in 13 of 85 runs. The loop below ends every change on the running product.
-
-Merged into one cadence on 2026-09-25. The 2026-09-24 decision scheduled the merge for after the next build phase closed, and three closed on 2026-09-25. The build harness review of that day found a documentation-only phase paying for a judge round while a fix-loop card with runnable behaviour got no engineering review at all. The product owner delegated the review's takeaways to the lead (`DECISIONS.md`, 2026-09-25, "The lead implements both harness reviews' takeaways").
+Every change ends on the running product: the loop below finishes with a product review of deployed develop and the owner's retest. The redesign behind it is `docs/build/Bossman_mode_redesign.md`, accepted on 2026-09-24 and recorded in `DECISIONS.md`.
 
 ## Table of contents
 
@@ -270,6 +262,7 @@ Read the file for the stage you are at. Do not read all of them at phase open.
 
 | Stage | Read |
 | --- | --- |
+| Activation: what this mode suspends and what it never suspends | `.claude/rules-reference/bossman-mode.md`, the full text behind the short `bossman-mode` rule |
 | Tier names to models | `docs/build/Build_workflow_cadence.md`, "Provider mapping" |
 | Opening, splitting and dispatching a numbered phase, what a worker is handed, the ledger and its dispatch table, gates, checkpoint, merge | `reference/Phase_execution.md` |
 | The judge, the adversary, the fix-and-verify round, the ledger rules | `reference/Review_rounds.md` |

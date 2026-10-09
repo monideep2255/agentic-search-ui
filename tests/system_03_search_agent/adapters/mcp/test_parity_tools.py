@@ -475,6 +475,25 @@ class TestAReopenedAnswerCountsWhatItCannotShow:
         assert omitted == 0
 
 
+def test_past_answer_timestamps_are_bounded_in_both_output_schemas() -> None:
+    asked_at = datetime(2026, 10, 6, 12, 30, tzinfo=UTC)
+    models = (
+        server_module.PastSearch(
+            trace_id="t1", question="BRCA1?", asked_at=asked_at,
+            trust_signal="answer", citation_count=1,
+        ),
+        server_module.ReopenedAnswerOutput(
+            trace_id="t1", question="BRCA1?", asked_at=asked_at,
+            audience_depth="researcher", answer_markdown="BRCA1 [1].",
+            trust_signal="answer",
+        ),
+    )
+    for model in models:
+        schema = type(model).model_json_schema()["properties"]["asked_at"]
+        assert schema["maxLength"] == 40
+        assert model.model_dump(mode="json")["asked_at"].startswith("2026-10-06T12:30")
+
+
 # ---------------------------------------------------------------------------
 # DATABASE-BACKED from here on: the auth path and the three new tools.
 # ---------------------------------------------------------------------------
@@ -729,7 +748,7 @@ class TestPastSearchesAreYoursAlone:
     @pytest.mark.asyncio
     async def test_no_token_lists_nothing(self) -> None:
         message = await _call_expecting_error(None, "list_past_searches", {})
-        assert message == server_module._AUTH_FAILURE_MESSAGE
+        assert message == server_module._NO_TOKEN_MESSAGE
 
 
 @_needs_database
@@ -758,7 +777,9 @@ class TestGuestsGetNoMoreThanRest:
             ("send_answer_feedback", {"run_id": str(uuid.uuid4()), "rating": "up"}),
         ):
             message = await _call_expecting_error(guest, name, arguments)
-            assert message == server_module._AUTH_FAILURE_MESSAGE, name
+            # Card 62: a guest token fails to verify as an account's, so it
+            # gets the invalid-token words, which say an account is needed.
+            assert message == server_module._INVALID_TOKEN_MESSAGE, name
 
 
 @_needs_database
@@ -784,10 +805,10 @@ class TestReopeningIsYoursAlone:
         assert content["citations_omitted"] == 0
 
     @pytest.mark.asyncio
-    async def test_a_sixty_marker_answer_says_ten_of_its_markers_point_at_nothing(self) -> None:
+    async def test_a_110_marker_answer_says_ten_of_its_markers_point_at_nothing(self) -> None:
         # Fix round, F-8.10-J02: the judge's `probe_capture60.py`, end to end.
         # The answer goes through the real capture and the real writer, which
-        # keep 50 of its 60 citations (card 54's cap), and comes back through
+        # keep 100 of its 110 citations (card 54's ceiling), and comes back through
         # the real tool. Mutation that turns this red: count only stored
         # entries left out again -> `citations_omitted` is 0.
         from system_03_search_agent.feedback.capture import assemble_interaction
@@ -796,18 +817,18 @@ class TestReopeningIsYoursAlone:
         a_id, a_headers = await _new_account()
         trace = f"paritytest-{uuid.uuid4().hex}"
         items: list[tuple[str, Any]] = [_GUARD_OK]
-        for index in range(1, 61):
+        for index in range(1, 111):
             items.append(
                 ("token", TokenPayload(text=f"Record {index} is relevant [{index}]. ", marker_ids=[f"c{index}"]))
             )
-        items.extend(("citation", _citation(index)) for index in range(1, 61))
+        items.extend(("citation", _citation(index)) for index in range(1, 111))
         items.append(("trust_signal", _answer_trust("answer")))
         items.append(("done", _done("answer", trust_line=_TRUST_LINE)))
         events = [_event(kind, trace, seq, payload) for seq, (kind, payload) in enumerate(items)]
         row = assemble_interaction(
             Query(
-                text="Sixty records",
-                session_id="s-sixty",
+                text="110 records",
+                session_id="s-110",
                 trace_id=trace,
                 user_id=None,
                 owner_id=f"user:{a_id}",
@@ -815,14 +836,14 @@ class TestReopeningIsYoursAlone:
             ),
             events,
         )
-        assert len(row.citations) == 50, "populate check: capture keeps 50 of the 60"
+        assert len(row.citations) == 100, "populate check: capture keeps 100 of the 110"
         await write_interaction(row)
 
         result = await _call(a_headers, "reopen_past_answer", {"trace_id": trace})
 
         assert result.is_error is False
         content = result.structured_content
-        assert len(content["citations"]) == 50
+        assert len(content["citations"]) == 100
         assert content["citations_omitted"] == 10
 
     @pytest.mark.asyncio
@@ -924,6 +945,12 @@ class TestFeedbackIsYoursAlone:
             {"run_id": run_id},
             {"run_id": run_id, "comment": "   ", "flagged_reason": ""},
             {"run_id": run_id, "citation_flags": []},
+            {"run_id": run_id, "comment": "\u200b"},
+            {"run_id": run_id, "flagged_reason": "\u200b\u200c"},
+            {"run_id": run_id, "comment": "\ufe0f"},
+            {"run_id": run_id, "comment": "\u0301"},
+            {"run_id": run_id, "comment": "\u3164"},
+            {"run_id": run_id, "comment": "\x00"},
         ):
             message = await _call_expecting_error(a_headers, "send_answer_feedback", empty)
             assert message == server_module._NOTHING_TO_RECORD_MESSAGE, empty

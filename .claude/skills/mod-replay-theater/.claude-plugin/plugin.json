@@ -1,0 +1,7 @@
+{
+  "name": "mod-replay-theater",
+  "version": "1.0.0",
+  "description": "Records the file edits of each turn and steps through them one diff at a time in a pane. Trigger: Auto hint after a turn with edits, or /replay",
+  "author": { "name": "Monideep Chakraborti" },
+  "types": "./types/index.d.ts"
+}

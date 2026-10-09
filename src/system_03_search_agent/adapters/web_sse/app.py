@@ -79,6 +79,7 @@ from system_03_search_agent.feedback import (
     InteractionNotFound,
     record_feedback,
 )
+from system_03_search_agent.feedback.contracts import MAX_CITATIONS_PER_ANSWER
 from system_03_search_agent.feedback.history import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
@@ -268,7 +269,7 @@ app.mount("/mcp", _mcp_asgi_app)
 # so the next reader can check the claim in one grep instead of trusting it,
 # which is the whole lesson build phase 4.15 drew from finding four of these
 # in one phase.
-_MAX_CITATIONS_PER_RUN = 50
+_MAX_CITATIONS_PER_RUN = MAX_CITATIONS_PER_ANSWER
 
 # F-4.0-A-02/A-03 (adversary round 1, build phase 4.0): the ONLY valid
 # `Last-Event-ID` shape is the digits `Event.seq` actually is (`ge=0`,
@@ -856,7 +857,7 @@ class SavedAnswerResponse(BaseModel):
     inventing one: `trace_id` matches `InteractionRow.trace_id`'s 64,
     `question` matches `query_text`'s 2000, `answer_markdown` matches the
     32000 measured in alembic 0010, and `citations` carries the same
-    `max_length=50` capture already truncates to.
+    `MAX_CITATIONS_PER_ANSWER` capture already truncates to (100, card 54).
 
     `citations` is typed as a list of plain objects, deliberately, and not
     as `CitationPayload`. These rows were validated against that model when
@@ -888,7 +889,9 @@ class SavedAnswerResponse(BaseModel):
     asked_at: datetime
     depth: Literal["plain", "researcher"]
     answer_markdown: str = Field(..., max_length=32000)
-    citations: list[dict[str, Any]] = Field(default_factory=list, max_length=50)
+    citations: list[dict[str, Any]] = Field(
+        default_factory=list, max_length=MAX_CITATIONS_PER_ANSWER
+    )
     trust_signal: str = Field(..., max_length=20)
     #: `max_length=200` mirrors `DonePayload.trust_line`'s own bound
     #: (`contracts/events.py`), the same bound `InteractionRow.answer_trust_
@@ -1121,7 +1124,7 @@ def get_v1_history_answer(
         asked_at=saved.asked_at,
         depth=_WIRE_DEPTH_BY_STORED.get(saved.depth, "researcher"),  # type: ignore[arg-type]
         answer_markdown=saved.answer_markdown,
-        citations=citations[:50],
+        citations=citations[:MAX_CITATIONS_PER_ANSWER],
         trust_signal=saved.trust_signal,
         trust_line=saved.trust_line,
     )
@@ -1884,8 +1887,15 @@ async def post_v1_query_stop(
     # already-cancelled run is a no-op, never an error, so this endpoint
     # always returns 200 once ownership is established, regardless of
     # whether the run was still in flight.
-    default_registry.cancel_run(run_id)
-    return StopRunResponse(stopped=True)
+    #
+    # Card 59, A-59-03: `stopped` reports what happened, as GraphQL's
+    # `stopRun` does, rather than the fixed `True` it used to be. A run that
+    # had already finished, including one that sent `done` and is still
+    # saving its answer (D18: that answer stands), reads `stopped: false`,
+    # which the command line prints as "run was already finished". Same
+    # one-field shape; the web client does not read the body.
+    stopped = default_registry.cancel_run(run_id)
+    return StopRunResponse(stopped=stopped)
 
 
 # ---------------------------------------------------------------------------

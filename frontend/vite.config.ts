@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig } from "vitest/config";
 import type { Plugin } from "vite";
@@ -15,7 +15,11 @@ import react from "@vitejs/plugin-react";
 // output carries alongside the bundle.
 function thirdPartyNoticesPlugin(): Plugin {
   const SECTION_DELIMITER = "=".repeat(80);
-  const LICENSE_FILENAMES = ["LICENSE", "LICENSE.md", "LICENCE"];
+  // Card 86. A package may spell its license file any way: `LICENSE`,
+  // `license` (clsx), `LICENCE.txt`, `License.md`. A Mac file system ignores
+  // case, so a fixed list of names passed locally and missed on Linux. This
+  // matches the folder listing instead, ignoring case.
+  const LICENSE_FILE_RE = /^licen[cs]e(\.md|\.txt)?$/i;
 
   // A module id looks like ".../node_modules/react/cjs/react.production.js"
   // or, scoped, ".../node_modules/@mui/material/index.js". The package root
@@ -29,10 +33,20 @@ function thirdPartyNoticesPlugin(): Plugin {
   }
 
   function licenseText(root: string): string {
-    for (const filename of LICENSE_FILENAMES) {
-      const licensePath = path.join(root, filename);
-      if (existsSync(licensePath)) {
+    let names: string[] = [];
+    try {
+      names = readdirSync(root).filter((name) => LICENSE_FILE_RE.test(name));
+    } catch {
+      return "no license file found";
+    }
+    // An exact `LICENSE` wins when several files match; then a stable order.
+    names.sort((a, b) => Number(b === "LICENSE") - Number(a === "LICENSE") || a.localeCompare(b));
+    for (const name of names) {
+      const licensePath = path.join(root, name);
+      try {
         return readFileSync(licensePath, "utf-8").trim();
+      } catch {
+        // A folder that matches the pattern is not a license file; try the next.
       }
     }
     return "no license file found";

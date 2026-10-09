@@ -31,6 +31,7 @@ import { Box, Typography, useMediaQuery } from "@mui/material";
 import { designTokens, layerColour } from "../../theme";
 import type { ReasoningStep } from "./RunProgress";
 import { ReasoningLog } from "./ReasoningLog";
+import { RECORDS_PAGE_SIZE, RecordsPaginationBar } from "../answer/RecordsPaginationBar";
 import { FeedbackSurface } from "../feedback/FeedbackSurface";
 import { PersonaInfo, WritingEllipsis } from "../shell/PersonaChip";
 import {
@@ -63,6 +64,8 @@ export interface Claim {
    *   sentence.
    * `heading`, `noteBefore`: a heading or a system note that stands directly
    *   before this claim.
+   * `noteAfter`: a note that belongs under the table this row ends (card 23's
+   *   variant-to-disease source line), shown directly after the table.
    * `cells`: the display values of a list item (one) or table row (two).
    * `emphasis`: substrings of `text` to bold, chosen in code by the backend.
    * `tableHeader`: the column labels, on the first row of a table.
@@ -78,6 +81,7 @@ export interface Claim {
   paragraph?: number;
   heading?: string;
   noteBefore?: string;
+  noteAfter?: string;
   cells?: string[];
   emphasis?: string[];
   tableHeader?: string[];
@@ -85,11 +89,27 @@ export interface Claim {
   findingsTail?: boolean;
 }
 
-/** What the trust line's info card says (item 9.9). */
+/**
+ * What the trust line's info card says (item 9.9).
+ *
+ * Card 22 (2026-10-06): this used to say sources were counted by database,
+ * which stopped being true for "Based on N sources" on 2026-09-23 (item
+ * 12.8 made it count pages). It now states what each number counts.
+ *
+ * Card 22 fix round (J-22-08): "not yet confirmed" has two causes, and the
+ * card names both. The backend floors an answer at `ask` when it may be
+ * incomplete (a background search did not finish, more records were found
+ * than it lists, a named item went unanswered, or the written summary fell
+ * back to a list: `core/graph.py`), as well as when a high-stakes fact has
+ * only one database behind it. The sentence says what the reader gets in
+ * each case and blames no one.
+ */
 export const TRUST_LINE_EXPLAINER =
-  "Sources are counted by the database each record comes from, so twenty records from one " +
-  "database are one source. Confirmed means two independent databases agree on the same " +
-  "high-stakes fact. Not yet confirmed means a high-stakes fact rests on a single source.";
+  "Sources cited counts the record pages this answer cites, the same pages listed under " +
+  "Sources; two links to one page count once. Confirmed means two or more independent " +
+  "databases agree on the same high-stakes fact. Not yet confirmed means a high-stakes fact " +
+  "has not been found in a second independent database, or this answer may be incomplete, " +
+  "for example because a search did not finish or more records were found than it lists.";
 
 /*
  * UI fix 11.27, product owner 2026-09-14: "There is too much bold. Only the
@@ -211,7 +231,7 @@ const PROSE_SX = {
   textWrap: "pretty",
   "&:last-child": { mb: 0 },
   "@media (max-width:860px)": { maxWidth: "none" },
-  "@media (max-width:720px)": { fontSize: 16, lineHeight: 1.65, mb: "16px" },
+  "@media (max-width:720px)": { fontSize: 16, lineHeight: 1.65, mb: "16px", overflowWrap: "anywhere" },
 } as const;
 
 const RTAB_CELL = {
@@ -234,6 +254,7 @@ const RTAB_ID = {
   fontSize: 12.5,
   whiteSpace: "nowrap",
   color: designTokens.inkMuted,
+  "@media (max-width:720px)": { whiteSpace: "normal", overflowWrap: "anywhere" },
 } as const;
 
 /**
@@ -365,6 +386,7 @@ export function buildAnswerBlocks(claims: Claim[]): AnswerBlock[] {
           rows: [row],
         });
       }
+      if (claim.noteAfter) blocks.push({ type: "note", text: claim.noteAfter, key: `note-after-${index}` });
       return;
     }
     const parsed = labels[index];
@@ -433,7 +455,9 @@ export const LAYER_GROUP_LABEL: Record<Layer, string> = {
  * Notes the answer still CARRIES but the web UI does not SHOW.
  *
  * Product-owner decision, 2026-09-21: "the Notes section is super confusing.
- * remove it", naming these two exactly. They asked for them deleted
+ * remove it", naming two notes. On 2026-10-05 (D1) the owner reversed it for
+ * the no-written-summary note: a list with no reason reads as a defect, so
+ * that note is shown. Only the further-records note stays hidden. They asked for them deleted
  * outright and that is what this does on screen.
  *
  * HIDDEN HERE RATHER THAN REMOVED IN THE BACKEND, and the reason is worth
@@ -454,7 +478,6 @@ export const LAYER_GROUP_LABEL: Record<Layer, string> = {
  * disease record").
  */
 export const HIDDEN_NOTE_PATTERNS: RegExp[] = [
-  /^Note: the written summary of these records could not be verified/,
   // "Note: 5 further pubmed records were found ...", and its singular
   // "Note: one further disease record was found ...". Written as one
   // pattern because the count and the record type both vary, and a prefix
@@ -469,10 +492,20 @@ export const isHiddenNote = (text: string): boolean =>
 /** One row in the grouped, deduplicated source list: `Source` plus every
  * citation marker that pointed at the same record. */
 export interface MergedSource {
-  /** Every citation marker this record answers for, ascending, e.g. [2, 5]. */
+  /** Every citation marker this record answers for, in citation order, e.g. [2, 5]. */
   ns: number[];
+  /** The group this card sits under (see `groupSourcesByLayer`). */
   layer: Layer;
+  /**
+   * Every layer a citation of this page came from, ascending, e.g. [1, 2]
+   * for the graph's gene link cited beside the live Datasets gene link
+   * (card 22 fix round). The card names each one.
+   */
+  layers: Layer[];
+  /** Which markers came from which layer, so a group can list its own. */
+  nsByLayer: Partial<Record<Layer, number[]>>;
   name: string;
+  /** Every distinct tool that cited this page, joined, e.g. "cypher_query, ncbi_datasets". */
   tool: string;
   evidence: string;
   confidence: string;
@@ -480,11 +513,65 @@ export interface MergedSource {
   url: string;
 }
 
+/** One layer group of the Sources list. */
+export interface SourceGroup {
+  layer: Layer;
+  label: string;
+  /** The cards that sit under this group. */
+  items: MergedSource[];
+  /**
+   * Pages also cited from this layer whose one card sits under an earlier
+   * group. Listed by name so the group, and the fact that the answer drew
+   * on this layer, never vanish (card 22 fix round, owner 2026-10-06).
+   */
+  alsoCited: MergedSource[];
+}
+
+/** The text a source card shows for its layers, e.g. "L1 · graph, L2 · live". */
+export function sourceLayerLabel(layers: Layer[]): string {
+  return layers.map((layer) => `L${layer} · ${LAYER_WORD[layer] ?? "source"}`).join(", ");
+}
+
+/**
+ * The key that decides whether two citations point at the same page.
+ *
+ * Card 22 (owner, 2026-10-06): every number on the answer screen that says
+ * "sources" counts distinct pages under this key. It is the same rule as
+ * `source_page_key` in `synthesis/trust.py`, which counts the trust line's
+ * "Based on N sources cited": surrounding whitespace and trailing slashes are
+ * dropped, nothing else. The one measured duplicate was `.../gene/672` beside
+ * `.../gene/672/` (the graph's and the live Datasets builder's links to one
+ * gene). Case, query strings and fragments are kept, because a query string
+ * can name a different record and merging on a guess would hide a source.
+ *
+ * An empty string means "no page"; callers fall back to their own id.
+ */
+export function sourcePageKey(url: string | null | undefined): string {
+  return (url ?? "").trim().replace(/\/+$/, "");
+}
+
+/**
+ * How many distinct pages the answer cites, and from how many layers: the
+ * numbers the meta line states. Read off `groupSourcesByLayer` itself, so
+ * the meta line can never disagree with the Sources list heading.
+ *
+ * Card 22 fix round (owner, 2026-10-06): `layers` counts every layer any
+ * cited page came from. A page cited from the graph and from a live fetch
+ * is one page from two layers, so that answer reads "1 source cited from
+ * 2 layers", and both groups show in the list (`SourceGroup.alsoCited`).
+ */
+export function citedSourceCounts(sources: Source[]): { pages: number; layers: number } {
+  const groups = groupSourcesByLayer(sources);
+  return {
+    pages: groups.reduce((total, group) => total + group.items.length, 0),
+    layers: groups.length,
+  };
+}
+
 /**
  * Groups `sources` by layer, Knowledge graph then Live NCBI APIs then
- * Enrichment, and within each group collapses every citation that names the
- * SAME record (`source.url`) into one row carrying every marker that
- * pointed at it.
+ * Enrichment, and collapses every citation that names the SAME record into
+ * one card carrying every marker that pointed at it.
  *
  * This dedupes the SOURCE LIST only, never a table row. `AnswerScreen`'s
  * result table (`RTAB`, rendered from `claims`) is untouched by this
@@ -496,42 +583,73 @@ export interface MergedSource {
  * the duplication the product owner asked removed (2026-09-20), and this
  * function only ever runs on the list that answers that question.
  *
- * A merged record's group is the layer of its FIRST citation. The same URL
- * cited from two different layers is not a modelled case in this system
- * (Section 6 gives each tool exactly one layer, so a record's layer is fixed
- * by which tool fetched it); this is a defensive default, not a real path.
+ * Card 22 (owner, 2026-10-06): "the same record" is decided by
+ * `sourcePageKey`, the one page key the trust line's count also uses, so a
+ * link with and without a trailing slash is one card, and the heading over
+ * this list, the meta line and "Based on N sources cited" are one number.
+ *
+ * ONE PAGE CITED FROM TWO LAYERS (card 22 fix round, owner's decision of
+ * 2026-10-06 on J-22-02 and A-22-09). Under the page key this is
+ * reachable: the graph's gene link has no trailing slash and the live
+ * Datasets gene link has one. The page stays ONE card, and:
+ *
+ * - the card names every layer it was cited from ("L1 · graph, L2 · live"),
+ *   so no marker points at a card that names a different layer;
+ * - THE RULE FOR WHERE IT SITS: the card sits under the group of the
+ *   lowest-numbered layer it was cited from, Knowledge graph before Live
+ *   NCBI APIs before Enrichment. That is the first group in the list that
+ *   holds it, and it does not depend on which citation came first, so the
+ *   same answer always files the card in the same place;
+ * - every other layer it was cited from still shows its group, listing the
+ *   page by name under `alsoCited` with that layer's own markers and where
+ *   its card is. A group never vanishes while a citation in the answer
+ *   still points at its layer, and the meta line counts that layer.
+ *
+ * The card's name, evidence, confidence and licence come from its first
+ * citation in the layer it sits under; its tool line names every tool that
+ * cited the page.
  */
-export function groupSourcesByLayer(
-  sources: Source[],
-): { layer: Layer; label: string; items: MergedSource[] }[] {
-  const byUrl = new Map<string, MergedSource>();
-  const order: string[] = [];
+export function groupSourcesByLayer(sources: Source[]): SourceGroup[] {
+  const byKey = new Map<string, Source[]>();
   sources.forEach((source) => {
-    const existing = byUrl.get(source.url);
-    if (existing) {
-      existing.ns.push(source.n);
-      return;
-    }
-    byUrl.set(source.url, {
-      ns: [source.n],
-      layer: source.layer,
-      name: source.name,
-      tool: source.tool,
-      evidence: source.evidence,
-      confidence: source.confidence,
-      license: source.license,
-      url: source.url,
-    });
-    order.push(source.url);
+    // A source with no link is its own card, never merged with another
+    // link-less one: the same fallback the trust line's count uses.
+    const key = sourcePageKey(source.url) || `#${source.n}`;
+    const cited = byKey.get(key);
+    if (cited) cited.push(source);
+    else byKey.set(key, [source]);
   });
-  const merged = order.map((url) => byUrl.get(url) as MergedSource);
+  const merged: MergedSource[] = Array.from(byKey.values()).map((cited) => {
+    const layers = ([1, 2, 3] as Layer[]).filter((layer) =>
+      cited.some((source) => source.layer === layer),
+    );
+    const home = layers[0];
+    const primary = cited.find((source) => source.layer === home) ?? cited[0];
+    const nsByLayer: Partial<Record<Layer, number[]>> = {};
+    cited.forEach((source) => {
+      (nsByLayer[source.layer] ??= []).push(source.n);
+    });
+    return {
+      ns: cited.map((source) => source.n),
+      layer: home,
+      layers,
+      nsByLayer,
+      name: primary.name,
+      tool: Array.from(new Set(cited.map((source) => source.tool))).join(", "),
+      evidence: primary.evidence,
+      confidence: primary.confidence,
+      license: primary.license,
+      url: primary.url,
+    };
+  });
   return ([1, 2, 3] as Layer[])
     .map((layer) => ({
       layer,
       label: LAYER_GROUP_LABEL[layer],
       items: merged.filter((item) => item.layer === layer),
+      alsoCited: merged.filter((item) => item.layer !== layer && item.layers.includes(layer)),
     }))
-    .filter((group) => group.items.length > 0);
+    .filter((group) => group.items.length + group.alsoCited.length > 0);
 }
 
 export interface TrustSignal {
@@ -555,7 +673,7 @@ export interface TrustSignal {
 export interface AnswerBodyContent {
   claims: Claim[];
   sources: Source[];
-  /** The counts line the run reported, e.g. "3 tools · 5 sources". */
+  /** The counts line the run reported, e.g. "3 tool calls · 5 sources cited from 2 layers". */
   meta?: string;
   /** The run's outcome word, e.g. "Answered" (F-4.8-D-05). */
   outcome?: string | null;
@@ -1126,6 +1244,16 @@ export function AnswerBody({
     />
   );
 
+  const citedRecordName = (name: string, claim: Claim, index: number) => (
+    <>
+      {name.slice(0, -3)}
+      <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+        {name.slice(-3)}
+        {citationChips(claim, index)}
+      </Box>
+    </>
+  );
+
   /*
    * What each claim rests on, as a data attribute on the claim itself: its
    * layer, "pending" while its citations are still arriving, or "none". This
@@ -1150,7 +1278,6 @@ export function AnswerBody({
    * since `AnswerBody` for the live turn is one long-lived component that
    * outlives any single answer.
    */
-  const RECORDS_PAGE_SIZE = 10;
   const [recordsPage, setRecordsPage] = useState<Record<string, number>>({});
   useEffect(() => {
     setRecordsPage({});
@@ -1184,69 +1311,15 @@ export function AnswerBody({
     currentPage: number,
     totalPages: number,
     totalRows: number,
-  ) => {
-    const start = currentPage * RECORDS_PAGE_SIZE + 1;
-    const end = Math.min(start + RECORDS_PAGE_SIZE - 1, totalRows);
-    const goTo = (next: number) =>
-      setRecordsPage((current) => ({ ...current, [block.key]: next }));
-    const navSx = {
-      font: "inherit",
-      fontSize: 13,
-      fontWeight: 600,
-      border: 0,
-      bgcolor: "transparent",
-      color: designTokens.link,
-      cursor: "pointer",
-      p: 0,
-      "&:disabled": { color: designTokens.inkFaint, cursor: "default" },
-    } as const;
-    return (
-      <Box
-        data-testid={`${testIdPrefix}answer-records-${number}-pagination`}
-        sx={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "8px 16px",
-          fontSize: 13,
-          color: designTokens.inkMuted,
-          m: "0 0 16px",
-          pt: "8px",
-          borderTop: `1px solid ${designTokens.line}`,
-        }}
-      >
-        <Box component="span" aria-live="polite" data-testid={`${testIdPrefix}answer-records-${number}-status`}>
-          {`Showing ${start}–${end} of ${totalRows}`}
-        </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <Box
-            component="button"
-            type="button"
-            data-testid={`${testIdPrefix}answer-records-${number}-prev`}
-            onClick={() => goTo(currentPage - 1)}
-            disabled={currentPage === 0}
-            sx={navSx}
-          >
-            {"‹ Previous"}
-          </Box>
-          <Box component="span" sx={{ color: designTokens.inkFaint, fontSize: 12.5 }}>
-            {`Page ${currentPage + 1} of ${totalPages}`}
-          </Box>
-          <Box
-            component="button"
-            type="button"
-            data-testid={`${testIdPrefix}answer-records-${number}-next`}
-            onClick={() => goTo(currentPage + 1)}
-            disabled={currentPage >= totalPages - 1}
-            sx={navSx}
-          >
-            {"Next ›"}
-          </Box>
-        </Box>
-      </Box>
-    );
-  };
+  ) => (
+    <RecordsPaginationBar
+      testIdBase={`${testIdPrefix}answer-records-${number}`}
+      currentPage={currentPage}
+      totalPages={totalPages}
+      totalRows={totalRows}
+      onGo={(next) => setRecordsPage((current) => ({ ...current, [block.key]: next }))}
+    />
+  );
 
   const renderRecords = (block: Extract<AnswerBlock, { type: "records" }>) => {
     const number = recordsNumber++;
@@ -1297,10 +1370,9 @@ export function AnswerBody({
               >
                 <Box
                   component="span"
-                  sx={{ fontSize: 15, lineHeight: 1.45, color: designTokens.ink, ...uncitedInk(claim) }}
+                  sx={{ fontSize: 15, lineHeight: 1.45, color: designTokens.ink, overflowWrap: "anywhere", ...uncitedInk(claim) }}
                 >
-                  {cells[0] ?? claim.text}
-                  {citationChips(claim, index)}
+                  {citedRecordName(cells[0] ?? claim.text, claim, index)}
                 </Box>
                 {cells.slice(1).map((cell, c) =>
                   cell ? (
@@ -1414,24 +1486,54 @@ export function AnswerBody({
     if (block.type === "records") return renderRecords(block);
     return (
       <Typography key={block.key} component="p" sx={PROSE_SX}>
-        {block.items.map(({ claim, index }) => (
-          <Box
-            component="span"
-            key={index}
-            data-testid={`${testIdPrefix}claim-text-${index}`}
-            data-layer={provenance(claim)}
-            sx={{ ...uncitedInk(claim), ...rise }}
-          >
-            {/* No space before the markers: a superscript sits against the
-                sentence it cites, and a space would let it wrap alone. */}
-            {withMainPoint(
-              claim.text,
-              mainPoint?.index === index ? mainPoint.term : undefined,
-              `${testIdPrefix}answer-main-point`,
-            )}
-            {citationChips(claim, index)}{" "}
-          </Box>
-        ))}
+        {block.items.map(({ claim, index }) => {
+          const trailing = claim.text.match(/[.!?]*\s*$/)?.[0].length ?? 0;
+          const longFinalName = (claim.citations.length > 0 || !!claim.pendingCitations)
+            && /(?:^|\s)\S{20,}$/.test(claim.text.slice(0, claim.text.length - trailing));
+          const tailStart = Math.max(0, claim.text.length - trailing - 3);
+          const term = mainPoint?.index === index ? mainPoint.term : undefined;
+          const termStart = term ? claim.text.indexOf(term) : -1;
+          const crossesTail = term && termStart >= 0 && termStart < tailStart && termStart + term.length > tailStart;
+          const mainPointId = `${testIdPrefix}answer-main-point`;
+          return (
+            <Box
+              component="span"
+              key={index}
+              data-testid={`${testIdPrefix}claim-text-${index}`}
+              data-layer={provenance(claim)}
+              sx={{ ...uncitedInk(claim), ...rise }}
+            >
+              {!longFinalName ? (
+                <>
+                  {withMainPoint(claim.text, term, mainPointId)}
+                  {citationChips(claim, index)}
+                </>
+              ) : crossesTail ? (
+                <>
+                  {claim.text.slice(0, termStart)}
+                  <Box component="strong" data-testid={mainPointId} sx={{ fontWeight: 700 }}>
+                    {claim.text.slice(termStart, tailStart)}
+                  </Box>
+                  <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+                    <Box component="strong" sx={{ fontWeight: 700 }}>
+                      {claim.text.slice(tailStart, termStart + term.length)}
+                    </Box>
+                    {claim.text.slice(termStart + term.length)}
+                    {citationChips(claim, index)}
+                  </Box>
+                </>
+              ) : (
+                <>
+                  {withMainPoint(claim.text.slice(0, tailStart), termStart < tailStart ? term : undefined, mainPointId)}
+                  <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+                    {withMainPoint(claim.text.slice(tailStart), termStart >= tailStart ? term : undefined, mainPointId)}
+                    {citationChips(claim, index)}
+                  </Box>
+                </>
+              )}{" "}
+            </Box>
+          );
+        })}
       </Typography>
     );
   };
@@ -1845,9 +1947,32 @@ export function AnswerBody({
                     px: 0.75,
                   }}
                 >
-                  {group.items.length}
+                  {/* Pages cited from this layer, its own cards plus any it
+                      shares with an earlier group (card 22 fix round). */}
+                  {group.items.length + group.alsoCited.length}
                 </Box>
               </Box>
+
+              {/*
+                A page also cited from this layer whose one card sits under
+                an earlier group (card 22 fix round, owner 2026-10-06): named
+                here with this layer's own markers and where its card is, so
+                the group, and the fact that the answer drew on this layer,
+                never vanish. A line, not a second card.
+              */}
+              {group.alsoCited.map((source) => (
+                <Typography
+                  key={`also-${source.ns.join(",")}`}
+                  component="p"
+                  data-testid={`${testIdPrefix}sources-group-${group.layer}-also-${source.ns[0]}`}
+                  sx={{ fontSize: 12.5, color: designTokens.inkMuted, m: 0, mb: 1, pl: 2.5 }}
+                >
+                  <Box component="span" sx={{ ...mono, fontWeight: 700, fontSize: 12, mr: 0.75 }}>
+                    {(source.nsByLayer[group.layer] ?? []).map((n) => `[${n}]`).join("")}
+                  </Box>
+                  {source.name}: one card for this page, listed under {LAYER_GROUP_LABEL[source.layer]}
+                </Typography>
+              ))}
 
               {group.items.map((source) => {
                 const colour = layerColour(source.layer);
@@ -1858,6 +1983,7 @@ export function AnswerBody({
                     component="details"
                     data-testid={`${testIdPrefix}source-${primaryN}`}
                     data-layer={source.layer}
+                    data-layers={source.layers.join(" ")}
                     open={openSources.includes(primaryN)}
                     sx={{
                       border: `1px solid ${designTokens.line}`,
@@ -1904,18 +2030,27 @@ export function AnswerBody({
                       >
                         {source.ns.map((n) => `[${n}]`).join("")}
                       </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, "@media (max-width:720px)": { minWidth: 0, overflowWrap: "anywhere" } }}
+                      >
                         {source.name}
                       </Typography>
                       {/*
                         F-4.8-D-02. This read "L1", which a reader has to already
                         know how to decode. The prototype names the layer in words.
                       */}
+                      {/*
+                        Card 22 fix round: every layer this page was cited
+                        from, so a live marker merged into a graph card never
+                        points at a card that says only "graph".
+                      */}
                       <Box
                         component="span"
+                        data-testid={`${testIdPrefix}source-${primaryN}-layers`}
                         sx={{ ...mono, ml: "auto", fontSize: 11.5, color: designTokens.inkMuted }}
                       >
-                        L{source.layer} · {LAYER_WORD[source.layer] ?? "source"}
+                        {sourceLayerLabel(source.layers)}
                       </Box>
                     </Box>
 

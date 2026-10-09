@@ -51,6 +51,17 @@ TrustSignal = Literal["answer", "flag", "ask", "refuse"]
 #: The playbook's outcome model, computed deterministically per Section 15.
 RubricOutcome = Literal["pass", "fail", "abstain"]
 
+#: Most citations one answer can carry, and so the most one stored row,
+#: one saved-answer reply and one REST export keeps. Card 54. It is the
+#: run's own bound: `write_node` builds one citation per display slot and
+#: the slots are capped at `core/graph.py`'s `_MAX_FINDINGS_FOR_DISPLAY`
+#: (the planned graph call's row limit, 100). The MCP and GraphQL surfaces
+#: use the same 100. Held as a literal here, and pinned to the run's bound
+#: by a test, so the stored shape moves only by a deliberate edit.
+#: Before card 54 this was 50 and a reopened long answer lost every
+#: citation after the fiftieth.
+MAX_CITATIONS_PER_ANSWER = 100
+
 
 def _bound_each_item(values: list[str], *, field: str, limit: int) -> list[str]:
     """Reject any item in a list of strings longer than `limit`.
@@ -194,10 +205,12 @@ class InteractionRow(BaseModel):
     #: it. Present here so the shape is complete rather than so it is filled.
     rubric_score: int | None = Field(None, ge=0, le=16)
     #: Each entry bounded per-field by `_bound_each_citation` below
-    #: (F-4.6-11), not only the list itself. The list-level `max_length=50`
-    #: mirrors `feedback.capture._MAX_CITATIONS`, which already truncates
-    #: before this model is ever constructed.
-    citations: list[dict[str, Any]] = Field(default_factory=list, max_length=50)
+    #: (F-4.6-11), not only the list itself. The list-level `max_length`
+    #: is `MAX_CITATIONS_PER_ANSWER`, the same bound
+    #: `feedback.capture` truncates to before this model is constructed.
+    citations: list[dict[str, Any]] = Field(
+        default_factory=list, max_length=MAX_CITATIONS_PER_ANSWER
+    )
     #: Each item bounded per-string by `_bound_each_coverage_tag` below
     #: (F-4.6-11), not only the list itself.
     coverage_tags: list[str] = Field(default_factory=list, max_length=100)

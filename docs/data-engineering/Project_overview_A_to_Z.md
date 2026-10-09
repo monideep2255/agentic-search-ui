@@ -1,6 +1,6 @@
 # Project overview A to Z
 
-This is the single-source-of-truth navigation hub for the `agentic-search-data-engineering` repo. The repo builds System 1 (NCBI ETL pipelines) and System 2 (a PostgreSQL + Apache AGE knowledge graph) for an agentic search prototype over NCBI data. V1 is loaded on a Hetzner CPX42 VPS with 115.4M nodes and 693.3M edges; the 7 smoke Cypher queries pass. Read this doc first, then click through to the deeper docs linked in each section.
+This is the single-source-of-truth navigation hub for the `agentic-search-data-engineering` repository. The repository builds System 1 (NCBI ETL pipelines) and System 2 (a PostgreSQL + Apache AGE knowledge graph) for an agentic search prototype over NCBI data. V1 is loaded on a Hetzner CPX42 VPS with 115.4M nodes and 693.3M edges; the 7 smoke Cypher queries pass. Read this doc first, then click through to the deeper docs linked in each section.
 
 ## Table of contents
 
@@ -16,24 +16,24 @@ This is the single-source-of-truth navigation hub for the `agentic-search-data-e
 - [J. How the project was executed phase-by-phase](#j-how-the-project-was-executed-phase-by-phase)
 - [K. Documentation map](#k-documentation-map)
 - [L. Where the live data lives](#l-where-the-live-data-lives)
-- [M. What is NOT in this repo](#m-what-is-not-in-this-repo)
+- [M. What is NOT in this repository](#m-what-is-not-in-this-repository)
 
 ## A. Project goals and scope
 
-The goal is a queryable knowledge graph stitched from 5 NCBI databases (Gene, ClinVar, MedGen, PubMed, Taxonomy) with full provenance on every node and edge, served by a downstream agentic search system. This repo covers the data engineering and graph layers only. For framing, see Innovation proposal 2026. For how this graph fits the broader three-layer query architecture (Layer 1 graph, Layer 2 on-demand API, Layer 3 enrichment), see [Three-layer data architecture](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/architecture/Three_layer_data_architecture.md).
+The goal is a queryable knowledge graph stitched from 5 NCBI databases (Gene, ClinVar, MedGen, PubMed, Taxonomy) with full provenance on every node and edge, served by a downstream agentic search system. This repository covers the data engineering and graph layers only. For framing, see Innovation proposal 2026. For how this graph fits the broader three-layer query architecture (Layer 1 graph, Layer 2 on-demand API, Layer 3 enrichment), see [Three-layer data architecture](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/architecture/Three_layer_data_architecture.md).
 
 ## B. Three-system architecture
 
-System 1 (ETL pipelines) and System 2 (knowledge graph) live in this repo. System 3 (search agent, FastAPI, LangGraph, UI, delivery channels) lives in a separate repository and is out of scope here.
+System 1 (ETL pipelines) and System 2 (knowledge graph) live in this repository. System 3 (search agent, FastAPI, LangGraph, UI, delivery channels) lives in a separate repository and is out of scope here.
 
 ```mermaid
 flowchart LR
-    subgraph thisrepo[This repo]
+    subgraph thisrepo[This repository]
         S1[System 1: ETL pipelines<br/>NCBI FTP -> KGX TSV]
         S2[System 2: knowledge graph<br/>KGX -> PostgreSQL + AGE]
         S1 --> S2
     end
-    subgraph otherrepo[Separate repo]
+    subgraph otherrepo[Separate repository]
         S3[System 3: search agent<br/>FastAPI + LangGraph + UI]
     end
     S2 --> S3
@@ -124,17 +124,17 @@ The full plan, status per phase, and gate criteria live in [docs/bossman_executi
 - [docs/learnings.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/learnings.md): Numbered problems and solutions log.
 - [docs/data_inventory.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/data_inventory.md): What was downloaded, FTP URLs, sizes, row counts, validation outcomes.
 - [docs/System_1_data_engineering_plan.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/System_1_data_engineering_plan.md): Detailed ETL design for all 5 pipelines.
-- [docs/architecture/System_3_architecture_brainstorming.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/System_3_architecture_brainstorming.md): Notes on the downstream search agent (separate repo).
+- [docs/architecture/System_3_architecture_brainstorming.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/System_3_architecture_brainstorming.md): Notes on the downstream search agent (separate repository).
 - [DECISIONS.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/DECISIONS.md): Append-only decision log.
-- [CLAUDE.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/CLAUDE.md) / [AGENTS.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/AGENTS.md) / [README.md](../README.md): Agent instructions, agent index, public-facing repo overview.
+- [CLAUDE.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/CLAUDE.md) / [AGENTS.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/AGENTS.md) / [README.md](../README.md): Agent instructions, agent index, public-facing repository overview.
 - [schema/biolink_ncbi.yaml](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/schema/biolink_ncbi.yaml): LinkML schema with 10 node types and 14 predicates.
 
 ## L. Where the live data lives
 
 The V1 graph runs on a Hetzner CPX42 VPS in the EU, with PostgreSQL 15.17 and Apache AGE 1.5.0. SSH access, Cypher entry, snapshot, and restore procedures are in [Knowledge graph on server reference](Knowledge_graph_on_server_reference.md). Raw KGX files used for the load are also rsynced to the VPS (144 GB).
 
-## M. What is NOT in this repo
+## M. What is NOT in this repository
 
 - System 3: the search agent (FastAPI, LangGraph, UI, MCP servers, delivery channels) lives in a separate repository.
-- Layer 2 on-demand API and Layer 3 enrichment: these are query-time concerns handled in the System 3 repo. See [Three-layer data architecture](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/architecture/Three_layer_data_architecture.md) for the boundary.
+- Layer 2 on-demand API and Layer 3 enrichment: these are query-time concerns handled in the System 3 repository. See [Three-layer data architecture](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/architecture/Three_layer_data_architecture.md) for the boundary.
 - Raw FTP caches and large binaries: gitignored under `data/raw/` and `data/ftp_cache/`; rsynced separately to the VPS.

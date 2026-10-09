@@ -1,0 +1,5 @@
+p2_plain_bare: depth=plain_language outcome=refuse elapsed=3.9s token_kinds={'none': 1}
+   CLAIM: What would you like to know about GERD?
+   options: ['What are the symptoms of GERD?', 'Are there clinical trials for GERD?', 'What does recent biomedical literature say about GERD?']
+p2_plain_pick: depth=plain_language outcome=ask elapsed=28.5s token_kinds={'claim': 1, 'paragraph_break': 3, 'heading': 1, 'list_item': 12, 'note': 2}
+   CLAIM: I found 5 published papers, 1 condition, 1 literature index entry and 5 clinical trials related to GERD [1][2][3][4][5][6][7][8][9][10][11][12]. 

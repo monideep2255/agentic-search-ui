@@ -1,0 +1,90 @@
+QUESTION: Which E. coli isolates in Pathogen Detection carry colistin resistance genes?
+LANDED=answer SECONDS=30.1
+
+Which E. coli isolates in Pathogen Detection carry colistin resistance genes?
+New search
+
+? Answered27.6s · 2 tools · 21 sources from 1 layer
+
+Show work ▾
+
+I found 20 pathogen samples and 1 organism related to Escherichia coli[21].⁠1–20
+
+WHERE THIS ANSWER COMES FROM
+KTE156	⁠1
+UMEA 3318-1	⁠2
+BIDMC 2B	⁠3
+BIDMC 3	⁠4
+BIDMC 6	⁠5
+BIDMC 9	⁠6
+BIDMC 15	⁠7
+BIDMC 17A	⁠8
+BIDMC 17B	⁠9
+BIDMC 19A	⁠10
+Showing 1–10 of 21
+‹ Previous
+Page 1 of 3
+Next ›
+NOTES
+Pathogen Detection lists 12,563 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown.
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+21
+Based on 21 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+BUTTONS:
+New search
+Show work ▾
+1–20
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+‹ Previous
+Next ›
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+
+LINKS:
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00854682
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01885952
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138622
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138623
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138626
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138630
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138638
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138640
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138641
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138646
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138647
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138648
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02356581
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02356582
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02581401
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03256164
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03256216
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03256224
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03256242
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03256245
+ -> https://www.ncbi.nlm.nih.gov/taxonomy/562

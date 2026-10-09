@@ -495,13 +495,13 @@ def compute_build_phase_statuses() -> Fact:
 
 def compute_phase_branches() -> dict[str, str]:
     """phase id -> its declared branch name, straight from BOARD.md's own
-    Branch column. Used to disambiguate merged_prs below: this repo's `main`
+    Branch column. Used to disambiguate merged_prs below: this repository's `main`
     was created from `agentic-search-data-engineering` as a structural
     template (DECISIONS.md row 1) and its git history carries that sibling
-    repo's own old `phase/N.M-description` merges, e.g. `phase/3.0-age-loader`
+    repository's own old `phase/N.M-description` merges, e.g. `phase/3.0-age-loader`
     for a completely different "phase 3.0". Matching on phase NUMBER alone
     collides with those; matching on the full declared branch STRING does not,
-    since the two repos' phase branches share numbers but never descriptions.
+    since the two repositories' phase branches share numbers but never descriptions.
     """
     if not BOARD_MD.exists():
         return {}
@@ -534,7 +534,7 @@ def compute_merged_pr_numbers() -> Fact:
     declared branch string, and unioned with the declared-branch PR, taking
     the max of whichever fired. Found live 2026-08-08 checkpointing build
     phase 3.2, when this fact reported PR #22 for phase 3.1 while every
-    other document in the repo, correctly, says PR #23.
+    other document in the repository, correctly, says PR #23.
     """
     source = (
         "git log --merges --pretty=format:%s, matched against BOARD.md's "
@@ -636,7 +636,9 @@ HEDGE_WORD_RE = re.compile(
 # topics used to live in standalone files, `file-naming.md`, `no-prose-
 # walls.md`, and `clarify-before-drafting.md`; they were merged into
 # `writing-style.md` and `preserve-your-thinking.md` respectively and the
-# standalone files deleted.) A reference inside one of these files is what
+# standalone files deleted. Since 2026-10-04 the full text of both rules,
+# these sections included, lives in `.claude/rules-reference/`, with a short
+# summary left in `.claude/rules/`.) A reference inside one of these files is what
 # that session reported at the time, never a claim about the document's
 # current state.
 # Real case this caught, from when this script still checked counts:
@@ -740,7 +742,7 @@ def is_historical_context(lines: list[str], idx: int, headings: list[tuple[int, 
 def has_nearby_hedge(line: str, start: int, end: int, window: int = 50) -> bool:
     """Rule 3, scoped to a character window around one match.
 
-    This has to be per-match, not per-line, because this repo routinely
+    This has to be per-match, not per-line, because this repository routinely
     puts an entire paragraph inside one markdown table cell, one line. The
     measured case, from when this script still checked counts: CLAUDE.md's
     Priority-2 row stated a current test count ("968 Python tests") in the
@@ -756,11 +758,11 @@ def has_nearby_hedge(line: str, start: int, end: int, window: int = 50) -> bool:
     return bool(HEDGE_WORD_RE.search(line[lo:hi]))
 
 
-# Directional by design: "phase X.Y (..., PR #N)" is the phrasing this repo
+# Directional by design: "phase X.Y (..., PR #N)" is the phrasing this repository
 # uses everywhere it was found (CLAUDE.md, AGENTS.md). The reverse order is
 # not scanned for; see the module docstring's "WHAT THIS SCRIPT DOES NOT
 # CHECK" section, which names this ordering gap, left as-is because no
-# reverse-ordered phrasing exists in this repo today.
+# reverse-ordered phrasing exists in this repository today.
 #
 # The window excludes both "." and "|": "." keeps the pairing inside one
 # sentence, and "|" keeps it inside one markdown table cell. Without the
@@ -850,7 +852,7 @@ def slugify(heading_text: str) -> str:
     a correct, existing table of contents on every heading that contains a
     stripped character bordered by spaces on both sides.
 
-    Good enough for the plain ASCII headings this repo uses; an inline code
+    Good enough for the plain ASCII headings this repository uses; an inline code
     span or emoji in a heading can still throw it off, which is a known
     limitation, not a defect to silently work around.
     """
@@ -863,7 +865,7 @@ def slugify(heading_text: str) -> str:
 def dedupe_slugs(slugs: list[str]) -> list[str]:
     """Apply GitHub's duplicate-anchor suffix: the second heading that slugs
     to the same text becomes `-1`, the third `-2`, and so on. Two headings
-    with the same text is a real, supported pattern in this repo (multiple
+    with the same text is a real, supported pattern in this repository (multiple
     "What is next" subsections in a session log), and without this the slug
     of the second occurrence collides with the first and never matches a
     correctly authored TOC link, which always carries the suffix.

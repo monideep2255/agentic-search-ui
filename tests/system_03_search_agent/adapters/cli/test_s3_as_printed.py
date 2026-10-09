@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 from pathlib import Path
 
 import httpx
@@ -452,6 +453,92 @@ class TestAskJsonFailsAsJson:
         assert set(document) == set(json.loads(answered)), "the same keys as an answer"
 
     @pytest.mark.asyncio
+    async def test_insecure_credentials_keep_the_path_off_json_stdout(self, credential_file: Path) -> None:
+        _signed_in()
+        os.chmod(credential_file, 0o644)
+
+        exit_code, out, err, seen = await _s3(["ask", "--json", "q"], [])
+
+        assert exit_code == 1
+        assert seen == []
+        document = json.loads(out)
+        assert document["error"]["error_class"] == "credentials_insecure"
+        assert str(credential_file) not in out
+        assert "chmod 600" in err and str(credential_file) in err
+        assert "chmod 600" in document["error"]["message"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("mode", [0o777, 0o770, 0o000])
+    async def test_insecure_or_unreadable_credential_folder_names_the_folder_remedy(
+        self, credential_file: Path, mode: int
+    ) -> None:
+        _signed_in()
+        folder = credential_file.parent
+        os.chmod(folder, mode)
+        try:
+            exit_code, out, err, seen = await _s3(["ask", "--json", "q"], [])
+        finally:
+            os.chmod(folder, 0o700)
+
+        assert exit_code == 1
+        assert seen == []
+        document = json.loads(out)
+        assert "chmod 700" in document["error"]["message"]
+        assert "credential folder" in document["error"]["message"]
+        assert "chmod 600" not in document["error"]["message"]
+        assert str(folder) not in out
+        assert "chmod 700" in err
+
+    @pytest.mark.asyncio
+    async def test_directory_at_credential_path_requires_moving_it_aside(
+        self, credential_file: Path
+    ) -> None:
+        credential_file.mkdir()
+        exit_code, out, err, seen = await _s3(["ask", "--json", "q"], [])
+
+        assert exit_code == 1
+        assert seen == []
+        document = json.loads(out)
+        assert "move" in document["error"]["message"].lower()
+        assert "directory" in document["error"]["message"]
+        assert str(credential_file) not in out
+        assert "Move it aside" in err
+
+    @pytest.mark.asyncio
+    async def test_unreadable_credential_file_gives_the_same_remedy_in_json_and_stderr(
+        self, credential_file: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def unreadable() -> credentials.Credentials:
+            raise PermissionError("credential path must stay out of JSON")
+
+        monkeypatch.setattr(credentials, "load", unreadable)
+        exit_code, out, err, seen = await _s3(["ask", "--json", "q"], [])
+
+        assert exit_code == 1
+        assert seen == []
+        document = json.loads(out)
+        assert document["error"]["error_class"] == "credentials_unreadable"
+        remedy = "check that the file exists and is readable"
+        assert remedy in document["error"]["message"]
+        assert remedy in err
+        assert str(credential_file) not in out
+
+    @pytest.mark.asyncio
+    async def test_corrupt_credentials_keep_the_path_off_json_stdout(self, credential_file: Path) -> None:
+        _signed_in()
+        credential_file.write_text("{", encoding="utf-8")
+
+        exit_code, out, err, seen = await _s3(["ask", "--json", "q"], [])
+
+        assert exit_code == 1
+        assert seen == []
+        document = json.loads(out)
+        assert document["error"]["error_class"] == "credentials_invalid"
+        assert str(credential_file) not in out
+        assert str(credential_file) in err
+        assert "s3 login" in document["error"]["message"]
+
+    @pytest.mark.asyncio
     async def test_a_refused_start_is_one_json_object_with_the_servers_reason(
         self, credential_file
     ) -> None:
@@ -478,6 +565,20 @@ class TestAskJsonFailsAsJson:
         assert document["complete"] is False
         assert document["error"]["error_class"] == "stream_failed"
         assert document["error"]["message"] == err.strip()
+
+    @pytest.mark.asyncio
+    async def test_an_empty_200_stream_explains_the_incomplete_json(self, credential_file) -> None:
+        _signed_in()
+
+        exit_code, out, _err, seen = await _s3(["ask", "--json", "q"], [])
+
+        assert exit_code == 1
+        assert any(request.url.path.endswith("/events") for request in seen)
+        document = json.loads(out)
+        assert document["complete"] is False
+        assert document["error"]["error_class"] == "stream_incomplete"
+        assert "no final answer or error" in document["error"]["message"]
+        assert "Try again" in document["error"]["message"]
 
     @pytest.mark.asyncio
     async def test_without_json_stdout_stays_empty(self, credential_file) -> None:
@@ -537,7 +638,7 @@ class TestABareTopicShowsNumberedOptions:
     @pytest.mark.asyncio
     async def test_the_four_options_are_numbered_under_the_question(self, credential_file) -> None:
         # Mutation: drop the `_write_clarifying_options()` call from
-        # `_write_trust_prefix` and `finish` -> no numbered line appears.
+        # `_write_verdict` and `finish` -> no numbered line appears.
         _signed_in()
         _, out, err, _ = await _s3(["ask", "--session-id", "s-7", "GERD"], _question_back_frames())
         expected = "".join(f"  {n}. {o}\n" for n, o in enumerate(_OPTIONS, start=1))
@@ -604,7 +705,7 @@ class TestAQuestionBackIsLabelledAsk:
     `refuse` for both, and the only difference is the `think` event's
     clarifying question, which is what these tests vary.
 
-    Mutation: make `_shown_outcome` return the stream's outcome unchanged
+    Mutation: make `_is_question_back` return False
     (the pre-follow-up behaviour) -> the question back reads `[refuse]` and
     exits 1, and these fail."""
 
@@ -664,6 +765,412 @@ class TestAQuestionBackIsLabelledAsk:
 
 
 # ---------------------------------------------------------------------------
+# "A finished answer tells me how far to trust it, as the web does, and
+# never reads as a question."
+# ---------------------------------------------------------------------------
+
+
+_UNCONFIRMED = "Based on 17 sources, not yet confirmed"
+
+
+def _unconfirmed_answer_frames(trust_line: str | None = _UNCONFIRMED) -> list[dict]:
+    """A finished, cited answer whose outcome is the server's `ask`: answered,
+    not yet confirmed. Phase 8.10's product review (PR-8.10-01) got exactly
+    this for "Which diseases are associated with BRCA1?", and the web showed
+    it as "Answered" with the trust line below."""
+    frames = _answer_frames()
+    frames[3]["payload"]["outcome"] = "ask"
+    frames[4]["payload"]["trust_outcome"] = "ask"
+    frames[4]["payload"]["trust_line"] = trust_line
+    return frames
+
+
+class TestAFinishedAnswerShowsTheWebsTrustLine:
+    """Card 62, PR-8.10-01: `s3` printed `[ask]` under a finished, 12-citation
+    answer that asked nothing, and no trust line, while `[ask]` also labels a
+    question back with options to pick from. The web shows the same answer
+    as "Answered" with "Based on N sources, not yet confirmed" under it.
+
+    Mutation that turns these red: tag the server's `ask` verdict `[ask]`
+    again, or drop the `_write_verdict` call from `_handle_done`."""
+
+    @pytest.mark.asyncio
+    async def test_an_unconfirmed_answer_reads_answer_with_its_trust_line(
+        self, credential_file
+    ) -> None:
+        _signed_in()
+        exit_code, out, _, _ = await _s3(["ask", "BRCA1"], _unconfirmed_answer_frames())
+        assert "[ask]" not in out
+        assert f"\n[answer]\n{_UNCONFIRMED}\n" in out
+        assert out.index(_UNCONFIRMED) < out.index("References:")
+        assert exit_code == 0
+
+    @pytest.mark.asyncio
+    async def test_every_trust_line_the_server_sends_is_printed(self, credential_file) -> None:
+        _signed_in()
+        _, out, _, _ = await _s3(["ask", "BRCA1"], _answer_frames())
+        assert "\n[answer]\nBased on 1 source\n" in out
+
+    @pytest.mark.asyncio
+    async def test_without_a_trust_line_the_web_s_own_caution_is_printed(
+        self, credential_file
+    ) -> None:
+        # The web's words for an `ask` answer with no trust line
+        # (`useRunView.ts`, OUTCOME_BY_TRUST), so the caution is never lost
+        # when the tag reads `[answer]`.
+        _signed_in()
+        _, out, _, _ = await _s3(["ask", "BRCA1"], _unconfirmed_answer_frames(trust_line=None))
+        assert "\n[answer]\nSingle source, not independently confirmed\n" in out
+
+    @pytest.mark.asyncio
+    async def test_a_question_back_still_reads_ask_with_no_trust_line(
+        self, credential_file
+    ) -> None:
+        _signed_in()
+        _, out, _, _ = await _s3(["ask", "GERD"], _question_back_frames())
+        assert "\n[ask]\n" in out
+        assert "Based on" not in out
+        assert "not independently confirmed" not in out
+
+    @pytest.mark.asyncio
+    async def test_the_trust_line_is_sanitized_like_any_server_text(
+        self, credential_file
+    ) -> None:
+        _signed_in()
+        # Card 62's fix round (F-62-A09): a one-line server string has every
+        # control character removed by Unicode category, not escaped, and
+        # still cannot forge the tag.
+        hostile = "Based on 2 sources\x1b[2J [answer]"
+        _, out, _, _ = await _s3(["ask", "BRCA1"], _unconfirmed_answer_frames(trust_line=hostile))
+        assert "\x1b" not in out
+        assert "\n[answer]\nBased on 2 sources [2J [\\answer]\n" in out
+
+    @pytest.mark.asyncio
+    async def test_json_is_unchanged(self, credential_file) -> None:
+        # `--json` is the contract: its `trust_outcome` keeps the server's
+        # value, `ask`, and the trust line is its own key.
+        _signed_in()
+        exit_code, out, _, _ = await _s3(["ask", "--json", "BRCA1"], _unconfirmed_answer_frames())
+        document = json.loads(out)
+        assert document["trust_outcome"] == "ask"
+        assert document["trust_line"] == _UNCONFIRMED
+        assert document["clarifying_options"] == []
+        assert exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# Card 62's fix round: `s3` tells the truth about each answer, exactly as the
+# web does. The tag and the trust line come from `done`, the server's final
+# verdict; nothing is printed that the server did not send; a question back
+# is its own state; a run that did not finish gets no verdict; the web's two
+# cautions sit beside the line; and a server string on a line stays one line.
+# ---------------------------------------------------------------------------
+
+
+def _signal(outcome: str, *, risk_tier: str = "low", grounded: bool = True, scope: str = "answer") -> dict:
+    return {"outcome": outcome, "risk_tier": risk_tier, "grounded": grounded, "scope": scope}
+
+
+def _done(outcome: str, trust_line: str | None = None) -> dict:
+    return {
+        "total_cost_usd": 0.0,
+        "total_tool_calls": 1,
+        "elapsed_ms": 5,
+        "trust_outcome": outcome,
+        "trust_line": trust_line,
+    }
+
+
+def _fatal(error_class: str = "unexpected") -> dict:
+    return {
+        "error_class": error_class,
+        "message": "the run failed",
+        "fatal": True,
+        "retry_after_s": 0,
+        "source": "run",
+        "scope": "run",
+    }
+
+
+def _render(frames: list[tuple[str, dict]]) -> tuple[int, str, str]:
+    """Drive the real `Renderer` with `(type, payload)` pairs, in order."""
+    out, err = io.StringIO(), io.StringIO()
+    renderer = Renderer(out, err, operator=False)
+    for seq, (event_type, payload) in enumerate(frames):
+        renderer.handle(Event.model_validate(_envelope(event_type, seq, payload)))
+    return renderer.finish(), out.getvalue(), err.getvalue()
+
+
+_GUARD_OK = ("guard", {"passed": True, "category": "ok", "reason": None})
+_TOKEN = ("token", {"text": "BRCA1 is linked to breast cancer [1].", "marker_ids": ["c1"]})
+_CITE = ("citation", _citation())
+_QUESTION_THINK = (
+    "think",
+    {
+        "narrative": "a bare topic",
+        "query_class": "lookup",
+        "resolved_entities": [],
+        "clarifying_question": _QUESTION_BACK,
+        "clarifying_options": _OPTIONS,
+    },
+)
+_QUESTION_TOKEN = ("token", {"text": _QUESTION_BACK, "marker_ids": []})
+
+
+class TestTheVerdictComesFromDone:
+    """F-62-A05. Mutation that turns these red: print the tag from the first
+    answer-scope `trust_signal` again."""
+
+    def test_done_ask_over_an_answer_signal_carries_the_caution(self) -> None:
+        code, out, _ = _render(
+            [_GUARD_OK, _TOKEN, _CITE, ("trust_signal", _signal("answer")), ("done", _done("ask"))]
+        )
+        assert "\n[answer]\nSingle source, not independently confirmed\n" in out
+        assert code == 0
+
+    def test_done_refuse_over_an_answer_signal_reads_refuse(self) -> None:
+        code, out, _ = _render(
+            [_GUARD_OK, _TOKEN, _CITE, ("trust_signal", _signal("answer")), ("done", _done("refuse"))]
+        )
+        assert "\n[refuse]\n" in out
+        assert "[answer]" not in out
+        assert code == 1
+
+    def test_done_answer_over_a_refuse_signal_reads_answer_with_its_line(self) -> None:
+        code, out, _ = _render(
+            [
+                _GUARD_OK,
+                _TOKEN,
+                _CITE,
+                ("trust_signal", _signal("refuse")),
+                ("done", _done("answer", "Based on 1 source")),
+            ]
+        )
+        assert "\n[answer]\nBased on 1 source\n" in out
+        assert "[refuse]" not in out
+        assert code == 0
+
+
+class TestARunThatDidNotFinishGetsNoVerdict:
+    """F-62-J04, F-62-A01, F-62-A08. The web shows no outcome and "Not
+    verified · the run did not finish" when a run ends on a fatal error.
+    Mutations that turn these red: let `_write_verdict` run after a fatal
+    error, or drop the notice from `finish`."""
+
+    def test_a_cut_off_answer_prints_no_tag_and_no_caution(self) -> None:
+        code, out, err = _render(
+            [_GUARD_OK, _TOKEN, _CITE, ("trust_signal", _signal("ask", risk_tier="high"))]
+        )
+        assert "[answer]" not in out and "[ask]" not in out
+        assert "Single source" not in out
+        assert "High-risk claim" not in out
+        assert "\nNot verified · the run did not finish\n" in out
+        assert out.index("Not verified") < out.index("References:")
+        assert "ended before a final answer" in err
+        assert code == 1
+
+    def test_a_question_back_that_is_stopped_claims_no_source(self) -> None:
+        code, out, _ = _render(
+            [
+                _GUARD_OK,
+                _QUESTION_THINK,
+                _QUESTION_TOKEN,
+                ("trust_signal", _signal("refuse", risk_tier="unknown", grounded=False)),
+                ("error", _fatal("cancelled")),
+            ]
+        )
+        assert "Single source" not in out
+        assert "[ask]" not in out
+        assert out.count("Not verified · the run did not finish") == 1
+        assert code == 1
+
+    def test_a_fatal_error_then_done_never_prints_the_positive_line(self) -> None:
+        code, out, _ = _render(
+            [
+                _GUARD_OK,
+                _TOKEN,
+                _CITE,
+                ("error", _fatal()),
+                ("trust_signal", _signal("answer", risk_tier="high")),
+                ("done", _done("answer", "Confirmed by 2 independent sources")),
+            ]
+        )
+        assert "Confirmed by" not in out
+        assert "[answer]" not in out
+        assert out.count("Not verified · the run did not finish") == 1
+        assert out.index("Not verified") < out.index("References:")
+        assert code == 1
+
+    def test_a_finished_answer_does_not_say_it_did_not_finish(self) -> None:
+        _, out, _ = _render(
+            [_GUARD_OK, _TOKEN, _CITE, ("trust_signal", _signal("answer")), ("done", _done("answer", "Based on 1 source"))]
+        )
+        assert "Not verified" not in out
+
+
+class TestAQuestionBackIsItsOwnState:
+    """F-62-A01. A question back reads `[ask]` and carries no trust line,
+    even when `done` sends one; the server's `ask` on an answer reads
+    `[answer]`. Mutation that turns this red: make `_is_question_back`
+    return False, so a question back reads as a refusal."""
+
+    def test_a_question_back_never_carries_a_trust_line(self) -> None:
+        code, out, _ = _render(
+            [
+                _GUARD_OK,
+                _QUESTION_THINK,
+                _QUESTION_TOKEN,
+                ("trust_signal", _signal("refuse", risk_tier="high", grounded=False)),
+                ("done", _done("refuse", "Based on 1 source")),
+            ]
+        )
+        assert "\n[ask]\n" in out
+        assert "Based on 1 source" not in out
+        assert "High-risk claim" not in out
+        assert "Not fully grounded" not in out
+        assert code == 0
+
+    def test_a_cited_answer_after_a_clarifying_think_is_an_answer(self) -> None:
+        code, out, _ = _render(
+            [
+                _GUARD_OK,
+                _QUESTION_THINK,
+                _TOKEN,
+                _CITE,
+                ("trust_signal", _signal("ask")),
+                ("done", _done("ask", "Based on 1 source, not yet confirmed")),
+            ]
+        )
+        assert "\n[answer]\nBased on 1 source, not yet confirmed\n" in out
+        assert "[ask]" not in out
+        assert code == 0
+
+
+class TestTheWebsTwoCautionsAppearBesideTheLine:
+    """F-62-A02. Mutations that turn these red: drop either caution, or read
+    only the answer-scope signal for them."""
+
+    def test_a_high_risk_answer_says_so(self) -> None:
+        _, out, _ = _render(
+            [
+                _GUARD_OK,
+                _TOKEN,
+                _CITE,
+                ("trust_signal", _signal("answer", risk_tier="high")),
+                ("done", _done("answer", "Confirmed by 2 independent sources")),
+            ]
+        )
+        assert "\n[answer]\nConfirmed by 2 independent sources · High-risk claim\n" in out
+
+    def test_an_ungrounded_claim_says_not_fully_grounded(self) -> None:
+        _, out, _ = _render(
+            [
+                _GUARD_OK,
+                _TOKEN,
+                _CITE,
+                ("trust_signal", _signal("answer", grounded=False, scope="claim")),
+                ("trust_signal", _signal("answer")),
+                ("done", _done("answer", "Based on 1 source")),
+            ]
+        )
+        assert "\n[answer]\nNot fully grounded · Based on 1 source\n" in out
+
+    def test_an_unknown_tier_never_hides_a_high_one(self) -> None:
+        _, out, _ = _render(
+            [
+                _GUARD_OK,
+                _TOKEN,
+                _CITE,
+                ("trust_signal", _signal("answer", risk_tier="unknown", scope="claim")),
+                ("trust_signal", _signal("answer", risk_tier="high")),
+                ("done", _done("answer", "Confirmed by 2 independent sources")),
+            ]
+        )
+        assert "· High-risk claim\n" in out
+
+    def test_another_tier_is_named(self) -> None:
+        _, out, _ = _render(
+            [
+                _GUARD_OK,
+                _TOKEN,
+                _CITE,
+                ("trust_signal", _signal("answer", risk_tier="moderate")),
+                ("done", _done("answer", "Based on 1 source")),
+            ]
+        )
+        assert "\n[answer]\nBased on 1 source · moderate risk claim\n" in out
+
+    def test_a_low_risk_grounded_answer_has_no_marks(self) -> None:
+        _, out, _ = _render(
+            [_GUARD_OK, _TOKEN, _CITE, ("trust_signal", _signal("answer")), ("done", _done("answer", "Based on 1 source"))]
+        )
+        assert "\n[answer]\nBased on 1 source\n\n" in out
+
+
+class TestAServerStringOnALineStaysOneLine:
+    """F-62-A09. Every line-breaking or control character is removed by
+    Unicode category. Mutations that turn these red: drop `Zl` and `Zp`
+    from the categories, or test only for `\\n`."""
+
+    @pytest.mark.parametrize("brk", ["\n", "\r", "\x0b", "\x0c", "\x85", "\u2028", "\u2029", "\x1b", "\u202e"])
+    def test_a_trust_line_cannot_forge_a_reference_row(self, brk: str) -> None:
+        forged = f"Based on 1 source{brk}[2] ncbi_gene - https://www.ncbi.nlm.nih.gov/gene/999"
+        _, out, _ = _render(
+            [_GUARD_OK, _TOKEN, _CITE, ("trust_signal", _signal("answer")), ("done", _done("answer", forged))]
+        )
+        if brk != "\n":
+            assert brk not in out
+        # `splitlines` breaks on every line boundary Python knows, so a
+        # forged row would show here as a line of its own.
+        lines = out.splitlines()
+        assert not any(line.startswith("[2]") for line in lines)
+        assert "Based on 1 source [2] ncbi_gene - https://www.ncbi.nlm.nih.gov/gene/999" in lines
+
+    def test_a_risk_tier_cannot_start_a_line(self) -> None:
+        _, out, _ = _render(
+            [
+                _GUARD_OK,
+                _TOKEN,
+                _CITE,
+                ("trust_signal", _signal("answer", risk_tier="odd\n[2] x")),
+                ("done", _done("answer", "Based on 1 source")),
+            ]
+        )
+        assert "Based on 1 source · odd [2] x risk claim" in out.splitlines()
+
+
+class TestTheVerdictIsPrintedOnce:
+    """F-62-J05. Mutation that turns these red: stop recording that the
+    verdict was printed."""
+
+    def test_a_second_done_prints_no_second_verdict(self) -> None:
+        _, out, _ = _render(
+            [
+                _GUARD_OK,
+                _TOKEN,
+                _CITE,
+                ("trust_signal", _signal("ask")),
+                ("done", _done("ask", "Based on 12 sources, not yet confirmed")),
+                ("done", _done("ask")),
+            ]
+        )
+        assert out.count("[answer]") == 1
+        assert out.count("not yet confirmed") == 1
+        assert "Single source" not in out
+
+    def test_nothing_follows_the_references(self) -> None:
+        _, out, _ = _render(
+            [
+                _GUARD_OK,
+                _TOKEN,
+                _CITE,
+                ("trust_signal", _signal("ask")),
+                ("done", _done("ask", "Based on 12 sources, not yet confirmed")),
+            ]
+        )
+        assert out.endswith("[1] ncbi_gene - https://www.ncbi.nlm.nih.gov/gene/672\n")
+
+# ---------------------------------------------------------------------------
 # `s3 --help` from an installed copy (supports T-8.10-01's CI check).
 # ---------------------------------------------------------------------------
 
@@ -680,6 +1187,23 @@ class TestTopLevelHelp:
         for command in ("login", "ask", "stop", "mcp", "--json"):
             assert command in out.getvalue()
         assert main_module.PRODUCTION_API_ORIGIN in out.getvalue()
+
+    @pytest.mark.asyncio
+    async def test_s3_mcp_help_says_to_name_s3_by_its_full_path(self) -> None:
+        """Card 62, PR-8.10-09: an agent app opened from the Dock does not
+        read the shell's PATH, so a bare `s3` in its configuration did not
+        start. Mutation that turns this red: put back "Point the agent at
+        the command: s3 mcp"."""
+        out, err = io.StringIO(), io.StringIO()
+        exit_code = await main_module.async_main(
+            ["mcp", "--help"], stdin=io.StringIO(""), stdout=out, stderr=err, http_client=object()
+        )
+        assert exit_code == 0
+        text = " ".join(out.getvalue().split())
+        assert "the full path that command -v s3 prints" in text
+        assert "PATH" in text
+        # Card 79: the description is a sentence and ends with a full stop.
+        assert "shell's PATH." in text
 
     def test_help_never_reads_the_credential_file(
         self, credential_file, monkeypatch: pytest.MonkeyPatch

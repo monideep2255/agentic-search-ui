@@ -34,10 +34,12 @@ from system_03_search_agent.harness.harness import Harness, HarnessCallError
 from system_03_search_agent.synthesis import sentence_check as sentence_check_module
 from system_03_search_agent.synthesis.findings import SynthFinding
 from system_03_search_agent.synthesis.grounding import (
+    MAX_WIDENED_QUOTE_CHARS,
     SynthesisCandidate,
     extract_evidence_quotes,
     run_grounding_pass,
     synthesis_key,
+    widen_to_record_sentences,
 )
 from system_03_search_agent.synthesis.sentence_check import (
     MAX_CANDIDATES,
@@ -257,8 +259,9 @@ async def test_no_candidates_means_no_call(monkeypatch) -> None:
         return _Reply('{"supported": [1]}')
 
     monkeypatch.setattr(graph_module, "_dispatch_tier_call", fake_dispatch)
+    # A whole record sentence: card 101 round 3 sends a cut to the check.
     result = await graph_module._ground_with_sentence_check(
-        "Long-term use of PPIs is associated with bone fractures [1].",
+        "Caffeine had no effect on maximal strength [1].",
         [PAPER],
         question=QUESTION,
         evidence_quotes=(),
@@ -366,6 +369,152 @@ def test_naming_the_other_record_instead_of_referring_back_stays() -> None:
     assert len(result.sentences) == 2, result.sentences
 
 
+# Card 88 (2026-10-05): a record may be named by a short form its own text
+# defines. Measured locally: papers titled "Gastroesophageal Reflux Disease."
+# whose abstracts open "Gastroesophageal reflux disease (GERD)", and every
+# approved opening sentence saying "GERD" was dropped by the switch rule.
+REFLUX_TITLE_TEXT = "Gastroesophageal Reflux Disease."
+REFLUX_DEFINES = (
+    "Gastroesophageal reflux disease (GERD) is a condition in which stomach contents "
+    "flow back into the esophagus. Typical symptoms are heartburn and regurgitation."
+)
+REFLUX_NEVER_DEFINES = (
+    "Reflux disease is a condition in which stomach contents flow back into the "
+    "esophagus. Typical symptoms are heartburn and regurgitation."
+)
+REFLUX_SENTENCE = (
+    "GERD is when what is in the stomach comes back up into the food pipe "
+    '[21: "a condition in which stomach contents flow back into the esophagus"].'
+)
+
+
+def _reflux_findings(abstract: str, title: str = REFLUX_TITLE_TEXT) -> list[SynthFinding]:
+    body = SynthFinding(
+        ref_index=21,
+        citation_id="c-21",
+        layer="layer_2_ncbi_api",
+        tool="ncbi_efetch",
+        field="abstract",
+        field_value=abstract,
+        source_url="https://pubmed.ncbi.nlm.nih.gov/21/",
+        entity_type="Publication",
+        curie="pubmed:21",
+    )
+    heading = replace_finding(body, ref_index=22, citation_id="c-22", field="title", field_value=title)
+    return [body, heading]
+
+
+def _approve_all_in(narrative: str, findings: list[SynthFinding], question: str = "") -> object:
+    sink: list[SynthesisCandidate] = []
+    run_grounding_pass(narrative, findings, question=question, candidate_sink=sink)
+    return run_grounding_pass(
+        narrative, findings, question=question,
+        verified_syntheses=frozenset(c.key for c in sink),
+    )
+
+
+def test_a_short_form_is_read_only_where_the_text_defines_it() -> None:
+    from system_03_search_agent.synthesis.grounding import defined_short_forms
+
+    assert defined_short_forms(REFLUX_DEFINES) == {"GERD": "Gastroesophageal reflux disease"}
+    assert defined_short_forms(REFLUX_NEVER_DEFINES) == {}
+    # A bracketed word the words before it do not spell is not a definition,
+    # and neither is an ordinary capitalised word.
+    assert defined_short_forms("Patients were seen in Ankara and Istanbul (Turkey).") == {}
+    assert defined_short_forms("Cases rose sharply (TBD) last year.") == {}
+
+
+def test_an_opening_sentence_names_its_record_by_the_short_form_the_record_defines() -> None:
+    result = _approve_all_in(REFLUX_SENTENCE, _reflux_findings(REFLUX_DEFINES))
+    assert len(result.sentences) == 1, result.sentences
+    assert result.sentences[0].startswith("GERD is when")
+
+
+def test_the_short_form_rule_can_fail(monkeypatch) -> None:
+    """Mutation proof: with no short forms read (the old code), the sentence is dropped."""
+    from system_03_search_agent.synthesis import grounding
+
+    monkeypatch.setattr(grounding, "defined_short_forms", lambda _text: {})
+    assert _approve_all_in(REFLUX_SENTENCE, _reflux_findings(REFLUX_DEFINES)).sentences == ()
+
+
+def test_a_short_form_the_record_never_defines_does_not_name_it() -> None:
+    result = _approve_all_in(REFLUX_SENTENCE, _reflux_findings(REFLUX_NEVER_DEFINES))
+    assert result.sentences == (), result.sentences
+
+
+def test_a_short_form_another_record_defines_does_not_name_this_one() -> None:
+    """The definition must come from the CITED record's own text."""
+    defines = _reflux_findings(REFLUX_DEFINES)
+    other = [
+        replace_finding(f, source_url="https://pubmed.ncbi.nlm.nih.gov/31/", ref_index=f.ref_index + 10,
+                        citation_id=f"{f.citation_id}-o", curie="pubmed:31")
+        for f in defines
+    ]
+    result = _approve_all_in(REFLUX_SENTENCE, _reflux_findings(REFLUX_NEVER_DEFINES) + other)
+    assert result.sentences == (), result.sentences
+
+
+def test_the_never_defines_check_can_fail(monkeypatch) -> None:
+    """Mutation proof: a reader that ignores the record's text lets the switch through."""
+    from system_03_search_agent.synthesis import grounding
+
+    monkeypatch.setattr(
+        grounding, "defined_short_forms", lambda _text: {"GERD": "Gastroesophageal reflux disease"}
+    )
+    assert len(_approve_all_in(REFLUX_SENTENCE, _reflux_findings(REFLUX_NEVER_DEFINES)).sentences) == 1
+
+
+def test_a_short_form_for_something_off_the_title_does_not_name_the_record() -> None:
+    """The long form must share a word with the record's own title."""
+    findings = _reflux_findings(REFLUX_DEFINES, title="Proton pump inhibitors in adults.")
+    assert _approve_all_in(REFLUX_SENTENCE, findings).sentences == ()
+
+
+NUMBERED_SENTENCE = (
+    "GERD affects 20 percent of adults, who get heartburn "
+    '[21: "Typical symptoms are heartburn and regurgitation"].'
+)
+
+
+def test_a_number_not_in_the_quote_still_fails_with_a_defined_short_form() -> None:
+    findings = _reflux_findings(REFLUX_DEFINES)
+    sink: list[SynthesisCandidate] = []
+    run_grounding_pass(NUMBERED_SENTENCE, findings, question="", candidate_sink=sink)
+    assert sink == [], "a number outside the quote must never reach the model"
+    assert _approve_all_in(NUMBERED_SENTENCE, findings).sentences == ()
+
+
+def test_the_number_check_can_fail(monkeypatch) -> None:
+    """Mutation proof: without the exact checks, the invented number ships."""
+    from system_03_search_agent.synthesis import grounding
+
+    monkeypatch.setattr(grounding, "exact_synthesis_checks_pass", lambda *a, **k: True)
+    assert len(_approve_all_in(NUMBERED_SENTENCE, _reflux_findings(REFLUX_DEFINES)).sentences) == 1
+
+
+def _same_title_papers() -> list[SynthFinding]:
+    """Two papers with one title, as on the GERD question: only the first
+    defines the short form in its own text."""
+    first = _reflux_findings(REFLUX_DEFINES)
+    second = [
+        replace_finding(f, source_url="https://pubmed.ncbi.nlm.nih.gov/41/", ref_index=f.ref_index + 20,
+                        citation_id=f"{f.citation_id}-b", curie="pubmed:41")
+        for f in _reflux_findings(REFLUX_NEVER_DEFINES)
+    ]
+    return first + second
+
+
+def test_a_shared_title_does_not_carry_one_papers_short_form_to_another() -> None:
+    """Paper 41 has the same title but never defines GERD: a GERD sentence
+    resting on it is not attributed to it by way of paper 21's definition."""
+    on_other = (
+        "GERD is when what is in the stomach comes back up into the food pipe "
+        '[41: "a condition in which stomach contents flow back into the esophagus"].'
+    )
+    assert _approve_all_in(on_other, _same_title_papers()).sentences == ()
+
+
 def test_the_opening_sentence_counts_a_paper_cited_twice_once() -> None:
     """Measured live 2026-09-23: "Found 10 pubmed records" above a list of 5,
     once the prose could cite a paper's abstract as well as its title."""
@@ -455,21 +604,61 @@ def _batch_result(choices: dict[str, str], *, cost: float = 5e-05) -> jev_client
     )
 
 
+def _is_pair_call(kwargs: dict) -> bool:
+    """Card 99: a pair call's questions are keyed `pair_<item>_<k>`."""
+    return all(key.startswith("pair_") for key in kwargs["questions"])
+
+
 class _FakeJev:
     """Stands in for `call_jev_batch`: records every call, then answers
-    with `choices` (item key to "yes" or "no"), or raises `raises`."""
+    the item call with `choices` (item key to "yes" or "no"), or raises
+    `raises`.
 
-    def __init__(self, choices=None, *, raises=None, delay_s=0.0, cost=5e-05):
+    Card 99: a pair call is answered with `pair_choices` (pair key to
+    choice), every pair not named there "no", so a test about the item
+    question sees the item question decide, as before card 99; or it
+    raises `pair_raises`, or sleeps `pair_delay_s` first."""
+
+    def __init__(
+        self,
+        choices=None,
+        *,
+        raises=None,
+        delay_s=0.0,
+        cost=5e-05,
+        pair_choices=None,
+        pair_raises=None,
+        pair_delay_s=0.0,
+    ):
         self.calls: list[dict] = []
         self.choices = choices
         self.raises = raises
         self.delay_s = delay_s
         self.cost = cost
+        self.pair_choices = pair_choices or {}
+        self.pair_raises = pair_raises
+        self.pair_delay_s = pair_delay_s
+
+    @property
+    def item_calls(self) -> list[dict]:
+        return [call for call in self.calls if not _is_pair_call(call)]
+
+    @property
+    def pair_calls(self) -> list[dict]:
+        return [call for call in self.calls if _is_pair_call(call)]
 
     async def __call__(self, **kwargs):
         import asyncio
 
         self.calls.append(kwargs)
+        if _is_pair_call(kwargs):
+            if self.pair_delay_s:
+                await asyncio.sleep(self.pair_delay_s)
+            if self.pair_raises is not None:
+                raise self.pair_raises
+            return _batch_result(
+                {key: self.pair_choices.get(key, "no") for key in kwargs["questions"]}, cost=self.cost
+            )
         if self.delay_s:
             await asyncio.sleep(self.delay_s)
         if self.raises is not None:
@@ -569,9 +758,10 @@ async def test_jev_mode_asks_one_yes_no_question_per_sentence_in_one_call(monkey
 
     approved = await _check(candidates, guard=guard)
 
-    assert len(fake_jev.calls) == 1, "one call for the whole answer"
+    assert len(fake_jev.item_calls) == 1, "one item call for the whole answer"
+    assert len(fake_jev.pair_calls) == 1, "card 99: and one pair call beside it, for the pairs of items 1 and 3"
     assert guard.calls == [], "the guard is not asked when Jev answers"
-    call = fake_jev.calls[0]
+    call = fake_jev.item_calls[0]
     assert call["state"] == sentence_check_module.build_jev_state(candidates)[0]
     questions = call["questions"]
     assert list(questions) == ["item_1", "item_2", "item_3"]
@@ -594,7 +784,7 @@ async def test_jev_gets_less_time_when_less_is_left(monkeypatch) -> None:
     fake_jev = _FakeJev({"item_1": "no", "item_2": "no", "item_3": "no"})
     _jev_on(monkeypatch, fake_jev)
     await _check(_made_up_candidates(), guard=_FakeGuard(), budget_s=1.2)
-    assert fake_jev.calls[0]["timeout_s"] == 1.2
+    assert [call["timeout_s"] for call in fake_jev.calls] == [1.2, 1.2], "the item call and the pair call"
 
 
 @pytest.mark.asyncio
@@ -602,7 +792,8 @@ async def test_jevs_cost_is_checked_first_and_charged_to_the_question(monkeypatc
     _jev_on(monkeypatch, _FakeJev({"item_1": "no", "item_2": "no", "item_3": "no"}, cost=0.0042))
     harness = Harness(trace_id="k-cost")
     await _check(_made_up_candidates(), guard=_FakeGuard(), trace_id="k-cost", harness=harness)
-    assert harness.get_query_cost_usd("k-cost") == pytest.approx(0.0042)
+    # Card 99: the item call and the one pair call, each charged what it reported.
+    assert harness.get_query_cost_usd("k-cost") == pytest.approx(2 * 0.0042)
 
 
 @pytest.mark.parametrize(
@@ -779,7 +970,7 @@ async def test_sentences_past_the_cap_are_not_sent_and_not_approved(monkeypatch)
 
     approved = await _check(candidates, guard=_FakeGuard())
 
-    assert len(fake_jev.calls[0]["questions"]) == MAX_CANDIDATES
+    assert len(fake_jev.item_calls[0]["questions"]) == MAX_CANDIDATES
     assert approved == frozenset(c.key for c in candidates[:MAX_CANDIDATES])
     assert not approved & {c.key for c in candidates[MAX_CANDIDATES:]}
 
@@ -841,9 +1032,15 @@ def _jev_http_reply(answers: dict[str, dict], *, cost: float = 5e-05) -> httpx.R
     return httpx.Response(200, content=json.dumps(body).encode())
 
 
+_PAIR_CALL_COST = 6e-05
+
+
 def _jev_replies_with(monkeypatch, answers: dict[str, dict], *, cost: float = 5e-05) -> list[dict]:
     """Jev mode through the REAL `call_jev_batch`: only its HTTP seam is
-    stubbed, so parsing and validation run exactly as live."""
+    stubbed, so parsing and validation run exactly as live.
+
+    Card 99: the item call gets `answers` at `cost`; a pair call gets a
+    "no" backed by its probabilities for every pair, at `_PAIR_CALL_COST`."""
     monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "1.0")
@@ -851,6 +1048,10 @@ def _jev_replies_with(monkeypatch, answers: dict[str, dict], *, cost: float = 5e
 
     async def fake_post(_headers, body):
         bodies.append(body)
+        if all(key.startswith("pair_") for key in body["questions"]):
+            return _jev_http_reply(
+                {key: _jev_answer("no") for key in body["questions"]}, cost=_PAIR_CALL_COST
+            )
         return _jev_http_reply(answers, cost=cost)
 
     monkeypatch.setattr(jev_client_module, "_post", fake_post)
@@ -943,7 +1144,8 @@ async def test_an_unusable_jev_reply_approves_nothing_and_is_charged_its_reporte
         await _check(_made_up_candidates(1), guard=guard, trace_id="j10-s", harness=harness)
 
     assert guard.calls == []
-    assert harness.get_query_cost_usd("j10-s") == pytest.approx(charged)
+    # Card 99: plus the one pair call beside it, which came back usable.
+    assert harness.get_query_cost_usd("j10-s") == pytest.approx(charged + _PAIR_CALL_COST)
 
 
 @pytest.mark.asyncio
@@ -985,8 +1187,8 @@ async def test_the_write_step_asks_jev_and_not_the_guard_when_jev_decides(monkey
         trace_id="t-wire-1",
         budget_s=30.0,
     )
-    assert len(fake_jev.calls) == 1 and calls == []
-    assert result.grounded, "Jev's no approved the faithful rewording"
+    assert len(fake_jev.item_calls) == 1 and calls == []
+    assert result.grounded, "Jev's no approved the faithful rewording, and every pair said no"
 
 
 @pytest.mark.asyncio
@@ -1063,3 +1265,194 @@ async def test_the_write_step_in_jev_mode_still_fails_closed(monkeypatch) -> Non
         budget_s=30.0,
     )
     assert not result.grounded, "a yes approves nothing, and code alone rejects the rewording"
+
+
+# ------------------------------- card 89: the model reads whole record sentences
+#
+# The owner's decision of 2026-10-05 (DECISIONS.md; design in
+# testing/Developer/reports/2026-10-05_sentence_check/design.md, option 1).
+# Measured: 36 of 47 rejections were sentences faithful to the record whose
+# extra words sat outside the short span the writer quoted. The model now
+# reads each quote widened to the whole record sentence(s) it sits in. The
+# exact checks still run on the writer's own quote, and the key keeps it.
+
+REFLUX_ABSTRACT = (
+    "Gastroesophageal reflux disease is common in adults. In 20 percent of cases it "
+    "results from the reflux of stomach contents into the esophagus, which does not "
+    "always cause heartburn. Proton pump inhibitors are the most effective treatment."
+)
+REFLUX_FIRST, REFLUX_SECOND, REFLUX_THIRD = (
+    "Gastroesophageal reflux disease is common in adults.",
+    (
+        "In 20 percent of cases it results from the reflux of stomach contents into the "
+        "esophagus, which does not always cause heartburn."
+    ),
+    "Proton pump inhibitors are the most effective treatment.",
+)
+REFLUX = replace_finding(
+    PAPER, ref_index=1, citation_id="c-r1", field_value=REFLUX_ABSTRACT,
+    source_url="https://pubmed.ncbi.nlm.nih.gov/21/", curie="pubmed:21",
+)
+REFLUX_TITLE = replace_finding(
+    PAPER_TITLE, ref_index=2, citation_id="c-r2", field_value="Reflux of stomach contents in adults",
+    source_url="https://pubmed.ncbi.nlm.nih.gov/21/", curie="pubmed:21",
+)
+MID_SENTENCE = (
+    "Stomach contents flow back up into the food pipe "
+    '[1: "the reflux of stomach contents into the esophagus"].'
+)
+
+
+def _reflux_candidates(narrative: str) -> list[SynthesisCandidate]:
+    sink: list[SynthesisCandidate] = []
+    run_grounding_pass(narrative, [REFLUX, REFLUX_TITLE], question=QUESTION, candidate_sink=sink)
+    return sink
+
+
+def test_the_record_sentences_are_what_the_test_says() -> None:
+    assert f"{REFLUX_FIRST} {REFLUX_SECOND} {REFLUX_THIRD}" == REFLUX_ABSTRACT
+
+
+def test_a_mid_sentence_quote_is_widened_to_its_whole_record_sentence() -> None:
+    sink = _reflux_candidates(MID_SENTENCE)
+    assert len(sink) == 1, sink
+    assert sink[0].quotes == (REFLUX_SECOND,)
+    state, _ = sentence_check_module.build_jev_state(sink)
+    assert json.dumps(REFLUX_SECOND) in state, "the model reads the whole record sentence"
+
+
+def test_a_quote_crossing_two_record_sentences_is_widened_to_both() -> None:
+    sink = _reflux_candidates(
+        'Reflux disease is frequent in grown-ups [1: "common in adults. In 20 percent"].'
+    )
+    assert len(sink) == 1, sink
+    assert sink[0].quotes == (f"{REFLUX_FIRST} {REFLUX_SECOND}",)
+
+
+def test_a_quote_that_is_already_a_whole_sentence_is_unchanged() -> None:
+    sink = _reflux_candidates(f'Acid-blocking pills work best for it [1: "{REFLUX_THIRD}"].')
+    assert len(sink) == 1, sink
+    assert sink[0].quotes == (REFLUX_THIRD,)
+    assert widen_to_record_sentences(REFLUX_THIRD, REFLUX_ABSTRACT) == REFLUX_THIRD
+
+
+def test_the_exact_checks_still_run_on_the_writers_own_quote() -> None:
+    # Negation: the widened sentence says "does not", the writer's quote and
+    # sentence do not. Checked on the writer's quote, the sentence is a
+    # candidate; had the check read the widened sentence, it would not be.
+    sink = _reflux_candidates(MID_SENTENCE)
+    assert len(sink) == 1 and "does not" in sink[0].quotes[0]
+    # The key is the writer's own words, and it is what the second pass accepts.
+    assert sink[0].key == synthesis_key(
+        "Stomach contents flow back up into the food pipe",
+        ["the reflux of stomach contents into the esophagus"],
+    )
+    result = run_grounding_pass(
+        MID_SENTENCE, [REFLUX, REFLUX_TITLE], question=QUESTION,
+        verified_syntheses=frozenset({sink[0].key}),
+    )
+    assert result.claims and result.claims[0].evidence_quote == (
+        "the reflux of stomach contents into the esophagus"
+    )
+    # Numbers: 20 is in the widened sentence but not in the writer's quote, so
+    # the sentence never reaches the model.
+    assert _reflux_candidates(
+        "Stomach contents flow back up into the food pipe in 20 percent of people "
+        '[1: "the reflux of stomach contents into the esophagus"].'
+    ) == []
+    # The quote must still be in the record word for word.
+    assert _reflux_candidates(
+        'Stomach contents flow back up [1: "the reflux of stomach acid into the esophagus"].'
+    ) == []
+
+
+def test_two_quotes_in_one_record_sentence_are_shown_once() -> None:
+    sink = _reflux_candidates(
+        "Stomach contents flow back up into the food pipe "
+        '[1: "the reflux of stomach contents"][1: "contents into the esophagus, which"].'
+    )
+    assert len(sink) == 1, sink
+    assert sink[0].quotes == (REFLUX_SECOND,)
+    assert len(sink[0].key[1]) == 2, "the key keeps both of the writer's quotes"
+
+
+def test_a_run_of_record_sentences_too_long_to_show_keeps_the_writers_quote() -> None:
+    long_sentence = "Reflux " + "and more words " * 60 + "ends here."
+    record = f"First sentence here. {long_sentence} Last one."
+    assert widen_to_record_sentences("and more words and more words", record) == (
+        "and more words and more words"
+    )
+    assert widen_to_record_sentences("words not in the record at all", record) == (
+        "words not in the record at all"
+    )
+
+
+def test_a_widened_quote_is_never_cut_short_in_the_check() -> None:
+    assert MAX_WIDENED_QUOTE_CHARS == sentence_check_module.MAX_QUOTE_CHARS
+
+
+# ------------------------------------------------ card 101 round 5: never approve unread text
+
+
+def _sized(name: str, sentence_chars: int, quote_chars: int) -> SynthesisCandidate:
+    sentence = (f"{name} " * 400)[:sentence_chars]
+    quote = ("hand hygiene reduced ward infection rates " * 40)[:quote_chars]
+    return SynthesisCandidate(key=(name, (quote,)), sentence=sentence, quotes=(quote,))
+
+
+class _ApproveEverythingSent:
+    """The guard tier approving every item it is shown."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    async def __call__(self, messages, budget_s):
+        user = messages[1]["content"]
+        self.calls.append(user)
+        count = user.count("ITEM ")
+        return json.dumps({"supported": list(range(1, count + 1))})
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provider", ["guard", "jev"])
+async def test_an_item_longer_than_the_check_reads_is_never_sent_or_approved(monkeypatch, provider) -> None:
+    """A4-101-04 (card 101, round 5): the check reads at most
+    `MAX_SENTENCE_CHARS` of a sentence and `MAX_QUOTE_CHARS` of a quote. An
+    item past either cap used to be sent cut short and could be approved on
+    text the checker never saw. Now it is not sent and not approved; items
+    at the cap still are.
+
+    MUTATION PROOF: removing the length filter in `check_reworded_sentences`
+    turns both cases red: the long items are approved."""
+    at_cap = _sized("cap", sentence_check_module.MAX_SENTENCE_CHARS, sentence_check_module.MAX_QUOTE_CHARS)
+    long_sentence = _sized("sentence", sentence_check_module.MAX_SENTENCE_CHARS + 1, 40)
+    long_quote = _sized("quote", 40, sentence_check_module.MAX_QUOTE_CHARS + 1)
+    candidates = [long_sentence, at_cap, long_quote]
+    guard = _ApproveEverythingSent()
+    jev_questions: list[dict] = []
+    if provider == "jev":
+
+        async def fake_jev(**kwargs):
+            jev_questions.append(kwargs)
+            return _batch_result({key: "no" for key in kwargs["questions"]})
+
+        _jev_on(monkeypatch, fake_jev)
+    else:
+        monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
+
+    approved = await _check(candidates, guard=guard)
+
+    assert approved == frozenset({at_cap.key}), approved
+    sent = guard.calls if provider == "guard" else [call["state"] for call in jev_questions]
+    assert sent, "populate-check: the item at the cap was asked about"
+    assert all(long_sentence.sentence[:200] not in text for text in sent)
+    assert all(long_quote.sentence not in text for text in sent)
+
+
+@pytest.mark.asyncio
+async def test_a_check_with_only_oversized_items_asks_no_model(monkeypatch) -> None:
+    monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
+    guard = _ApproveEverythingSent()
+    candidates = [_sized("sentence", sentence_check_module.MAX_SENTENCE_CHARS + 1, 40)]
+    assert await _check(candidates, guard=guard, harness=object()) == frozenset()
+    assert guard.calls == []

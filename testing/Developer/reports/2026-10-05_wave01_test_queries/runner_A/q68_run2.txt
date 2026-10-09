@@ -1,0 +1,69 @@
+QUESTION: GERD
+MODE: plain
+
+--- ANSWER TEXT ---
+▶
+GERD
+0 tools · 0 sources
+Show answer
+What are the common symptoms and complications of GERD?
+New search
+
+✓ Answered12.9s · 8 tools · 14 sources from 2 layers
+
+Show work ▾
+
+I found 5 published papers, 5 clinical trials, 1 condition and 1 literature index entry related to GERD.⁠3–14
+
+The common symptoms of GERD are heartburn and regurgitation of stomach contents into the throat.⁠1 GERD happens when stomach contents flow back into the esophagus or mouth, causing symptoms or complications.⁠1 In children, GERD symptoms are varied and nonspecific, making diagnosis harder.⁠2 A natural history study is following GER in children and adolescents.⁠3
+
+WHERE THIS ANSWER COMES FROM
+Gastroesophageal Reflux Disease.	⁠4
+Gastroesophageal reflux (GERD)	⁠5
+Gastroesophageal Reflux	⁠6
+Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease	⁠7
+Gastroesophageal Reflux Disease.	⁠8
+Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339)	⁠9
+Gastroesophageal Reflux Disease.	⁠10
+Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents	⁠3
+Gastroesophageal reflux disease in children: What's new right now?	⁠11
+On Demand Treatment of Reflux Disease	⁠12
+Showing 1–10 of 12
+‹ Previous
+Page 1 of 2
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+12
+Based on 12 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- ANSWER META ---
+✓ Answered12.9s · 8 tools · 14 sources from 2 layers
+
+--- LINKS (13) ---
+ -> https://www.ncbi.nlm.nih.gov/search/all/?term=GERD
+ -> https://pubmed.ncbi.nlm.nih.gov/29132520/
+ -> https://pubmed.ncbi.nlm.nih.gov/37034973/
+ -> https://www.ncbi.nlm.nih.gov/medgen/1795938
+ -> https://pubmed.ncbi.nlm.nih.gov/33351044/
+ -> https://pubmed.ncbi.nlm.nih.gov/36170502/
+ -> https://pubmed.ncbi.nlm.nih.gov/37516506/
+ -> https://clinicaltrials.gov/study/NCT00181805
+ -> https://www.ncbi.nlm.nih.gov/mesh/D005764
+ -> https://clinicaltrials.gov/study/NCT00141960
+ -> https://clinicaltrials.gov/study/NCT00163306
+ -> https://clinicaltrials.gov/study/NCT00184522
+ -> https://clinicaltrials.gov/study/NCT00235677

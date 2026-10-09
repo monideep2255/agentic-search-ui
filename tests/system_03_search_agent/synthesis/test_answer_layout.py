@@ -314,7 +314,7 @@ def _claims(*findings: SynthFinding) -> list[GroundedClaim]:
 
 def test_trust_line_single_source_not_confirmed() -> None:
     line = answer_trust_line("ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE))
-    assert line == "Based on 1 source, not yet confirmed"
+    assert line == "Based on 1 source cited, not yet confirmed"
 
 
 def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
@@ -332,7 +332,30 @@ def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
     line = answer_trust_line(
         "ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE, other, GENE)
     )
-    assert line == "Based on 3 sources, not yet confirmed"
+    assert line == "Based on 3 sources cited, not yet confirmed"
+
+
+def _significance(ref_index: int, url: str, *, tool: str = "cypher_query") -> SynthFinding:
+    """A record stating one variant's clinical significance, "Pathogenic"."""
+    return SynthFinding(
+        ref_index=ref_index,
+        citation_id=f"c-{ref_index}",
+        layer="layer_1_graph" if tool == "cypher_query" else "layer_3_enrichment",
+        tool=tool,
+        field="clinical_significance",
+        field_value="Pathogenic",
+        source_url=url,
+        entity_type="Variant",
+    )
+
+
+# One variant's records (card 22 last round, V-22-04): its ClinVar variation
+# record, a ClinVar condition record for the same variant, and its dbSNP
+# page, which is also the link `litvar2_lookup` builds for a LitVar2 record
+# with a significance (`tools/litvar2_lookup.py`, `_snp_url_for_rsid`).
+CLINVAR_A = _significance(1, "https://www.ncbi.nlm.nih.gov/clinvar/variation/17661")
+CLINVAR_B = _significance(2, "https://www.ncbi.nlm.nih.gov/clinvar/RCV000019240")
+LITVAR = _significance(3, "https://www.ncbi.nlm.nih.gov/snp/rs80357713", tool="litvar2_lookup")
 
 
 def test_trust_line_confirmed_still_counts_independent_databases() -> None:
@@ -340,24 +363,28 @@ def test_trust_line_confirmed_still_counts_independent_databases() -> None:
     how many chips are on screen, so it must keep counting distinct
     databases even where `test_trust_line_based_on_counts_visible_
     citations_not_databases` just proved the "Based on" line does not.
-    Three distinct citations (DISEASE, other, GENE) share only two
-    databases (MedGen, NCBIGene); reporting "Confirmed by 3" would claim a
-    third, nonexistent, independent database agreed.
+    Three records of one variant state its significance, two in ClinVar
+    and one on its dbSNP page (cited by LitVar2): three pages, two
+    databases. Reporting "Confirmed by 3" would claim a third, nonexistent,
+    independent database agreed.
+
+    Card 22 fix round: rebuilt with records that state the same fact about
+    the same variant (last round, V-22-04). The old version marked a claim
+    concordant with nothing agreeing with it and still read "Confirmed by 2",
+    because the count then ran over every claim in the answer (A-22-02).
     """
-    other = _finding(3, "pancreatic cancer", curie="MedGen:C3")
-    trusts = [_trust("c-2", "high", "concordant", "answer")]
-    assert answer_trust_line("answer", trusts, _claims(DISEASE, other, GENE)) == (
-        "Confirmed by 2 independent sources"
-    )
+    trusts = [_trust("c-1", "high", "concordant", "answer")]
+    claims = _claims(CLINVAR_A, CLINVAR_B, LITVAR)
+    assert answer_trust_line("answer", trusts, claims) == "Confirmed by 2 independent databases"
 
 
 def test_trust_line_confirmed_only_on_concordance() -> None:
-    trusts = [_trust("c-2", "high", "concordant", "answer")]
-    assert answer_trust_line("answer", trusts, _claims(DISEASE, GENE)) == (
-        "Confirmed by 2 independent sources"
+    trusts = [_trust("c-1", "high", "concordant", "answer")]
+    assert answer_trust_line("answer", trusts, _claims(CLINVAR_A, LITVAR)) == (
+        "Confirmed by 2 independent databases"
     )
-    low = [_trust("c-2", "low", "insufficient", "answer")]
-    assert answer_trust_line("answer", low, _claims(DISEASE, GENE)) == "Based on 2 sources"
+    low = [_trust("c-1", "low", "insufficient", "answer")]
+    assert answer_trust_line("answer", low, _claims(CLINVAR_A, LITVAR)) == "Based on 2 sources cited"
 
 
 def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
@@ -370,7 +397,7 @@ def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
         for n in range(1, 6)
     ]
     line = answer_trust_line("answer", [], _claims(*papers))
-    assert line == "Based on 5 sources"
+    assert line == "Based on 5 sources cited"
 
 
 def test_trust_line_counts_pages_the_source_list_shows() -> None:
@@ -393,7 +420,7 @@ def test_trust_line_counts_pages_the_source_list_shows() -> None:
     assert len({c.finding.citation_id for c in claims}) == 3, (
         "populate-check: three citation ids, or the old count could not be told apart"
     )
-    assert answer_trust_line("answer", [], claims) == "Based on 2 sources"
+    assert answer_trust_line("answer", [], claims) == "Based on 2 sources cited"
 
 
 def test_trust_line_flag_and_refuse() -> None:
@@ -463,7 +490,7 @@ def test_the_placeholder_count_is_the_real_number_of_excluded_links() -> None:
     assert placeholder_link_count(rows, _NAMES) == 2
     assert placeholder_links_note(2) == (
         "2 variant links to ClinVar placeholder conditions "
-        "('not provided', 'not specified' or 'see cases') are not listed."
+        "('not provided', 'not specified' or 'see cases') are not listed as diseases."
     )
     assert placeholder_links_note(0) is None
 
@@ -642,3 +669,169 @@ def test_12_9_a_plain_label_is_a_title_and_never_a_code() -> None:
     assert plain_record_label(gene, {"name": "BRCA1 and 53BP1 in repair"}, "NCBIGene:672") == (
         "BRCA1 and 53BP1 in repair"
     )
+
+
+# ---------------------------------------------------------------- card 32
+
+
+def test_the_variant_to_disease_table_names_its_two_sources() -> None:
+    """Card 32 (2026-09-25): the note is pinned, code-built and shown only
+    under the "Variant-to-disease mapping" table."""
+    from system_03_search_agent.synthesis.answer_layout import (
+        VARIANT_TO_DISEASE_SOURCE_NOTE,
+        variant_to_disease_source_note,
+    )
+
+    assert VARIANT_TO_DISEASE_SOURCE_NOTE == (
+        "Each row lists the conditions the variant's ClinVar record names; the "
+        "record's classification (for example pathogenic, benign or uncertain) "
+        "is not shown here. Disease names are MedGen titles looked up from NCBI."
+    )
+    assert variant_to_disease_source_note("SequenceVariant", True) == VARIANT_TO_DISEASE_SOURCE_NOTE
+
+
+def test_card23_the_note_never_implies_the_variant_causes_the_disease() -> None:
+    """Card 23's fix round, A-23-05. The table lists every variant whose
+    ClinVar record names a condition, likely benign and uncertain ones
+    included (live HNF1A: c.1011C>T, Likely benign, beside "Maturity-onset
+    diabetes of the young"), and the table has no classification column. So
+    the line under it must say the classification is not shown, and must
+    not call a row an assertion or a cause.
+
+    Red when the line goes back to "ClinVar assertions" (the mutation run),
+    when it drops the "not shown" clause, or when the table starts showing a
+    variant's classification without the line being revisited."""
+    from system_03_search_agent.synthesis.answer_layout import (
+        VARIANT_TO_DISEASE_SOURCE_NOTE,
+        record_status_or_year,
+    )
+
+    note = VARIANT_TO_DISEASE_SOURCE_NOTE.lower()
+    assert "classification" in note and "is not shown here" in note
+    for word in ("assertion", "cause", "caused", "responsible for", "pathogenic variant"):
+        assert word not in note, word
+
+    # "is not shown here" stays true only while the table shows no
+    # classification for a variant row, even when a row carries one.
+    variant_row = {
+        "clinical_significance": "Likely benign",
+        "ClinicalSignificance": "Likely benign",
+        "germline_classification": "Likely benign",
+        "clinvar_condition_ids": ["MedGen:C0342276"],
+    }
+    assert record_status_or_year("SequenceVariant", variant_row) is None
+
+
+def test_card23_the_note_makes_no_freshness_claim_about_disease_names() -> None:
+    """Card 23's fix round, the owner's wording decision of 2026-10-06
+    (J-23-02, A-23-02): a MedGen title is kept for up to a week per server
+    process (`disease_names._CACHE_TTL_S`), so a repeated question shows a
+    title looked up days earlier with no NCBI call. The line says "looked up
+    from NCBI" and never "read live", or any other word promising the name
+    was fetched for this answer.
+
+    Red when "read live" comes back (the mutation run)."""
+    from system_03_search_agent.synthesis import disease_names
+    from system_03_search_agent.synthesis.answer_layout import VARIANT_TO_DISEASE_SOURCE_NOTE
+
+    note = VARIANT_TO_DISEASE_SOURCE_NOTE.lower()
+    assert "disease names are medgen titles looked up from ncbi." in note
+    # The reason the line carries no timing word: titles are cached.
+    assert disease_names._CACHE_TTL_S > 0
+    for word in ("live", "real time", "real-time", "current", "today", "just now"):
+        assert word not in note, word
+
+
+def test_card23_query_79_quotes_the_line_that_ships() -> None:
+    """Card 23's fix round: the test-queries document is the owner's gate,
+    so query 79's expected line must be the shipped text, word for word.
+    Card 23's second part (J-23-01, A-23-01) keeps the line directly under
+    its table on screen even when the table ends the answer
+    (`frontend/src/answerLayout.test.tsx`, `e2e/card23-source-note.spec.ts`),
+    so query 79 promises "directly under that table" and never the Notes list.
+
+    Red when the document quotes an older wording (the mutation run), drops
+    the placement promise, or sends the line to the Notes list again."""
+    from pathlib import Path
+
+    from system_03_search_agent.synthesis.answer_layout import VARIANT_TO_DISEASE_SOURCE_NOTE
+
+    document = Path(__file__).resolve().parents[3] / "testing" / "Test_queries_and_workflows.md"
+    text = document.read_text(encoding="utf-8")
+    start = text.index("### 79. ")
+    end = text.index("\n### ", start + 1)
+    section = text[start:end]
+    assert f'"{VARIANT_TO_DISEASE_SOURCE_NOTE}"' in section
+    assert "directly under that table" in section.lower()
+    assert "never in the notes list" in section.lower()
+    assert "shows first in the notes list" not in section.lower()
+
+
+def test_card23_the_screen_finds_the_line_by_the_words_that_ship() -> None:
+    """Card 23's second part (J-23-01, A-23-01): the web screen keeps the
+    line directly under its table by matching its opening words,
+    `VARIANT_TABLE_SOURCE_NOTE_PREFIX` in `frontend/src/hooks/useRunView.ts`,
+    because no field on the wire tells it apart from an answer-wide note.
+
+    Red when the backend line is reworded without the frontend prefix (the
+    mutation run: the old "Each row is a condition" opening), which would
+    send the line back to the Notes list when the table ends the answer."""
+    import re
+    from pathlib import Path
+
+    from system_03_search_agent.synthesis.answer_layout import VARIANT_TO_DISEASE_SOURCE_NOTE
+
+    hook = Path(__file__).resolve().parents[3] / "frontend" / "src" / "hooks" / "useRunView.ts"
+    match = re.search(
+        r'export const VARIANT_TABLE_SOURCE_NOTE_PREFIX = "([^"]+)";',
+        hook.read_text(encoding="utf-8"),
+    )
+    assert match is not None
+    prefix = match.group(1)
+    assert len(prefix) >= 40, prefix
+    assert VARIANT_TO_DISEASE_SOURCE_NOTE.startswith(prefix)
+
+
+@pytest.mark.parametrize(
+    ("entity_type", "mapped"),
+    [
+        ("SequenceVariant", False),  # a variant list with no mapping table shown
+        ("Gene", True),  # the gene-to-disease table, a different pairing
+        ("Clinical trial", True),
+        ("Pathogen Detection isolate", True),
+        ("", False),
+    ],
+)
+def test_the_variant_to_disease_note_is_silent_off_its_own_table(
+    entity_type: str, mapped: bool
+) -> None:
+    from system_03_search_agent.synthesis.answer_layout import variant_to_disease_source_note
+
+    assert variant_to_disease_source_note(entity_type, mapped) is None
+
+
+# ---------------------------------------------------------------------------
+# Card 95 (2026-10-05): a token carries at most 20 marker ids, so a lead
+# sentence writing 35 markers showed 21 to 35 as raw bracketed text. Red on
+# the old code: the sentence carried 35 markers.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("depth", ["researcher", "plain"])
+def test_the_lead_sentence_never_writes_more_markers_than_a_token_can_carry(depth: str) -> None:
+    import re
+
+    from system_03_search_agent.synthesis.answer_layout import (
+        MAX_SUMMARY_MARKERS,
+        answer_summary_sentence,
+    )
+
+    findings = [_fold_finding(n, "SequenceVariant", f"ClinVar:{n}", f"NM_{n}") for n in range(1, 36)]
+    slots = {f.citation_id: f.ref_index for f in findings}
+    sentence = answer_summary_sentence(
+        findings, slots, "BRCA1", None, lambda f: None, audience_depth=depth
+    )
+    assert sentence is not None
+    markers = [int(n) for n in re.findall(r"\[(\d+)\]", sentence)]
+    assert 0 < len(markers) <= MAX_SUMMARY_MARKERS == 20, sentence
+    assert "35" in sentence, "the count still tells the truth about all records"

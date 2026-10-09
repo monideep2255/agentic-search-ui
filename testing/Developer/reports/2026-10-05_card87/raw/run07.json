@@ -1,0 +1,128 @@
+{
+ "q": "recent papers on statins",
+ "seconds": 2.3,
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "7b77cd51-f74f-415d-898b-ce7177ee8783",
+   "seq": 0,
+   "ts": "2026-10-05T16:31:18.531348Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "7b77cd51-f74f-415d-898b-ce7177ee8783",
+   "seq": 2,
+   "ts": "2026-10-05T16:31:18.772339Z",
+   "payload": {
+    "narrative": "the recent-work classifier read a request for recent work that says no year or length of time, so the answer asks how far back to search before any search",
+    "query_class": "lookup",
+    "resolved_entities": [],
+    "clarifying_question": "How far back should I search?",
+    "clarifying_options": [
+     "Recent papers on statins from the last 12 months?",
+     "Recent papers on statins from the last 5 years?",
+     "Recent papers on statins from the last 10 years?"
+    ]
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "7b77cd51-f74f-415d-898b-ce7177ee8783",
+   "seq": 3,
+   "ts": "2026-10-05T16:31:18.780659Z",
+   "payload": {
+    "narrative": "no tool selected; the answer asks a question back before any search",
+    "tool_calls": [],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7b77cd51-f74f-415d-898b-ce7177ee8783",
+   "seq": 4,
+   "ts": "2026-10-05T16:31:18.842272Z",
+   "payload": {
+    "text": "How far back should I search?",
+    "marker_ids": [],
+    "kind": null,
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "7b77cd51-f74f-415d-898b-ce7177ee8783",
+   "seq": 5,
+   "ts": "2026-10-05T16:31:18.842348Z",
+   "payload": {
+    "outcome": "refuse",
+    "risk_tier": "unknown",
+    "grounded": false,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": "How far back should I search?",
+    "fallback_link": "https://www.ncbi.nlm.nih.gov/search/all/?term=recent%20papers%20on%20statins"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "7b77cd51-f74f-415d-898b-ce7177ee8783",
+   "seq": 6,
+   "ts": "2026-10-05T16:31:18.842390Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 2128,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 149
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "recent_unbounded",
+      "decided_by": "jev",
+      "jev_choice": "recent_unbounded",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 237
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -631,7 +631,13 @@ class TestStopEndpoint:
     ) -> None:
         """production-standards.md's retry-safety gate: a write the agent
         loop (or a client retry) may issue more than once must produce the
-        same end state, never an error, on the second call."""
+        same end state, never an error, on the second call.
+
+        Card 59, A-59-03: both calls also say the run had already finished,
+        `stopped: false`, which the command line prints as "run was already
+        finished". The endpoint used to answer a fixed `stopped: true`, a
+        stop that never happened. Mutation that turns this red: restore that
+        literal."""
         async with _client() as client:
             _user_id, headers = await _auth_headers(client)
             run_id = await _create_run(client, headers)
@@ -641,9 +647,9 @@ class TestStopEndpoint:
             second = await client.post(f"/v1/query/{run_id}/stop", headers=headers)
 
             assert first.status_code == 200
-            assert first.json()["stopped"] is True
+            assert first.json() == {"stopped": False}
             assert second.status_code == 200
-            assert second.json()["stopped"] is True
+            assert second.json() == {"stopped": False}
 
 
 class TestAllowanceEndpoint:

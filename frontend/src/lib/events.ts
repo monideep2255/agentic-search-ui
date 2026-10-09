@@ -44,6 +44,26 @@ export type ToolName =
 
 export type Layer = "layer_1_graph" | "layer_2_api" | "layer_3_enrichment";
 
+/**
+ * The wire's layer strings, mapped to the design system's 1, 2, 3.
+ *
+ * Lives beside `Layer` so the live answer (`hooks/useRunView.ts`) and a
+ * reopened saved answer (`lib/api.ts`'s `fetchHistoryAnswer`) read a
+ * citation's layer through the one mapping. Card 102: the saved-answer
+ * parser had its own numeric check instead, and every stored citation,
+ * which carries the wire string, was dropped.
+ */
+export function layerNumber(layer: Layer): 1 | 2 | 3 {
+  switch (layer) {
+    case "layer_1_graph":
+      return 1;
+    case "layer_2_api":
+      return 2;
+    default:
+      return 3;
+  }
+}
+
 export type TrustOutcome = "answer" | "flag" | "ask" | "refuse";
 
 // ---------------------------------------------------------------------------
@@ -316,7 +336,12 @@ export type AgentEventType = AgentEvent["type"];
 /**
  * The known event types this client listens for, mirroring Section 12.2's
  * `knownTypes` list minus `cost` (see this module's docstring for why
- * `cost` has no client-side variant).
+ * `cost` has no client-side variant) and minus `step`. The backend emits
+ * `step` (`StepPayload` in `contracts/events.py`), and this client skips it
+ * by name before parsing, through `FORWARD_COMPATIBLE_EVENT_NAMES` in
+ * `hooks/useAgentRun.ts`, so it has no variant here either. The facts
+ * checker reads that set, so a `step` frame the client stops skipping must
+ * be added here too.
  */
 export const KNOWN_EVENT_TYPES: readonly AgentEventType[] = [
   "guard",
@@ -356,7 +381,7 @@ function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === "string";
 }
 
-function isLayer(value: unknown): value is Layer {
+export function isLayer(value: unknown): value is Layer {
   return value === "layer_1_graph" || value === "layer_2_api" || value === "layer_3_enrichment";
 }
 

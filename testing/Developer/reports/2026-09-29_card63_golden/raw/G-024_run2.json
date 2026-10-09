@@ -1,0 +1,456 @@
+{
+ "record": {
+  "id": "G-024",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-golden-b-20260929@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "What is rs334 and what condition is it associated with?",
+  "session_id": "c103-559afda3d88e",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "bae5d1bd",
+  "started_at": "2026-09-29T16:20:56+00:00",
+  "run_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "dbSNP:rs334"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 5 sources, not yet confirmed",
+  "citations": 5,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 1,
+   "layer_3_enrichment": 4
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 1,
+  "tools": [
+   "litvar2_lookup",
+   "ncbi_dbsnp",
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 64,
+  "answer_start": "Found 1 variant record record and 4 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other [1], rs334348 [2], rs334353",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 3,
+  "server_elapsed_s": 15.657,
+  "seconds": 16.1,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 12,
+   "citation": 5,
+   "trust_signal": 6,
+   "done": 1
+  },
+  "first_word_s": 15.824,
+  "first_token_ts": "2026-09-29T16:19:24.063151Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+   "seq": 0,
+   "ts": "2026-09-29T16:19:10.479031Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+   "seq": 2,
+   "ts": "2026-09-29T16:19:16.818840Z",
+   "payload": {
+    "narrative": "The query asks about a specific dbSNP identifier (rs334) and its associated condition, which can be answered with one or two API calls.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "rs334",
+      "curie": "dbSNP:rs334",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+   "seq": 4,
+   "ts": "2026-09-29T16:19:16.823071Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_dbsnp; Layer 3, literature and trials: litvar2_lookup",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-6874397d2ba7",
+      "layer": "layer_1_graph",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_dbsnp",
+      "call_id": "db-476ca663023a",
+      "layer": "layer_2_api",
+      "persona": "Crick",
+      "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+     },
+     {
+      "tool": "litvar2_lookup",
+      "call_id": "lv-622dc1468fd5",
+      "layer": "layer_3_enrichment",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "rs334",
+      "curie": "dbSNP:rs334",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+   "seq": 6,
+   "ts": "2026-09-29T16:19:16.825175Z",
+   "payload": {
+    "call_id": "cq-6874397d2ba7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+   "seq": 7,
+   "ts": "2026-09-29T16:19:16.825233Z",
+   "payload": {
+    "call_id": "db-476ca663023a",
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+   "seq": 8,
+   "ts": "2026-09-29T16:19:16.825258Z",
+   "payload": {
+    "call_id": "lv-622dc1468fd5",
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+   "seq": 9,
+   "ts": "2026-09-29T16:19:17.052092Z",
+   "payload": {
+    "call_id": "lv-622dc1468fd5",
+    "tool": "litvar2_lookup",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+   "seq": 10,
+   "ts": "2026-09-29T16:19:17.361271Z",
+   "payload": {
+    "call_id": "db-476ca663023a",
+    "tool": "ncbi_dbsnp",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+   "seq": 11,
+   "ts": "2026-09-29T16:19:19.068569Z",
+   "payload": {
+    "call_id": "cq-6874397d2ba7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+   "seq": 12,
+   "ts": "2026-09-29T16:19:19.070657Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+   "seq": 13,
+   "ts": "2026-09-29T16:19:24.063151Z",
+   "payload": {
+    "text": "Found 1 variant record record and 4 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other [1], rs334348 [2], rs334353 [3], c.-50T>C [4] and rs334773 [5]. ",
+    "marker_ids": [
+     "db-476ca663023a-1",
+     "lv-622dc1468fd5-3",
+     "lv-622dc1468fd5-4",
+     "lv-622dc1468fd5-5",
+     "lv-622dc1468fd5-6"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "rs334348",
+     "rs334353",
+     "c.-50T>C",
+     "rs334773",
+     "rs334"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
+    "layer": "layer_2_api",
+    "source": "dbsnp",
+    "field": "clinical_significance",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334348",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334348",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334353",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334353",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334558",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334558",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "rs334773",
+    "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334773",
+    "layer": "layer_3_enrichment",
+    "source": "litvar2",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "b52b7fb6-4e59-4413-afc2-b0abf1993605",
+   "seq": 37,
+   "ts": "2026-09-29T16:19:24.063697Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 3,
+    "elapsed_ms": 15657,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 5 sources, not yet confirmed",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 174
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 158
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.99,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 150
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 190
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 variant record record and 4 literature variant records for rs334: not-provided, protective, likely-benign, pathogenic, other [1], rs334348 [2], rs334353 [3], c.-50T>C [4] and rs334773 [5]. \n\nVariant record records found\n\nVariant record clinical_significance: not-provided, protective, likely-benign, pathogenic, other [1]. \n\nLiterature variant records found\n\nLiterature variant name: rs334348 [2]. Literature variant name: rs334353 [3]. Literature variant name: c.-50T>C [4]. Literature variant name: rs334773 [5]. "
+}

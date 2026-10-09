@@ -1,6 +1,6 @@
 ---
 name: eval-harness
-description: "Evaluation framework for System 3, operationalizing requirements/Evaluation_playbook.md: the 8-point rubric and its 13-of-16 pass threshold, the hard-fail conditions checked every run, the coverage metric, the moat test that selects and tiers competency questions, the v1 must-pass set (Q1, Q3, Q4, Q5, Q6, Q8, Q10), model selection, the online feedback loop, and the pass@k / pass^k / pass-fail-abstain outcome model the rubric composes with. Use before building an agent component to define acceptance criteria, during development to measure progress, and before shipping any answer-generation feature to run the offline evaluation gate (cite-or-refuse, citation coverage, hard-fail checks). Distinct from dev-standards, which is the production-readiness review (security, testing, quality, deployment): this is the evaluation and metrics skill, answering whether a component's or the agent's output is correct and honest against the locked playbook, not whether the code is safe to ship."
+description: "Evaluation framework for System 3: rubric, hard-fail checks, coverage metric, and pass@k outcomes from the evaluation playbook. Use before building an agent component, while measuring progress, and before shipping answer features. Unlike dev-standards, it judges correctness, not shipping safety."
 scope: project
 depends_on:
   - CLAUDE.md
@@ -45,7 +45,7 @@ This is the evaluation and metrics skill for System 3. It answers "does this act
 
 - Before building a new tool, agent step, or answer-generation feature: define acceptance criteria first.
 - During development: run evals to measure progress against targets.
-- Before shipping any answer-generation feature: run the offline evaluation gate (the 8-point rubric plus hard-fails) against the v1 must-pass set, and verify cite-or-refuse and citation-coverage targets. This is not optional polish, it is the gate.
+- Before shipping any answer-generation feature: verify cite-or-refuse and citation-coverage targets. The evaluation track closed on 2026-08-31, so the gate that runs is the golden consistency run in `.claude/skills/bossman-mode/reference/Product_review.md`, Step 2. The offline gate below (the 8-point rubric plus hard-fails against the v1 must-pass set) stays available to invoke by name.
 - After changes to a tool, prompt, or agent step: regression test against the fixed query set.
 - When proposing a new competency question, at design time or through the online feedback loop: run it through the moat test before adding it to any must-pass or should-pass set.
 

@@ -65,6 +65,14 @@ httpx2>=2.0
 # itself pinned in this file (no direct import in this codebase requires
 # a specific version).
 strawberry-graphql==0.324.0
+# graphql-core, the engine under strawberry, which allows anything from 3.2.0
+# up to 3.4.0. Pinned on 2026-09-27: version 3.3.0 was published at 14:50 UTC
+# that day, changed the wording of GraphQL's own error messages, and turned 21
+# unit tests red, since the error mask passes those messages through by their
+# exact text. 3.2.11, published 2026-06-05, is the version every earlier run
+# used; pip-audit finds no known vulnerability in it. Moving to 3.3.0 is a
+# reviewed change of its own.
+graphql-core==3.2.11
 
 # Config
 python-dotenv>=1.0

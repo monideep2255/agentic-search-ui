@@ -1,6 +1,6 @@
 /**
  * The Architecture page, `/architecture`. Product-owner request of
- * 2026-09-13: "Data retrieval from data engineering repo, April 22 snapshot,
+ * 2026-09-13: "Data retrieval from data engineering repository, April 22 snapshot,
  * add this metric for the system 1, list out the names of databases as the
  * core of information being pulled from like the 115M etc, then the system 2
  * and 3, Databases in kg, pull from api layer 2 and 3."
@@ -86,8 +86,10 @@
  *
  *   - Every per-call budget and every API host: `visualizations/
  *     Architecture_diagram.md`'s tool table, each value of which is in the
- *     tool code. `CYPHER_QUERY_TIMEOUT_SECONDS = 90.0` and
- *     `MAX_ROW_LIMIT = 500` are in `tools/graph_schema_constants.py`;
+ *     tool code. `CYPHER_QUERY_TIMEOUT_SECONDS = 30.0` is in
+ *     `tools/graph_schema_constants.py`, and every graph call Plan builds
+ *     asks for `_PLAN_TOOL_CALL_ROW_LIMIT = 100` rows (`core/graph.py`),
+ *     below the schema's ceiling of `MAX_ROW_LIMIT = 500`;
  *     `DEFAULT_TIMEOUT_S = 15.0` is in `tools/ncbi_transport.py`;
  *     `_TOTAL_BUDGET_S = 120.0` is in `tools/pathogen_detection.py`.
  *   - The API hosts: `_EUTILS_BASE` in `tools/ncbi_eutils_actions.py`,
@@ -95,22 +97,36 @@
  *     `_VARIATION_BASE` in `tools/ncbi_dbsnp.py`, and the PubTator3, LitVar2
  *     and ClinicalTrials.gov constants in their own tool modules.
  *
- * ONE DIVERGENCE IS DELIBERATE AND IS STATED HERE rather than quietly
- * resolved. About's walk lists `pathogen_detection` under Layer 3. This page
- * lists it under Layer 2, following `visualizations/Architecture_diagram.md`,
- * which classifies it as Layer 2 "because it is an NCBI-native bulk source,
- * not one of the four enrichment APIs" and is the repository's source of
- * truth for the tool-to-layer mapping. About was left unchanged because this
- * work is scoped not to restructure it; the disagreement is reported rather
- * than papered over.
+ * `pathogen_detection` is listed under Layer 2, following
+ * `visualizations/Architecture_diagram.md`, which classifies it there because
+ * it is an NCBI-native bulk source, not one of the three enrichment APIs.
+ * About's walk has listed it under Layer 2 too since 2026-09-13.
  *
- * THE GRAPH BUDGET IS 90 SECONDS, NOT 30. Technical specification Section 6.1
- * says 30 and the code says 90, deliberately: the plan-tier call that writes
- * the Cypher was measured at a mean of 25 seconds before the graph is touched
- * at all, so 30 could not complete. `tools/graph_schema_constants.py` carries
- * the measurement and files the spec text as a Step 6.2 reconciliation item.
- * The page states what the code enforces, since that is what a reader
- * actually experiences.
+ * THE GRAPH BUDGET IS 30 SECONDS. It was 90 for a while, because the
+ * plan-tier call that writes the Cypher was once measured at a mean of 25
+ * seconds. It went back to 30, Section 6.1's figure, on the product owner's
+ * decision of 2026-09-26 (R-09): across two golden runs, 290 `cypher_query`
+ * calls took a median of 0.71 seconds, and no call that ran past 30 seconds
+ * succeeded. `tools/graph_schema_constants.py` carries the measurement. The
+ * page states what the code enforces, since that is what a reader actually
+ * experiences.
+ *
+ * WHEN LAYER 3 RUNS, read from `core/graph.py` on 2026-09-29 (card 53's
+ * fix round). `plan_node` reaches `_build_layer_tool_calls` only on its last
+ * branch. That function plans `pubtator_annotate` (mode `entity_lookup`, a
+ * name lookup, not a paper search) and `clinicaltrials_search` on the gene's
+ * symbol, or on the disease's MedGen name when no gene resolved, and one
+ * `litvar2_lookup` (mode `variant_search`, the variant and a count of papers)
+ * for each of the first two rs ids. Several paths plan none of them: a gene
+ * named only by an identifier has no symbol, an isolate or accession
+ * question takes its own branch, and with no gene resolved the
+ * `plan.literature` classifier can send the question to a literature search
+ * instead. The page says so, and the facts checker reads each of these.
+ *
+ * ACT RUNS IN TWO ROUNDS. The first round's calls go out together through
+ * `_gather_planned_calls`; a follow-up that needs a first-round result, such
+ * as the abstracts of the papers a PubMed search found, goes out in a second
+ * round after it.
  */
 
 import { Box, Typography } from "@mui/material";
@@ -439,7 +455,7 @@ export function ArchitectureScreen({ onNavigateToAbout }: ArchitectureScreenProp
           </StopText>
 
           <StopText>
-            The search agent gives one graph query 30 seconds and accepts at most 500 rows back. A
+            The search agent gives one graph query 30 seconds and asks it for at most 100 rows. A
             query that would exceed either says so rather than leaving you waiting.
           </StopText>
 
@@ -462,10 +478,21 @@ export function ArchitectureScreen({ onNavigateToAbout }: ArchitectureScreenProp
 
         <JourneyStop index={3} title="Layer 3, enrichment">
           <StopText>
-            Once a fact is established, three further tools add evidence around it: which papers
-            mention the entity, which variants the literature ties to it, and which clinical trials
-            name it. These run when the question asks for that evidence, never by default, and
-            ClinicalTrials.gov is the one source here that is not an NCBI host.
+            Three further tools add evidence around the gene, disease or variant a question names.
+            PubTator3 looks the name up in its index of the genes and diseases found in published
+            papers, LitVar2 finds a named variant and counts the papers that mention it, and
+            ClinicalTrials.gov lists the trials registered under the name. ClinicalTrials.gov is the
+            one source here that is not an NCBI host.
+          </StopText>
+
+          <StopText>
+            Plan decides which of them a question gets, from what Think found in it: PubTator3 and
+            ClinicalTrials.gov for a gene named by its symbol or, when no gene was found, for a
+            disease, and LitVar2 for up to two rs variant ids. Not every question gets them. A gene
+            named only by an identifier, a question about bacterial isolates, a question with no
+            gene that a classifier reads as asking for papers, a disease whose MedGen name cannot be
+            looked up, and a disease named by an identifier from another vocabulary are each
+            searched another way, and for the last two that is the graph search alone.
           </StopText>
           <Box sx={{ mt: 0.75 }}>
             <LayerCard layer={LAYERS[2]} />
@@ -474,11 +501,16 @@ export function ArchitectureScreen({ onNavigateToAbout }: ArchitectureScreenProp
 
         <JourneyStop index={4} last title="All three layers feed the search agent">
           <StopText>
-            The agent reads all three layers at once: the tools Plan chose go out together, so the
-            graph query and any live layer 2 and 3 calls run in parallel rather than one after
-            another, and the answer waits on whichever finishes last. Seven tools cover the three layers,
-            each one reaching exactly one of them and one access path within it, and each
-            carrying its own time limit in code rather than one the model chooses.
+            The agent reads all three layers at once: the calls Plan chose go out together, so the
+            graph query and the live layer 2 and 3 calls run in parallel. A call that needs another
+            call's result, such as the abstracts of the papers a PubMed search found or PubTator3's
+            markup of those papers, goes out in a second round once the first has returned, and the
+            answer waits for both rounds.
+          </StopText>
+
+          <StopText>
+            Seven tools cover the three layers, each one reaching exactly one of them. Each carries
+            its own time limit in code rather than one the model chooses.
           </StopText>
 
           <StopText>

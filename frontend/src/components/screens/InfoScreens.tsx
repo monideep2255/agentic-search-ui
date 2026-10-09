@@ -70,8 +70,9 @@
  * bound, the session id, the clarifying question and its options, and the
  * trust line, plus tools to list past searches, reopen an answer and send
  * feedback. The follow-up offers the web shows after an answer are not on
- * MCP yet; card 52's phase adds them to every surface, so the card says they
- * are coming rather than claiming the same parity (F-8.10-J13). The config
+ * MCP, and the card says so plainly rather than claiming the same parity
+ * (F-8.10-J13) or promising them "next", which no plan schedules (card 62,
+ * F-8.10-V06). The config
  * below carries the bearer header a caller needs, and a token lasts 15
  * minutes.
  */
@@ -184,11 +185,25 @@ export const MCP_CONFIG = `{
   }
 }`;
 
-/** The install line for `system3-cli`, until the owner's first release makes
- *  a published name possible (`tracker/phase_8.10.md`, T-8.10-04 and
+/** The install for `system3-cli`, until the owner's first release makes a
+ *  published name possible (`tracker/phase_8.10.md`, T-8.10-04 and
  *  T-8.10-07). Never `pip install s3`, which is a stranger's package on
- *  PyPI, not this repository's. */
-export const INSTALL_EXAMPLE = `pip install "git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli"`;
+ *  PyPI, not this repository's.
+ *
+ *  Card 62, PR-8.10-04: the bare pip line failed two ways on a Mac. The
+ *  system's Python 3.9 gave "No matching distribution found for
+ *  setuptools==83.0.0" (the package needs 3.11), and Homebrew's Python
+ *  refused with "externally-managed-environment". So the copy makes and
+ *  enters a virtual environment first, which also puts `s3` on the PATH for
+ *  the next command, and the card says 3.11 is needed.
+ *
+ *  Card 62's fix round (F-62-J01): `python3` is macOS's own 3.9 under a
+ *  default PATH, so the copied lines still failed with the setuptools
+ *  error. The venv is made with `python3.11` by name, which either works or
+ *  says "command not found", naming what is missing. */
+export const INSTALL_EXAMPLE = `python3.11 -m venv s3-env
+. s3-env/bin/activate
+pip install "git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli"`;
 
 /** Typed into a terminal. `--base-url` names the page's own API origin, so
  *  every example here points at one server (F-8.10-J06): `s3` defaults to
@@ -201,18 +216,50 @@ s3 ask "diseases linked to BRCA1"`;
 /** The agent side of `s3 mcp` (F-8.10-J10, A12): what a person pastes into
  *  an AI agent's MCP configuration so the agent starts `s3 mcp` itself and
  *  speaks MCP to it over stdio. It carries no token, because `s3 mcp` uses
- *  the sign-in `s3 login` stored and renews it. */
+ *  the sign-in `s3 login` stored and renews it.
+ *
+ *  Card 62, PR-8.10-09 (F-8.10-V10): the bare `"command": "s3"` did not
+ *  start under the PATH an app opened from the Dock gets
+ *  (`FileNotFoundError: 's3'`), since such an app does not read the shell's
+ *  PATH and `s3` sits in a virtual environment. So the command is a full
+ *  path, shaped like the one `INSTALL_EXAMPLE` makes, and the card says to
+ *  replace it with what `command -v s3` prints. */
 export const MCP_STDIO_CONFIG = `{
   "mcpServers": {
     "system3": {
-      "command": "s3",
+      "command": "/path/to/s3-env/bin/s3",
       "args": ["mcp"]
     }
   }
 }`;
 
-export const KGX_EXAMPLE = `s3-kgx-export NCBIGene:672 \\
-  --hops 1 --output-dir ./kgx-out`;
+/** One piece of a card's text: a paragraph, or a command set in a code box. */
+export type CardSegment = string | { code: string; label: string };
+
+/** The command line card's words, in the order a reader needs them: what
+ *  the install needs before it runs, how to get back into the environment
+ *  later, then each command.
+ *
+ *  Card 62's fix round. F-62-J01, J07 and A03: the install runs
+ *  `python3.11` and `git`, and its activate line is POSIX, so the card says
+ *  so before the commands. F-62-A04: a new terminal does not have `s3` on
+ *  its PATH until the environment is entered again, which is also where
+ *  `command -v s3` prints the full path. F-62-J02, J03 and A07: the page no
+ *  longer prints an install for `s3-kgx-export`. The only package that
+ *  carries it is the server's own, whose dependencies are version floors,
+ *  and it owns the same files as `s3`, so uninstalling it deleted `s3`. It
+ *  also reads the graph directly with credentials only the operator holds,
+ *  so an outside reader could never run it; the card says how a KGX file
+ *  is had today instead. */
+export const CLI_CARD_SEGMENTS: CardSegment[] = [
+  "Two console commands rather than HTTP routes. The install works on macOS and Linux and needs git and Python 3.11: its first line runs python3.11 by name, so if python3.11 --version fails, install Python 3.11 first, or put the name of a newer Python, such as python3.12, in that line.",
+  { code: INSTALL_EXAMPLE, label: "Install command for s3" },
+  "Its first two lines make and enter a virtual environment, since many systems refuse a pip install outside one. In a new terminal, enter it again with . s3-env/bin/activate from the same folder before s3 login or s3 ask. s3 asks a question and prints the answer, human-readable by default and JSON with --json.",
+  { code: CLI_EXAMPLE, label: "Sign in and ask with s3" },
+  "s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent: it is not typed into a terminal, where it only waits for input, but started by the agent from the configuration below, pasted into the agent's MCP settings. An agent app does not read your shell's PATH, so replace /path/to/s3-env/bin/s3 with the full path that command -v s3 prints inside the virtual environment, after . s3-env/bin/activate.",
+  { code: MCP_STDIO_CONFIG, label: "Agent configuration for s3 mcp" },
+  "s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops. s3-kgx-export is not in that install and has no download: it reads the knowledge graph directly with credentials only the operator holds, so today a KGX file comes from the operator, who runs it for the seed CURIEs you name.",
+];
 
 /** The event stream frame, transcribed from `adapters/web_sse/app.py`'s own
  *  emitter (`{"id": seq, "event": type, "data": envelope_json}`) and
@@ -354,7 +401,15 @@ interface CardLink {
  * outlined, which is the reference's own "Copy curl" beside "API Docs"
  * hierarchy applied to a card whose secondary action is also a copy.
  */
-function CardActionRow({ copies, links }: { copies?: CardCopy[]; links?: CardLink[] }) {
+function CardActionRow({
+  copies,
+  links,
+  showsCode = false,
+}: {
+  copies?: CardCopy[];
+  links?: CardLink[];
+  showsCode?: boolean;
+}) {
   const [state, setState] = useState<{ testId: string; status: CopyStatus } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -433,7 +488,9 @@ function CardActionRow({ copies, links }: { copies?: CardCopy[]; links?: CardLin
         >
           {state.status === "copied"
             ? "Copied to clipboard."
-            : "Could not copy automatically. Select the example and copy it by hand."}
+            : showsCode
+              ? "Could not copy automatically. Select the command shown above and copy it by hand."
+              : "Could not copy automatically. Allow clipboard access for this page, then try again."}
         </Box>
       ) : null}
     </Box>
@@ -453,6 +510,7 @@ function IntegrationCard({
   icon,
   title,
   body,
+  segments,
   code,
   codeLabel,
   copies,
@@ -460,12 +518,18 @@ function IntegrationCard({
 }: {
   icon: React.ReactNode;
   title: string;
-  body: string;
+  body?: string;
+  segments?: CardSegment[];
   code?: string;
   codeLabel?: string;
   copies?: CardCopy[];
   links?: CardLink[];
 }) {
+  const blocks: CardSegment[] = [
+    ...(segments ?? (body ? [body] : [])),
+    ...(code ? [{ code, label: codeLabel ?? `${title} example` }] : []),
+  ];
+  const showsCode = blocks.some((b) => typeof b !== "string");
   return (
     <Box
       sx={{
@@ -482,42 +546,50 @@ function IntegrationCard({
       <Typography variant="h3" component="h2" sx={{ mb: 1 }}>
         {title}
       </Typography>
-      <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
-        {body}
-      </Typography>
-      {code ? (
-        <Box
-          component="pre"
-          // A pre with overflow-x: auto is a scrollable region, and a keyboard
-          // user cannot scroll it without being able to focus it. axe flags
-          // this as scrollable-region-focusable; the fix is a tab stop plus a
-          // name, so the region is both reachable and announced.
-          tabIndex={0}
-          role="region"
-          aria-label={codeLabel ?? `${title} example`}
-          sx={{
-            ...mono,
-            fontSize: 11.5,
-            m: 0,
-            mt: 1.5,
-            p: 1.25,
-            // Scrolled rather than wrapped, which is the opposite of what this
-            // page did when five cards each carried a code box. Two cards
-            // show code now, the MCP config and the agent config for `s3 mcp`
-            // (F-8.10-J10), each a small JSON object whose lines are short
-            // enough to read at 390px; a wrapped brace-per-line config reads
-            // as broken, while a scroll container keeps the shape and still
-            // cannot bleed the page sideways.
-            overflowX: "auto",
-            bgcolor: designTokens.surfaceSunk,
-            border: `1px solid ${designTokens.line}`,
-            borderRadius: 0.5,
-          }}
-        >
-          {code}
-        </Box>
-      ) : null}
-      <CardActionRow copies={copies} links={links} />
+      {blocks.map((block, index) =>
+        typeof block === "string" ? (
+          <Typography
+            key={index}
+            variant="body2"
+            sx={{ color: designTokens.inkMuted, mt: index === 0 ? 0 : 1.25 }}
+          >
+            {block}
+          </Typography>
+        ) : (
+          <Box
+            component="pre"
+            // A pre with overflow-x: auto is a scrollable region, and a keyboard
+            // user cannot scroll it without being able to focus it. axe flags
+            // this as scrollable-region-focusable; the fix is a tab stop plus a
+            // name, so the region is both reachable and announced.
+            tabIndex={0}
+            role="region"
+            aria-label={block.label}
+            sx={{
+              ...mono,
+              fontSize: 11.5,
+              m: 0,
+              mt: 1.25,
+              mb: 1.25,
+              p: 1.25,
+              // Scrolled rather than wrapped, which is the opposite of what this
+              // page did when five cards each carried a code box. The MCP
+              // card and the command line card show code now (card 79), and
+              // the agent config for `s3 mcp` (F-8.10-J10) is a small JSON object whose lines are short
+              // enough to read at 390px; a wrapped brace-per-line config reads
+              // as broken, while a scroll container keeps the shape and still
+              // cannot bleed the page sideways.
+              overflowX: "auto",
+              bgcolor: designTokens.surfaceSunk,
+              border: `1px solid ${designTokens.line}`,
+              borderRadius: 0.5,
+            }}
+          >
+            {block.code}
+          </Box>
+        ),
+      )}
+      <CardActionRow copies={copies} links={links} showsCode={showsCode} />
     </Box>
   );
 }
@@ -692,7 +764,7 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<PlugIcon />}
           title="MCP server"
-          body="Four tools. ask_biomedical_question folds a whole run into a single cited answer at any depth, with the session id to continue, the clarifying options and the trust line. list_past_searches, reopen_past_answer and send_answer_feedback reach your account's own history, and the seven internal tools are never separately reachable. The follow-up offers the web app shows after an answer are coming to MCP next. An account is required, and a bearer token lasts 15 minutes."
+          body="Four tools. ask_biomedical_question folds a whole run into a single cited answer at any depth, with the session id to continue, the clarifying options and the trust line. list_past_searches, reopen_past_answer and send_answer_feedback reach your account's own history, and the seven internal tools are never separately reachable. The follow-up offers the web app shows after an answer are not part of MCP. An account is required, and a bearer token lasts 15 minutes."
           code={MCP_CONFIG}
           codeLabel="MCP server configuration"
           copies={[
@@ -707,9 +779,7 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<TerminalIcon />}
           title="Command line tools"
-          body="Two console commands rather than HTTP routes, installed once with pip. s3 asks a question and prints the answer, human-readable by default and JSON with --json. s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent: it is not typed into a terminal, where it only waits for input, but started by the agent from the configuration below, pasted into the agent's MCP settings. s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops, and needs graph credentials only the operator grants."
-          code={MCP_STDIO_CONFIG}
-          codeLabel="Agent configuration for s3 mcp"
+          segments={CLI_CARD_SEGMENTS}
           copies={[
             {
               label: "Copy install command",
@@ -728,12 +798,6 @@ export function IntegrationsScreen() {
               text: MCP_STDIO_CONFIG,
               accessibleName: "Copy the agent configuration for s3 mcp",
               testId: "integration-copy-mcp-stdio",
-            },
-            {
-              label: "Copy KGX command",
-              text: KGX_EXAMPLE,
-              accessibleName: "Copy the KGX export command",
-              testId: "integration-copy-kgx",
             },
           ]}
         />
@@ -871,9 +935,11 @@ export function IntegrationsScreen() {
 //     confirmed by a live lookup" does not contribute one. NCBIGene:672 for
 //     BRCA1 appears in `tools/cypher_query.py`'s own examples.
 //   - Timeouts and the call budget: `CYPHER_QUERY_TIMEOUT_SECONDS` is 30
-//     seconds (`tools/cypher_query.py`), `tools/ncbi_transport.py` carries the
-//     15-second per-call budget with one backoff retry, and
-//     `harness/call_budget.py`'s `MAX_LAYER_2_3_CALLS_PER_QUERY` is 20.
+//     seconds (`tools/graph_schema_constants.py`), `tools/ncbi_transport.py`
+//     carries the 15-second per-call budget with one backoff retry for every
+//     web API, `tools/pathogen_detection.py`'s `_TOTAL_BUDGET_S` is 120
+//     seconds, the longest, and `harness/call_budget.py`'s
+//     `MAX_LAYER_2_3_CALLS_PER_QUERY` is 20.
 //   - Results come back typed and bounded: each tool has its own `*_schemas.py`
 //     input and output models, and `harness/coordinator_worker.py` caps a
 //     finding at `_MAX_FINDING_TOTAL_BYTES` and records that it cut.
@@ -885,8 +951,22 @@ export function IntegrationsScreen() {
 //     `synthesis/grounding.py`'s `ground_claim` accepts a claim only on a
 //     substring match against the record's own field value.
 //   - The event stream: `contracts/events.py`'s envelope `type` union carries
-//     guard, think, plan, tool_start, tool_result, token, citation,
+//     guard, think, plan, step, tool_start, tool_result, token, citation,
 //     trust_signal, cost, error and done.
+//   - Act runs in two rounds (card 53): the first round's planned calls,
+//     the graph query among them, go out together through `core/graph.py`'s
+//     `_gather_planned_calls`; a follow-up that needs a first-round result,
+//     such as the abstracts of the papers a PubMed search found, goes out in
+//     a second round after it.
+//   - When layer 3 runs (card 53): `plan_node` reaches
+//     `_build_layer_tool_calls` only on its last branch, which plans
+//     `pubtator_annotate` and `clinicaltrials_search` on the gene's symbol,
+//     or on the disease's MedGen name when no gene resolved, and one
+//     `litvar2_lookup` for each of the first two rs ids in the question.
+//     Isolate and accession questions, a gene named only by an identifier,
+//     and a no-gene question the `plan.literature` classifier reads as
+//     asking for papers plan none of those three calls. BRCA1, named by its
+//     symbol, gets PubTator3 and ClinicalTrials.gov.
 //   - The scientist is presentation only: `shell/PersonaChip.tsx`'s docstring,
 //     "the persona never changes which tools run, which records are
 //     retrieved, or what the trust signal says".
@@ -921,7 +1001,7 @@ const JOURNEY_LAYERS: { n: 1 | 2 | 3; name: string; tools: string; body: string 
     n: 1,
     name: "Knowledge graph",
     tools: "cypher_query",
-    body: "115M nodes and 693M edges merged from five NCBI databases. One query returns a stored link, which is why a question like this one starts here.",
+    body: "115M nodes and 693M edges merged from five NCBI databases. One query returns the stored links from BRCA1 to its diseases, while most of the live searches run at the same time and four of the thirteen calls follow in a second round.",
   },
   {
     n: 2,
@@ -938,7 +1018,7 @@ const JOURNEY_LAYERS: { n: 1 | 2 | 3; name: string; tools: string; body: string 
     n: 3,
     name: "Enrichment",
     tools: "pubtator_annotate, litvar2_lookup, clinicaltrials_search",
-    body: "Literature and trial evidence, added when the question asks for it rather than by default.",
+    body: "Literature and trial evidence. Plan adds them here because the question names a gene by its symbol, BRCA1, though not every question gets them.",
   },
 ];
 
@@ -1189,7 +1269,7 @@ export function AboutScreen({
       n: 3,
       name: "Enrichment",
       colour: designTokens.layer3,
-      body: "PubTator3, LitVar2 and ClinicalTrials.gov. Literature and trial evidence layered on a fact the first two layers established.",
+      body: "PubTator3, LitVar2 and ClinicalTrials.gov. Literature and trial evidence about the gene, disease or variant a question names, when Plan adds them.",
     },
   ];
 
@@ -1198,6 +1278,33 @@ export function AboutScreen({
       title="How an answer is built"
       lede="Every question crosses up to three data layers. The colour on a citation tells you which layer it came from, and therefore how fresh it is and how it was established."
     >
+      <Box sx={{ ...GRID, mb: 4 }} data-testid="about-layer-cards">
+        {layers.map((layer) => (
+          <Box
+            key={layer.n}
+            sx={{
+              bgcolor: designTokens.surface,
+              border: `1px solid ${designTokens.line}`,
+              borderRadius: 1,
+              p: 2.5,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 1.25 }}>
+              <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: layer.colour, flex: "none" }} />
+              <Typography variant="h4" component="h2">
+                {layer.name}
+              </Typography>
+              <Box component="span" sx={{ ...mono, ml: "auto", fontSize: 11, fontWeight: 700, color: layer.colour }}>
+                L{layer.n}
+              </Box>
+            </Box>
+            <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
+              {layer.body}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+
       <Typography variant="h2" component="h2" sx={{ mb: 1.5 }}>
         What happens to your question
       </Typography>
@@ -1275,11 +1382,14 @@ export function AboutScreen({
 
         <JourneyStop index={3} title="The search goes out">
           <StopText>
-            Act runs the tools Plan chose, across three layers of data, together rather than one
-            after another. Each call carries its own time limit, 30 seconds for a graph query and
-            15 seconds for a live NCBI call, and one question may make at most 20 live calls in
-            total. A call that would exceed either of those fails fast and says which limit it hit,
-            rather than leaving you waiting. This is the part you watch on the progress screen.
+            Act sends out the calls Plan chose, across three layers of data, together rather than
+            one after another. A call that needs another call's result, such as the abstracts of
+            the papers a PubMed search found, goes out in a second round once the first has
+            returned. Each source has its own time limit in code: 30 seconds for a graph query, 15
+            seconds for a call to a live web API, and 120 seconds for Pathogen Detection, the
+            longest. One question may make at most 20 live calls in total. A call that reaches its
+            limit stops there and says which limit it hit, rather than leaving you waiting. This is
+            the part you watch on the progress screen.
           </StopText>
           <Box
             data-testid="about-journey-layers"
@@ -1322,7 +1432,7 @@ export function AboutScreen({
                       documents for the same pair, "reading the LABEL in ink
                       while the border, the wash and the check mark keep
                       carrying the green", so it copies a decision rather than
-                      inventing one. The layer cards further down this page
+                      inventing one. The layer cards above the walk
                       keep the coloured mark because their ground is `surface`,
                       where the same pair passes.
                     */}
@@ -1441,33 +1551,6 @@ export function AboutScreen({
         )}{" "}
         and ask "{JOURNEY_QUESTION}".
       </Typography>
-
-      <Box sx={GRID}>
-        {layers.map((layer) => (
-          <Box
-            key={layer.n}
-            sx={{
-              bgcolor: designTokens.surface,
-              border: `1px solid ${designTokens.line}`,
-              borderRadius: 1,
-              p: 2.5,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 1.25 }}>
-              <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: layer.colour, flex: "none" }} />
-              <Typography variant="h4" component="h2">
-                {layer.name}
-              </Typography>
-              <Box component="span" sx={{ ...mono, ml: "auto", fontSize: 11, fontWeight: 700, color: layer.colour }}>
-                L{layer.n}
-              </Box>
-            </Box>
-            <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
-              {layer.body}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
 
       <Typography variant="h2" component="h2" sx={{ mt: 5, mb: 1.5 }}>
         Cite or refuse

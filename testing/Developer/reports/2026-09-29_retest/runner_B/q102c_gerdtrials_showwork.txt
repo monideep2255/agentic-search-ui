@@ -1,0 +1,77 @@
+No search limit in effect yet
+Any trials for GERD?
+New search
+
+? Answered15.8s · 8 tools · 12 sources from 2 layers
+
+Hide work ▴
+0.0s
+GUARD
+In scope. The question can be grounded in NCBI records.
+2.5s
+THINK
+Broad question about available trials for GERD, requiring search across multiple clinical trial sources. (GERD: 1 MedGen record matched by name)
+2.5s
+PLAN
+searching 3 layers for gastroesophageal reflux. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch
+2.7s
+ACT
+ncbi_efetch — 1 result
+2.8s
+ACT
+pubtator_annotate — 1 result
+3.0s
+ACT
+ncbi_efetch — 5 results
+3.0s
+ACT
+cypher_query — 0 results
+3.3s
+ACT
+clinicaltrials_search — 5 results
+3.5s
+ACT
+ncbi_efetch — 1 result
+3.6s
+ACT
+pubtator_annotate — 5 results
+4.1s
+ACT
+ncbi_efetch — 8 results
+
+Found 5 clinical trial records for GERD: Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease, Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339), Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents, On Demand Treatment of Reflux Disease and Treatment Of Gastroesophageal Reflux Disease By Endoscopic Fundoplication, A Placebo-Controlled Study.⁠1–5
+
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease	NCT00141960	COMPLETED	⁠1
+Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339)	NCT00163306	COMPLETED	⁠2
+Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents	NCT00181805	COMPLETED	⁠3
+On Demand Treatment of Reflux Disease	NCT00184522	COMPLETED	⁠4
+Treatment Of Gastroesophageal Reflux Disease By Endoscopic Fundoplication, A Placebo-Controlled Study	NCT00235677	COMPLETED	⁠5
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Gastroesophageal Reflux Disease.	PMID:29132520	⁠6
+Gastroesophageal Reflux Disease.	PMID:33351044	⁠9
+Gastroesophageal Reflux Disease.	PMID:36170502	⁠10
+Gastroesophageal reflux disease in children: What's new right now?	PMID:37034973	⁠11
+Gastroesophageal Reflux Disease.	PMID:37516506	⁠12
+MEDGEN RECORDS FOUND
+DISEASE	IDENTIFIER	
+Gastroesophageal reflux (GERD)	medgen 1795938	⁠7
+LITERATURE ENTITY RECORDS FOUND
+RECORD	IDENTIFIER	
+Gastroesophageal Reflux	@DISEASE_Gastroesophageal_Reflux	⁠8
+▶
+SOURCES
+12
+Based on 12 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

@@ -8,7 +8,7 @@ should not, not merely that the existing test suite still passes."
 
 That last clause is the reason this file exists separately. A change that
 silently interpolates a value into the Synth system block, or reorders it,
-passes every other test in this repo and costs real money on every call
+passes every other test in this repository and costs real money on every call
 after it, because a provider caches on an exact prefix match and a single
 changed byte misses for the whole prompt. Nothing errors. The bill climbs.
 

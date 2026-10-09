@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-09-27.
+Last updated: 2026-10-08.
 
 Every entry has the same three parts:
 
@@ -423,6 +423,20 @@ What you should see:
 - A Plain language answer keeps its bold main point too. The fix over-corrected at first, so plain language had no bold at all, and that was repaired the same day, 2026-09-20.
 - Why it matters: in the product owner's words, "Too much bold: only the title or main point should be bold"; bold everywhere stops pointing the reader at anything.
 
+### 106. A plain-language answer never claims more than its paper (cards 99 and 101)
+
+Queries to try:
+
+- `What are the typical symptoms and risk factors of GERD?` in Plain language, five times
+- `What causes bronchiolitis in babies, and how is it usually treated?` in Plain language
+
+What you should see:
+
+- Where a paper says young children, the answer never says children; where it says potentially or may, the answer keeps the hedge.
+- The bronchiolitis answer never says babies where its record says children.
+- Each answer still has written sentences above its records. A plain-language GERD answer shows about two to three sentences; a sentence that drops a limiting word such as "transient" is held back rather than shown.
+- Why it matters: a parent reading about an older child, or a reader told a symptom is GERD's when the paper only suspects it, takes a wider claim as fact. A missing sentence is better than a wider one.
+
 ## 2. Follow-up questions and conversation
 
 ### 20. A follow-up carries the gene forward (Product test 2, 7.1 to 7.5)
@@ -549,7 +563,9 @@ What you should see:
 
 - Variant-to-disease and gene-to-disease tables over the graph's ClinVar links, in every mode.
 - The HNF1A answer shows "Variant-to-disease mapping".
+- With that table, and with no other, one line reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI." (card 23). Directly under that table, at 1280 and 390, whether more records follow it or the table ends the answer; never in the Notes list. Plain language shows no table, so no line.
 - When checked live on 2026-09-14 the table stopped at 5 rows where the reference prototype shows 13, because an answer cites at most 20 sources. Whether that ceiling is right is the product owner's call, a card in the board's To do column.
+- No disease cell is blank without a reason: a row whose ClinVar record names only a placeholder reads "None named: the ClinVar record says not provided" (or "not specified", or "gives only a placeholder"), and a row whose disease name could not be looked up reads "Name could not be looked up" (card 103).
 - Why it matters: a person asking which diseases a gene's variants cause wants the variant and the disease side by side, not two lists to match up themselves.
 
 ### 87. No stray sentence about a record's clinical features (card 1, T-8.6-06)
@@ -662,6 +678,36 @@ What you should see:
 - The BioSample record and up to ten of its SRA runs are among the sources.
 - No "which gene, variant or condition do you mean?" request.
 - Why it matters: a person who already found a BioSample id in a paper or a database wants to know what came from that exact sample, not to be redirected into naming a gene they never asked about.
+
+### 103. An organism's records, not a disease with a similar name (card 56)
+
+Queries to try:
+
+- `Find SRA runs of SARS-CoV-2 sequenced on Illumina from clinical respiratory samples`
+- `Which genome assemblies are available for Mycobacterium tuberculosis?`
+
+What you should see:
+
+- The answer is about the organism named: SARS-CoV-2 runs from NCBI's SRA, or M. tuberculosis assemblies, each record linked to its NCBI page.
+- Never a disease record for "SARS" or any other disease read out of the organism's name.
+- The organism's NCBI Taxonomy record among the sources.
+- The Illumina and sample-type conditions are not yet applied to the search; the answer must not claim they were.
+- Why it matters: before 2026-10-05 the first question was answered confidently about the disease SARS, a confident wrong record.
+- Since 2026-10-06 (#186): when Think misses the organism, the question is asked back instead of answered about SARS. Still known and left open on card 56: "SARS CoV-2" typed with a space; a SARS-CoV-2 question asked after a gene question in the same conversation; "SRA runs from AML-derived cell lines"; and a refusal naming "Illumina" on about 1 run in 3.
+
+### 104. The data records linked to one paper (card 74, G-006)
+
+Queries to try:
+
+- `What sequence data is linked to PMID 11237011?`
+
+What you should see:
+
+- The records NCBI links to that paper, such as sequence records, BioProjects, SRA runs or genome assemblies, each linked to its NCBI page.
+- When NCBI lists more records than are shown, one line says how many there are and how many are shown.
+- When NCBI links no record of a kind, one plain sentence says so, rather than an empty answer.
+- No "One of the background searches did not finish" line from a graph search timing out.
+- Why it matters: the knowledge graph holds no link from a paper to its data, so before 2026-10-05 this question found nothing in every run.
 
 ## 5. Pathogen isolates
 
@@ -1055,7 +1101,25 @@ What you should see:
 - Run again does a fresh search, charged to you as a normal search.
 - On the search asked in the same tab, it does NOT search again: the source count and the text must match what you just read. The product owner reported on 2026-09-23 that clicking a past search re-ran it instead of showing the saved answer; a search asked in the same tab never got marked as saved, and the second search showed 22 sources against the original 23.
 - Guests do not get this. The account is what stores the answer, and deleting the account deletes it with them.
+- A reopened table longer than ten rows shows ten at a time, with the same "Showing 1–10 of N" bar and page controls as the live answer. On a phone each row stacks: the first value leads the row and every other value carries its column name, and nothing runs past the screen edge (card 71).
+- A long answer reopens with every source it cited, up to 100: its "Based on N sources cited" line, its Sources rows and the history list's count agree, and every marker points at a listed source. An answer saved before 2026-10-08 still reopens with at most 50 (card 54).
 - Why it matters: clicking your own earlier question, being charged a second search for it, and waiting thirty seconds to read something you already read is the kind of small dishonesty that makes a history rail feel like decoration rather than a record.
+
+### 100. A "not yet confirmed" answer reopens too (card 63)
+
+Queries to try:
+
+- `Which diseases are associated with BRCA1?`: sign in, ask it, and read the trust line under the answer. If it reads "Based on N sources, not yet confirmed", start a new search, then click the question in "Your searches". If it reads "Confirmed", ask another gene question until one reads "not yet confirmed"; about six answers in ten do.
+- Query 67 covers a confirmed answer reopening.
+
+What you should see:
+
+- The "not yet confirmed" answer reopens at once, marked "Saved answer, asked <date>", with no progress screen and no second charge.
+- Its trust line still reads "not yet confirmed", with no check mark beside it, and any note that was under the answer is still there.
+- A guest's search still is not saved.
+- Only during an NCBI outage, which cannot be triggered on demand: the note reads, for example, "PubMed is down at NCBI right now, so this answer may be missing papers from it. Try again later." It never says the answer "has no papers", and never "Ask again to retry". A timeout or any other failure still says "Ask again to retry".
+- Only on an answer saved during an NCBI outage: when reopened, its note is in the past tense, for example "When this answer was written, NCBI's PubMed was not answering, so this answer may be missing papers from it. Ask the question again to search afresh." It never says "right now"; the saved answer's header says when it was asked (card 67).
+- Why it matters: before card 63, about six answered searches in ten could not be reopened at all, and during an outage the note sent people straight back into it.
 
 ## 8. Stop, feedback and the connection
 
@@ -1074,6 +1138,9 @@ What you should see:
 - Clicking "Run again" asks the same question again from the start.
 - Clicking "New search" returns to the home page.
 - No answer appears from the stopped search.
+- Pressed while the search is still working, the button reads "Stopping…" for a moment, then "Search stopped"; after a reload the search is not listed as answered, and a follow-up such as "what about it?" does not refer to it.
+- Pressed after the search had already finished but while its answer is still appearing, the whole answer shows at once, with its sources and trust line, and history and the conversation keep that same answer (card 59).
+- Pressing Stop and asking a new question straight away answers the new question normally.
 - Why it matters: a person who changes their mind mid-search should not have to wait out a search they no longer want.
 
 ### 98. Stop works until the answer appears (card 58)
@@ -1137,7 +1204,7 @@ What you should see:
 - About opens with "What happens to your question": seven numbered stops following one BRCA1 question through the system, and its closing line has an "open Search" link that returns to the home page.
 - About ends with "Where the data comes from": the knowledge graph is a snapshot finished on 22 April 2026, built from Gene, PubMed, ClinVar, Taxonomy and MedGen, holding 115,406,761 nodes and 693,295,991 edges, with layers 2 and 3 called live. "Explore the architecture" goes to the Architecture page without reloading, so you stay logged in.
 - Architecture opens with the title "Architecture" and four numbered stops: Layer 1 the data pipelines and the knowledge graph, Layer 2 live NCBI APIs, Layer 3 enrichment, then how all three feed the search agent. The word "system" appears nowhere on the page, and it also opens directly at /architecture.
-- Stop 1 shows the pipeline steps, the snapshot figures, one card per source database with its node count, the graph facts and an example query, and it ends with the blue L1 card for cypher_query naming its 30-second, 500-row limit. Stops 2 and 3 each show their own coloured card: green L2 with ncbi_efetch, ncbi_dbsnp and pathogen_detection, purple L3 with pubtator_annotate, litvar2_lookup and clinicaltrials_search, each tool naming what it calls and its time limit.
+- Stop 1 shows the pipeline steps, the snapshot figures, one card per source database with its node count, the graph facts and an example query, and it ends with the blue L1 card for cypher_query naming its budget, "30 seconds, at most 100 rows" (card 53 corrected 500 to the 100 every planned graph call asks for). Stops 2 and 3 each show their own coloured card: green L2 with ncbi_efetch, ncbi_dbsnp and pathogen_detection, purple L3 with pubtator_annotate, litvar2_lookup and clinicaltrials_search, each tool naming what it calls and its time limit.
 - Stop 4 says the agent reads all three layers at once, the graph query and the live layer 2 and 3 calls together, and that every fact arrives with a link to the record behind it.
 - The closing line on Architecture, "open About", goes back to About.
 - The copy button copies the snippet.
@@ -1209,6 +1276,7 @@ What you should see:
 - If the system refuses the question, the tour says so and ends with Done.
 - Escape closes the tour at any point. "Take the tour" starts it again any time.
 - At phone width the card sits at the bottom of the screen and nothing scrolls sideways.
+- Rest the pointer on "Take the tour": its dark blue text and border stay readable on the light blue it turns (card 44, 2026-10-06).
 - Why it matters: a first-time visitor who does not know what to ask should be able to see the whole product work end to end without having to guess a good question first.
 
 ### 99. The web app carries its libraries' license notices (card 60)
@@ -1225,6 +1293,20 @@ What you should see:
 - `react`, `react-dom` and `@mui/material` are among them, each with its version and its license text.
 - No package reads "no license file found".
 - Why it matters: React, React DOM and MUI are MIT licensed, and their licenses require the notices to travel with every copy of the app. Before card 60, the built app carried none of them.
+
+### 105. Long variant names on a phone (cards 43 and 43b)
+
+Queries to try:
+
+- `What does BRCA1 do?` on a phone, or with the browser window at 390 and then 414 pixels wide
+
+What you should see:
+
+- A long variant name such as NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG wraps inside its line, in the sentence, in the record list and under Sources.
+- The page never scrolls sideways, and every citation number stays on screen.
+- A citation number stays on the same line as the end of the name it belongs to, never alone on the next line.
+- On a wide screen the record list stays one line per record.
+- Why it matters: a sideways-scrolling answer hides its citations, and a number alone on a line reads as a stray digit rather than a source.
 
 ## 10. Questions with no gene and no disease in them
 
@@ -1364,6 +1446,25 @@ What you should see:
 - Before, `GERD` read 14 against 12 and `recent papers on statins` read 6 against 5. Earlier still, the trust line undercounted, reading "Based on 1 source" beneath five cited papers; item 12.8 fixed the undercount and item 12.11 the remaining disagreement.
 - Why it matters: two numbers on the same screen disagreeing about the same count undermines trust in both of them, not just the wrong one.
 
+### 107. Every total says what it counts, and every sources number is the same (card 22)
+
+Queries to try:
+
+- `Which diseases are associated with BRCA1?` at Researcher, then the same question at Plain language. Read the line under the question, open SOURCES and count its cards, then read the line under the sources.
+
+What you should see:
+
+- The line under the question reads "N tool calls · S sources cited from L layers", never a bare "tools" or "sources".
+- The SOURCES heading shows the same S, and the line under the sources reads "Based on S sources cited", with ", not yet confirmed" when a high-stakes fact has not been found in a second database.
+- A confirmed answer reads "Confirmed by N independent databases": N counts the databases among the answer's own sources whose records state the confirmed fact, never a record that is not listed under SOURCES, so it is never more than the databases you can open there. A graph record and a live lookup of the same database count as one database, so two copies of one ClinVar record never read as confirmed.
+- The info card beside that line says "not yet confirmed" has two causes: a high-stakes fact not yet found in a second database, or an answer that may be incomplete, for example because a search did not finish.
+- The NCBI Gene record for BRCA1 is one source card, even when the answer cites it through two links, one ending in a slash. Before, the 2026-09-27 BRCA1 answer read "18 sources" above a SOURCES heading of 17 and "Based on 17 sources"; the same answer now reads 16 in all three places.
+- When one page is cited both from the knowledge graph and from a live lookup, it is still one card, and the card names both layers ("L1 · graph, L2 · live"). It sits under Knowledge graph, the Live NCBI APIs group still shows and names it, and the line under the question counts both layers.
+- The opening line counts one record per page ("Found 4 disease records for BRCA1" at Researcher, "I found 4 conditions related to BRCA1" at Plain language): it counts the records that answer the question, which is a different thing from sources.
+- After a reload, YOUR SEARCHES shows the same search as "S sources cited", the same S. Open it: the saved answer lists S source rows under its "Based on S sources cited" line, the gene page once.
+- A record appears once in the answer's tables and in the Plain language list, with every citation number on its row, for example "BRCA1 NCBIGene:672 [6, 7]" (card 104).
+- Why it matters: a number that says "sources" should be the number of sources you can open and count, wherever it appears.
+
 ### 75. A papers list reads as clean prose, with no record repeated (12.12)
 
 Queries to try:
@@ -1400,7 +1501,7 @@ What you should see:
 
 ## 12. The overnight build of 2026-09-25
 
-Built overnight from the board's To do column, by the plan in `testing/Overnight_build_plan_2026-09-25.md`. Everything here is on develop only. If you do not like it, `python3 testing/Developer/scripts/bin_overnight.py --all --yes` puts develop's product code back exactly as it was before the night.
+Built overnight from the board's To do column. Everything here is on develop only.
 
 ### 80. A good question is not refused at the think step (12.17)
 
@@ -1532,7 +1633,7 @@ What you should see:
 - The install command installs `system3-cli`, and afterwards `s3 --help` works. The page never tells you to `pip install s3`, which is a stranger's package.
 - The first command line names the same server the page itself talks to, so you sign in to develop, not production. After your password, `s3` prints "logged in to" followed by develop's address.
 - The second line, `s3 ask "diseases linked to BRCA1"`, prints a cited answer, as query 91 describes.
-- The agent configuration names the command `s3` with `mcp`, and carries no token. Once it is added, the agent reports four System 3 tools: ask_biomedical_question, list_past_searches, reopen_past_answer and send_answer_feedback.
+- The agent configuration names the command by its full path to `s3` (since card 62, since an agent app does not read your shell's PATH) with `mcp`, and carries no token. Once it is added, the agent reports four System 3 tools: ask_biomedical_question, list_past_searches, reopen_past_answer and send_answer_feedback.
 - The MCP server card names the same four tools, says an account is required, and says a token lasts 15 minutes. Its own configuration, for reaching the server by its address, carries an Authorization line with a place for your token.
 - The Access notice under the cards says GraphQL and the MCP server need an account, and that only REST and SSE take a guest.
 - Known: the fourth copy button, the KGX command, needs graph access only the operator grants, so it is not tried here.
@@ -1637,7 +1738,7 @@ What you should see:
 - Reopening shows the answer that search already gave, with its citations, its trust line and the depth it was asked at, and runs no new search.
 - A search with no saved answer is not reopened: the agent is told "no saved answer for this search; ask it again to get a fresh one".
 - Known: feedback sent the moment an answer arrives can be told to retry in a few seconds, while the answer is still being saved.
-- Known: a long answer reopens with at most 50 of its citations, and the result counts how many markers point at nothing (card 54).
+- Known: an answer saved before 2026-10-08 reopens with at most 50 of its citations, and the result counts how many markers point at nothing; one saved since keeps up to 100 (card 54).
 - Why it matters: an agent asked what you found last week should read the answer you already got, not pay for a second search, and a rating sent through an agent should count like one sent on the web.
 
 ### 96. A guest gets no more than the web gives a guest (T-8.10-05)
@@ -1676,6 +1777,41 @@ What you should see:
 - Reopening A's search as B is refused with "no saved answer for this search; ask it again to get a fresh one", the same words a search that never existed gets, so B learns nothing about A's search.
 - Back as A, the GCK search is listed again, and it reopens.
 - Why it matters: what a researcher searched for is private. An agent holding someone else's sign-in must never be a way into it.
+
+### 101. Install and connect on the first try, from a fresh terminal (card 62)
+
+Queries to try:
+
+- No query needed in the web app. Once #133 is on develop, open develop's Integrations page and read the Command line tools card before copying anything.
+- In a new terminal, run what "Copy install command" copies, then open a second new terminal and follow the card's line on re-entering the environment before `s3 login` and `s3 ask "diseases linked to BRCA1"`.
+- Run `s3 mcp --help`, and add the agent configuration the page prints to an AI agent app, using the full path the card tells you how to find.
+- As a guest with no account, point an MCP client at the server with no token.
+
+What you should see:
+
+- Before any command, the card says it needs Python 3.11 and git, and works on macOS and Linux.
+- The install command creates its environment with `python3.11`, not `python3`, and succeeds on a Mac whose `python3` is older.
+- In the second terminal, following the card's line, `s3` is found and `s3 login` works.
+- Under a finished answer, `s3` prints the same trust line the web shows for that answer, with "High-risk claim" or "Not fully grounded" where the web shows them. A search you stop prints "Not verified · the run did not finish", never a confirmed verdict. A question the system asks back reads `[ask]` with no trust line.
+- `s3 mcp --help` says to point the agent app at `s3` by its full path, and the agent app finds it.
+- The page prints no KGX install command; it says a KGX file comes from the operator. This replaces query 90's line about the fourth copy button.
+- A guest over MCP is told MCP needs an account and how to get a token, never that the token is malformed.
+- Known, card 75: an agent that sends an unknown argument whose name contains "bearer token" can make `s3 mcp` tell you to log in again.
+- Why it matters: someone outside the project judges the integration by the first command they paste, and by whether `s3` tells them the same truth about an answer that the web does.
+
+### 102. The pages say what the system actually does (card 53)
+
+Queries to try:
+
+- No query needed. Once #134 is on develop, read the Architecture page's stops and the About page's walk-through, then ask `Which diseases are associated with BRCA1?`, `Which diseases are associated with NCBIGene:672?` and `Any trials for GERD?`, and open the steps each search shows.
+
+What you should see:
+
+- The pages say the plan step decides whether literature and trial evidence (PubTator3 and ClinicalTrials.gov) are searched, never that they run for every gene or disease question. The BRCA1 question searches them; the question naming NCBIGene:672 does not, as the page's layer 3 stop says.
+- They say what the PubTator3 and LitVar2 searches return, that each source has its own time limit with Pathogen Detection's 120 seconds the longest, and that some follow-up searches run in a second round after the first.
+- No page or README names LitSense, which nothing calls, and README names no Redis cache.
+- Known, card 76: the layer 3 stop names three kinds of question searched another way where there are five, and the About walk says BRCA1's live searches run at the same time as the graph, where four of its thirteen run in a second round.
+- Why it matters: a researcher who reads how the system works and then sees it do something else stops trusting the rest of what it says.
 
 ## Workflow for the product owner
 
@@ -1858,6 +1994,21 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
+| card 67 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now" | Query 100 |
+| card 104 | An answer lists one record once in its tables and Plain language list | Query 107 |
+| card 103 | No disease cell under the variant-to-disease table is blank without a reason | Query 79 |
+| card 101 | A sentence whose copied piece the sentence check holds back is dropped whole, never shown cut | Query 106 |
+| card 54 | A reopened long answer keeps every source it cited, up to 100 | Query 67 |
+| card 71 | A reopened answer's tables page ten rows at a time and fit a phone | Query 67 |
+| card 102 | A reopened saved answer lists its sources, one row per page, each linking to its record | Query 107 |
+| card 22 | Every total on an answer says what it counts, and every number that says sources is the same | Query 107 |
+| card 101 | Every sentence the writer rewords is checked against its paper before you see it | Query 106 |
+| card 99 | A plain-language answer never says "children" for "young children" or drops "potentially" | Query 106 |
+| cards 43 and 43b | Long variant names wrap on a phone, with their citation numbers kept beside them | Query 105 |
+| card 44 | The "Take the tour" button stays readable when the pointer rests on it | Query 63 |
+| card 56 | An organism question is never answered about a disease cut out of its name | Query 103 |
+| card 63 | A "not yet confirmed" answer reopens with its trust line and notes, and an NCBI outage is said plainly | Query 100 |
 | card 60 | The web app carries the license notices of the libraries it bundles | Query 99 |
 | card 58 | Stop can be pressed until the answer's first sentence is on screen | Query 98 |
 | card 49, phase 8.10 | Every integration works end to end: the command line and another AI agent ask what the web asks and get the same evidence | Queries 90 to 97 |

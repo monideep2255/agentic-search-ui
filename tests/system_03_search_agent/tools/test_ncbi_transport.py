@@ -80,6 +80,7 @@ Writes:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from datetime import UTC
 from typing import Any, Self
@@ -176,6 +177,155 @@ def test_eutils_json_elink_body_level_error_is_error() -> None:
     )
     assert result.error_message is not None
     assert "Invalid db name specified" in result.error_message
+
+
+# ---------------------------------------------------------------------------
+# Card 63: the failure kind of an ERROR body, and the warning it logs.
+# ---------------------------------------------------------------------------
+
+#: The ESearch body NCBI served from 02:24 UTC on 2026-09-27, in the shape
+#: the diagnosis measured: HTTP 200, an `ERROR` naming the search backend as
+#: unavailable.
+_OUTAGE_BODY = (
+    '{"esearchresult": {"ERROR": "Search Backend failed: Search is temporarily '
+    'unavailable. Cannot connect to SOLR", "count": "0"}}'
+)
+#: The same "Search Backend failed" prefix on a request NCBI refused, not an
+#: outage (`test_ncbi_eutils_actions.py`'s own fixture wording).
+_EMPTY_TERM_BODY = (
+    '{"esearchresult": {"ERROR": "Search Backend failed: ... Empty Term in the '
+    'request", "count": "0"}}'
+)
+
+
+def test_an_eutils_error_body_saying_the_search_is_unavailable_is_service_down() -> None:
+    result = ncbi_transport.classify_eutils_response(
+        content_type="application/json", text=_OUTAGE_BODY, database="pubmed"
+    )
+    assert result.status == "error"
+    assert result.failure_kind == "service_down"
+    # Unchanged: the tool's own `error` text still carries NCBI's words for
+    # a developer; only the person-facing words are ours.
+    assert result.error_message is not None and "SOLR" in result.error_message
+
+
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        # F-63-J01: each outage marker on its OWN. The measured body carries
+        # both phrases, so with only that fixture, dropping either marker
+        # from `_SERVICE_DOWN_MARKERS` left every test green. Neither phrase
+        # below contains the other's text, so each arm can only pass through
+        # its own marker.
+        "Search Backend failed: Cannot connect to SOLR",
+        "Search Backend failed: the service is temporarily unavailable",
+    ],
+    ids=["cannot_connect_only", "unavailable_only"],
+)
+def test_each_outage_marker_alone_makes_an_error_body_service_down(phrase: str) -> None:
+    lowered = phrase.lower()
+    assert ("cannot connect" in lowered) != ("unavailable" in lowered), phrase
+    result = ncbi_transport.classify_eutils_response(
+        content_type="application/json",
+        text=json.dumps({"esearchresult": {"ERROR": phrase, "count": "0"}}),
+        database="pubmed",
+    )
+    assert result.status == "error"
+    assert result.failure_kind == "service_down", phrase
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        _EMPTY_TERM_BODY,
+        '{"esearchresult": {"ERROR": "Invalid db name specified: notadatabase"}}',
+        '{"linksets":[],"ERROR":"Invalid db name specified: notadatabase"}',
+    ],
+)
+def test_an_eutils_error_body_that_is_not_an_outage_is_other(text: str) -> None:
+    """The populate check for the arm above, and the reason `service_down`
+    reads the body: an `ERROR` that names a bad request must never tell a
+    person the service is down."""
+    result = ncbi_transport.classify_eutils_response(
+        content_type="application/json", text=text, database="pubmed"
+    )
+    assert result.status == "error"
+    assert result.failure_kind == "other"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        '{"esearchresult": {"count": "1", "idlist": ["7157"]}}',
+        '{"esearchresult": {"count": "0", "idlist": []}}',
+    ],
+)
+def test_a_success_or_an_empty_body_carries_no_failure_kind(text: str) -> None:
+    result = ncbi_transport.classify_eutils_response(content_type="application/json", text=text)
+    assert result.status in ("ok", "empty")
+    assert result.failure_kind is None
+
+
+def test_an_error_body_is_logged_at_warning_with_the_database_and_kind_only() -> None:
+    with _DirectLogCapture("system_03_search_agent.tools.ncbi_transport") as capture:
+        ncbi_transport.classify_eutils_response(
+            content_type="application/json", text=_OUTAGE_BODY, database="pubmed"
+        )
+    warnings = [r for r in capture.records if r.levelno == logging.WARNING]
+    # POSITIVE CONTROL: exactly one warning, naming what it must name.
+    assert len(warnings) == 1, capture.text
+    message = warnings[0].getMessage()
+    assert "pubmed" in message
+    assert "service_down" in message
+    # NCBI's own text is untrusted and is never logged, nor any URL or key.
+    for fragment in ("SOLR", "temporarily", "Search Backend", "http", "api_key"):
+        assert fragment not in capture.text, fragment
+
+
+def test_a_success_body_logs_no_error_body_warning() -> None:
+    """The negative twin of the arm above, so it cannot pass on a classifier
+    that warns on every response."""
+    with _DirectLogCapture("system_03_search_agent.tools.ncbi_transport") as capture:
+        ncbi_transport.classify_eutils_response(
+            content_type="application/json",
+            text='{"esearchresult": {"count": "1", "idlist": ["7157"]}}',
+            database="pubmed",
+        )
+    assert not [r for r in capture.records if r.levelno >= logging.WARNING], capture.text
+
+
+def test_a_database_value_that_is_not_a_database_name_is_never_logged() -> None:
+    """Defence in depth: every real caller passes a schema-validated `db`,
+    but the log line must not become a channel for anything else."""
+    with _DirectLogCapture("system_03_search_agent.tools.ncbi_transport") as capture:
+        ncbi_transport.classify_eutils_response(
+            content_type="application/json",
+            text=_OUTAGE_BODY,
+            database="pubmed&api_key=NOT-A-REAL-KEY",
+        )
+    assert "NOT-A-REAL-KEY" not in capture.text
+    assert "unrecognised" in capture.text  # POSITIVE CONTROL: the line was logged
+
+
+def test_the_failure_kind_of_a_transport_error_and_a_status() -> None:
+    assert (
+        ncbi_transport.failure_kind_for_exception(ncbi_transport.TransportTimeoutError("t"))
+        == "timed_out"
+    )
+    assert (
+        ncbi_transport.failure_kind_for_exception(
+            ncbi_transport.TransportRateLimitedError("r", family="eutils", retry_after=1.0)
+        )
+        == "rate_limited"
+    )
+    assert (
+        ncbi_transport.failure_kind_for_exception(ncbi_transport.TransportConnectionError("c"))
+        == "other"
+    )
+    assert ncbi_transport.failure_kind_for_status(429) == "rate_limited"
+    assert ncbi_transport.failure_kind_for_status(503) == "other"
+    assert ncbi_transport.failure_kind_for_status(400) == "other"
+    assert ncbi_transport.failure_kind_for_status(200) is None
 
 
 def test_eutils_xml_nonexistent_id_is_empty_and_fabricates_nothing() -> None:

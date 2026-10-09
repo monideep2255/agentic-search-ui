@@ -182,7 +182,7 @@ def _load_env_explicitly() -> None:
     """Populate NCBI_API_KEY from .env (F-2.1-04's fix, restated per-gate).
 
     Relying on an import-time dotenv side effect from a third-party package is
-    order-dependent and has broken once already in this repo.
+    order-dependent and has broken once already in this repository.
     """
     env_path = _REPO_ROOT / ".env"
     if not env_path.exists():
@@ -245,7 +245,7 @@ premise_gate = pytest.mark.skipif(
 # that has stopped measuring anything (`.claude/rules/goal-contracts.md`).
 # ---------------------------------------------------------------------------
 
-# rs334, the HBB missense variant (HbS, sickle-cell), already this repo's
+# rs334, the HBB missense variant (HbS, sickle-cell), already this repository's
 # canonical dbSNP example (Section 6.5's LitVar2 spec cites it, 589 PMIDs).
 RS334 = "rs334"
 RS334_GENE_NAME = "HBB"

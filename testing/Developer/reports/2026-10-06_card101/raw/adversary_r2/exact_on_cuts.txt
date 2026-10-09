@@ -1,0 +1,5 @@
+False | Aspirin prevents colorectal cancer in adults | quote: There is no evidence that aspirin prevents colorectal cancer in adults.
+False | Montelukast improves symptoms | quote: Earlier studies suggested that montelukast improves symptoms, but this trial found no benefit.
+False | Drug X reduces mortality in men | quote: Drug X reduces mortality in women but not in men.
+True  | Antibiotics are effective | quote: Antibiotics are effective only when a bacterial infection is confirmed.
+True  | Bronchiolitis is a self-limited disease | quote: Bronchiolitis is a self-limited disease in healthy infants and children.

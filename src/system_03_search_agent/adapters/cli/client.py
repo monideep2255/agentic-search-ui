@@ -105,10 +105,10 @@ if TYPE_CHECKING:
 # call shapes have genuinely different failure-detection requirements:
 #
 #   _REST_CALL_TIMEOUT_S covers create_run, stop, and fetch_citations: a
-#   plain request/response round trip against this repo's own backend,
+#   plain request/response round trip against this repository's own backend,
 #   never a live third-party API. 15.0s matches the interactive-HTTPS-call
 #   budget `tool-call-budgets.md`'s table already sets for every other
-#   15-second-class tool in this repo (ncbi_efetch, ncbi_dbsnp,
+#   15-second-class tool in this repository (ncbi_efetch, ncbi_dbsnp,
 #   pubtator_annotate, litvar2_lookup, clinicaltrials_search): none of
 #   these three calls does agent work inline (POST /v1/query returns as
 #   soon as the run is registered, per app.py's own handler, not after the
@@ -463,7 +463,7 @@ def _parse_json_body(
     `KeyError` further down the call chain (F-4.2-A-24). Only called
     after `_raise_for_status`, so `response.status_code` is already known
     to be below 400; a 204 No Content, a followed 302/303, or any other
-    2xx/3xx this repo's server never intentionally sends for this
+    2xx/3xx this repository's server never intentionally sends for this
     endpoint still needs an explicit reject here, since `< 400` alone
     does not mean "has a JSON body".
     """

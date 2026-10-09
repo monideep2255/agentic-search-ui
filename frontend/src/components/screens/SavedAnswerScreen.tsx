@@ -53,6 +53,7 @@ import { Box, Typography } from "@mui/material";
 
 import { designTokens, layerColour } from "../../theme";
 import { LAYER_WORD, isLinkableCitationUrl } from "../answer/CitationMarkers";
+import { sourcePageKey } from "./AnswerScreen";
 import { SavedAnswerMarkdown } from "./savedAnswerMarkdown";
 import type { HistoryAnswerCitation, HistoryAnswerResponse } from "../../lib/api";
 
@@ -81,9 +82,60 @@ function formatAskedAt(iso: string): string {
   });
 }
 
-/** One citation row: layer dot, source name, link or "Not linked". */
-function CitationRow({ citation }: { citation: HistoryAnswerCitation }) {
-  const colour = layerColour(citation.layer);
+/** One page in a saved answer's Sources list, and every citation of it. */
+export interface SavedSourceRow {
+  /** The first citation of the page; its name and link spelling are shown. */
+  citation: HistoryAnswerCitation;
+  /** Every citation number that points at this page, in answer order. */
+  indices: number[];
+  /**
+   * Every layer the page was cited from, ascending. A citation whose stored
+   * layer was not recognised (`layer: null`, card 102) adds none, so its row
+   * still shows with its link and names no layer rather than a guessed one.
+   */
+  layers: (1 | 2 | 3)[];
+}
+
+/**
+ * A saved answer's citations, one row per record page.
+ *
+ * Card 22 fix round (2026-10-06, J-22-04, A-22-05): this screen listed one
+ * row per citation under a trust line that counts pages, so a reopened
+ * BRCA1 answer read "Based on 16 sources cited" above 18 rows, the gene
+ * page three times. Rows are now keyed by `sourcePageKey`, the key the live
+ * Sources list and the trust line use, so the rows a person counts are the
+ * sources the line names. A citation with no link is its own row, never
+ * merged.
+ */
+export function savedSourceRows(citations: HistoryAnswerCitation[]): SavedSourceRow[] {
+  const rows = new Map<string, SavedSourceRow>();
+  [...citations]
+    .sort((a, b) => a.display_index - b.display_index)
+    .forEach((citation) => {
+      const key = sourcePageKey(citation.source_url) || `#${citation.display_index}`;
+      const row = rows.get(key);
+      const { layer } = citation;
+      if (row) {
+        row.indices.push(citation.display_index);
+        if (layer !== null && !row.layers.includes(layer)) {
+          row.layers = [...row.layers, layer].sort((a, b) => a - b);
+        }
+      } else {
+        rows.set(key, {
+          citation,
+          indices: [citation.display_index],
+          layers: layer === null ? [] : [layer],
+        });
+      }
+    });
+  return Array.from(rows.values());
+}
+
+/** One source row: layer dot, source name, link or "Not linked". */
+function CitationRow({ row }: { row: SavedSourceRow }) {
+  const { citation } = row;
+  // An unrecognised layer draws `layerColour(null)`, the neutral gap colour.
+  const colour = layerColour(citation.layer ?? row.layers[0] ?? null);
   const linkable = isLinkableCitationUrl(citation.source_url);
   const label = citation.entity_name ?? citation.source;
   return (
@@ -113,21 +165,29 @@ function CitationRow({ citation }: { citation: HistoryAnswerCitation }) {
       />
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Typography component="span" sx={{ fontSize: 13, color: designTokens.ink }}>
-          {citation.display_index}. {label}
+          {row.indices.join(", ")}. {label}
         </Typography>
         <Typography
           component="span"
           sx={{ ml: 0.75, fontSize: 11.5, color: designTokens.inkFaint, textTransform: "uppercase" }}
         >
-          {LAYER_WORD[citation.layer]}
+          {row.layers.map((layer) => LAYER_WORD[layer]).join(" · ")}
         </Typography>
         {linkable ? (
           <Box sx={{ mt: "2px" }}>
+            {/*
+              A URL has no spaces, so without a break point a long one (a
+              Pathogen Detection isolate link, a ClinVar variation) runs past
+              its row and scrolls the page sideways on a phone (F-102-V-05).
+              `overflowWrap: "anywhere"` is the live answer's own rule for
+              long unbroken strings (`AnswerScreen.tsx`'s claim text and
+              phone source names), applied at every width.
+            */}
             <a
               href={citation.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ fontSize: 12.5, color: designTokens.link }}
+              style={{ fontSize: 12.5, color: designTokens.link, overflowWrap: "anywhere" }}
             >
               {citation.source_url}
             </a>
@@ -295,9 +355,9 @@ export function SavedAnswerScreen({
                   component="ul"
                   sx={{ listStyle: "none", m: 0, p: 0, display: "flex", flexDirection: "column", gap: 0.75 }}
                 >
-                  {answer.citations.map((citation) => (
-                    <Fragment key={citation.display_index}>
-                      <CitationRow citation={citation} />
+                  {savedSourceRows(answer.citations).map((row) => (
+                    <Fragment key={row.indices.join(",")}>
+                      <CitationRow row={row} />
                     </Fragment>
                   ))}
                 </Box>

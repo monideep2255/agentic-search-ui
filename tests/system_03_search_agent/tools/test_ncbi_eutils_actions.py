@@ -224,6 +224,100 @@ class TestSearch:
         assert output.status == "error"
         assert output.records == []
         assert "Empty Term in the request" in output.error
+        # Card 63: a request NCBI refused is NOT "the service is down".
+        assert output.failure_kind == "other"
+
+    @pytest.mark.asyncio
+    async def test_the_outage_body_is_a_service_down_search(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Card 63: the body every ESearch returned from 02:24 UTC on
+        2026-09-27. The tool says `service_down`, so the answer can tell a
+        person PubMed is down at NCBI rather than invite them to ask again
+        straight into the outage."""
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "esearchresult": {
+                            "ERROR": (
+                                "Search Backend failed: Search is temporarily "
+                                "unavailable. Cannot connect to SOLR"
+                            ),
+                            "count": "0",
+                        }
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.search(
+            NcbiEfetchSearchInput(action="search", db="pubmed", term="BRCA1", retmax=10)
+        )
+        assert output.status == "error"
+        assert output.records == []
+        assert output.failure_kind == "service_down"
+
+    @pytest.mark.asyncio
+    async def test_the_outage_is_logged_by_database(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The action hands its own `db` to the classifier, so the warning
+        names the database that is down. The request's own URL and key never
+        reach the classifier at all."""
+        from tests.system_03_search_agent.tools.test_ncbi_transport import _DirectLogCapture
+
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {"esearchresult": {"ERROR": "Search is temporarily unavailable"}}
+                )
+            ],
+        )
+        with _DirectLogCapture("system_03_search_agent.tools.ncbi_transport") as capture:
+            await ncbi_eutils_actions.search(
+                NcbiEfetchSearchInput(action="search", db="clinvar", term="BRCA1", retmax=10)
+            )
+        assert "database clinvar" in capture.text, capture.text
+        assert "service_down" in capture.text
+        assert "temporarily" not in capture.text
+
+    @pytest.mark.asyncio
+    async def test_a_rate_limited_search_says_rate_limited(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install(monkeypatch, [_json_response({}, status_code=429)])
+        output = await ncbi_eutils_actions.search(
+            NcbiEfetchSearchInput(action="search", db="pubmed", term="BRCA1", retmax=10)
+        )
+        assert output.status == "error"
+        assert output.failure_kind == "rate_limited"
+
+    @pytest.mark.asyncio
+    async def test_a_timed_out_search_says_timed_out(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install(monkeypatch, [ncbi_transport.TransportTimeoutError("did not answer in time")])
+        output = await ncbi_eutils_actions.search(
+            NcbiEfetchSearchInput(action="search", db="pubmed", term="BRCA1", retmax=10)
+        )
+        assert output.status == "error"
+        assert output.failure_kind == "timed_out"
+
+    @pytest.mark.asyncio
+    async def test_a_successful_search_carries_no_failure_kind(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install(
+            monkeypatch,
+            [_json_response({"esearchresult": {"count": "1", "idlist": ["7157"]}})],
+        )
+        output = await ncbi_eutils_actions.search(
+            NcbiEfetchSearchInput(action="search", db="pubmed", term="BRCA1", retmax=10)
+        )
+        assert output.status == "ok"
+        assert output.failure_kind is None
 
     @pytest.mark.asyncio
     async def test_unvalidated_field_tag_rejected_with_no_transport_call(
@@ -1960,3 +2054,43 @@ class TestLink:
         )
         assert output.status == "error"
         assert "connection failed" in output.error
+
+
+class TestRepairMojibake:
+    """Test the mojibake repair helper."""
+
+    def test_repairs_double_encoded_utf8_with_c3(self) -> None:
+        """Test that mojibake with U+00C3 (Ã) is repaired.
+
+        NCBI sends "Muir-TorrÃ© syndrome" where UTF-8 bytes for "é" (c3 a9)
+        are interpreted as latin-1 characters (Ã ©) and re-encoded as UTF-8
+        (c3 83 c2 a9). This test constructs the mojibake string and verifies
+        the repair.
+        """
+        mojibake = "Muir-Torr" + chr(0xc3) + chr(0xa9) + " syndrome"
+        assert mojibake == "Muir-TorrÃ© syndrome"
+        result = ncbi_eutils_actions._repair_mojibake(mojibake)
+        assert result == "Muir-Torré syndrome"
+
+    def test_leaves_correct_utf8_unchanged(self) -> None:
+        """Test that correct UTF-8 with accented characters is unchanged."""
+        correct = "Muir-Torré syndrome"
+        result = ncbi_eutils_actions._repair_mojibake(correct)
+        assert result == correct
+
+    def test_leaves_plain_ascii_unchanged(self) -> None:
+        """Test that plain ASCII text is left unchanged."""
+        ascii_text = "Simple text without accents"
+        result = ncbi_eutils_actions._repair_mojibake(ascii_text)
+        assert result == ascii_text
+
+    def test_leaves_unrepairable_mojibake_unchanged(self) -> None:
+        """Test that mojibake that cannot be repaired is left unchanged.
+
+        A string with U+00C3 (Ã) that is not valid double-encoded UTF-8
+        should pass through unchanged since the latin-1 encode or UTF-8
+        decode will fail.
+        """
+        unrepairable = "Ã alone"
+        result = ncbi_eutils_actions._repair_mojibake(unrepairable)
+        assert result == unrepairable

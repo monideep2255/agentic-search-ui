@@ -76,7 +76,7 @@ rejection is the correct and only available behavior, and a `Literal` is the
 direct implementation of the spec for that case.
 
 Design decision 3, `source_url` and the fetch-host-versus-record-host split:
-this is the first tool in the repo where the host it fetches from
+this is the first tool in the repository where the host it fetches from
 (`eutils.ncbi.nlm.nih.gov`, `api.ncbi.nlm.nih.gov`) differs from the host a
 citation must resolve to (`www.ncbi.nlm.nih.gov`, `pubmed.ncbi.nlm.nih.gov`,
 `omim.org`). `graph_schema_constants.NCBI_RECORD_URL_PATTERN`
@@ -201,9 +201,16 @@ FetchDb = Literal[
 #: The same call over all 26 of G-019's UIDs at once returned all 26
 #: records. `mesh` is deliberately NOT added to `FetchDb`: that path has not
 #: been live-verified and nothing needs it.
+#:
+#: `nuccore` is the fifteenth summary value, additive, card 74 (2026-10-05): a
+#: question about one paper's linked sequence data cites each GenBank or
+#: RefSeq record to its own page. Live-verified the same day: ESummary on
+#: `db=nuccore&id=2449300375` returns `title`, `accessionversion`, `organism`,
+#: `moltype` and `slen`, and the record page `/nuccore/2449300375` answers
+#: HTTP 200. It is not a `SearchDb` or `FetchDb` value: nothing needs either.
 SummaryDb = Literal[
     "pubmed", "gene", "clinvar", "dbvar", "omim", "medgen", "gtr", "sra",
-    "bioproject", "biosample", "assembly", "gds", "taxonomy", "mesh",
+    "bioproject", "biosample", "assembly", "gds", "taxonomy", "mesh", "nuccore",
 ]
 
 
@@ -524,3 +531,21 @@ class NcbiEfetchOutput(BaseModel):
     ] = None
     truncated: bool
     error: Annotated[str | None, Field(default=None, max_length=500)] = None
+    #: Card 63 (2026-09-27): what went wrong, in a fixed set a person can be
+    #: told about, beside `error`, which is free text and may quote NCBI.
+    #: Additive and optional under `system-design-patterns` pattern 10, like
+    #: `candidates_checked` above: None on `ok` and `empty`, and None on an
+    #: error no action classified, which a reader takes as `other`. The four
+    #: values are `ncbi_transport.FAILURE_KINDS`, written out here so this
+    #: schema module imports no transport code; a test pins the two equal.
+    failure_kind: Annotated[
+        Literal["service_down", "rate_limited", "timed_out", "other"] | None,
+        Field(
+            default=None,
+            description=(
+                "Why an error output failed, in a fixed set: service_down (NCBI said "
+                "its own search is unavailable), rate_limited, timed_out or other. "
+                "None unless status is error."
+            ),
+        ),
+    ] = None

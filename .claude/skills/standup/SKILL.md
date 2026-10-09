@@ -1,6 +1,6 @@
 ---
 name: standup
-description: "Answer where the build stands right now, in seven plain lines: the phase, what has landed, what is in motion this moment, what is next, how long until it is done, what decisions are waiting on the product owner, and what is blocked. Reports BOTH committed work and uncommitted work, including running agents, running commands, and what the assistant is mid-way through, since the product owner asking mid-flight is usually asking about the present and the present is not in the git log yet. Reads the tracker and git rather than the conversation, so it is correct in a fresh session and in a long one. TRIGGER on 'standup', 'catch me up', 'where are we', 'what is the status', 'what did I miss', 'what are you doing', 'quick update'. Distinct from task-tracker, which maintains the board and ticket detail: this only reports, never edits. Distinct from phase-checkpoint, which syncs planning documents at a phase boundary."
+description: "Report where the build stands now in seven plain lines, covering committed and uncommitted work, from the tracker and git. TRIGGER on 'standup', 'catch me up', 'where are we', 'what is the status', 'quick update'. Unlike task-tracker and phase-checkpoint, it only reports."
 scope: project
 ---
 

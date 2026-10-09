@@ -82,7 +82,7 @@ property of the shipped module. Full narrative: `tracker/phase_3.5.md`
 Design decisions, live-verified against the real API and the real
 `pathogen_ftp_transport.py` (not guessed):
 
-1. ASYNC throughout, matching every other Layer 2 tool in this repo
+1. ASYNC throughout, matching every other Layer 2 tool in this repository
    (`ncbi_transport.execute_get`): `pathogen_ftp_transport`'s functions
    are `await`ed, and `client` is a fresh `httpx.AsyncClient()` opened
    once per `pathogen_detection` call and reused across every FTP read
@@ -1479,8 +1479,8 @@ def build_citation(
     `layer="layer_2_api"` is a deliberate classification call, not the
     Layer 3 default a bulk-enrichment-shaped tool might suggest: Pathogen
     Detection is an NCBI-native bulk data source (the FTP snapshot tree),
-    not one of the four enrichment APIs CLAUDE.md names for Layer 3
-    (PubTator3, LitVar2, LitSense, ClinicalTrials.gov). Logged in
+    not one of the three enrichment APIs CLAUDE.md names for Layer 3
+    (PubTator3, LitVar2, ClinicalTrials.gov). Logged in
     DECISIONS.md and `tracker/phase_3.4.md` per T-3.4-04's own instruction,
     since it is a non-obvious call, not a mechanical one.
     """

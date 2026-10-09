@@ -73,6 +73,7 @@ from typing import Any, Literal
 
 import litellm
 
+from system_03_search_agent.harness.call_log import provider_of
 from system_03_search_agent.harness.tiers import (
     _FALLBACK_PRICES_USD_PER_TOKEN as _TIER_FALLBACK_PRICES,
 )
@@ -142,6 +143,9 @@ class LLMResponse:
     model_id: str
     tier: Tier
     elapsed_s: float | None = None
+    #: The upstream provider the router reported for this call, when its
+    #: reply carried one (card 72's call log reads it); None otherwise.
+    provider: str | None = None
 
 
 # Exceptions where the request itself was never the problem: a provider- or
@@ -446,7 +450,9 @@ _STEP_TIER: dict[str, Tier] = {
 # CLASS alone, so every step of a lookup query got the same 5.0 s. The two
 # axes are not the same thing: query class describes how hard the question
 # is, while what a step actually costs is driven by which tier answers it.
-# Measured on the configured models at the reasoning effort each tier runs:
+# Measured on the configured models at the reasoning effort each tier ran at
+# the time. Plan and synth now run at effort none (see `_TIER_REASONING`), so
+# the plan and synth timings below predate that change:
 #
 #   guard  deepseek-v4-flash, effort none:               719 to 4615 ms
 #   plan   kimi-k2.6, effort high, 4000-token ceiling:   both completed and
@@ -723,6 +729,7 @@ class Harness:
                     model_id=model_id,
                     tier=tier,
                     elapsed_s=elapsed_s,
+                    provider=provider_of(response),
                 )
 
     def last_call_elapsed_s(self, trace_id: str, tier: Tier) -> float | None:
