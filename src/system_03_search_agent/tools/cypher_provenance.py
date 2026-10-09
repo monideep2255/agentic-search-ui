@@ -728,7 +728,11 @@ def _shape_entity(
     curie = str(properties.get("id") or "")
     is_edge = _is_edge_entity(entity)
 
-    fields = dict(properties)
+    # Card 32 (J-32-02, A-32-02): a vertex or edge property named like a
+    # MedGen feature field is renamed the same way as a derived column.
+    fields = dict(
+        zip(_graph_field_names(list(properties)), properties.values(), strict=True)
+    )
     if "start_id" in entity:
         fields.setdefault("_edge_start_id", entity["start_id"])
     if "end_id" in entity:
@@ -854,11 +858,25 @@ _RESERVED_FEATURE_FIELD_NAMES: frozenset[str] = frozenset(
 )
 
 
-def _graph_field_name(label: str) -> str:
-    """A Layer 1 field name that never equals a reserved feature field name."""
-    if label in _RESERVED_FEATURE_FIELD_NAMES:
-        return f"graph_{label}"
-    return label
+def _graph_field_names(labels: list[str]) -> list[str]:
+    """Layer 1 field names for these labels, none equal to a reserved feature
+    field name and no two equal to each other.
+
+    A reserved label is prefixed with `graph_`, and the prefix is repeated
+    while the result is already a name in this row, so a second column that
+    really is called `graph_clinical_features` keeps its own name and its
+    value. No value is ever dropped by the rename.
+    """
+    taken = {label for label in labels if label not in _RESERVED_FEATURE_FIELD_NAMES}
+    names: list[str] = []
+    for label in labels:
+        if label in _RESERVED_FEATURE_FIELD_NAMES:
+            label = f"graph_{label}"
+            while label in taken:
+                label = f"graph_{label}"
+            taken.add(label)
+        names.append(label)
+    return names
 
 
 def _shape_derived_value(
@@ -901,9 +919,8 @@ def _shape_derived_value(
     # (Layer 2) and every consumer downstream keys on the name alone. A graph
     # column the model happens to alias to one of them is renamed here, where
     # a Layer 1 field name is born, so it is never shown as MedGen's list.
-    fields = {
-        _graph_field_name(labels.get(column, column)): value for column, value in derived.items()
-    }
+    names = _graph_field_names([labels.get(column, column) for column in derived])
+    fields = dict(zip(names, derived.values(), strict=True))
 
     projected_curie = _first_resolvable_curie(derived)
     if projected_curie:
