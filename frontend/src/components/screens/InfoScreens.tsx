@@ -1485,8 +1485,10 @@ export function AboutScreen({
             the record it points at: the exact words must be in the record, every number must be in
             the quote, and a negation must match. A sentence that fails those checks is dropped. One
             that passes but was reworded is then judged by a model, and kept only when the model
-            finds it adds nothing beyond the record's own words. If nothing citeable survives, the
-            system says it could not find an answer and stops instead of answering from memory. That
+            finds it adds nothing beyond the record's own words. A copied cut is judged the same
+            way, and a sentence with any piece held back is dropped whole. If nothing citeable
+            survives, the system says it could not find an answer and stops instead of answering
+            from memory. That
             rule is called cite or refuse.
           </StopText>
           <StopText>
@@ -1557,9 +1559,8 @@ export function AboutScreen({
       </Typography>
       <Typography sx={{ color: designTokens.inkMuted, maxWidth: "66ch" }}>
         Every claim is tied to a specific record. When nothing supports an answer, the system says
-        so and stops rather than answering from memory. The track beside each answer shows one
-        segment per claim, coloured by its layer, so an uncited claim is visible before you read a
-        word.
+        so and stops rather than answering from memory. Each claim's marker carries its layer's
+        colour, and a claim with no source shows in muted ink with no marker after it.
       </Typography>
 
       {/*
