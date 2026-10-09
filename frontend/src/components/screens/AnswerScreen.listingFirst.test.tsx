@@ -55,18 +55,29 @@ const citation = (n: number): AgentEvent =>
 const withPlacement = (placement: "listing" | "summary" | null, payload: Record<string, unknown>): AgentEvent =>
   ev("token", placement === null ? payload : { ...payload, placement });
 
-/** The count line and two records, as the server sends them once the searches end. */
+/**
+ * Two records, as the server sends them once the searches end. The count line
+ * is not among them: the server sends it with the summary, placed "summary"
+ * (`core/graph.py` `_answer_parts`; fix round, F-8.7-J07 and F-8.7-J09).
+ */
 const listingEvents = (placement: "listing" | null = "listing"): AgentEvent[] => [
-  withPlacement(placement, { text: "Found 2 disease records for BRCA1 [1][2].", marker_ids: ["k1", "k2"], kind: "claim" }),
   withPlacement(placement, { text: "Disease name: Alpha disease [1].", marker_ids: ["k1"], kind: "claim" }),
   withPlacement(placement, { text: "Disease name: Beta disease [2].", marker_ids: ["k2"], kind: "claim" }),
   citation(1),
   citation(2),
 ];
 
+const COUNT_LINE = "Found 2 disease records for BRCA1: Alpha disease [1] and Beta disease [2].";
+
+/** The count line, then the written summary, as the server sends them after the writer. */
 const summaryEvents = (): AgentEvent[] => [
+  withPlacement("summary", { text: COUNT_LINE, marker_ids: ["k1", "k2"], kind: "claim" }),
   withPlacement("summary", { text: "BRCA1 is linked to two inherited conditions [1].", marker_ids: ["k1"], kind: "claim" }),
 ];
+
+/** `core/graph.py` `_build_writer_failed_note`, word for word. */
+const WRITER_FAILED_NOTE =
+  "Note: the written summary could not be finished this time, so this answer lists the records found";
 
 const doneEvent = (): AgentEvent =>
   ev("done", { total_cost_usd: 0.01, total_tool_calls: 1, elapsed_ms: 9000, trust_outcome: "answer" });
@@ -166,6 +177,37 @@ describe("the answer page shows the records first (build phase 8.7)", () => {
       expect(screen.getByText(/Alpha disease/), "the records were taken back").toBeInTheDocument();
       unmount();
     }
+  });
+
+  it("shows the writer-failed note under records sent early, with the count line above them", () => {
+    // Fix round, F-8.7-J09: the server's own order when the writer fails
+    // after the records were sent (`test_a_writer_failing_after_the_listing_
+    // keeps_the_listing_as_the_answer`): the listing, its citations, the
+    // count line placed "summary", then a paragraph break and the note,
+    // both placed "listing", then `done`. Mutation that turns this red: add
+    // the note to `HIDDEN_NOTE_PATTERNS`, or drop listing-placed notes.
+    render(
+      <Screen
+        running={false}
+        events={[
+          withPlacement("listing", { text: "\n\n", marker_ids: [], kind: "paragraph_break" }),
+          withPlacement("listing", { text: "Disease records found\n\n", marker_ids: [], kind: "heading" }),
+          withPlacement("listing", { text: "Alpha disease [1].", marker_ids: ["k1"], kind: "list_item", cells: ["Alpha disease"] }),
+          withPlacement("listing", { text: "Beta disease [2].", marker_ids: ["k2"], kind: "list_item", cells: ["Beta disease"] }),
+          citation(1),
+          citation(2),
+          withPlacement("summary", { text: COUNT_LINE, marker_ids: ["k1", "k2"], kind: "claim" }),
+          withPlacement("listing", { text: "\n\n", marker_ids: [], kind: "paragraph_break" }),
+          withPlacement("listing", { text: WRITER_FAILED_NOTE, marker_ids: [], kind: "note" }),
+          ev("done", { total_cost_usd: 0.01, total_tool_calls: 1, elapsed_ms: 9000, trust_outcome: "ask" }),
+        ]}
+      />,
+    );
+    expect(screen.getByText(WRITER_FAILED_NOTE), "the writer-failed note is not on screen").toBeInTheDocument();
+    expect(screen.getAllByText(/Alpha disease/).length, "the records were taken back").toBeGreaterThan(0);
+    const countLine = screen.getByText(/Found 2 disease records for BRCA1/);
+    expect(listingRows().length, "no row carried the listing attribute").toBeGreaterThan(0);
+    expect(before(countLine, listingRows()[0]!), "the count line landed below the records").toBe(true);
   });
 
   it("keeps the records under a Stop and shows no writing mark", () => {
