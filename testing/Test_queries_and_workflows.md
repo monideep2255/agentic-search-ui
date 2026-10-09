@@ -495,6 +495,7 @@ What you should see:
 
 - The question's own words are never mistaken for a disease name.
 - The answer ends without a note listing conditions you never mentioned: no "Patient condition unchanged", no "Condition of fetal membrane".
+- Only rs334's own records are listed. Never rs334348, rs334353, rs334558 or rs334773, which are different variants that only start with the same digits.
 - Why it matters: the person asked about sickle cell trait's variant, not about unrelated MedGen entries that happened to share the word "condition" with their own question; a made-up list of conditions reads as evidence when it is noise.
 
 ### 24. Comparing two genes in a disease context (G-033)

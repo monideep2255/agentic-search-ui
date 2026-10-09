@@ -4889,8 +4889,21 @@ def _layer_tool_output_to_structured_fields(
 
     if tool == "litvar2_lookup":
         litvar: Litvar2LookupOutput = output
+        # A search for one rs id keeps only that rs id's own records. The
+        # autocomplete also returns variants that merely start with the same
+        # digits (rs334348 for rs334); those are different variants and are
+        # never shown as the one asked about. An exact comparison of the
+        # parsed rs number, never a text prefix. A query that is not a bare
+        # rs id (HGVS, a name) is left unfiltered.
+        asked_rsid = ""
+        if tool_input is not None and getattr(tool_input, "root", None) is not None:
+            candidate = str(getattr(tool_input.root, "query", "") or "").strip().casefold()
+            if re.fullmatch(r"rs\d+", candidate):
+                asked_rsid = candidate
         for match in litvar.variant_matches:
             if not match.source_url:
+                continue
+            if asked_rsid and str(match.rsid or "").strip().casefold() != asked_rsid:
                 continue
             rows.append(
                 _pseudo_row(
@@ -5422,7 +5435,9 @@ _CURIE_IN_TEXT_PATTERN = re.compile(
 
 # An rsID, Section 17's literal `rs\d+`. Case-sensitive: a real rsID is
 # always written with a lowercase "rs" prefix by convention, and Section
-# 17 gives the pattern exactly this way.
+# 17 gives the pattern exactly this way. Card 37's fix round tried ignoring
+# case and the verifier found "What does the RS1 gene do?" then resolved
+# the variant rs1 instead of the gene RS1, so it stays case-sensitive.
 _RSID_PATTERN = re.compile(r"\brs\d+\b")
 
 # A PMID mentioned in natural language ("PMID 21376230", "PMID: 21376230"),
@@ -11814,6 +11829,16 @@ def _layer3_base_citation(
         if synth_finding.tool == "pubtator_annotate":
             return pubtator_build_citation(raw_output, display_index=display_index)
         if synth_finding.tool == "litvar2_lookup":
+            # The hedged or asserted label comes from the cited record itself
+            # (card 37), never from the first raw match, which can be a near
+            # miss the shaping step dropped.
+            own = [
+                m
+                for m in raw_output.variant_matches
+                if m.source_url and m.source_url == synth_finding.source_url
+            ]
+            if own:
+                raw_output = raw_output.model_copy(update={"variant_matches": own[:1]})
             return litvar2_build_citation(raw_output, display_index=display_index)
         if synth_finding.tool == "ncbi_dbsnp":
             return dbsnp_build_citation(raw_output, synth_finding.field, display_index=display_index)
