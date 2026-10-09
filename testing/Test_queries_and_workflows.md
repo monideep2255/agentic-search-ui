@@ -1578,6 +1578,19 @@ What you should see:
 - `recent-onset diabetes treatment` is not asked back: "recent" there describes the disease, not the papers.
 - Known: after develop restarts or redeploys, a choice clicked on an earlier question searches without the year limit.
 
+### 108. A picked window that could not be applied says so (card 36)
+
+Queries to try:
+
+- Ask `recent papers on BRCA1`, wait for the three "How far back" choices, then redeploy or restart the service (developer step: restart the local server), then click "from the last 10 years".
+
+What you should see:
+
+- The plan line says the date range in your question could not be applied, so papers from any year were searched.
+- The answer heading does not claim a window that was not used.
+- Without a restart, the same click still limits to the last 10 years and says so.
+- Why it matters: a quiet change to what was searched is worse than an honest one.
+
 ### 85. Whether a question wants papers is a classifier's choice (12.16 part 3)
 
 Queries to try:
