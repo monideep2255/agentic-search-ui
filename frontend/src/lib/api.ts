@@ -138,6 +138,12 @@ export interface ApiCallOptions {
 }
 
 /**
+ * The `reads` query parameter `createRun` sends: this client reads
+ * `TokenPayload.placement` (build phase 8.7, card 50; fix round F-8.7-A14).
+ */
+export const READS_PLACEMENT_QUERY = "reads=placement";
+
+/**
  * `POST /v1/query`: starts a new streaming run and returns its `run_id`
  * immediately (202 Accepted), before the agent loop has necessarily
  * finished. `persona_name` is a fixed placeholder string
@@ -149,7 +155,11 @@ export async function createRun(
   options: ApiCallOptions = {},
 ): Promise<CreateRunResponse> {
   const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
-  const response = await fetch(`${baseUrl}/v1/query`, {
+  // Build phase 8.7 fix round, F-8.7-A14: this bundle lays the answer out by
+  // each token's `placement` (`useRunView.ts`), so it says so. Only then may
+  // the server send the records ahead of the summary; a bundle that does not
+  // ask gets the tokens in reading order with no `placement` at all.
+  const response = await fetch(`${baseUrl}/v1/query?${READS_PLACEMENT_QUERY}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

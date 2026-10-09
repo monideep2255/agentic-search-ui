@@ -65,6 +65,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from system_03_search_agent.contracts.events import CostPayload, DonePayload, Event
+from system_03_search_agent.contracts.query import RequestContext
 from system_03_search_agent.contracts.token_order import LISTING, placement_of
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.core.run_registry import RunRegistry
@@ -83,6 +84,14 @@ from tests.system_03_search_agent.core.test_phase_4_16_premise import (  # noqa:
     _query,
     _stub_symbol_resolution,
 )
+
+
+def _web_context() -> RequestContext:
+    """The web bundle built with build phase 8.7: it asks for `placement`
+    (`createRun`'s `?reads=placement`), so its run sends the records ahead
+    of the summary (fix round, F-8.7-A14)."""
+    return RequestContext(surface="web_ui", reads_placement=True)
+
 
 # The answer's own event types. None of them may reach a reader after Stop.
 _ANSWER_EVENT_TYPES = frozenset({"token", "citation", "trust_signal", "done"})
@@ -166,7 +175,7 @@ async def _stop_mid_write(
     spy = _install_tool_spy(monkeypatch)
 
     registry = RunRegistry()
-    run_id = registry.create_run(_query(), _context(), owner_id="guest:stop-mid-write")
+    run_id = registry.create_run(_query(), _web_context(), owner_id="guest:stop-mid-write")
     entry = registry.get_run(run_id)
 
     await asyncio.wait_for(synth.started.wait(), timeout=_WAIT_SECONDS)
@@ -499,7 +508,7 @@ async def _stop_before_listing(
     spy = _install_tool_spy(monkeypatch)
 
     registry = RunRegistry()
-    run_id = registry.create_run(_query(), _context(), owner_id="guest:stop-before-listing")
+    run_id = registry.create_run(_query(), _web_context(), owner_id="guest:stop-before-listing")
     entry = registry.get_run(run_id)
 
     await asyncio.wait_for(reader.started.wait(), timeout=_WAIT_SECONDS)
@@ -696,13 +705,13 @@ async def test_s8_a_stop_while_two_drafts_are_written_cancels_both_and_charges_o
         "_listing_uncitable",
         lambda prompt_findings, _listing_grounding: list(prompt_findings),
     )
-    monkeypatch.setattr(graph_module, "_two_drafts_fit_cap", lambda _harness, _trace_id: True)
+    monkeypatch.setattr(graph_module, "_two_drafts_fit_cap", lambda *_args: True)
     synth = _CountingSlowSynth()
     synth.install(monkeypatch, request.getfixturevalue("_mock_litellm"))
     _install_tool_spy(monkeypatch)
 
     registry = RunRegistry()
-    run_id = registry.create_run(_query(), _context(), owner_id="guest:stop-two-drafts")
+    run_id = registry.create_run(_query(), _web_context(), owner_id="guest:stop-two-drafts")
     entry = registry.get_run(run_id)
     await asyncio.wait_for(synth.two_started.wait(), timeout=_WAIT_SECONDS)
     assert synth.started == 2, f"populate-check failed: {synth.started} writing calls started."

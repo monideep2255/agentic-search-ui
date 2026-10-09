@@ -196,10 +196,12 @@ export type TokenKind = (typeof TOKEN_KINDS)[number];
 /**
  * Build phase 8.7, T-8.7-03 (card 50). Where on the answer screen a token
  * belongs, mirroring `TokenPayload.placement` in `contracts/events.py`:
- * "listing" is the code-built count line and record listing, sent the moment
- * the searches end; "summary" is the written answer, shown ABOVE the listing
- * whatever order the two arrive in. Absent or null reads as "summary", which
- * is where every token from an older producer rendered.
+ * "listing" is the code-built record listing, sent the moment the searches
+ * end, and the notes under it; "summary" is the code-built count line and
+ * the written answer, shown ABOVE the listing whatever order the two arrive
+ * in. Absent or null reads as "summary", which is where every token from an
+ * older producer rendered. The server sets it only for a run this bundle
+ * started with `POST /v1/query?reads=placement` (`createRun`, F-8.7-A14).
  */
 export const TOKEN_PLACEMENTS = ["listing", "summary"] as const;
 export type TokenPlacement = (typeof TOKEN_PLACEMENTS)[number];

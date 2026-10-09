@@ -764,6 +764,10 @@ class CliClient:
         """
         response = await self._http.post(
             "/v1/query",
+            # Build phase 8.7 fix round, F-8.7-A01: this client lays the
+            # answer out by `TokenPayload.placement` (`render.py`), so it
+            # declares it; a server that predates the parameter ignores it.
+            params={"reads": "placement"},
             json={
                 "text": text,
                 "session_id": session_id,

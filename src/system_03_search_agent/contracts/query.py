@@ -297,3 +297,13 @@ class RequestContext(BaseModel):
     # any one part of it may contain.
     session_memory: SessionMemorySummary | None = None
     operator_mode: bool = False
+    # Build phase 8.7 fix round, F-8.7-A01 and F-8.7-A14: whether the client
+    # that asked lays the answer out by `TokenPayload.placement`. Only then
+    # does the Write step send the record listing ahead of the summary, and
+    # only then does any token carry the field. False, the default, is the
+    # stream every client built before the field reads correctly: no
+    # `placement` key, the listing after the summary. Decided per request:
+    # the REST surface sets it from `POST /v1/query?reads=placement`, and the
+    # in-process MCP and GraphQL surfaces, which read tokens in reading order
+    # (`contracts.token_order`), set it themselves. Additive within v1.
+    reads_placement: bool = False

@@ -406,7 +406,7 @@ flowchart LR
     W -->|POST stop| R
 ```
 
-- `POST /v1/query` answers 202 with a run id. That id is also the trace id, minted there with `uuid4` and carried on every event (`adapters/web_sse/app.py`).
+- `POST /v1/query` answers 202 with a run id. That id is also the trace id, minted there with `uuid4` and carried on every event (`adapters/web_sse/app.py`). A client that lays the answer out by token `placement` adds `?reads=placement`; only its run sends the record listing ahead of the summary (build phase 8.7). Any other value, or none, gets the stream every older client reads.
 - `GET /v1/query/{run_id}/events` streams the run. A reconnecting client sends the last `seq` it saw as `Last-Event-ID` and resumes after it. `POST /v1/query/{run_id}/stop` ends a run.
 - `core/run.py`'s `run_streaming` yields each event as its step produces it, and never raises: a crash becomes a synthetic `error` and `done` pair.
 

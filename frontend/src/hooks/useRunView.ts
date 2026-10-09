@@ -668,9 +668,11 @@ export function useRunView(events: AgentEvent[]): RunView {
      */
     /*
      * Build phase 8.7, T-8.7-03 (card 50): TWO REGIONS, EACH WITH ITS OWN
-     * STRUCTURE STATE. The server now sends the code-built count line and
-     * record listing (`placement: "listing"`) the moment the searches end,
-     * and the written summary later. The screen shows the summary above the
+     * STRUCTURE STATE. The server now sends the code-built record listing
+     * (`placement: "listing"`) the moment the searches end, and the count
+     * line and the written summary (`placement: "summary"`) later; the
+     * notes under the listing (a cost limit, a writer failure) are placed
+     * "listing" too. The screen shows the summary above the
      * listing, so each region is classified as if the other were not there:
      * a listing that ends inside its findings tail or a table must not turn
      * the summary's first sentence into a record line, and a summary heading

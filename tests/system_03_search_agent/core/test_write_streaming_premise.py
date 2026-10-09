@@ -77,6 +77,7 @@ import time
 import pytest
 
 from system_03_search_agent.contracts.events import PAYLOAD_MODEL_BY_TYPE, Event
+from system_03_search_agent.contracts.query import RequestContext
 from system_03_search_agent.contracts.token_order import LISTING, placement_of
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.core.run import run, run_streaming
@@ -347,9 +348,12 @@ async def test_w3_the_live_path_yields_the_same_write_events_in_the_same_order_a
     Volatile fields (`elapsed_ms`, costs) are excluded by comparing only the
     write event payloads plus the full type sequence."""
     _install_tool_spy(monkeypatch)
-    buffered = [event async for event in run(_query(), _context())]
+    # The web bundle built with build phase 8.7 asks for `placement`, so its
+    # run sends the listing early (fix round, F-8.7-A14).
+    web = RequestContext(surface="web_ui", reads_placement=True)
+    buffered = [event async for event in run(_query(), web)]
     _install_tool_spy(monkeypatch)
-    live = [event async for event in run_streaming(_query(), _context())]
+    live = [event async for event in run_streaming(_query(), web)]
 
     assert any(event.type == "token" for event in buffered), (
         "populate-check failed: the buffered run produced no answer token."

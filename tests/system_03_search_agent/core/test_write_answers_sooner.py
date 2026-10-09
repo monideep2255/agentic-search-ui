@@ -22,10 +22,10 @@ The owner's words, one arm group each:
   nothing to do. Each of the seven points the plan's "What the hand merges
   must get right" names has an arm here that fails if the point is broken.
 
-The placement arms stand in for the contract's field with a subclass of
-`TokenPayload` carrying exactly the field the lead fixed: `placement`, one of
-"listing" or "summary", default "summary". Another builder adds it to
-`contracts/events.py`; this code works with or without it.
+The placement arms stand in for the request's declaration
+(`RequestContext.reads_placement`, fix round F-8.7-A01) by patching
+`_request_reads_placement`; the "opt-in per request" group at the end builds
+it for real.
 """
 
 from __future__ import annotations
@@ -33,13 +33,12 @@ from __future__ import annotations
 import asyncio
 import re
 import time
-from typing import Literal
 from unittest.mock import AsyncMock
 
 import pytest
+from pydantic import BaseModel, ConfigDict, Field
 
-from system_03_search_agent.contracts import events as events_module
-from system_03_search_agent.contracts.events import TokenPayload
+from system_03_search_agent.contracts.query import RequestContext
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import cost_control
 from system_03_search_agent.harness import decide as decide_module
@@ -71,23 +70,20 @@ REQUIREMENT = "COMPLETENESS REQUIREMENT"
 CORRECTION = "COMPLETENESS CORRECTION"
 
 
-class _PlacedToken(TokenPayload):
-    """`TokenPayload` with the one field the contract adds in this phase."""
-
-    placement: Literal["listing", "summary"] = "summary"
-
-
 @pytest.fixture
 def placement_contract(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(graph_module, "TokenPayload", _PlacedToken)
-    monkeypatch.setitem(events_module.PAYLOAD_MODEL_BY_TYPE, "token", _PlacedToken)
+    """A client that reads `placement` asked (fix round, F-8.7-A01): the
+    listing may leave early and every token carries the field. The arms
+    below that build the request for real are the "opt-in per request"
+    group at the end of this file."""
+    monkeypatch.setattr(graph_module, "_request_reads_placement", lambda _state: True)
 
 
 @pytest.fixture
 def no_placement_contract(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The contract as it was before `placement`, whether or not today's
-    `TokenPayload` carries the field: nothing may leave early."""
-    monkeypatch.setattr(graph_module, "_contract_carries_placement", lambda: False)
+    """A client that does not read `placement` asked: nothing may leave
+    early, and no token carries the field."""
+    monkeypatch.setattr(graph_module, "_request_reads_placement", lambda _state: False)
 
 
 @pytest.fixture
@@ -749,7 +745,7 @@ async def test_the_early_listing_is_the_listing_the_answer_would_show(
     nothing is sent early: same text, same citations, same cells."""
     _models(monkeypatch)
     early = await graph_module.write_node(_write_state(audience_depth="researcher"))
-    monkeypatch.setattr(graph_module, "_contract_carries_placement", lambda: False)
+    monkeypatch.setattr(graph_module, "_request_reads_placement", lambda _state: False)
     late = await graph_module.write_node(_write_state(audience_depth="researcher"))
 
     assert _rows(early["events"]) == _rows(late["events"]), (
@@ -953,10 +949,12 @@ async def test_an_unneeded_second_draft_is_dropped_and_never_waited_for(
 async def test_two_opus_drafts_never_start_together_under_a_25_cent_cap(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Priced at Opus's real price, two writer calls are estimated at $0.264,
-    over a 25-cent cap, so the second waits for the first and its own check
-    sees the first call's real cost. The old static estimate ($0.025 a call)
-    would have started both together."""
+    """Priced at Opus's real price, each writer call is bounded at its
+    prompt (the stable prefix alone counts about 12,000 tokens) plus its
+    4,000-token output ceiling, about $0.14 here, so two are over a 25-cent
+    cap: the second waits for the first and its own check sees the first
+    call's real cost. The old static estimate ($0.025 a call) would have
+    started both together."""
     monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "0.25")
     _listing_cannot_cite(monkeypatch, 4)
     calls = _models(monkeypatch, first=ANSWERING, first_delay_s=0.2, price=OPUS_PRICE)
@@ -985,12 +983,13 @@ def test_the_drafts_price_bounds_what_a_dropped_draft_is_metered_at() -> None:
     price `_two_drafts_fit_cap` admits each draft at must be at least that,
     or a draft started and then dropped could carry a question past the cap
     that admitted it."""
+    harness = harness_module.Harness(trace_id="trace-dropped")
+    harness.price_per_token = lambda tier: OPUS_PRICE  # type: ignore[method-assign]
+    messages = build_synth_messages("Which diseases?", [_synth_finding(1, "d")], "researcher")
 
-    class _OpusHarness:
-        def price_per_token(self, tier: str) -> tuple[float, float]:
-            return OPUS_PRICE
-
-    per_draft = cost_control.estimate_next_call_cost_usd(_OpusHarness(), "synth")  # type: ignore[arg-type]
+    per_draft = cost_control.estimate_next_call_cost_usd(
+        harness, "synth", messages=messages, cache_prefix=graph_module._STABLE_PREFIX
+    )
     metered_if_dropped = harness_module._TIER_MAX_TOKENS["synth"] * OPUS_PRICE[1]
     assert per_draft >= metered_if_dropped, (per_draft, metered_if_dropped)
     assert per_draft > cost_control.estimate_call_cost_usd("synth")
@@ -1011,3 +1010,251 @@ def test_the_second_draft_leaves_the_stable_prefix_byte_identical() -> None:
     assert REQUIREMENT in beside[1]["content"]
     assert "previous answer" not in findings_module.build_listing_gap_directive(findings)
 
+
+
+# ---------------------------------------------------------------------------
+# Fix round, F-8.7-A01 and F-8.7-A14: `placement` and the early listing are
+# opt-in per request. Built here from a real `RequestContext`, not patched.
+# ---------------------------------------------------------------------------
+
+
+class _TokenPayloadBefore87(BaseModel):
+    """The token contract every client built before this phase holds: the
+    same fields and bounds as `TokenPayload` without `placement`, and
+    `extra="forbid"`, so a key it does not know fails the frame."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(..., max_length=1000)
+    marker_ids: list[str] = Field(default_factory=list, max_length=20)
+    kind: str | None = None
+    cells: list[str] | None = None
+    emphasis: list[str] | None = None
+
+
+def _asked_by(state: dict[str, object], *, reads_placement: bool) -> dict[str, object]:
+    state["context"] = RequestContext(surface="rest_sse", reads_placement=reads_placement)
+    return state
+
+
+@pytest.mark.asyncio
+async def test_a_client_that_does_not_ask_gets_the_stream_it_got_before(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An installed command line or a cached web bundle sends no
+    declaration. Nothing leaves before the writer, the listing follows the
+    summary, and every token frame is one its own strict contract accepts:
+    no `placement` key on the wire. Mutation that turns this red: decide
+    the early send per process again (`_request_reads_placement` returning
+    True), or serialize `placement` when it is None."""
+    _models(monkeypatch)
+    timeline = _record_timeline(monkeypatch)
+
+    result = await graph_module.write_node(
+        _asked_by(_write_state(audience_depth="researcher"), reads_placement=False)
+    )
+
+    writer_at = next(i for i, (kind, _) in enumerate(timeline) if kind == "writer_call")
+    assert [kind for kind, _ in timeline[:writer_at]] == ["step"], timeline[:writer_at]
+    token_events = [event for event in result["events"] if event.type == "token"]
+    for event in token_events:
+        assert "placement" not in event.payload, event.payload
+        assert '"placement"' not in event.model_dump_json()
+        _TokenPayloadBefore87.model_validate(event.payload)
+    kinds = [event.payload["kind"] for event in token_events]
+    assert kinds.index("table_row") > kinds.index("claim"), kinds
+    assert token_events[0].payload["text"].startswith(COUNT_LINE_START)
+
+
+@pytest.mark.asyncio
+async def test_a_client_that_asks_gets_placement_and_the_early_listing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The web bundle and the command line built with this phase ask. The
+    listing leaves before the writer is called and every token says where
+    it belongs. Mutation that turns this red: never read the declaration
+    (`_request_reads_placement` returning False)."""
+    _models(monkeypatch)
+    timeline = _record_timeline(monkeypatch)
+
+    result = await graph_module.write_node(
+        _asked_by(_write_state(audience_depth="researcher"), reads_placement=True)
+    )
+
+    writer_at = next(i for i, (kind, _) in enumerate(timeline) if kind == "writer_call")
+    early = [payload for kind, payload in timeline[:writer_at] if kind == "token"]
+    assert early and all(token.placement == "listing" for token in early)  # type: ignore[attr-defined]
+    tokens = _tokens(result["events"])
+    assert all(t.get("placement") in ("listing", "summary") for t in tokens), tokens
+    assert next(t for t in tokens if t["placement"] == "summary")["text"].startswith(
+        COUNT_LINE_START
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fix round, F-8.7-J05: the two protections the judge could remove with every
+# arm green.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_the_answer_keeps_each_early_citation_exactly_as_it_was_sent(
+    monkeypatch: pytest.MonkeyPatch, placement_contract: None
+) -> None:
+    """A citation already on screen is the one the answer keeps: the
+    payload the conflict flags read is the very payload sent early, so no
+    surface is ever told two things about one chip. The prose here cites
+    records 1 to 3, which makes a freshly built payload for them differ
+    from the early one (its `claim_text` joins the prose's words, F-8.7-A04),
+    so dropping the substitution is visible. Mutation that turns this red:
+    remove `citations = [sent_by_id.get(c.citation_id, c) for c in citations]`."""
+    _models(monkeypatch)
+    timeline = _record_timeline(monkeypatch)
+    seen: list[list] = []
+    real_flags = graph_module._apply_conflict_flags_to_claim_trusts
+
+    def _spy(claim_trusts, citations, findings_by_id):
+        seen.append(list(citations))
+        return real_flags(claim_trusts, citations, findings_by_id)
+
+    monkeypatch.setattr(graph_module, "_apply_conflict_flags_to_claim_trusts", _spy)
+
+    await graph_module.write_node(_write_state(audience_depth="researcher"))
+
+    writer_at = next(i for i, (kind, _) in enumerate(timeline) if kind == "writer_call")
+    sent_early = {
+        payload.citation_id: payload  # type: ignore[attr-defined]
+        for kind, payload in timeline[:writer_at]
+        if kind == "citation"
+    }
+    assert sent_early, "populate-check: nothing was sent early"
+    used = {citation.citation_id: citation for citation in seen[-1]}
+    for citation_id, payload in sent_early.items():
+        assert used[citation_id] == payload, (citation_id, used[citation_id], payload)
+
+
+def test_a_sentence_without_a_marker_is_never_offered_to_lead() -> None:
+    """The lead decision is offered only sentences that carry a citation
+    marker, whatever the grounding pass hands it. Mutation that turns this
+    red: drop the `_MARKER_PATTERN.search(sentence)` filter from
+    `_lead_candidates`."""
+    grounding = GroundingResult(
+        narrative="BRCA1 is a gene. BRCA1 is linked to familial breast cancer [1].",
+        claims=[],
+        stripped_count=0,
+        refused=False,
+        sentences=("BRCA1 is a gene.", "BRCA1 is linked to familial breast cancer [1]."),
+    )
+
+    assert graph_module._lead_candidates(grounding) == [1]
+
+
+# ---------------------------------------------------------------------------
+# Fix round, F-8.7-J04 and F-8.7-A06: the cap is a bound.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_call_that_could_pass_the_cap_is_never_sent_and_the_note_shows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The adversary's 27-cent question, made to fail the old estimate. At
+    $1 and $50 per million tokens, the first draft is admitted (its bound,
+    prompt plus 4,000 output tokens, is about $0.21) and costs $0.06. The
+    old estimate priced the repair at 2,000 output tokens, $0.123, and
+    admitted it; it then wrote 3,900 tokens and the question ended at
+    $0.256 on a 25-cent cap. Priced at its prompt and its whole output
+    ceiling the repair is never sent, the question stays under the cap, and
+    the reader is told why the answer was not widened. Mutation that turns
+    this red: price output at the profile's 2,000 tokens, or check the
+    writer call without its prompt."""
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "0.25")
+    price = (1e-6, 50e-6)
+    _listing_cannot_cite(monkeypatch, 4)
+    calls: list[str] = []
+
+    async def _dispatch(*_args: object, **kwargs: object):
+        joined = _joined(kwargs.get("messages"))
+        if REQUIREMENT in joined or CORRECTION in joined:
+            calls.append("repair")
+            return _fake_response(ANSWERING, prompt_tokens=1_000, completion_tokens=3_900)
+        if SYNTH_SYSTEM_INSTRUCTION in joined:
+            calls.append("first")
+            return _fake_response(ANSWERING, prompt_tokens=10_000, completion_tokens=1_000)
+        calls.append("guard")
+        return _fake_response("not an option")
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", AsyncMock(side_effect=_dispatch))
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": price[0], "output_cost_per_token": price[1]},
+    )
+
+    result = await graph_module.write_node(_write_state(audience_depth="researcher"))
+    events = result["events"]
+
+    assert calls.count("first") == 1 and "repair" not in calls, calls
+    assert _done(events)["total_cost_usd"] <= 0.25, _done(events)
+    assert any(note.startswith(graph_module._build_repair_cap_note()[:60]) for note in _notes(events)), _notes(events)
+
+
+@pytest.mark.asyncio
+async def test_a_call_still_in_flight_counts_against_the_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two calls running at once can never each be admitted against a total
+    that leaves out the other: a call `call_tier` has sent and not yet
+    metered is held at its bound. Mutation that turns this red: stop adding
+    `Harness.in_flight_usd` in `check_per_query_cap`."""
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 50e-6},
+    )
+    release = asyncio.Event()
+
+    async def _slow(**_kwargs: object):
+        await release.wait()
+        return _fake_response("ok", prompt_tokens=10, completion_tokens=5)
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", AsyncMock(side_effect=_slow))
+    harness = harness_module.Harness(trace_id="trace-in-flight")
+    messages = [{"role": "user", "content": "Which diseases?"}]
+    bound = harness.call_cost_bound_usd("synth", messages)
+    cap = bound * 1.5
+
+    cost_control.check_per_query_cap(
+        harness, "trace-in-flight", "synth", query_cap_usd=cap, messages=messages
+    )
+    first = asyncio.ensure_future(harness.call_tier("synth", messages))
+    await asyncio.sleep(0)
+    assert harness.in_flight_usd("trace-in-flight") == pytest.approx(bound)
+    with pytest.raises(cost_control.QueryCapExceededError):
+        cost_control.check_per_query_cap(
+            harness, "trace-in-flight", "synth", query_cap_usd=cap, messages=messages
+        )
+    release.set()
+    await first
+    assert harness.in_flight_usd("trace-in-flight") == 0.0
+
+
+@pytest.mark.asyncio
+async def test_a_call_is_checked_on_the_prompt_it_actually_sends(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A writer prompt far above the 23,000-token profile is priced on its
+    own size: at Opus's price, 240,000 characters of prompt cannot fit 25
+    cents with its output ceiling, so the call is never sent, although the
+    profile alone ($0.172) would have admitted it. Mutation that turns this
+    red: drop `messages` from `_dispatch_tier_call`'s cap check."""
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "0.25")
+    calls = _models(monkeypatch, price=OPUS_PRICE)
+    harness = harness_module.Harness(trace_id="trace-big-prompt")
+    messages = [{"role": "user", "content": "BRCA1 record. " * 17_000}]
+
+    with pytest.raises(cost_control.QueryCapExceededError):
+        await graph_module._dispatch_tier_call(
+            harness, "trace-big-prompt", "synth", "write", messages, budget_s=5.0
+        )
+    assert calls == [], calls

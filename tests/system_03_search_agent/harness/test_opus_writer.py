@@ -245,16 +245,28 @@ def test_the_pre_flight_estimate_prices_an_opus_writer_call_at_opus_price(
 ) -> None:
     harness = _opus_harness(monkeypatch, 0.0)
     estimate = cost_control.estimate_call_cost_usd("synth", harness.price_per_token("synth"))
-    # 23,000 prompt and 2,000 output tokens at Opus's price: above every one
-    # of the bench's 78 Opus writer calls (largest: 22,839 and 1,869).
-    assert estimate == pytest.approx(23_000 * _OPUS_INPUT_PRICE + 2_000 * _OPUS_OUTPUT_PRICE)
+    # Without the prompt in hand: 23,000 prompt tokens, above every one of
+    # the bench's 78 Opus writer prompts (largest 22,839), and the tier's
+    # whole 4,000-token output ceiling, the most the call can write
+    # (fix round, F-8.7-J04).
+    assert estimate == pytest.approx(
+        23_000 * _OPUS_INPUT_PRICE
+        + harness_module._TIER_MAX_TOKENS["synth"] * _OPUS_OUTPUT_PRICE
+    )
     assert estimate > cost_control.estimate_call_cost_usd("synth"), "above today's static figure"
 
 
 def test_a_normal_opus_question_fits_the_owners_cap(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The first writer call, then the repair after a median and after a p90
-    first call, are all admitted at the owner's cap. At 0.10 the first call
-    is refused."""
+    """The first writer call is admitted at the owner's cap. At 0.10 it is
+    refused.
+
+    Fix round, F-8.7-J04: the check now prices a call's whole output
+    ceiling, so it is a bound. Priced so without its prompt, a second
+    writer call after a median first one needs $0.172 of room and does not
+    fit 25 cents; a repair is admitted only when its own prompt's bound
+    fits (`core.graph._dispatch_tier_call` checks every call on its
+    prompt). This arm pins that trade-off so a change to the writer's
+    output ceiling shows up here."""
     first = _opus_harness(monkeypatch, _LARGEST_NON_WRITER_SPEND_USD)
     cost_control.check_per_query_cap(
         first, "trace-cap", "synth", query_cap_usd=_OWNER_APPROVED_CAP_USD
@@ -263,28 +275,25 @@ def test_a_normal_opus_question_fits_the_owners_cap(monkeypatch: pytest.MonkeyPa
     after_median = _opus_harness(
         monkeypatch, _LARGEST_NON_WRITER_SPEND_USD + _MEDIAN_WRITER_CALL_USD
     )
-    cost_control.check_per_query_cap(
-        after_median, "trace-cap", "synth", query_cap_usd=_OWNER_APPROVED_CAP_USD
-    )
-
-    after_p90 = _opus_harness(monkeypatch, _LARGEST_NON_WRITER_SPEND_USD + _P90_WRITER_CALL_USD)
-    cost_control.check_per_query_cap(
-        after_p90, "trace-cap", "synth", query_cap_usd=_OWNER_APPROVED_CAP_USD
-    )
+    with pytest.raises(cost_control.QueryCapExceededError):
+        cost_control.check_per_query_cap(
+            after_median, "trace-cap", "synth", query_cap_usd=_OWNER_APPROVED_CAP_USD
+        )
 
 
 def test_an_opus_call_that_would_cross_the_cap_is_refused_before_it_is_sent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """$0.13 spent plus one Opus writer call's bound ($0.132) passes 25
-    cents, so the call is never sent. Under the static estimate ($0.025)
-    it was admitted, and the question could end near $0.26."""
+    """$0.13 spent plus one Opus writer call's bound ($0.172: 23,000 prompt
+    tokens and the 4,000-token output ceiling) passes 25 cents, so the call
+    is never sent. Under the static estimate ($0.025) it was admitted, and
+    the question could end near $0.30."""
     harness = _opus_harness(monkeypatch, 0.13)
     with pytest.raises(cost_control.QueryCapExceededError) as caught:
         cost_control.check_per_query_cap(
             harness, "trace-cap", "synth", query_cap_usd=_OWNER_APPROVED_CAP_USD
         )
-    assert caught.value.estimated_call_cost_usd == pytest.approx(0.132)
+    assert caught.value.estimated_call_cost_usd == pytest.approx(0.172)
 
 
 def test_a_ten_cent_cap_refuses_every_opus_writer_call_and_logs_an_error(
