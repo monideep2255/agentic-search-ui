@@ -432,9 +432,13 @@ export function useRunView(events: AgentEvent[]): RunView {
      * that whole gap and "is writing the answer" never appeared once.
      *
      * So Write is entered as soon as the run's own events say Act is over:
-     *   - every tool call the run opened (by `tool_start`, or by the plan's
-     *     own `tool_calls`) has a matching `tool_result`, and at least one
-     *     result arrived; or
+     *   - every tool call that has STARTED (a `tool_start`) has a matching
+     *     `tool_result`, and at least one result arrived. A planned call
+     *     that never started, because act_node skipped it, does not hold Act
+     *     open. This rests on the backend writing every `tool_start` of a
+     *     run before any `tool_result`, pinned by
+     *     test_every_tool_start_comes_before_the_first_tool_result in
+     *     tests/system_03_search_agent/core/test_breadth_wiring.py; or
      *   - the plan selected no tool and none started (a no-data refusal
      *     path, where Write follows Plan directly).
      * A later `tool_start` reopens Act, which is the honest reading.
