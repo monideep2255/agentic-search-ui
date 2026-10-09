@@ -285,9 +285,12 @@ async def _run_jev_pick(
 ) -> JevResult:
     """Jev's pick, cap-checked first exactly like the guard call above.
 
-    Charges Jev's reported cost whether or not the reply is usable: a
-    reply that came back unusable carries its cost on
-    `JevCallError.billed_cost_usd` (fix round, F-8.6-J10). Raises
+    Charges every reply that came back, usable or not, what
+    `jev_client.jev_charge_usd` fixes (the owner's rule of 2026-09-29, step
+    3a of the guardrail design): its stated cost, the ceiling when it
+    states more, the floor when it states $0 or nothing or is an error
+    status, on `JevResult.cost_usd` or `JevCallError.billed_cost_usd`; a
+    timeout is charged nothing (fix round, F-8.6-J10). Raises
     JevCallError (from `jev_client.call_jev`) or
     `cost_control.QueryCapExceededError` on any failure; `_jev_attempt`
     catches both.
@@ -312,10 +315,10 @@ async def _run_jev_pick(
             criteria=criteria,
         )
     except JevCallError as exc:
-        # A reply that came back but could not be used (malformed, an option
-        # outside the set, a cost above the ceiling) was still billed: its
-        # reported cost is charged, never zero, and the cost cap then applies
-        # to the guard fallback as to any call (fix round, F-8.6-J10).
+        # A reply that came back but could not be used, or an error status,
+        # was still billed: the charge `jev_client` fixed is charged, never
+        # zero, and the cost cap then applies to the guard fallback as to any
+        # call (fix round, F-8.6-J10; step 3a, F-84-J04, F-72-V03).
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
         raise

@@ -637,9 +637,12 @@ async def _ask_jev(
     stands in. The cap check is made once, before any call is sent, and
     leaves room for every call at the most it can be charged
     (`MAX_JEV_COST_USD` each), since none is charged until it returns.
-    Every call that comes back is charged, a reply that came back unusable
-    its reported cost too (`JevCallError.billed_cost_usd`), and the check
-    waits for all of them.
+    Every reply that comes back is charged what `jev_client.jev_charge_usd`
+    fixes, usable or not (the owner's rule of 2026-09-29): its stated cost,
+    the ceiling when it states more, the `JEV_FLOOR_COST_USD` floor when it
+    states $0 or nothing, the floor for an error status, nothing for a
+    timeout (`JevResult.cost_usd`, `JevCallError.billed_cost_usd`). The
+    check waits for all of them.
 
     A sentence is approved only when its item answer approves it and every
     one of its pairs was asked and answered "no" (`_jev_approves`). Any
@@ -653,7 +656,7 @@ async def _ask_jev(
     # Card 99: the calls run at the same time and none is charged until it
     # returns, so the cap must hold for all of them at once, at the most
     # each can be charged: `MAX_JEV_COST_USD`, the ceiling the client bills
-    # for a reply it cannot read (A-99-05, J-99-07). One check then reserves
+    # a reply stating more (A-99-05, J-99-07). One check then reserves
     # (calls x ceiling): `check_per_query_cap` adds the guard estimate to the
     # running cost, so the cap it is given is lowered to leave exactly that
     # much room. A query too close to its cap for every call approves
@@ -679,8 +682,9 @@ async def _ask_jev(
                 timeout_s=timeout_s,
             )
         except JevCallError as exc:
-            # An unusable reply was still billed: its reported cost is charged,
-            # never zero, even though it approves nothing (fix round, F-8.6-J10).
+            # An unusable reply or an error status was still billed: the
+            # charge `jev_client` fixed is charged, never zero, even though it
+            # approves nothing (F-8.6-J10; step 3a, F-84-J04, F-72-V03, J11).
             if exc.billed_cost_usd:
                 harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
             raise

@@ -1,104 +1,105 @@
-"""F-8.6-V01 and V03: every Jev charge lands between $0 and
-`MAX_JEV_COST_USD`, inclusive.
+"""Step 3a of the guardrail design (cards 84 and 72): what one Jev reply is
+charged, as the pure functions `_stated_cost_usd` and `jev_charge_usd` fix
+it, by the product owner's rule of 2026-09-29.
 
-`test_jev_client.py` already exercises the clamp through `call_jev` and
-`call_jev_batch` end to end (the parametrized cost arms of
-`test_a_cost_no_decision_could_have_is_a_malformed_reply`,
-`test_an_unusable_reply_still_reports_what_it_cost`,
-`test_a_batch_cost_no_call_could_have_is_malformed` and
-`test_an_unusable_batch_reply_still_reports_what_it_cost`, all updated for
-this ticket). This file is the unit-level proof, directly against
-`_reported_cost_usd` and `_cost_ceiling_error`, the two of the three fixed
-sites that are pure functions (the third, the reply's `answers` block once
-parsed, is bounded by `JevResult.cost_usd`'s own Pydantic `le` constraint
-and needs no separate test here).
+| What the reply states | Charged |
+|---|---|
+| a cost above $0 and at most `MAX_JEV_COST_USD` | that cost |
+| a cost above `MAX_JEV_COST_USD`, infinity and a number too large for a float included | `MAX_JEV_COST_USD` (F-84-A06) |
+| $0, no cost, or no amount (not a number, negative, a boolean, `NaN`) | `JEV_FLOOR_COST_USD` (F-72-J02, A03) |
 
-MUTATION PROOF for each arm below: reverting `_reported_cost_usd`'s
-invalid branch to `return 0.0` (F-8.6-V03), or `_cost_ceiling_error` to
-`billed_cost_usd=cost_usd` (F-8.6-V01), turns the matching arm red. Both
-were run by hand and reverted; see the builder's report.
+Usable or not makes no difference (F-84-J04); `test_jev_followup_costs.py`
+proves that end to end through `call_jev`, `call_jev_batch` and the three
+charge sites, with the error statuses and the timeout.
+
+MUTATION PROOF: `jev_charge_usd` returning the floor above the ceiling (the
+parked branch's F-84-A06) turns `test_more_stated_is_never_less_charged`
+red; returning the stated $0 turns `test_a_stated_zero_is_charged_the_floor`
+red; returning `MAX_JEV_COST_USD` for no amount (develop's rule) turns
+`test_no_amount_is_charged_the_floor` red.
 """
+
 from __future__ import annotations
 
+import itertools
 import math
 
 import pytest
 
 from system_03_search_agent.harness.jev_client import (
+    JEV_FLOOR_COST_USD,
     MAX_JEV_COST_USD,
-    _cost_ceiling_error,
-    _reported_cost_usd,
+    _stated_cost_usd,
+    jev_charge_usd,
 )
 
 
-class TestReportedCostUsd:
-    """`_reported_cost_usd`: the source of `billed_usd` at two of the three
-    fixed sites (the single-decision and batch malformed-reply errors)."""
-
-    @pytest.mark.parametrize(
-        "raw",
-        [float("nan"), float("inf"), -0.1, True, "not a number", 10**400],
-        ids=["nan", "infinity", "negative", "a bool", "a string", "an overflowing int"],
-    )
-    def test_a_non_amount_is_charged_the_ceiling_never_zero(self, raw: object) -> None:
-        assert _reported_cost_usd({"usage": {"cost": raw}}, "test") == MAX_JEV_COST_USD
-
-    def test_no_cost_field_at_all_is_charged_the_ceiling(self) -> None:
-        assert _reported_cost_usd({"usage": {}}, "test") == MAX_JEV_COST_USD
-        assert _reported_cost_usd({}, "test") == MAX_JEV_COST_USD
-        assert _reported_cost_usd("not even a dict", "test") == MAX_JEV_COST_USD
-
-    def test_a_well_formed_cost_at_or_under_the_ceiling_is_returned_exactly(self) -> None:
-        assert _reported_cost_usd({"usage": {"cost": 0.0}}, "test") == 0.0
-        assert _reported_cost_usd({"usage": {"cost": 0.005}}, "test") == pytest.approx(0.005)
-        assert _reported_cost_usd({"usage": {"cost": MAX_JEV_COST_USD}}, "test") == pytest.approx(
-            MAX_JEV_COST_USD
-        )
-
-    def test_a_well_formed_cost_above_the_ceiling_is_still_returned_as_reported(self) -> None:
-        """`_reported_cost_usd` itself does not clamp an over-ceiling but
-        otherwise valid amount; `_cost_ceiling_error`, the caller that
-        raises on it, is the one that clamps (below)."""
-        assert _reported_cost_usd({"usage": {"cost": 12.5}}, "test") == pytest.approx(12.5)
+def _charge(raw: object) -> float:
+    return jev_charge_usd(_stated_cost_usd({"usage": {"cost": raw}}))
 
 
-class TestCostCeilingError:
-    """`_cost_ceiling_error`: the third fixed site, called by both
-    `call_jev` and `call_jev_batch` once a finite reported cost exceeds the
-    ceiling."""
+def test_the_constants_are_the_owners() -> None:
+    assert JEV_FLOOR_COST_USD == 0.0001
+    assert MAX_JEV_COST_USD == 0.01
 
-    @pytest.mark.parametrize("reported", [0.011, 0.5, 12.5, 999.9])
-    def test_billed_cost_usd_is_always_the_ceiling_never_the_reported_figure(
-        self, reported: float
-    ) -> None:
-        err = _cost_ceiling_error("test", reported, "fall back")
-        assert err.billed_cost_usd == pytest.approx(MAX_JEV_COST_USD)
-        assert err.reason == "malformed_reply"
 
-    def test_every_charge_this_module_can_produce_stays_in_bounds(self) -> None:
-        """The property acceptance item 1 actually asks for: no combination
-        of `_reported_cost_usd` and `_cost_ceiling_error` can produce a
-        `billed_cost_usd` outside `[0, MAX_JEV_COST_USD]`."""
-        raws: list[object] = [
-            float("nan"),
-            float("-inf"),
-            -1.0,
-            0.0,
-            0.005,
-            MAX_JEV_COST_USD,
-            0.5,
-            999.9,
-            10**400,
-            "abc",
-            True,
-            None,
-        ]
-        for raw in raws:
-            reported = _reported_cost_usd({"usage": {"cost": raw}}, "test")
-            assert math.isfinite(reported)
-            assert 0.0 <= reported
-            if reported > MAX_JEV_COST_USD:
-                billed = _cost_ceiling_error("test", reported, "fall back").billed_cost_usd
-            else:
-                billed = reported
-            assert 0.0 <= billed <= MAX_JEV_COST_USD, (raw, billed)
+@pytest.mark.parametrize("raw", [0.0000148, 0.00002, 0.005, MAX_JEV_COST_USD, "0.003"])
+def test_a_sensible_stated_cost_is_charged_as_stated(raw: object) -> None:
+    assert _charge(raw) == pytest.approx(float(raw))  # type: ignore[arg-type]
+
+
+def test_a_stated_zero_is_charged_the_floor() -> None:
+    """F-72-J02: a usable reply stating $0 was charged $0, invisible to every cap."""
+    assert _charge(0.0) == JEV_FLOOR_COST_USD
+    assert _charge(0) == JEV_FLOOR_COST_USD
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [float("nan"), -0.1, -(10**400), True, False, "not a number", None, [], {}],
+    ids=["nan", "negative", "a negative overflowing int", "true", "false", "a string", "null", "a list", "a map"],
+)
+def test_no_amount_is_charged_the_floor(raw: object) -> None:
+    """F-72-A03: develop charged the one-cent ceiling here, so a drift in
+    Jev's reply shape cost about $0.07 a question."""
+    assert _charge(raw) == JEV_FLOOR_COST_USD
+
+
+@pytest.mark.parametrize("payload", [{"usage": {}}, {}, "not even a dict", None, {"usage": None}])
+def test_no_cost_field_is_charged_the_floor(payload: object) -> None:
+    assert _stated_cost_usd(payload) is None
+    assert jev_charge_usd(_stated_cost_usd(payload)) == JEV_FLOOR_COST_USD
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [0.0100001, 0.05, 12.5, float("inf"), 10**400, "Infinity"],
+    ids=["just above", "five cents", "a units slip", "infinity", "an overflowing int", "the string Infinity"],
+)
+def test_a_stated_cost_above_the_ceiling_is_charged_the_ceiling(raw: object) -> None:
+    """F-84-A06: the parked branch charged these the floor, so the more a
+    reply said it cost, the less was counted. F-8.6-V01: never the stated
+    figure either."""
+    assert _charge(raw) == MAX_JEV_COST_USD
+
+
+def test_more_stated_is_never_less_charged() -> None:
+    """The charge never falls as the stated cost rises, from the first cent
+    above $0 to infinity (F-84-A06)."""
+    stated = [1e-9, 0.00001, 0.0001, 0.005, 0.0099, MAX_JEV_COST_USD, 0.0100001, 0.05, 1.0, 1e9, math.inf]
+    charges = [jev_charge_usd(value) for value in stated]
+    for lower, higher in itertools.pairwise(charges):
+        assert higher >= lower, charges
+
+
+def test_every_charge_is_above_zero_and_at_most_the_ceiling() -> None:
+    """Never $0 for a reply that came back, never above the ceiling. A stated
+    cost below the floor but above $0 is charged as stated, the owner's
+    words."""
+    raws: list[object] = [
+        float("nan"), float("-inf"), float("inf"), -1.0, 0.0, 1e-12, 0.005, MAX_JEV_COST_USD,
+        0.5, 999.9, 10**400, -(10**400), "abc", "0.002", True, None,
+    ]
+    for raw in raws:
+        charged = _charge(raw)
+        assert 0.0 < charged <= MAX_JEV_COST_USD, (raw, charged)
