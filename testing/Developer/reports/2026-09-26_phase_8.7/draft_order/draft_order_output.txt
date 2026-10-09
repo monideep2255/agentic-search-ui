@@ -1,0 +1,29 @@
+runs: 54
+repair fired (two writer calls): 24; one writer call: 30
+repair shipped (shipped_draft == 1): 7
+first draft withdrawn-alone rescued? runs whose first draft grounded nothing and repair shipped: 7
+fired runs: median t2/t1 = 1.378; median gap between draft 1's end and draft 2's start (grounding and sentence check) = 0.327 s; median c2/c1 = 1.146
+sequential (today) write step: median 14.19 s, p90 26.59, max 30.08, mean 16.60
+side by side, (a) ratio estimate: median 14.32 s, p90 17.87, max 28.00, mean 14.46
+side by side, (b) own-question estimate: median 14.32 s, p90 18.78, max 28.00, mean 14.51
+sequential metered $ per question: median 0.0875 $, p90 0.1877, max 0.2132, mean 0.1258
+side by side metered $ per question: median 0.1760 $, p90 0.1895, max 0.2132, mean 0.1774
+sequential OpenRouter $ per question: median 0.0875 $, p90 0.1875, max 0.2130, mean 0.1257
+side by side OpenRouter $ per question: median 0.1760 $, p90 0.1893, max 0.2130, mean 0.1773
+side by side runs over $0.25 metered: 0 of 54
+sequential runs over $0.25 metered: 0 of 54
+side by side runs over 20 s write step, (a): 3; (b): 3; sequential: 21
+(a) per run: faster 24, slower 30, same 0
+(b) per run: faster 24, slower 30, same 0
+side by side, (c) second draft dropped when not needed: median 11.66 s, p90 16.25, max 20.35, mean 12.20
+(c) over 20 s: 1
+(c) seconds saved on the fired runs: median 10.15 s, p90 11.45, max 12.35, mean 9.91
+extra metered $ per question, side by side: median 0.0855 $, p90 0.0988, max 0.1019, mean 0.0516
+golden run of 150 questions at the mean: sequential $18.86, side by side $26.60
+questions by runs fired (of 3): [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3]
+sequential write step sorted: [7.5, 8.1, 8.2, 8.5, 8.6, 8.7, 8.8, 9.2, 9.2, 9.3, 10.3, 10.4, 10.4, 10.8, 10.9, 11.0, 11.0, 11.1, 11.3, 11.5, 11.7, 11.9, 11.9, 11.9, 12.0, 12.0, 13.2, 15.2, 15.4, 17.1, 18.8, 19.0, 19.7, 20.3, 21.1, 21.1, 21.2, 21.4, 21.8, 22.7, 23.1, 23.2, 23.3, 23.5, 24.2, 24.5, 25.6, 26.4, 26.7, 27.1, 27.1, 27.9, 29.4, 30.1]
+(c) write step sorted:        [7.5, 8.1, 8.2, 8.5, 8.6, 8.7, 8.8, 9.2, 9.2, 9.3, 9.6, 10.3, 10.3, 10.4, 10.4, 10.5, 10.8, 10.9, 10.9, 11.0, 11.0, 11.1, 11.1, 11.3, 11.4, 11.5, 11.7, 11.7, 11.7, 11.9, 11.9, 11.9, 12.0, 12.0, 12.7, 12.9, 12.9, 13.1, 13.1, 13.2, 13.3, 14.3, 14.7, 14.9, 15.2, 15.4, 15.5, 15.7, 16.5, 17.1, 17.6, 18.0, 19.1, 20.3]
+side by side when predicted, (d): median 11.66 s, p90 16.25, max 29.41, mean 12.39
+(d) over 20 s: 2; U empty runs: 28
+(d) metered $ per question: median 0.1222 $, p90 0.1877, max 0.2132, mean 0.1302
+(d) runs over $0.25: 0; golden run at the mean: $19.53

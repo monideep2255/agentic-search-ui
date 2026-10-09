@@ -57,6 +57,7 @@ simpler to reason about, test, and explain to an end user ("resets at
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 import uuid
@@ -68,8 +69,16 @@ from sqlalchemy.orm import Session
 
 from system_03_search_agent.contracts.events import CostPayload, DonePayload, Event
 from system_03_search_agent.data.models import Interaction
-from system_03_search_agent.harness.harness import Harness
+from system_03_search_agent.harness.harness import (
+    _TIER_MAX_TOKENS,
+    Harness,
+    HarnessCallError,
+    Message,
+)
+from system_03_search_agent.harness.jev_client import MAX_JEV_COST_USD
 from system_03_search_agent.harness.tiers import Tier, UnknownTierError
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Environment-configured cap values. No default, no silent fallback: a
@@ -229,7 +238,14 @@ def anon_daily_source_share(daily_cap: int) -> int:
 
 
 def per_query_cost_cap_usd() -> float:
-    """Return PER_QUERY_COST_CAP_USD (Section 19.1's $0.10 starter value)."""
+    """Return PER_QUERY_COST_CAP_USD (Section 19.1's $0.10 starter value).
+
+    A deployment whose writer is Opus 5.5 needs 0.25, the owner's figure
+    (DECISIONS.md 2026-09-27; build phase 8.7): one Opus writer call is
+    estimated at $0.132, so a 10-cent cap stops every question at Write.
+    The value stays an environment setting with no code default, since a
+    missing cap must raise rather than be invented (F-2.0-09).
+    """
     return _read_float_env("PER_QUERY_COST_CAP_USD")
 
 
@@ -339,14 +355,62 @@ _TYPICAL_TOKEN_PROFILE: dict[Tier, tuple[int, int]] = {
 # than expected.
 _CONSERVATIVE_PRICE_PER_TOKEN_USD = 5e-6
 
+# Build phase 8.7, T-8.7-02: the PROMPT tokens one call is priced at when the
+# model that will answer it is known but its prompt is not, at that model's
+# real price. The static figure above stopped being conservative the day the
+# writer became Opus 5.5 ($4 and $20 per million tokens).
+#
+# Fix round, F-8.7-J04 and F-8.7-A06: the output side is no longer a profile
+# figure. Every estimate prices output at the tier's own ceiling
+# (`harness._TIER_MAX_TOKENS`), the most the provider can write, and every
+# call the loop sends through `core.graph._dispatch_tier_call` is checked on
+# its actual prompt instead (`Harness.call_cost_bound_usd`), so the check is a
+# bound on that call and not a guess. The prompt profile below is used only
+# for a check made without the prompt in hand. Synth's 23,000 is above every
+# writer prompt writer bench 3 measured (largest 22,839).
+#
+# Guard and plan keep the typical prompt figure. Their real-price estimate
+# is used only where it exceeds the static one (see
+# `estimate_call_cost_usd`).
+_PRICED_TOKEN_PROFILE: dict[Tier, tuple[int, int]] = {
+    "guard": (500, 100),
+    "plan": (2000, 500),
+    "synth": (23_000, 2_000),
+}
 
-def estimate_call_cost_usd(tier: Tier) -> float:
-    """Return a conservative, static USD estimate for one `tier` call.
+# A guard-tier check made without a prompt may be a Jev call (`harness.decide`
+# checks Jev under "guard", having no tier of its own), and a Jev reply is
+# billed at most `MAX_JEV_COST_USD`, which is above the guard profile at any
+# price develop runs. So a guard estimate is never below it (F-8.7-A06).
+_GUARD_ESTIMATE_FLOOR_USD = MAX_JEV_COST_USD
+
+
+def estimate_call_cost_usd(
+    tier: Tier, price_per_token: tuple[float, float] | None = None
+) -> float:
+    """Return a conservative USD estimate for one `tier` call.
 
     Used only to decide, before any call is dispatched, whether the next
     call could plausibly push a query over its per-query cap. Not the
     harness's real metered cost, which is computed after the call returns
     from actual token usage and the resolved model's real OpenRouter price.
+
+    Two figures, and the larger one is the estimate (build phase 8.7,
+    T-8.7-02):
+
+    - The static one: the tier's typical token profile at the flat
+      conservative price, exactly as before.
+    - When `price_per_token` is given, the (input, output) USD per token of
+      the model that will answer: `_PRICED_TOKEN_PROFILE`'s prompt at the
+      input price plus the tier's output ceiling at the output price
+      (F-8.7-J04).
+
+    A guard estimate is never below `MAX_JEV_COST_USD`, since a guard-tier
+    check may be for a Jev call (F-8.7-A06).
+
+    So the estimate never falls below what it was, and rises only for a
+    model whose real price makes a call cost more than the static figure,
+    which today is Opus 5.5 on the synth tier.
 
     Raises:
         UnknownTierError: for a tier outside {"guard", "plan", "synth"}.
@@ -357,7 +421,91 @@ def estimate_call_cost_usd(tier: Tier) -> float:
             f"unknown tier {tier!r}: expected one of {sorted(_TYPICAL_TOKEN_PROFILE)}"
         )
     prompt_tokens, completion_tokens = profile
-    return (prompt_tokens + completion_tokens) * _CONSERVATIVE_PRICE_PER_TOKEN_USD
+    static = (prompt_tokens + completion_tokens) * _CONSERVATIVE_PRICE_PER_TOKEN_USD
+    if tier == "guard":
+        static = max(static, _GUARD_ESTIMATE_FLOOR_USD)
+    if price_per_token is None:
+        return static
+    input_price, output_price = price_per_token
+    priced_prompt, _ = _PRICED_TOKEN_PROFILE[tier]
+    return max(static, priced_prompt * input_price + _TIER_MAX_TOKENS[tier] * output_price)
+
+
+def _next_call_price(harness: Harness, tier: Tier) -> tuple[float, float] | None:
+    """The real price of the model that will answer the next `tier` call,
+    or None when it cannot be known here.
+
+    None in two cases, each of which leaves the estimate at today's static
+    figure and changes no failure:
+
+    - The model is priced by neither litellm's map nor the fallback table.
+      `call_tier` refuses that call itself before sending it, with its own
+      actionable message, exactly as before; raising a second error from
+      the cap check would change which step fails and how.
+    - The harness passed in has no `price_per_token`, as with the stand-in
+      harnesses some tool tests build.
+    """
+    price_of = getattr(harness, "price_per_token", None)
+    if price_of is None:
+        return None
+    try:
+        return price_of(tier)
+    except HarnessCallError:
+        return None
+
+
+def estimate_next_call_cost_usd(
+    harness: Harness,
+    tier: Tier,
+    *,
+    messages: list[Message] | None = None,
+    cache_prefix: str | None = None,
+    max_tokens: int | None = None,
+) -> float:
+    """The amount `check_per_query_cap` adds for the next `tier` call on
+    this question, never below the static figure.
+
+    With `messages` (the prompt the call will send, before `cache_prefix`
+    is put in front) and a harness that can price it, the bound of that
+    exact call (`Harness.call_cost_bound_usd`): the prompt counted, at the
+    input price, plus `max_tokens` (the tier's ceiling when None) at the
+    output price (F-8.7-J04, F-8.7-A06). Without them, the tier estimate
+    at the answering model's price (`estimate_call_cost_usd`).
+
+    Public for a caller that must price a call before it can be checked
+    (build phase 8.7, card 50): the Write step's second draft starts beside
+    the first, while the first is still in flight. The same computation as
+    the cap check's own, so the two can never price one call differently.
+
+    Raises:
+        UnknownTierError: for a tier outside {"guard", "plan", "synth"}.
+    """
+    estimate = estimate_call_cost_usd(tier, _next_call_price(harness, tier))
+    bound_of = getattr(harness, "call_cost_bound_usd", None)
+    if messages is None or bound_of is None:
+        return estimate
+    try:
+        bound = float(bound_of(tier, messages, cache_prefix=cache_prefix, max_tokens=max_tokens))
+    except HarnessCallError:
+        # Unpriced: `call_tier` refuses the call itself, as before.
+        return estimate
+    return max(estimate_call_cost_usd(tier), bound)
+
+
+def _in_flight_usd(harness: Harness, trace_id: str) -> float:
+    """The bound of `trace_id`'s calls already sent and not yet metered, or
+    0.0 for a stand-in harness that does not track them."""
+    in_flight_of = getattr(harness, "in_flight_usd", None)
+    if in_flight_of is None:
+        return 0.0
+    value = in_flight_of(trace_id)
+    return float(value) if isinstance(value, int | float) else 0.0
+
+
+def _model_for(harness: Harness, tier: Tier) -> str:
+    """The model id `tier` resolved to, for a log line only."""
+    model_of = getattr(harness, "model_for", None)
+    return str(model_of(tier)) if model_of is not None else "an unknown model"
 
 
 class QueryCapExceededError(RuntimeError):
@@ -391,6 +539,9 @@ def check_per_query_cap(
     tier: Tier,
     *,
     query_cap_usd: float | None = None,
+    messages: list[Message] | None = None,
+    cache_prefix: str | None = None,
+    max_tokens: int | None = None,
 ) -> None:
     """Pre-flight check: refuse to dispatch if the next `tier` call would exceed the cap.
 
@@ -399,6 +550,23 @@ def check_per_query_cap(
     `Harness.track_cost` already accumulates (never duplicated here), adds
     this tier's conservative estimated call cost, and refuses before any
     network attempt if the projected total would exceed the cap.
+
+    The estimate prices the call at the real price of the model this
+    question resolved for `tier`, never below today's static figure (build
+    phase 8.7, T-8.7-02; `estimate_call_cost_usd`). Given the call's
+    `messages`, `cache_prefix` and `max_tokens`, it is the bound of that
+    exact call: its prompt counted and its whole output ceiling, so a call
+    this check admits cannot carry the question past the cap (fix round,
+    F-8.7-J04, F-8.7-A06). Calls already sent and not yet metered are
+    added at their own bound (`Harness.in_flight_usd`), so two calls
+    running at once are never each admitted against a total that leaves
+    out the other.
+
+    A cap below the estimate of ONE call is a misconfiguration, not a cap
+    doing its job: every question stops at that call. It is logged as an
+    error naming the setting and the model, so a deployment that runs Opus
+    5.5 under the old 10-cent cap is caught on its first question rather
+    than read as a run of partial answers.
 
     Args:
         query_cap_usd: overrides PER_QUERY_COST_CAP_USD when given (mainly
@@ -411,9 +579,21 @@ def check_per_query_cap(
     """
     cap = per_query_cost_cap_usd() if query_cap_usd is None else query_cap_usd
     current = harness.get_query_cost_usd(trace_id)
-    estimated = estimate_call_cost_usd(tier)
-    projected = current + estimated
+    estimated = estimate_next_call_cost_usd(
+        harness, tier, messages=messages, cache_prefix=cache_prefix, max_tokens=max_tokens
+    )
+    projected = current + _in_flight_usd(harness, trace_id) + estimated
     if projected > cap:
+        if estimated > cap:
+            logger.error(
+                "PER_QUERY_COST_CAP_USD is %.4f, below the estimated cost of one "
+                "%s-tier call on %s (%.4f): every question stops at this call. "
+                "Raise PER_QUERY_COST_CAP_USD, or set a cheaper model for this tier",
+                cap,
+                tier,
+                _model_for(harness, tier),
+                estimated,
+            )
         raise QueryCapExceededError(
             f"dispatching one more {tier!r} call for query {trace_id!r} would "
             "project its running cost past the per-query cap; stop issuing "

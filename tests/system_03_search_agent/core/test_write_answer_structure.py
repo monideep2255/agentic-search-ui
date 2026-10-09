@@ -43,7 +43,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from system_03_search_agent.contracts.query import Query
+from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.contracts.token_order import in_reading_order
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
@@ -139,6 +140,9 @@ def _state(depth: str, rows=None) -> dict[str, object]:
     return {
         "query": query,
         "harness": harness_module.Harness(trace_id=query.trace_id),
+        # The web bundle built with build phase 8.7 asks for `placement`
+        # (fix round, F-8.7-A14), so the listing leaves first.
+        "context": RequestContext(surface="web_ui", reads_placement=True),
         "seq": 0,
         "start_monotonic": time.monotonic(),
         "findings": [finding],
@@ -174,6 +178,26 @@ def _tokens(result) -> list[dict]:
     return [e.payload for e in result["events"] if e.type == "token"]
 
 
+def _read_tokens(result) -> list[dict]:
+    """The tokens in reading order, as every surface lays them out.
+
+    Build phase 8.7 sends the record listing before the summary, each token
+    carrying `placement`. A reader sees the summary above the listing
+    (`contracts/token_order.py`), so an arm about the answer's STRUCTURE
+    reads it that way; `_tokens` keeps the arrival order for an arm about
+    the stream.
+    """
+    return in_reading_order(_tokens(result))
+
+
+def _listing_arrived_first(result) -> bool:
+    """Whether the first token on the wire was placed in the listing: the
+    early send this phase turns on, so a reading-order assertion is not
+    passing on a stream that already arrived in reading order."""
+    tokens = _tokens(result)
+    return bool(tokens) and tokens[0].get("placement") == "listing"
+
+
 def _sources(result) -> list[str]:
     return sorted(e.payload["source_id"] for e in result["events"] if e.type == "citation")
 
@@ -196,9 +220,19 @@ async def test_researcher_carries_supported_headings_paragraphs_and_a_listing(mo
     language. The product owner's rule 2 gives Researcher the records
     grouped by type as a table with an identifier column, so they are now
     rows of a "Disease | Identifier" table, each naming its own MedGen
-    record. The headings, the paragraphs and the markers are unchanged."""
+    record. The headings, the paragraphs and the markers are unchanged.
+
+    Build phase 8.7: the listing now arrives before the summary, so the
+    order is asserted in reading order (summary above listing), the order
+    every surface shows; the populate-check proves the arrival order really
+    differs."""
     _install(monkeypatch, _structured_reply)
-    tokens = _tokens(await graph_module.write_node(_state("researcher")))
+    result = await graph_module.write_node(_state("researcher"))
+    assert _listing_arrived_first(result), (
+        "populate-check failed: the listing did not arrive first, so the "
+        "reading order below is not doing any work."
+    )
+    tokens = _read_tokens(result)
     kinds = [t["kind"] for t in tokens]
 
     headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
@@ -248,11 +282,21 @@ async def test_plain_language_lists_its_records_in_code_and_ends_on_the_note(mon
     "the structure is the same in every mode", which this arm pinned by
     asserting the Researcher heading "Disease records found" here too. Rule
     2 gives Plain language ONE list under the product owner's own heading,
-    "Where this answer comes from", titles only."""
+    "Where this answer comes from", titles only.
+
+    Build phase 8.7: read in reading order, the order every surface shows.
+    The note follows the listing there, so it carries `placement`
+    "listing": it is the last thing under the records, not part of the
+    summary slot above them."""
     _install(
         monkeypatch, lambda lines: f"{lines[1]} [1].\n\n## Disease associations\n{lines[2]} [2]."
     )
-    tokens = _tokens(await graph_module.write_node(_state("plain_language")))
+    result = await graph_module.write_node(_state("plain_language"))
+    assert _listing_arrived_first(result), (
+        "populate-check failed: the listing did not arrive first, so the "
+        "reading order below is not doing any work."
+    )
+    tokens = _read_tokens(result)
     headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
     assert "Disease associations" not in headings, headings
     assert headings == ["Where this answer comes from"], headings
@@ -264,6 +308,7 @@ async def test_plain_language_lists_its_records_in_code_and_ends_on_the_note(mon
         "kind": "note",
         "cells": None,
         "emphasis": None,
+        "placement": "listing",
     }
 
 
@@ -1798,7 +1843,12 @@ def test_a_group_of_only_placeholder_rows_gets_no_disease_column() -> None:
 async def test_the_command_line_prints_every_citation_of_a_merged_row(monkeypatch) -> None:
     """A-103-03: the command line prints each row's text, not its chips, so
     a merged row's text carries every grounded sentence and its number.
-    Red before the fix round: only '[1]' was printed for the BRCA1 row."""
+    Red before the fix round: only '[1]' was printed for the BRCA1 row.
+
+    Build phase 8.7: the listing now arrives before the summary, and the
+    command line holds it until the run's `done` so the summary prints
+    above it. The run's whole write stream, its `done` included, is fed
+    in, as the command line receives it."""
     import io
 
     from system_03_search_agent.adapters.cli.render import Renderer
@@ -1817,10 +1867,18 @@ async def test_the_command_line_prints_every_citation_of_a_merged_row(monkeypatc
     }
     out, err = io.StringIO(), io.StringIO()
     renderer = Renderer(out, err, operator=False)
+    assert any(event.type == "done" for event in result["events"]), (
+        "populate-check failed: the run sent no `done`, so the held listing "
+        "would never print."
+    )
     for event in result["events"]:
-        if event.type in ("token", "citation"):
+        if event.type in ("token", "citation", "done"):
             renderer.handle(event)
     printed = out.getvalue()
+    # The summary prints above the listing, the reading order.
+    assert printed.index("Found 1 gene record") < printed.index("Gene record NCBIGene:672 [1]"), (
+        printed
+    )
     for marker in table_rows[0]["marker_ids"]:
         assert f"[{numbers[marker]}]" in table_rows[0]["text"], table_rows[0]["text"]
         assert f"[{numbers[marker]}]" in printed, printed

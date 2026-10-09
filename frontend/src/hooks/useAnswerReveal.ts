@@ -1,66 +1,46 @@
 /**
- * Reveal a burst of answer sentences one at a time, 2026-09-14.
+ * What the screen shows of the answer, and what Stop leaves on it.
  *
- * WHY THIS EXISTS. Measured on develop (6 live runs, 28 frames at 250ms): the
- * write step holds every event until it returns, so an answer's 14 to 33
- * `token` events land within 217ms of each other, usually together with
- * `done`. Rendered as they arrive, the answer appeared all at once and the
- * approved "writing" state (`design/Streaming.dc.html`) was never seen.
+ * BUILD PHASE 8.7, T-8.7-03 (2026-09-27, card 50): THE SCREEN FOLLOWS THE
+ * STREAM. This hook used to hold the answer back: the first sentence waited
+ * until the writing banner had shown for 1.5 seconds, then one sentence per
+ * 110 ms, and the pacing ahead of it (`usePacedEvents`) held arrived text
+ * behind the helper narrative for up to 13 seconds on develop. The owner's
+ * acceptance for this phase is that nothing that has arrived is held back,
+ * so every sentence, record and citation is shown in the render it arrives
+ * in. The writing state is still seen, because it is now real: the records
+ * arrive the moment the searches end and the writing mark stands above them
+ * while the summary is written (`AnswerScreen`'s `WritingMark`).
  *
- * WHAT IT DOES, and nothing else. It sits between `useRunView` and every
- * consumer in `App`, and returns the SAME view with fewer claims while a
- * reveal is in progress:
+ * WHAT IS LEFT HERE is Stop, card 58's rule plus the owner's answer of
+ * 2026-09-27, in one function, `whatStopLeavesOnScreen`:
  *
- *   - The first sentence waits until the Write state has been on screen for
- *     `minBannerMs`, so a fast write still reads as writing.
- *   - Then one sentence per `perItemMs` while the run is live, or per
- *     `afterDoneMs` once `done` has arrived, so a finished answer catches up
- *     quickly.
- *   - Until the last sentence is shown, the view reports `landed: false` and
- *     `activeStep: "Write"`, so the screen stays in the writing state instead
- *     of jumping to a landed answer with half its sentences.
- *   - Stop freezes the reveal where it is and clears the pending timer.
- *   - Stop before the first sentence withholds the whole answer, see
- *     `withholdAnswer` below.
- *   - Once every sentence is shown, the input view is returned UNCHANGED, the
- *     same object, so the landed answer is exactly what arrived.
+ *   - Stop before any of the answer was on screen shows no part of it (card
+ *     58, F-58-J02 and F-58-A01): "Search stopped" alone.
+ *   - Stop after the records were on screen keeps exactly those records, as
+ *     they were, and shows nothing that arrives afterwards: no summary, no
+ *     count-line change, no note, no trust line. The owner, relayed by the
+ *     lead: "keep them".
  *
- * NOTHING IS DROPPED OR REWORDED while the reveal runs: claims are sliced,
- * never filtered, and the slice only grows until it equals the input. The one
- * exception is the Stop above, where the reader asked for no answer at all.
+ * The same rule covers a summary already partly on screen, which only happens
+ * while the server is still writing: what was shown stays, nothing new comes.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 
 import type { RunView } from "./useRunView";
 
-export const REVEAL_TIMING = {
-  /** The writing banner is visible at least this long before the first sentence. */
-  minBannerMs: 1500,
-  /** One sentence per this many ms while the run is still live. */
-  perItemMs: 110,
-  /** One sentence per this many ms once `done` has arrived. */
-  afterDoneMs: 40,
-  /**
-   * UI fix 11.28: the banner minimum under `prefers-reduced-motion`. The
-   * order is kept (banner, then sentences) but the hold is cut to a minimum.
-   */
-  reducedMinBannerMs: 300,
-} as const;
-
 export interface AnswerRevealOptions {
-  /** The run being revealed. A new key starts a new reveal from zero. */
+  /** The run being shown. A new key starts again from nothing on screen. */
   runKey: string | null;
-  /** Stop latched: freeze where the reveal is. */
+  /** Stop latched: keep what was on screen, show nothing new. */
   stopped: boolean;
   /**
    * The stream failed (`useAgentRun` status "error"): show everything that
-   * arrived at once. A failed run has no writing to pace, and holding its
-   * sentences back would hide what the reader is owed.
+   * arrived. A failed run has nothing to stop, and holding its sentences back
+   * would hide what the reader is owed.
    */
   flush?: boolean;
-  /** `prefers-reduced-motion: reduce`: hold the banner `reducedMinBannerMs` only. */
-  reducedMotion?: boolean;
 }
 
 /**
@@ -82,6 +62,11 @@ export interface AnswerRevealOptions {
  *
  * So the answer is withheld as a whole: the view never lands, and everything
  * `useRunView` derives from the Write step's output is cleared.
+ *
+ * Since build phase 8.7 no arrived text is held back, so the case above now
+ * arises only when the answer arrives in the same moment as the Stop, or
+ * after it. The rule is unchanged: what the reader had not seen, they never
+ * see.
  *
  * KEPT, because each was on screen before any Stop could discard it:
  *
@@ -117,61 +102,40 @@ export function withholdAnswer(view: RunView): RunView {
   };
 }
 
+/**
+ * What a Stop leaves on screen, in ONE place (the lead's condition while the
+ * owner decided, 2026-09-27), given the view as it arrives now and the view
+ * that was on screen the moment before Stop latched.
+ *
+ *   - Nothing of the answer was on screen: withhold all of it, card 58.
+ *   - Records, or sentences, were on screen: keep exactly those, with the
+ *     sources their citation markers resolve through, and nothing else from
+ *     the answer: no trust line, no status line, no note, no cap notice, and
+ *     nothing that arrived after Stop. The view never lands, so the result
+ *     page never comes up for a stopped run.
+ */
+export function whatStopLeavesOnScreen(view: RunView, shownBeforeStop: RunView | null): RunView {
+  if (shownBeforeStop === null || shownBeforeStop.claims.length === 0) return withholdAnswer(view);
+  return {
+    ...withholdAnswer(view),
+    claims: shownBeforeStop.claims,
+    sources: shownBeforeStop.sources,
+  };
+}
+
 export function useAnswerReveal(
   view: RunView,
-  { runKey, stopped, flush = false, reducedMotion = false }: AnswerRevealOptions,
+  { runKey, stopped, flush = false }: AnswerRevealOptions,
 ): RunView {
-  const minBannerMs = reducedMotion ? REVEAL_TIMING.reducedMinBannerMs : REVEAL_TIMING.minBannerMs;
-  const [state, setState] = useState<{ key: string | null; count: number }>({
-    key: runKey,
-    count: 0,
-  });
-  const writeStartRef = useRef<{ key: string | null; at: number } | null>(null);
+  // What is on screen, recorded on every render before Stop. Written during
+  // render, the pattern `usePacedEvents` uses for arrival times: it is a
+  // fact about this render, and a repeated render writes the same value.
+  const shownRef = useRef<{ key: string | null; view: RunView } | null>(null);
+  if (!stopped) shownRef.current = { key: runKey, view };
 
-  const total = view.claims.length;
-  const count = state.key === runKey ? state.count : 0;
-  const inWrite = view.activeStep === "Write" || total > 0;
-
-  // When the Write state (or the first sentence) was first seen for this run.
-  if (inWrite && (writeStartRef.current === null || writeStartRef.current.key !== runKey)) {
-    writeStartRef.current = { key: runKey, at: Date.now() };
-  }
-
-  useEffect(() => {
-    if (runKey === null || stopped || flush || count >= total) return;
-    const pace = view.landed ? REVEAL_TIMING.afterDoneMs : REVEAL_TIMING.perItemMs;
-    let delay: number = pace;
-    if (count === 0) {
-      const startedAt = writeStartRef.current?.at ?? Date.now();
-      delay = Math.max(0, startedAt + minBannerMs - Date.now());
-    }
-    const timer = setTimeout(() => {
-      setState((current) => ({
-        key: runKey,
-        count: (current.key === runKey ? current.count : 0) + 1,
-      }));
-    }, delay);
-    return () => clearTimeout(timer);
-  }, [runKey, stopped, flush, count, total, view.landed, minBannerMs]);
-
-  if (runKey === null || flush) return view;
-  // Stop froze the reveal before its first sentence: the reader saw no
-  // answer and asked for none. Checked before `count >= total`, because a run
-  // with no sentences at all has nothing to slice and would otherwise land.
-  if (stopped && count === 0) return withholdAnswer(view);
-  if (count >= total) return view;
-
-  const reachedSteps = view.reachedSteps.includes("Write")
-    ? view.reachedSteps
-    : [...view.reachedSteps, "Write" as const];
-  return {
-    ...view,
-    claims: view.claims.slice(0, count),
-    landed: false,
-    activeStep: stopped ? view.activeStep : "Write",
-    reachedSteps,
-    meta: "",
-  };
+  if (runKey === null || flush || !stopped) return view;
+  const shown = shownRef.current !== null && shownRef.current.key === runKey ? shownRef.current.view : null;
+  return whatStopLeavesOnScreen(view, shown);
 }
 
 export default useAnswerReveal;

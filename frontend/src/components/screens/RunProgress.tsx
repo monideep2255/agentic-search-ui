@@ -348,6 +348,15 @@ export interface RunProgressProps {
    * counter above.
    */
   stopped?: boolean;
+  /**
+   * Build phase 8.7, the owner's decision of 2026-09-27: Stop was pressed
+   * after the record listing was on screen, and those records stay below
+   * this block. Only the sentence under "Search stopped" changes, because
+   * "No answer was produced" above a list of records reads as a
+   * contradiction: what was not produced is the written summary. Read only
+   * while `stopped`.
+   */
+  recordsKept?: boolean;
   /** Re-runs the same question unchanged (decision U7). */
   onRunAgain?: () => void;
   /**
@@ -420,6 +429,7 @@ export function RunProgress({
   onNewSearch,
   showNewSearch = true,
   stopped = false,
+  recordsKept = false,
   onRunAgain,
   stopEnabled = true,
   stopping = false,
@@ -539,7 +549,9 @@ export function RunProgress({
             Search stopped
           </Typography>
           <Typography variant="body2" sx={{ color: designTokens.inkMuted, mt: 1, mb: 2.5 }}>
-            No answer was produced. Run the same question again, or start a new one.
+            {recordsKept
+              ? "No summary was written. The records found before you stopped are below. Run the same question again, or start a new one."
+              : "No answer was produced. Run the same question again, or start a new one."}
           </Typography>
           <Box sx={{ display: "flex", gap: 1.25 }}>
             <Button variant="contained" onClick={onRunAgain} sx={{ fontSize: 12.5, px: 1.6, py: 0.6 }}>

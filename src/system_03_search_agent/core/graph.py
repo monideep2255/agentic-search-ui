@@ -515,7 +515,18 @@ from system_03_search_agent.harness.coordinator_worker import (
     ToolExecutionResult,
     coordinator_worker_execute,
 )
-from system_03_search_agent.harness.decide import decide, jev_decides
+from system_03_search_agent.harness.decide import (
+    LEAD_SENTENCE_INSTRUCTIONS,
+    LEAD_SENTENCE_NEITHER,
+    LEAD_SENTENCE_POINT,
+    MAX_LEAD_CANDIDATES,
+    decide,
+    jev_decides,
+    lead_sentence_criteria,
+    lead_sentence_index,
+    lead_sentence_options,
+    lead_sentence_state,
+)
 from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
@@ -537,6 +548,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     PLAIN_SOURCES_HEADING,
     TABLE_COLUMNS,
     TABLE_HEADINGS,
+    AskedField,
     GroundingInput,
     answer_summary_sentence,
     collected_placeholder,
@@ -570,6 +582,7 @@ from system_03_search_agent.synthesis.findings import (
     SynthFinding,
     apply_resolved_disease_names,
     build_completeness_directive,
+    build_listing_gap_directive,
     build_structured_fallback_narrative,
     build_synth_findings,
     build_synth_messages,
@@ -822,7 +835,16 @@ async def _dispatch_tier_call(
         HarnessCallError: the call timed out, or failed and exhausted its
             retry (both classified; see `harness.harness.Harness`).
     """
-    cost_control.check_per_query_cap(harness, trace_id, tier)  # type: ignore[arg-type]
+    # F-8.7-J04, F-8.7-A06: checked on the prompt this call sends and its
+    # whole output ceiling, so the call it admits cannot pass the cap.
+    cost_control.check_per_query_cap(
+        harness,
+        trace_id,
+        tier,  # type: ignore[arg-type]
+        messages=messages,
+        cache_prefix=cache_prefix,
+        max_tokens=max_tokens,
+    )
     return await harness.enforce_timeout(
         step,
         harness.call_tier(  # type: ignore[arg-type]
@@ -4716,9 +4738,25 @@ class _PlannedFollowUpCall:
 #: two sequential calls, 30 seconds worst case (Section 6.3); the other three
 #: are 15 seconds per call (Sections 6.4, 6.5, 6.7). A timeout here degrades
 #: ONE call and discloses it; it never fails the run.
+#:
+#: PubTator is the exception since build phase 8.7 (T-8.7-02, option C of
+#: `testing/Developer/reports/2026-09-26_answer_speed/report.md`): 6 seconds
+#: in Act, below the tool's own 15-second per-call budget, which still bounds
+#: the call itself. The owner's words: "No answer waits more than 6 seconds
+#: on a literature search, and when one is cut off, the answer says one of
+#: its searches did not finish." Measured before the change: PubTator's
+#: median call was 1.07 s and its p90 4.96 s over 174 calls, and the long
+#: calls the report traced, 12 to 17.7 s, fell in a window of PubTator 502s
+#: and read timeouts. A call between 6 s and 20 s that would have finished
+#: now does not; the golden run's must-cite hits on literature questions are
+#: where that shows. A cut
+#: call closes as an `error` result and lands in `failed_searches`, so
+#: `write_node` adds the existing failed-search note and marks the answer
+#: "not yet confirmed". The transport is async httpx, so the cut cancels
+#: the request rather than leaving it running.
 _LAYER_TOOL_ACT_TIMEOUT_SECONDS: Final[dict[str, float]] = {
     "ncbi_dbsnp": 35.0,
-    "pubtator_annotate": 20.0,
+    "pubtator_annotate": 6.0,
     "litvar2_lookup": 20.0,
     "clinicaltrials_search": 20.0,
     # The isolate search (2026-09-22): the tool's own 120-second FTP budget
@@ -8593,6 +8631,118 @@ async def _gather_planned_calls(coroutines: list[Any]) -> None:
     await asyncio.gather(*coroutines)
 
 
+def _one_lookup_holds(curies: list[str]) -> bool:
+    """Whether each resolver would look up every id of `curies` in ONE lookup.
+
+    Each resolver looks up a bounded batch and maps the rest to None without
+    caching them: MedGen at most `_MAX_IDS_PER_CALL` ids, MeSH as many as
+    fit one legal ESearch term. Looked up in Act, a set larger than that
+    would leave Write to look up the remainder, NCBI calls the question
+    never made before. So Act looks names up only when every id fits, and
+    otherwise leaves the whole lookup to Write, exactly as before.
+
+    The resolvers' own normalisation and batching rules are read, not
+    restated, so this guard cannot drift from them.
+    """
+    from system_03_search_agent.synthesis import disease_names, mesh_terms
+
+    medgen = {local for c in curies if (local := disease_names._normalize(str(c))) is not None}
+    if len(medgen) > disease_names._MAX_IDS_PER_CALL:
+        return False
+    mesh = sorted({local for c in curies if (local := mesh_terms._normalize(str(c))) is not None})
+    return mesh_terms._batch_for_one_term(mesh) == mesh
+
+
+async def _prefetch_answer_names(
+    state: GraphState, tool_calls: list[ToolCall], results: list[ToolExecutionResult]
+) -> None:
+    """Look up the disease and MeSH names Write will need, during Act.
+
+    Build phase 8.7, T-8.7-02, option H's Act half
+    (`testing/Developer/reports/2026-09-26_answer_speed/report.md`). Write
+    resolves the names of `curie_fallback` findings (MedGen and MeSH) and of
+    a variant row's linked conditions before its model call: up to 0.65 s
+    measured. This makes the same lookups, with the same ids in the same
+    order, while the reader pass runs, so the time hides behind it and
+    Write then finds every name in the resolvers' cache and makes no lookup
+    of its own.
+
+    Where it runs, and why only there (decided from the reader's chair):
+
+    - After every Act search, never beside one. Beside the searches the
+      lookups would compete for the question's 20 Layer 2 and 3 calls
+      (`call_budget`) and could turn a finished search into "one of the
+      background searches did not finish". After them, they see exactly
+      the call count Write's own lookup would have seen.
+    - Only when a reader pass runs (`act_node` decides), since without one
+      there is nothing in Act to hide the lookup behind.
+    - Only when every id fits one lookup (`_one_lookup_holds`), so the
+      question makes exactly the NCBI calls it made before.
+
+    The ids are Write's own: the same `build_synth_findings` call over the
+    same structured findings, with the same arguments. A reader-pass
+    finding contributes nothing to them (`build_synth_findings` skips a
+    finding with no `structured_fields`), so the structured findings are
+    computed here from `results` directly, through the same pass-through the
+    reader-free pairs take in `coordinator_worker_execute`, without waiting
+    for the reader.
+
+    It never raises and never changes an answer. The resolvers never raise;
+    anything else that fails here is logged and dropped, and Write then
+    makes its own lookup exactly as before.
+    """
+    from system_03_search_agent.harness.coordinator_worker import (
+        _structured_pass_through,
+    )
+
+    query = state["query"]
+    try:
+        structured = [
+            _structured_pass_through(call, result)
+            for call, result in zip(tool_calls, results, strict=True)
+            if not result.contains_untrusted_free_text
+        ]
+        # The same call `_write_answer` makes before its lookups.
+        synth_findings, _ = build_synth_findings(
+            structured,
+            _pick_representative_field,
+            max_findings=_MAX_FINDINGS_FOR_DISPLAY,
+            defer_source_urls=frozenset(state.get("deferred_record_ids") or []),
+            lead_call_ids=_answer_call_ids(state.get("tool_calls", []), query.text),
+            lead_quota=_LEAD_FINDINGS_QUOTA,
+        )
+        curie_fallback_curies = [f.curie for f in synth_findings if f.curie_fallback and f.curie]
+        fold_condition_ids: list[str] = []
+        for prepared in synth_findings:
+            for curie in condition_ids_for_row(
+                prepared.entity_type, _row_fields_for(prepared, structured)
+            ):
+                if curie not in fold_condition_ids:
+                    fold_condition_ids.append(curie)
+        if not _one_lookup_holds(curie_fallback_curies) or not _one_lookup_holds(
+            fold_condition_ids
+        ):
+            return
+        # Write's order: MedGen, then MeSH, over the same list, then the
+        # linked conditions. The same order keeps each lookup's view of the
+        # question's call count the one Write would have had.
+        if curie_fallback_curies:
+            await resolve_concept_ids(curie_fallback_curies)
+            await resolve_descriptor_ids(curie_fallback_curies)
+        if fold_condition_ids:
+            await resolve_concept_ids(fold_condition_ids)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        # Logged with the trace id only, never the exception text. Write
+        # makes its own lookup, as before this function existed.
+        logger.warning(
+            "name lookup during Act failed (trace %s); Write will look the names up itself",
+            query.trace_id,
+            exc_info=True,
+        )
+
+
 async def act_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     trace_id = state["query"].trace_id
@@ -8799,7 +8949,47 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             layer3_raw_outputs[planned.tool_call.call_id] = outcome.layer_raw_output
         cap_exceeded = cap_exceeded or outcome.cap_exceeded
 
-    findings = await coordinator_worker_execute(harness, tool_calls, results)
+    # Build phase 8.7, step 8 (card 50, option K; the owner's yes of
+    # 2026-10-05): the reader pass is off the answer path. A paper question
+    # no longer waits up to 10 s for a guard-model read of its Article
+    # titles before Write can start.
+    #
+    # Not run at all, rather than started and left unawaited:
+    #
+    # - Nothing reads what it returns. `build_synth_findings` and every
+    #   citation, count and truncation helper skip a finding with no
+    #   `structured_fields`, which every reader finding is, and no module
+    #   outside `coordinator_worker.py` reads its three fields
+    #   (`test_reader_pass_reach_probe.py`'s static check, which goes red
+    #   the day one does).
+    # - The protection against a paper's hidden instructions is not the
+    #   reader. It is `_sanitized_citeable_row`: an Article row reaches
+    #   `structured_fields` with `fields` emptied, so its title never
+    #   reaches a prompt, a citation or an event. That holds unchanged.
+    # - Started in the background it would still spend one guard call per
+    #   paper question, and its cost would land on the harness while
+    #   Write's own cap checks run, so a reader's spend could tip Write
+    #   into a capped partial answer at random, and land after `done`
+    #   reported the question's cost.
+    #
+    # The quarantine pair is still built, by `_execute_planned_call`, and
+    # simply not handed over, so a later phase that gives the reader a
+    # real use reattaches it here. `findings_count` still counts every
+    # pair Act assembled, so `done.total_tool_calls` is unchanged.
+    #
+    # Option H's Act-time name lookup (`_prefetch_answer_names`) ran only
+    # beside the reader pass, to hide behind it. With no reader pass there
+    # is nothing in Act to hide it behind, so by its own rule it does not
+    # run, and Write makes the lookups itself, as it does on every other
+    # question.
+    answer_pairs = [
+        (call, result)
+        for call, result in zip(tool_calls, results, strict=True)
+        if not result.contains_untrusted_free_text
+    ]
+    findings = await coordinator_worker_execute(
+        harness, [call for call, _ in answer_pairs], [result for _, result in answer_pairs]
+    )
     # Decided from the user's chair, 2026-09-22: a search that failed is
     # recorded here, with the tool's own reason, so `write_node` can say
     # so in one plain sentence. The reason is the same bounded text the
@@ -8828,7 +9018,9 @@ async def act_node(state: GraphState) -> dict[str, Any]:
     # (not just its length), so write_node can read what Act actually
     # found instead of fabricating trust_outcome="answer" over nothing.
     result: dict[str, Any] = {
-        "findings_count": len(findings),
+        # Every pair Act assembled, the quarantine pair included, so
+        # `done.total_tool_calls` reads as it did while the reader ran.
+        "findings_count": len(results),
         "findings": findings,
         # T-3.4-05: empty for the common single-tool query; write_node
         # falls back to a generic citation construction when a Layer 2
@@ -9924,6 +10116,215 @@ def _code_built_lines_will_cite(
     return all(finding.citation_id in cited for finding in omitted_findings)
 
 
+# ---------------------------------------------------------------------------
+# Build phase 8.7, card 50: the written summary arrives sooner, and the
+# records are numbered in the order the list shows them.
+#
+# Two changes to the Write step, each fail-closed to today's behaviour:
+#
+# - The listing first (option E, server half). The code-built listing of
+#   every record is grounded and numbered BEFORE any writer call, so its
+#   records take the first numbers, in the listing's own order, and the
+#   model's prose is renumbered into them. When the client that asked reads
+#   `TokenPayload.placement` (`_request_reads_placement`), it is sent at
+#   once with its citations, each token placed "listing"; the count line and
+#   the written summary follow placed "summary". Nothing sent early is ever taken back: an answer whose
+#   listing grounded can no longer refuse (every grounded claim's trust is
+#   answer, flag or ask), a writer that fails after the listing was sent
+#   leaves the listing as the answer with a note saying why, and a citation
+#   number sent early is the number the answer ends with.
+# - The second draft beside the first (option B). When the listing cannot
+#   cite some finding the writer is shown, the completeness draft, which
+#   exists for exactly those findings, starts WITH the first draft rather
+#   than after it, when both fit the per-question cost cap, and is dropped
+#   the moment the first draft leaves it nothing to do.
+# ---------------------------------------------------------------------------
+
+#: The token placement a surface lays the answer out by (the field
+#: `TokenPayload.placement`, one of these two; absent reads as "summary"):
+#: the listing and the notes under it are shown as they arrive, and the
+#: count line and written summary go in a slot above them when they land.
+_PLACEMENT_LISTING: Final[str] = "listing"
+_PLACEMENT_SUMMARY: Final[str] = "summary"
+
+
+def _request_reads_placement(state: GraphState) -> bool:
+    """Whether the client that asked this question reads `placement`.
+
+    Decided per request, never per process (fix round, F-8.7-A01 and
+    F-8.7-A14): `RequestContext.reads_placement`, which the REST surface
+    sets only for a client that sends `POST /v1/query?reads=placement` (the
+    web bundle and the command line built with this phase), and the
+    in-process MCP and GraphQL surfaces set themselves. Only then does the
+    listing go out ahead of the summary and does any token carry the field.
+
+    Every other request gets the stream as it was before the field: an
+    installed command line whose contract forbids extra keys, or a browser
+    still holding an older web bundle, joins the tokens in arrival order,
+    and would otherwise fail every answer or read it upside down. For those
+    the listing is still grounded first and numbered first, and simply
+    leaves after the summary, as it always has.
+    """
+    context = state.get("context")
+    return bool(getattr(context, "reads_placement", False)) if context is not None else False
+
+
+def _with_placement(token: TokenPayload, placement: str, reads_placement: bool) -> TokenPayload:
+    """`token` carrying `placement` when the request reads it, else unchanged.
+
+    A token left unchanged has no `placement` (None), which is left out of
+    its serialized payload altogether. Rebuilt through the model, never
+    copied around it, so the field is validated like every other.
+    """
+    if not reads_placement:
+        return token
+    return type(token)(**{**token.model_dump(), "placement": placement})
+
+
+def _listing_uncitable(
+    prompt_findings: list[SynthFinding], listing_grounding: GroundingResult | None
+) -> list[SynthFinding]:
+    """The prompt findings the code-built listing cannot cite by their own id.
+
+    Known before any writer call. It is the completeness draft's whole job:
+    `_code_built_lines_will_cite` keeps that draft exactly when the model's
+    prose leaves out one of these, since nothing else can show it. Measured
+    over writer bench 3's 54 Opus runs, re-grounded offline: the draft fired
+    on 24, and 23 of those had such a finding; of the 30 where it did not
+    fire, 27 had none (`testing/Developer/reports/2026-09-26_phase_8.7/
+    draft_order/`). Empty when the listing did not run.
+    """
+    if listing_grounding is None:
+        return []
+    cited = {claim.finding.citation_id for claim in listing_grounding.claims}
+    return [finding for finding in prompt_findings if finding.citation_id not in cited]
+
+
+def _two_drafts_fit_cap(
+    harness: Harness,
+    trace_id: str,
+    first_messages: list[Message],
+    second_messages: list[Message],
+) -> bool:
+    """Whether two writer calls started together stay inside the per-query cap.
+
+    Each call's own pre-flight check (`_dispatch_tier_call`) also counts a
+    call still in flight (`Harness.in_flight_usd`), so the cap holds either
+    way; this decides only whether the second draft is worth starting now.
+    It starts beside the first only when the running cost, every call
+    still in flight, and the bound of BOTH drafts fit the cap, each draft
+    priced exactly as its own check will price it: its prompt counted and
+    its whole output ceiling, at the answering model's real price
+    (`cost_control.estimate_next_call_cost_usd`, F-8.7-J04). Otherwise it
+    waits for the first, as before, and its own check then sees the first
+    call's real cost.
+
+    That bound also covers what a dropped draft is metered at: a cancelled
+    call is charged the writer tier's full output ceiling at its output
+    price (`Harness.call_tier`, F-2.1-B02), which its bound includes, so a
+    draft that is started and then dropped can never carry a question past
+    the cap that admitted it.
+    """
+    in_flight_of = getattr(harness, "in_flight_usd", None)
+    in_flight = float(in_flight_of(trace_id)) if in_flight_of is not None else 0.0
+    projected = harness.get_query_cost_usd(trace_id) + in_flight
+    for messages in (first_messages, second_messages):
+        projected += cost_control.estimate_next_call_cost_usd(
+            harness, "synth", messages=messages, cache_prefix=_STABLE_PREFIX
+        )
+    return projected <= cost_control.per_query_cost_cap_usd()
+
+
+#: A second draft still running, by the run's own `Harness`, so `write_node`
+#: stops it whatever way the Write step ends (the same weak-key shape as
+#: `_RUN_DECISIONS`: an entry lives exactly as long as its run).
+_SECOND_DRAFTS: weakref.WeakKeyDictionary[Any, asyncio.Task[Any]] = weakref.WeakKeyDictionary()
+
+
+def _start_second_draft(harness: Harness, coro: Any) -> asyncio.Task[Any]:
+    """Start the second draft as a task registered against the run."""
+    task: asyncio.Task[Any] = asyncio.ensure_future(coro)
+    try:
+        _SECOND_DRAFTS[harness] = task
+    except TypeError:
+        # A stand-in harness that cannot be a weak key: the draft is still
+        # awaited or dropped on every path inside `_write_answer`.
+        pass
+    return task
+
+
+async def _drop_second_draft(harness: Any) -> None:
+    """Stop the run's second draft if it is still running, and wait until
+    it has stopped.
+
+    A cancelled call is metered by `Harness.call_tier` at the writer tier's
+    full output ceiling (F-2.1-B02), since the provider may bill it anyway,
+    so the per-query cap still sees it. A draft that already finished is
+    only collected, so its exception, if any, is never left unretrieved.
+    """
+    try:
+        task = _SECOND_DRAFTS.pop(harness, None)
+    except TypeError:
+        return
+    if task is None:
+        return
+    if not task.done():
+        task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+
+def _second_draft_running(harness: Any) -> bool:
+    """Whether a second draft was started beside the first for this run."""
+    try:
+        return harness in _SECOND_DRAFTS
+    except TypeError:
+        return False
+
+
+async def _second_draft_reply(harness: Harness) -> tuple[Any | None, bool]:
+    """The second draft's reply, and whether the cost cap stopped it.
+
+    Awaited only when the first draft left it a job. Its failures are the
+    completeness draft's own (F-4.5-A-04, best effort): a call error gives
+    no reply, and a cap hit gives no reply and is disclosed.
+    """
+    try:
+        task = _SECOND_DRAFTS.pop(harness, None)
+    except TypeError:
+        task = None
+    if task is None:
+        return None, False
+    try:
+        return await task, False
+    except cost_control.QueryCapExceededError:
+        return None, True
+    except HarnessCallError:
+        return None, False
+
+
+def _renumbered(grounding: GroundingResult, merged_slots: dict[str, int]) -> GroundingResult:
+    """The model's grounded prose with its markers in the merged numbering.
+
+    The listing is numbered first and may go out before the prose exists,
+    so a record the prose cites prints the number the listing already gave
+    it (`_renumber_markers_by_citation_id`, keyed on `citation_id`). Claims,
+    origins and structure are unchanged.
+    """
+    local_slots = display_index_by_citation_id(grounding)
+    sentences = tuple(
+        _renumber_markers_by_citation_id(sentence, local_slots, merged_slots)
+        for sentence in grounding.sentences
+    )
+    return GroundingResult(
+        narrative=" ".join(sentences),
+        claims=list(grounding.claims),
+        stripped_count=grounding.stripped_count,
+        refused=grounding.refused,
+        sentences=sentences,
+        sentence_origins=grounding.sentence_origins,
+    )
+
+
 def _build_repair_cap_note(omission_remains: bool = True) -> str:
     """F-4.5-A-04: disclose that a cost cap, not the model, is why this
     answer stayed incomplete.
@@ -10242,6 +10643,22 @@ def _build_cap_list_note() -> str:
     return (
         "Note: this question reached its resource limit before it finished, "
         "so this answer lists the records gathered so far"
+    )
+
+
+def _build_writer_failed_note() -> str:
+    """Tell the reader the written summary failed after the records were shown.
+
+    Build phase 8.7, card 50. Once the listing is on screen it is never
+    taken back: a writer call that fails after it leaves the listing as the
+    answer, and this note says why there is no summary above it. Worded like
+    `_build_cap_list_note` (card 46) and shown the same way (owner decision
+    D1, 2026-10-05: the no-summary note is shown): one sentence, opening
+    "Note:", no interior period, blaming no one.
+    """
+    return (
+        "Note: the written summary could not be finished this time, "
+        "so this answer lists the records found"
     )
 
 
@@ -12179,7 +12596,156 @@ def _answer_call_ids(planned_tool_calls: list[Any], question: str) -> frozenset[
     return frozenset(ids)
 
 
-def _answer_tokens(
+# ---------------------------------------------------------------------------
+# Build phase 8.7, card 2 (design C): the first sentence answers the
+# question. After grounding, one classifier decision reads the question and
+# the first one or two grounded, cited sentences of the model's prose and
+# says whether one of them answers it. Yes: that sentence opens the answer
+# and the code-built count line follows it. No, or any failure: the count
+# line opens it, exactly as before. Code reads no word of the question.
+# ---------------------------------------------------------------------------
+
+#: The least Write budget left in which the lead decision is asked at all.
+#: Below it the count line leads, as it did before the decision existed.
+_LEAD_DECISION_MIN_BUDGET_S: Final[float] = 1.5
+
+#: The longest the answer waits for the lead decision. Jev answers in 0.3 to
+#: 0.8 s (answer speed report, 2026-09-26); a pick later than this is a
+#: late pick, and a late pick leaves the count line leading.
+_LEAD_DECISION_MAX_WAIT_S: Final[float] = 4.0
+
+
+def _lead_candidates(model_grounding: GroundingResult | None) -> list[int]:
+    """Indexes into `model_grounding.sentences` of the first one or two
+    sentences that carry a citation marker.
+
+    Only sentences the grounding pass already accepted exist here: this
+    reads the pass's own output and nothing else, so a sentence it stripped
+    can never be offered, let alone lead.
+    """
+    if model_grounding is None:
+        return []
+    return [
+        index
+        for index, sentence in enumerate(model_grounding.sentences)
+        if _MARKER_PATTERN.search(sentence)
+    ][:MAX_LEAD_CANDIDATES]
+
+
+async def _lead_sentence_choice(
+    harness: Harness,
+    trace_id: str,
+    question: str,
+    model_grounding: GroundingResult | None,
+    budget_s: float,
+) -> int | None:
+    """The index of the model sentence that should open the answer, or None
+    for the code-built count line (build phase 8.7, card 2, design C).
+
+    One decision through the classifier seam (`_decide_point`, so Jev
+    decides and the guard tier steps in only when Jev fails, and the record
+    reaches `done.decisions`). Asked only when Jev is the classifier
+    (`CLASSIFIER_PROVIDER=jev`): with the guard tier deciding alone, the
+    question would wait on a guard call of about 2 s (answer speed report,
+    2026-09-26) on every answer, against Jev's 0.3 to 0.8 s, so the count
+    line leads there as before. Fails closed to None, the count line, when:
+    there is no candidate; less than `_LEAD_DECISION_MIN_BUDGET_S` of the
+    Write budget is left; no pick comes within `_LEAD_DECISION_MAX_WAIT_S`
+    or what is left of the budget; no model made a usable pick; or the pick
+    is "neither". Code reads no word of the question: the question and the
+    candidates are only the decision's bounded `state`.
+    """
+    candidates = _lead_candidates(model_grounding)
+    if (
+        not candidates
+        or model_grounding is None
+        or budget_s < _LEAD_DECISION_MIN_BUDGET_S
+        or not _jev_decides()
+    ):
+        return None
+    options = lead_sentence_options(len(candidates))
+    spec = _DecisionSpec(
+        point=LEAD_SENTENCE_POINT,
+        options=options,
+        instructions=LEAD_SENTENCE_INSTRUCTIONS,
+        criteria=lead_sentence_criteria(options),
+        fail_open=LEAD_SENTENCE_NEITHER,
+    )
+    state_text = lead_sentence_state(
+        question, [model_grounding.sentences[index] for index in candidates]
+    )
+    wait_s = min(_LEAD_DECISION_MAX_WAIT_S, budget_s - 0.5)
+    try:
+        record = await asyncio.wait_for(
+            _decide_point(harness, trace_id, spec, state_text), timeout=wait_s
+        )
+    except TimeoutError:
+        logger.warning("lead sentence decision was late (trace %s); the count line leads", trace_id)
+        return None
+    picked = lead_sentence_index(_usable_choice(record), len(candidates))
+    return None if picked is None else candidates[picked]
+
+
+def _asked_field(
+    clinical_features_asked: bool, failed_searches: list[dict[str, str]]
+) -> AskedField | None:
+    """What kind of fact the question asks for, when a decision already made
+    says so, and the state of the source that carries it, for the opening
+    line's honest-gap clause (card 2).
+
+    Today one decision supplies one: `think.asks_features` picking
+    `asks_features` means the question asks for a condition's clinical
+    features. The plan names no other asked-for field yet (phase 8.9 adds
+    organism, title and gene), so every other question gets None and the
+    line is unchanged. Never read off the question's words (DECISIONS.md
+    2026-09-24).
+
+    The source state (fix round, F-8.7-J02, A02): the features come from
+    MedGen, and a record is known to list none only through the code-built
+    "MedGen lists no clinical features for <disease>" statement, which
+    `_with_medgen_clinical_feature_rows` writes only for a record fetched
+    and read. `every_search_finished` is False when any search of this
+    question failed or timed out, since that search may be the one that
+    carries them; the clause is then never said. The fields the feature
+    rows carry beside the name (the total, the disease's own title, the HPO
+    id) say nothing about the record's content.
+    """
+    if not clinical_features_asked:
+        return None
+    return AskedField(
+        label="clinical features",
+        field_names=(CLINICAL_FEATURES_FIELD,),
+        source="MedGen",
+        lists_none_prefix=NO_CLINICAL_FEATURES_PREFIX,
+        quiet_fields=(_FEATURE_TOTAL_FIELD, _FEATURE_DISEASE_FIELD, _FEATURE_HPO_FIELD),
+        every_search_finished=not failed_searches,
+    )
+
+
+@dataclass(frozen=True)
+class _AnswerParts:
+    """The answer's tokens in its three parts, each in reading order.
+
+    Build phase 8.7, card 50 (option E): the parts may leave the Write step
+    at different moments. `listing` can go out as soon as it is grounded,
+    before any writer call; `summary` and `notes` go out once the writing is
+    done. Reading order is summary, listing, notes, and the three joined are
+    exactly `_answer_tokens`.
+    """
+
+    summary: list[TokenPayload]
+    listing: list[TokenPayload]
+    notes: list[TokenPayload]
+
+
+def _answer_tokens(**kwargs: Any) -> list[TokenPayload]:
+    """The answer as typed token chunks, in reading order: `_answer_parts`
+    joined. See `_answer_parts` for the structure."""
+    parts = _answer_parts(**kwargs)
+    return [*parts.summary, *parts.listing, *parts.notes]
+
+
+def _answer_parts(
     *,
     audience_depth: str,
     question: str,
@@ -12195,8 +12761,23 @@ def _answer_tokens(
     notes: list[str],
     summary_sentence: str | None = None,
     condition_names: dict[str, str | None] | None = None,
-) -> list[TokenPayload]:
-    """The answer as typed token chunks, in reading order.
+    lead_index: int | None = None,
+) -> _AnswerParts:
+    """The answer as typed token chunks, in reading order, in three parts.
+
+    Build phase 8.7, card 50. One list is built exactly as it always was;
+    `_AnswerParts` only marks where the listing starts and where the notes
+    start, so the three joined are the answer token for token, and a
+    listing built here alone (no summary, no prose, no notes) is the same
+    rows the answer shows, merged the same way (card 104, #166). A row is
+    final only once this function returns: `merge_into` folds a repeat into
+    the row already built, so no row may leave before then.
+
+    Build phase 8.7, card 2. `lead_index` names the sentence of
+    `model_grounding` the lead decision picked (`_lead_sentence_choice`):
+    it opens the answer, the code-built count line follows it in the same
+    paragraph, and it is not repeated in the prose. None, the fail-closed
+    default, leaves the count line opening the answer, exactly as before.
 
     UI fix set 9. Every sentence here was already accepted by the grounding
     pass; this function adds structure around them and never adds, removes
@@ -12731,27 +13312,38 @@ def _answer_tokens(
         for remaining in feature_blocks.values():
             feature_block(remaining)
 
-    if summary_sentence:
+    # Build phase 8.7, card 2 (design C): the sentence the lead decision
+    # picked opens the answer, with the count line straight after it;
+    # otherwise the count line opens it, as before.
+    lead_text = (
+        model_grounding.sentences[lead_index]
+        if model_grounding is not None
+        and lead_index is not None
+        and 0 <= lead_index < len(model_grounding.sentences)
+        else None
+    )
+    if lead_text is not None:
+        # The lead carries the emphasis: it is the one claim `mainPointFor`
+        # reads on the frontend, the first that is not a list row.
+        sentence_token(lead_text, emphasize=True)
+        if summary_sentence:
+            sentence_token(summary_sentence, emphasize=researcher)
+        paragraph_break()
+    elif summary_sentence:
         # Always emphasize the lead summary, not Researcher only: it is the
         # one claim `mainPointFor` reads on the frontend, in every depth.
         sentence_token(summary_sentence, emphasize=True)
         paragraph_break()
 
-    if fallback_sentences:
-        # Product-owner direction 2026-09-14: the structured fallback (the
-        # model's prose grounded nothing, so the records themselves are the
-        # answer) is a grouped listing in EVERY depth. Measured live on
-        # "What genes are associated with MODY?" in Plain language, 3 of 5
-        # runs took this branch and rendered "Gene name: ... Disease name:
-        # ..." as run-on claims; that was the run-on block the product
-        # owner pasted.
-        listing(fallback_sentences)
-    elif model_grounding is not None:
+    # The model's prose, unless the structured fallback stands in for it.
+    if not fallback_sentences and model_grounding is not None:
         headings_shown = 0
         last_paragraph: int | None = None
-        for sentence, origin in zip(
-            model_grounding.sentences, model_grounding.sentence_origins, strict=False
+        for position, (sentence, origin) in enumerate(
+            zip(model_grounding.sentences, model_grounding.sentence_origins, strict=False)
         ):
+            if lead_text is not None and position == lead_index:
+                continue
             paragraph = (
                 model_layout.sentence_paragraph[origin]
                 if origin < len(model_layout.sentence_paragraph)
@@ -12772,6 +13364,18 @@ def _answer_tokens(
                 last_paragraph = paragraph
             sentence_token(sentence, emphasize=researcher)
 
+    # THE LISTING (build phase 8.7: its own part from here on).
+    listing_at = len(tokens)
+    if fallback_sentences:
+        # Product-owner direction 2026-09-14: the structured fallback (the
+        # model's prose grounded nothing, so the records themselves are the
+        # answer) is a grouped listing in EVERY depth. Measured live on
+        # "What genes are associated with MODY?" in Plain language, 3 of 5
+        # runs took this branch and rendered "Gene name: ... Disease name:
+        # ..." as run-on claims; that was the run-on block the product
+        # owner pasted.
+        listing(fallback_sentences)
+
     if tail_sentences:
         if tail_is_listing:
             listing(tail_sentences)
@@ -12781,14 +13385,20 @@ def _answer_tokens(
             for sentence in tail_sentences:
                 sentence_token(sentence)
 
+    # THE NOTES, after the listing in reading order.
+    notes_at = len(tokens)
     for note in notes:
         paragraph_break()
         tokens.append(TokenPayload(text=note[:1000], marker_ids=[], kind="note"))
-    return tokens
+    return _AnswerParts(
+        summary=tokens[:listing_at],
+        listing=tokens[listing_at:notes_at],
+        notes=tokens[notes_at:],
+    )
 
 
 async def write_node(state: GraphState) -> dict[str, Any]:
-    """The Write step (Section 8), `_write_answer`, plus one settling rule.
+    """The Write step (Section 8), `_write_answer`, plus two settling rules.
 
     Build phase 8.6, T-8.6-06: the `think.asks_features` decision Think
     started is read on the answer path only. Every other way out of Write
@@ -12799,6 +13409,9 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         return await _write_answer(state)
     finally:
         _drop_features_decision(state["harness"])
+        # Build phase 8.7, card 50: a second draft started beside the first
+        # never outlives the Write step, however it ends.
+        await _drop_second_draft(state["harness"])
 
 
 async def _write_answer(state: GraphState) -> dict[str, Any]:
@@ -13185,53 +13798,8 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
         )
 
-    try:
-        synth_text = "" if cap_hit else await _dispatch_tier_call(
-            harness,
-            trace_id,
-            "synth",
-            "write",
-            # T-4.5-07: the depth the caller asked for reaches synthesis here
-            # and nowhere else. It was carried on `Query` from build phase
-            # 1.0 and dropped at this line until phase 4.5.
-            build_synth_messages(
-                query.text,
-                prompt_findings,
-                query.audience_depth,
-                answer_ref_indices=answer_ref_indices,
-                topic_question=bool(state.get("topic_search_term")),
-                clinical_features_asked=clinical_features_asked,
-            ),
-            budget_s=write_budget_s,
-        )
-    except cost_control.QueryCapExceededError:
-        # A cap hit discovered only here, at Write's own call, not routed
-        # in from an earlier node: handled inline with the same partial-
-        # result shape.
-        return _partial_result_for_cap(
-            sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
-        )
-    except HarnessCallError as exc:
-        sink.emit("error", ErrorPayload(**_step_error_kwargs("write", exc)))
-        sink.emit(
-            "done",
-            DonePayload(
-                total_cost_usd=harness.get_query_cost_usd(trace_id),
-                total_tool_calls=total_tool_calls,
-                elapsed_ms=_elapsed_ms(state),
-                trust_outcome="refuse",
-                layer_calls_used=call_budget.calls_made(),
-                decisions=_done_decisions(harness),
-            ),
-        )
-        return sink.result()
-
-    # A5/F-02 (build phase 2.1) established that the terminal
-    # trust_outcome must reflect what Act actually found. Build phase 2.2
-    # replaces the row-count proxy that stood in for grounding with the
-    # real thing: Section 8.2 runs over the narrative Synth just wrote,
-    # and the outcome comes from Section 8.3's decision table over what
-    # survived, not from whether any row happened to carry a source_url.
+    # Computed before the writer call since build phase 8.7: it reads only
+    # what Act found, and the listing below needs it before any model call.
     tool_outcome = _tool_execution_outcome(findings)
     # Fix-plan item 12.7 (2026-09-23), and it is the one thing the topic
     # path could not inherit from the paths beside it. `_tool_execution_
@@ -13256,6 +13824,185 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         # Card 74: the same hole, for a paper's linked-records question whose
         # every link search came back empty. It is a true "none", said plainly.
         tool_outcome = "empty"
+
+    answer_mentions = [
+        getattr(entity, "text", "") or "" for entity in (state.get("resolved_entities") or [])
+    ] + [state.get("next_step_entity_label") or ""]
+
+    # Build phase 8.7, card 50, option E. THE LISTING FIRST. The code-built
+    # listing of every prepared record, grounded by the same deterministic
+    # pass as always (`code_built_listing=True`), BEFORE any writer call,
+    # and numbered first. It is exactly the
+    # listing the answer ends with in every case: the findings tail after
+    # grounded prose and the structured fallback when the prose grounds
+    # nothing were already this same computation over the same findings.
+    # Its numbers run in its own order, the order its sentences are
+    # grounded, and the prose is renumbered into them. Measured (answer speed report, 2026-09-26): the records reach the
+    # screen at a median 7.6 s instead of 16.8 s. Sent early only when the
+    # client that asked reads `placement` (`_request_reads_placement`);
+    # otherwise it is grounded and numbered here and leaves after the
+    # summary, as before. Built once, whole, before anything of it is sent, so a row
+    # card 104 folds a repeat into is final before it leaves.
+    listing_grounding: GroundingResult | None = None
+    listing_citations: list[CitationPayload] = []
+    listing_tokens: list[TokenPayload] = []
+
+    def build_listing(
+        listed: GroundingResult,
+    ) -> tuple[list[CitationPayload], list[TokenPayload]]:
+        listed_citations = _citations_from_grounded_claims(
+            listed, findings, layer2_raw_outputs, layer3_raw_outputs
+        )
+        part = _answer_parts(
+            audience_depth=query.audience_depth,
+            question=query.text,
+            model_grounding=None,
+            model_layout=GroundingInput(narrative="", sentence_paragraph=(), heading_before={}),
+            fallback_sentences=listed.sentences,
+            tail_sentences=(),
+            tail_is_listing=True,
+            citations=listed_citations,
+            synth_findings=synth_findings,
+            findings=findings,
+            mentions=answer_mentions,
+            notes=[],
+            condition_names=condition_names,
+        ).listing
+        return listed_citations, part
+
+    if tool_outcome == "ok" and synth_findings:
+        listing_grounding = run_grounding_pass(
+            build_structured_fallback_narrative(synth_findings),
+            synth_findings,
+            core_ask_required=True,
+            question=query.text,
+            code_built_listing=True,
+        )
+        if listing_grounding.claims:
+            listing_citations, listing_tokens = build_listing(listing_grounding)
+    reads_placement = _request_reads_placement(state)
+    listing_sent = bool(listing_tokens) and reads_placement
+    if listing_sent:
+        # Its own paragraph: in reading order the summary always precedes it.
+        sink.emit_live(
+            "token",
+            _with_placement(
+                TokenPayload(text="\n\n", marker_ids=[], kind="paragraph_break"),
+                _PLACEMENT_LISTING,
+                reads_placement,
+            ),
+        )
+        for token in listing_tokens:
+            sink.emit_live("token", _with_placement(token, _PLACEMENT_LISTING, reads_placement))
+        for citation in listing_citations:
+            sink.emit_live("citation", citation)
+
+    # Build phase 8.7, card 50, option B, decided under the Opus writer from
+    # writer bench 3's saved runs (`testing/Developer/reports/2026-09-26_
+    # phase_8.7/draft_order/`). When the listing cannot cite a finding the
+    # writer is shown, the completeness draft starts NOW, beside the first
+    # draft, and is dropped the moment the first leaves it nothing to do.
+    # Over the 54 runs: write step median 14.19 s to 11.66 s, over 20 s from
+    # 21 runs to 2. Only when both drafts fit the per-question cap at the
+    # answering model's price (`_two_drafts_fit_cap`); otherwise the
+    # completeness draft waits for the first, as before.
+    uncitable = _listing_uncitable(prompt_findings, listing_grounding)
+    # T-4.5-07: the depth the caller asked for reaches synthesis here and
+    # nowhere else. It was carried on `Query` from build phase 1.0 and
+    # dropped at this line until phase 4.5.
+    first_draft_messages = build_synth_messages(
+        query.text,
+        prompt_findings,
+        query.audience_depth,
+        answer_ref_indices=answer_ref_indices,
+        topic_question=bool(state.get("topic_search_term")),
+        clinical_features_asked=clinical_features_asked,
+    )
+    if uncitable and not cap_hit:
+        second_draft_messages = build_synth_messages(
+            query.text,
+            prompt_findings,
+            query.audience_depth,
+            completeness_directive=build_listing_gap_directive(uncitable),
+            answer_ref_indices=answer_ref_indices,
+            topic_question=bool(state.get("topic_search_term")),
+            clinical_features_asked=clinical_features_asked,
+        )
+        if _two_drafts_fit_cap(harness, trace_id, first_draft_messages, second_draft_messages):
+            _start_second_draft(
+                harness,
+                _dispatch_tier_call(
+                    harness,
+                    trace_id,
+                    "synth",
+                    "write",
+                    second_draft_messages,
+                    budget_s=write_budget_s,
+                ),
+            )
+
+    writer_failed = False
+    try:
+        synth_text = "" if cap_hit else await _dispatch_tier_call(
+            harness,
+            trace_id,
+            "synth",
+            "write",
+            first_draft_messages,
+            budget_s=write_budget_s,
+        )
+    except cost_control.QueryCapExceededError:
+        await _drop_second_draft(harness)
+        if not listing_sent:
+            # A cap hit discovered only here, at Write's own call, not routed
+            # in from an earlier node: handled inline with the same partial-
+            # result shape.
+            return _partial_result_for_cap(
+                sink, harness, trace_id, _elapsed_ms(state), total_tool_calls
+            )
+        # Build phase 8.7: the listing is already on screen and is never
+        # taken back. A cap hit here takes card 46's own path, as if it had
+        # been routed in: the listing is the answer, under the one cap note,
+        # `_build_cap_list_note`.
+        cap_hit = True
+        synth_text = ""
+    except HarnessCallError as exc:
+        await _drop_second_draft(harness)
+        if not listing_sent:
+            sink.emit("error", ErrorPayload(**_step_error_kwargs("write", exc)))
+            sink.emit(
+                "done",
+                DonePayload(
+                    total_cost_usd=harness.get_query_cost_usd(trace_id),
+                    total_tool_calls=total_tool_calls,
+                    elapsed_ms=_elapsed_ms(state),
+                    trust_outcome="refuse",
+                    layer_calls_used=call_budget.calls_made(),
+                    decisions=_done_decisions(harness),
+                ),
+            )
+            return sink.result()
+        # Build phase 8.7: the listing is already on screen and is never
+        # taken back. The writer wrote nothing, which grounds nothing, so
+        # the structured fallback below answers with that same listing, and
+        # `_build_writer_failed_note` says why there is no summary.
+        logger.warning(
+            "writer call failed after the listing was sent (trace %s): %s; "
+            "the listing is the answer",
+            trace_id,
+            exc.error_class,
+        )
+        writer_failed = True
+        synth_text = ""
+
+    # A5/F-02 (build phase 2.1) established that the terminal
+    # trust_outcome must reflect what Act actually found. Build phase 2.2
+    # replaces the row-count proxy that stood in for grounding with the
+    # real thing: Section 8.2 runs over the narrative Synth just wrote,
+    # and the outcome comes from Section 8.3's decision table over what
+    # survived, not from whether any row happened to carry a source_url.
+    # (`tool_outcome` itself is read before the writer call since build
+    # phase 8.7: it reads only what Act found, and the listing needs it.)
 
     # UI fix set 9 (2026-09-13). The reply is read into paragraphs and
     # headings first, and the grounding pass receives the paragraphs joined,
@@ -13372,10 +14119,16 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             {claim.finding.citation_id for claim in grounding.claims}, prompt_findings
         )
         repair_budget_s = write_budget_s - (time.monotonic() - write_started_at)
-        if (
-            omitted_findings
+        # Build phase 8.7, card 50, option B: the second draft may already
+        # be running beside the first. Whether it has a job is decided
+        # exactly as before; only when it started differs, and both paths
+        # are judged by the one keep rule below.
+        repair_needed = (
+            bool(omitted_findings)
             and not cap_hit
-            and repair_budget_s >= _WRITE_REPAIR_MIN_BUDGET_S
+            # A writer that failed after the listing was sent is not asked
+            # again: the listing is already the answer on screen.
+            and not writer_failed
             and not _code_built_lines_will_cite(
                 omitted_findings,
                 synth_findings,
@@ -13384,7 +14137,11 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 lists_every_finding=query.audience_depth == "researcher",
                 question=query.text,
             )
-        ):
+        )
+        repaired_text: Any = None
+        if repair_needed and _second_draft_running(harness):
+            repaired_text, repair_cap_exceeded = await _second_draft_reply(harness)
+        elif repair_needed and repair_budget_s >= _WRITE_REPAIR_MIN_BUDGET_S:
             try:
                 repaired_text = await _dispatch_tier_call(
                     harness,
@@ -13417,64 +14174,75 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             except HarnessCallError:
                 # Best-effort, per the contract stated above.
                 repaired_text = None
-            if repaired_text is not None:
-                repaired_reply, repaired_quotes = extract_evidence_quotes(
-                    _response_text(repaired_text)
+        else:
+            # Nothing for a second draft to do: one started beside the first
+            # is dropped now, so the answer never waits on it.
+            await _drop_second_draft(harness)
+        if repaired_text is not None:
+            repaired_reply, repaired_quotes = extract_evidence_quotes(
+                _response_text(repaired_text)
+            )
+            repaired_layout = grounding_input(parse_synth_layout(repaired_reply))
+            repaired_grounding = await _ground_with_sentence_check(
+                repaired_layout.narrative,
+                prompt_findings,
+                question=query.text,
+                evidence_quotes=repaired_quotes,
+                harness=harness,
+                trace_id=trace_id,
+                budget_s=write_budget_s - (time.monotonic() - write_started_at),
+            )
+            reported_before = {
+                claim.finding.citation_id for claim in grounding.claims
+            }
+            reported_after = {
+                claim.finding.citation_id for claim in repaired_grounding.claims
+            }
+            # Keep the repair only when it is a genuine improvement over
+            # the SET, never merely a smaller number (F-4.5-J-13/
+            # F-4.5-A-06). The old rule compared counts, so a repair that
+            # covered two new findings while dropping one was accepted:
+            # omitted went from five to four and looked like progress.
+            #
+            # Everything downstream is recomputed from the replaced
+            # `grounding`, so a dropped finding takes its citation, its
+            # per-claim trust signal and, if it was the conflicted one,
+            # its conflict flag with it. The answer-level number does not
+            # fall, because the note below floors at `ask`, which
+            # outranks `flag`. That is what makes the loss hard to see:
+            # the aggregate looks more restrictive while a specific
+            # safety signal has been deleted.
+            #
+            # A strict superset is the whole rule. It implies fewer
+            # omissions, and it implies the claim set is non-empty, so
+            # both of the old conditions are subsumed rather than
+            # accumulated alongside it.
+            #
+            # Card 88 (2026-10-05): a repair that keeps EVERY record the
+            # first answer reported (a superset, possibly equal) and shows
+            # more grounded sentences is also kept. Measured locally on
+            # the GERD question: a first draft with one surviving sentence
+            # beat a repair with three on the same abstract, so the reader
+            # got one sentence. What F-4.5-J-13 protects still holds: no
+            # reported record can be dropped, and every sentence either
+            # way passed the same grounding pass.
+            #
+            # Build phase 8.7: the same rule judges a second draft started
+            # beside the first, so option B never undoes card 88.
+            more_on_the_same_records = reported_after >= reported_before and len(
+                repaired_grounding.sentences
+            ) > len(grounding.sentences)
+            if reported_after > reported_before or more_on_the_same_records:
+                synth_text = repaired_text
+                grounding = repaired_grounding
+                model_layout = repaired_layout
+                omitted_findings = unreported_findings(
+                    reported_after, synth_findings
                 )
-                repaired_layout = grounding_input(parse_synth_layout(repaired_reply))
-                repaired_grounding = await _ground_with_sentence_check(
-                    repaired_layout.narrative,
-                    prompt_findings,
-                    question=query.text,
-                    evidence_quotes=repaired_quotes,
-                    harness=harness,
-                    trace_id=trace_id,
-                    budget_s=write_budget_s - (time.monotonic() - write_started_at),
-                )
-                reported_before = {
-                    claim.finding.citation_id for claim in grounding.claims
-                }
-                reported_after = {
-                    claim.finding.citation_id for claim in repaired_grounding.claims
-                }
-                # Keep the repair only when it is a genuine improvement over
-                # the SET, never merely a smaller number (F-4.5-J-13/
-                # F-4.5-A-06). The old rule compared counts, so a repair that
-                # covered two new findings while dropping one was accepted:
-                # omitted went from five to four and looked like progress.
-                #
-                # Everything downstream is recomputed from the replaced
-                # `grounding`, so a dropped finding takes its citation, its
-                # per-claim trust signal and, if it was the conflicted one,
-                # its conflict flag with it. The answer-level number does not
-                # fall, because the note below floors at `ask`, which
-                # outranks `flag`. That is what makes the loss hard to see:
-                # the aggregate looks more restrictive while a specific
-                # safety signal has been deleted.
-                #
-                # A strict superset is the whole rule. It implies fewer
-                # omissions, and it implies the claim set is non-empty, so
-                # both of the old conditions are subsumed rather than
-                # accumulated alongside it.
-                #
-                # Card 88 (2026-10-05): a repair that keeps EVERY record the
-                # first answer reported (a superset, possibly equal) and shows
-                # more grounded sentences is also kept. Measured locally on
-                # the GERD question: a first draft with one surviving sentence
-                # beat a repair with three on the same abstract, so the reader
-                # got one sentence. What F-4.5-J-13 protects still holds: no
-                # reported record can be dropped, and every sentence either
-                # way passed the same grounding pass.
-                more_on_the_same_records = reported_after >= reported_before and len(
-                    repaired_grounding.sentences
-                ) > len(grounding.sentences)
-                if reported_after > reported_before or more_on_the_same_records:
-                    synth_text = repaired_text
-                    grounding = repaired_grounding
-                    model_layout = repaired_layout
-                    omitted_findings = unreported_findings(
-                        reported_after, synth_findings
-                    )
+
+    # Build phase 8.7: whatever happened above, no second draft outlives
+    # this point.
+    await _drop_second_draft(harness)
 
     # UI fix set 7, item 7.1 (2026-09-13). THE STRUCTURED FALLBACK.
     #
@@ -13500,12 +14268,19 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     # `_build_structured_fallback_note` says so in the answer.
     structured_fallback_used = False
     if tool_outcome == "ok" and synth_findings and not grounding.claims:
-        fallback_grounding = run_grounding_pass(
-            build_structured_fallback_narrative(synth_findings),
-            synth_findings,
-            core_ask_required=True,
-            question=query.text,
-            code_built_listing=True,
+        # Build phase 8.7: the listing grounded before the writer call is
+        # this exact computation over the same findings, so it is reused as
+        # is.
+        fallback_grounding = (
+            listing_grounding
+            if listing_grounding is not None
+            else run_grounding_pass(
+                build_structured_fallback_narrative(synth_findings),
+                synth_findings,
+                core_ask_required=True,
+                question=query.text,
+                code_built_listing=True,
+            )
         )
         if fallback_grounding.claims:
             grounding = fallback_grounding
@@ -13600,7 +14375,40 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     tail_sentences: tuple[str, ...] = ()
     tail_findings = synth_findings if tail_is_listing else omitted_findings
     if (
-        tool_outcome == "ok"
+        tail_is_listing
+        and tool_outcome == "ok"
+        and synth_findings
+        and (grounding.claims or restatements_dropped)
+        and not structured_fallback_used
+        and listing_grounding is not None
+        and listing_grounding.claims
+    ):
+        # Build phase 8.7, card 50: the listing, as grounded and numbered
+        # before the writer call, and perhaps already on screen. Its claims
+        # come FIRST in the merged claims, and `display_index_by_citation_id`
+        # numbers by first appearance, so every record it lists keeps the
+        # number it was grounded (and sent) with: a number shown early can
+        # never change. The prose, which arrives later, is renumbered into
+        # that numbering, so a record it cites prints the listing's number.
+        merged_claims = list(listing_grounding.claims) + list(grounding.claims)
+        merged_slots = display_index_by_citation_id(
+            GroundingResult(narrative="", claims=merged_claims, stripped_count=0, refused=False)
+        )
+        model_grounding = _renumbered(grounding, merged_slots)
+        tail_sentences = listing_grounding.sentences
+        grounding = GroundingResult(
+            narrative=(model_grounding.narrative.rstrip() + " " + " ".join(tail_sentences)).strip(),
+            claims=merged_claims,
+            stripped_count=grounding.stripped_count + listing_grounding.stripped_count,
+            refused=False,
+        )
+        omitted_findings = unreported_findings(
+            {claim.finding.citation_id for claim in grounding.claims},
+            synth_findings,
+        )
+    elif (
+        not tail_is_listing
+        and tool_outcome == "ok"
         and tail_findings
         and (grounding.claims or restatements_dropped)
         and not structured_fallback_used
@@ -13657,6 +14465,14 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         citations = _citations_from_grounded_claims(
             grounding, findings, layer2_raw_outputs, layer3_raw_outputs
         )
+        if listing_sent:
+            # Build phase 8.7, card 50: a citation already on screen is the
+            # one the answer keeps, exactly as it was sent. Its number
+            # cannot differ (the listing's claims lead the merged claims,
+            # see the listing merge above); the payload is kept too, so no
+            # surface is ever told two things about one chip.
+            sent_by_id = {citation.citation_id: citation for citation in listing_citations}
+            citations = [sent_by_id.get(c.citation_id, c) for c in citations]
         # T-3.4-07, Section 7.2: floor a conflicted claim's outcome at
         # `flag` AFTER citations exist (it needs their `source_url` for
         # `ConflictResult`) and BEFORE the answer-level aggregate below, so
@@ -13674,9 +14490,15 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
 
     structured_fallback_note: str | None = None
     if structured_fallback_used and trust_outcome != "refuse":
-        structured_fallback_note = (
-            _build_cap_list_note() if cap_hit else _build_structured_fallback_note()
-        )
+        # Build phase 8.7: a writer that failed after the listing was on
+        # screen gets its own note, which says the summary is missing rather
+        # than that one failed its check. A cap hit keeps card 46's note.
+        if cap_hit:
+            structured_fallback_note = _build_cap_list_note()
+        elif writer_failed:
+            structured_fallback_note = _build_writer_failed_note()
+        else:
+            structured_fallback_note = _build_structured_fallback_note()
 
     # F-3.4-A-01: a completeness check, a different question from
     # everything Section 8.3 above just computed. Every claim above may
@@ -14043,39 +14865,88 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             lambda finding: _row_for(finding, findings),
             condition_names,
             audience_depth=query.audience_depth,
+            # Build phase 8.7, card 2: the honest gap, when a decision
+            # already made says what kind of fact was asked for and code
+            # finds no record in the answer that gives it.
+            asked_field=_asked_field(clinical_features_asked, state.get("failed_searches", [])),
+            all_findings=synth_findings,
         )
-        for token in _answer_tokens(
+        # Build phase 8.7, card 2 (design C): whether a grounded, cited
+        # sentence of the model's prose answers the question and should
+        # open the answer. Asked only when there is a count line it could
+        # lead ahead of; every failure leaves the count line leading.
+        lead_index = (
+            await _lead_sentence_choice(
+                harness,
+                trace_id,
+                query.text,
+                model_grounding,
+                write_budget_s - (time.monotonic() - write_started_at),
+            )
+            if summary_sentence
+            else None
+        )
+        parts = _answer_parts(
             audience_depth=query.audience_depth,
             question=query.text,
             model_grounding=model_grounding,
             model_layout=model_layout,
-            fallback_sentences=grounding.sentences if structured_fallback_used else (),
-            tail_sentences=tail_sentences,
+            # Build phase 8.7: a listing already on screen is never built or
+            # sent twice.
+            fallback_sentences=(
+                grounding.sentences if structured_fallback_used and not listing_sent else ()
+            ),
+            tail_sentences=() if listing_sent else tail_sentences,
             tail_is_listing=tail_is_listing,
             citations=citations,
             synth_findings=synth_findings,
             findings=findings,
-            mentions=[
-                getattr(entity, "text", "") or ""
-                for entity in (state.get("resolved_entities") or [])
-            ]
-            + [state.get("next_step_entity_label") or ""],
+            mentions=answer_mentions,
             notes=notes,
             summary_sentence=summary_sentence,
             condition_names=condition_names,
-        ):
-            # UI fix set 11.16 (2026-09-14): `emit_live`, not `emit`, for
-            # every event from here to the answer-scope verdict. Each token
-            # is a sentence the grounding pass above has already accepted,
-            # and the citations and verdicts are derived from that same
-            # pass, so nothing leaving the node here is a draft. Only WHEN
-            # a reader sees it changes; `run_streaming` de-duplicates by
-            # seq, so the node's own state still carries every one of them
-            # in this order. The `cost` and `done` events below keep plain
-            # `emit`: the node returns on the line after them.
-            sink.emit_live("token", token)
+            lead_index=lead_index,
+        )
+        summary_tokens = list(parts.summary)
+        note_tokens = list(parts.notes)
+        if listing_sent:
+            # The summary goes in the slot above a listing that is already
+            # on screen, and the listing opened with its own paragraph
+            # break; each note keeps one before it.
+            while summary_tokens and summary_tokens[-1].kind == "paragraph_break":
+                summary_tokens.pop()
+            if note_tokens and note_tokens[0].kind != "paragraph_break":
+                note_tokens.insert(
+                    0, TokenPayload(text="\n\n", marker_ids=[], kind="paragraph_break")
+                )
+        # UI fix set 11.16 (2026-09-14): `emit_live`, not `emit`, for every
+        # event from here to the answer-scope verdict. Each token is a
+        # sentence the grounding pass above has already accepted, and the
+        # citations and verdicts are derived from that same pass, so nothing
+        # leaving the node here is a draft. Only WHEN a reader sees it
+        # changes; `run_streaming` de-duplicates by seq, so the node's own
+        # state still carries every one of them in this order. The `cost`
+        # and `done` events below keep plain `emit`: the node returns on the
+        # line after them.
+        #
+        # Build phase 8.7: the summary goes in the slot above the listing,
+        # and the notes follow the listing, so a surface lays the answer out
+        # from `placement` alone. For a request that does not read the field
+        # no token carries it, and the order is the reading order, token for
+        # token as before (F-8.7-A01).
+        for token in summary_tokens:
+            sink.emit_live("token", _with_placement(token, _PLACEMENT_SUMMARY, reads_placement))
+        for token in parts.listing:
+            sink.emit_live("token", _with_placement(token, _PLACEMENT_LISTING, reads_placement))
+        for token in note_tokens:
+            sink.emit_live("token", _with_placement(token, _PLACEMENT_LISTING, reads_placement))
 
+        # The listing's citations went out with it; only the ones the prose
+        # added are new.
+        sent_ids = {citation.citation_id for citation in listing_citations} if listing_sent else set()
         for citation in citations:
+            if citation.citation_id in sent_ids:
+                continue
             sink.emit_live("citation", citation)
 
         for trust in claim_trusts:

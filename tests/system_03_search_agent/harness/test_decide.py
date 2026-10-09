@@ -835,10 +835,14 @@ async def test_an_unusable_jev_reply_is_charged_at_its_reported_cost(
 @pytest.mark.asyncio
 async def test_the_cost_cap_still_applies_after_an_over_ceiling_charge(monkeypatch: pytest.MonkeyPatch) -> None:
     """$0.02 reported, charged at the $0.01 ceiling (F-8.6-V01) against a
-    $0.005 cap: the guard fallback is refused by the cap before it is
-    sent, and the fail-open default is recorded."""
+    $0.015 cap: the guard fallback is refused by the cap before it is
+    sent, and the fail-open default is recorded.
+
+    The cap was $0.005 here until the fix round's F-8.7-A06: a Jev call can
+    be billed its $0.01 ceiling, so under a $0.005 cap the check now refuses
+    it before it is sent, which is the cap holding as a bound."""
     _jev_mode(monkeypatch)
-    _patch_cap(monkeypatch, cap_usd="0.005")
+    _patch_cap(monkeypatch, cap_usd="0.015")
     mock_guard = _free_guard(monkeypatch)
     _real_jev_reply(monkeypatch, cost="0.02")
     harness = Harness(trace_id="j10-2")

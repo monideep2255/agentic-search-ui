@@ -23,6 +23,7 @@ from system_03_search_agent.contracts.events import (
     ToolStartPayload,
     TrustSignalPayload,
 )
+from system_03_search_agent.contracts.token_order import placement_of
 
 EVENT_TYPES = [
     "guard",
@@ -504,6 +505,59 @@ class TestTokenPayload:
     def test_marker_ids_over_max_items_rejected(self) -> None:
         with pytest.raises(ValidationError):
             TokenPayload(text="ok", marker_ids=[f"c_{i}" for i in range(21)])
+
+    # Build phase 8.7, T-8.7-03: the additive `placement` field.
+
+    def test_a_payload_without_placement_validates_and_reads_as_summary(self) -> None:
+        # Every token a producer built before phase 8.7 carries no placement.
+        # It must still validate, and land where it always rendered.
+        before_8_7 = {"text": "BRCA1 is a gene [1].", "marker_ids": ["c_1"], "kind": "claim"}
+        payload = TokenPayload.model_validate(before_8_7)
+        assert payload.placement is None
+        assert placement_of(payload) == "summary"
+
+    def test_a_token_without_placement_serializes_to_the_bytes_it_had_before(self) -> None:
+        # Fix round, F-8.7-A01: a request that did not ask for `placement`
+        # gets no such key, so a client whose own contract forbids extra
+        # keys reads the frame as before. The literal is the exact JSON
+        # the pre-8.7 `TokenPayload` produced for this token. Mutation that
+        # turns this red: drop `_omit_absent_placement`, or default the
+        # field to "summary" again.
+        payload = TokenPayload(text="Found 4 records.", marker_ids=["c_1"], kind="claim")
+        assert payload.model_dump_json() == (
+            '{"text":"Found 4 records.","marker_ids":["c_1"],"kind":"claim",'
+            '"cells":null,"emphasis":null}'
+        )
+        assert "placement" not in payload.model_dump()
+        explicit_none = TokenPayload.model_validate(
+            {"text": "ok", "marker_ids": [], "placement": None}
+        )
+        assert "placement" not in explicit_none.model_dump()
+        placed = TokenPayload(text="ok", marker_ids=[], placement="listing")
+        assert placed.model_dump()["placement"] == "listing"
+
+    def test_both_placements_validate(self) -> None:
+        for placement in ("listing", "summary"):
+            payload = TokenPayload(text="Found 4 records.", marker_ids=[], placement=placement)
+            assert payload.placement == placement
+
+    @pytest.mark.parametrize("placement", ["header", "", "LISTING", 1])
+    def test_a_placement_outside_the_two_values_is_rejected(self, placement: object) -> None:
+        # Bounded like every other field here: a free string would let a
+        # producer invent a region the screen has no slot for.
+        with pytest.raises(ValidationError):
+            TokenPayload.model_validate({"text": "ok", "marker_ids": [], "placement": placement})
+
+    def test_placement_travels_on_the_wire_envelope(self) -> None:
+        event = Event(
+            type="token",
+            version="v1",
+            trace_id="t_1",
+            seq=1,
+            ts=datetime(2026, 9, 27, tzinfo=UTC),
+            payload={"text": "Found 4 records.", "marker_ids": [], "placement": "listing"},
+        )
+        assert event.model_dump(mode="json")["payload"]["placement"] == "listing"
 
 
 class TestCitationPayload:

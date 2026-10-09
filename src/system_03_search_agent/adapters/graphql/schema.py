@@ -345,7 +345,12 @@ class Mutation:
         # surface does. This surface has no field a cost figure could be
         # selected into, so an operator allowlist entry must not be able to
         # open one here.
-        run_context = RequestContext(surface="graphql", operator_mode=False)
+        # Build phase 8.7 fix round, F-8.7-A01: the fold joins tokens in
+        # reading order (`contracts.token_order.joined_text`), so this
+        # surface reads `placement` and opts in.
+        run_context = RequestContext(
+            surface="graphql", operator_mode=False, reads_placement=True
+        )
         try:
             default_registry.create_run(
                 core_query,

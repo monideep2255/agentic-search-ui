@@ -177,6 +177,10 @@ from system_03_search_agent.contracts.events import (
     TrustSignalPayload,
     source_page_key,
 )
+from system_03_search_agent.contracts.token_order import (
+    LISTING,
+    joined_text,
+)
 
 if TYPE_CHECKING:
     from system_03_search_agent.adapters.cli.client import CliApiError
@@ -712,6 +716,18 @@ class Renderer:
         # Whether anything answer-shaped reached stdout, so a run that did
         # not finish says so under it.
         self._answer_written = False
+        # Build phase 8.7: listing tokens that arrived before the summary are
+        # held and written after it, at `done` or `finish()`, so the summary
+        # stays above the records. A stream with no placement holds nothing.
+        self._held_listing: list[str] = []
+
+    def _flush_held_listing(self) -> None:
+        if not self._held_listing:
+            return
+        held, self._held_listing = self._held_listing, []
+        for text in held:
+            self._out.write(text)
+        self._out.flush()
 
     @property
     def offered_options(self) -> bool:
@@ -868,11 +884,15 @@ class Renderer:
         # immediately (F-4.2-A-07): an unflushed stream buffers the
         # answer until process exit, which is indistinguishable from not
         # streaming at all from the reader's side of the pipe.
-        self._out.write(_sanitize_untrusted(payload.text))
-        self._out.flush()
         self._seen_marker_ids.update(payload.marker_ids)
         if payload.text:
             self._answer_written = True
+        if payload.placement == LISTING:
+            # Held until the summary has been written (build phase 8.7).
+            self._held_listing.append(_sanitize_untrusted(payload.text))
+            return
+        self._out.write(_sanitize_untrusted(payload.text))
+        self._out.flush()
 
     def _handle_citation(self, event: Event) -> None:
         payload = CitationPayload.model_validate(event.payload)
@@ -1019,6 +1039,7 @@ class Renderer:
     def _handle_done(self, event: Event) -> None:
         payload = DonePayload.model_validate(event.payload)
         self._done_seen = True
+        self._flush_held_listing()
 
         # The tag and the trust line, from the server's final verdict: the
         # same field the web's outcome, `--json`'s `trust_outcome` and the
@@ -1155,6 +1176,7 @@ class Renderer:
     # ------------------------------------------------------------------
 
     def finish(self) -> int:
+        self._flush_held_listing()
         # A run that never reached a terminal `done`, a terminal fatal
         # `error`, or a guard rejection is not a run that finished
         # cleanly, so the safe default on an otherwise-undetermined state
@@ -1275,7 +1297,7 @@ class JsonRenderer:
         # The `CliClient` whose `stream_skipped_frame_count` and
         # `stream_truncated` are read once, at `finish()`.
         self._stream_state = stream_state
-        self._answer_parts: list[str] = []
+        self._answer_parts: list[TokenPayload] = []
         self._citations: dict[str, CitationPayload] = {}
         self._seen_marker_ids: set[str] = set()
         self._trust_outcome: str | None = None
@@ -1323,7 +1345,7 @@ class JsonRenderer:
 
     def _handle_token(self, event: Event) -> None:
         payload = TokenPayload.model_validate(event.payload)
-        self._answer_parts.append(payload.text)
+        self._answer_parts.append(payload)
         self._seen_marker_ids.update(payload.marker_ids)
 
     def _handle_citation(self, event: Event) -> None:
@@ -1398,7 +1420,7 @@ class JsonRenderer:
                 "complete": complete,
                 "trust_outcome": trust_outcome,
                 "trust_line": self._trust_line,
-                "answer": "".join(self._answer_parts),
+                "answer": joined_text(self._answer_parts),
                 "citations": [
                     citation.model_dump(mode="json")
                     for citation in sorted(self._citations.values(), key=lambda c: c.display_index)

@@ -917,3 +917,14 @@ class TestTheAnonymousSourceShareIsMateriallyBelowTheDay:
 
         with pytest.raises(TypeError):
             anon_daily_source_share(bad_cap)  # type: ignore[arg-type]
+
+
+def test_a_guard_estimate_bounds_a_jev_call() -> None:
+    """Fix round, F-8.7-A06: `harness.decide` checks a Jev call under the
+    guard tier, and a Jev reply can be billed `MAX_JEV_COST_USD`. The guard
+    estimate is never below that, so the cap check bounds the Jev call too.
+    Mutation that turns this red: drop `_GUARD_ESTIMATE_FLOOR_USD`."""
+    from system_03_search_agent.harness.jev_client import MAX_JEV_COST_USD
+
+    assert estimate_call_cost_usd("guard") >= MAX_JEV_COST_USD
+    assert estimate_call_cost_usd("guard", (1e-9, 1e-9)) >= MAX_JEV_COST_USD

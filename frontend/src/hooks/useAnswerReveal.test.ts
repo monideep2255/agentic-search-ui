@@ -1,141 +1,120 @@
 /**
- * The one-by-one answer reveal, 2026-09-14.
+ * What the screen shows of the answer, and what Stop leaves on it.
+ *
+ * BUILD PHASE 8.7, T-8.7-03 (2026-09-27): the screen follows the stream.
+ * This file used to pin a timed reveal: the first sentence held until the
+ * writing banner had shown 1.5 seconds, then one sentence per 110 ms. The
+ * phase's acceptance ("nothing that has arrived is held back") removes that
+ * reveal on purpose, so its three timing arms are replaced by the arm below
+ * that pins the opposite: every arrived sentence shows in the render it
+ * arrives in. Every Stop arm is kept, card 58's included, and the owner's
+ * decision of 2026-09-27 on records already on screen is added.
  *
  * WHAT THIS PINS:
- * - a burst of 5 sentences that arrives at once is revealed progressively,
- *   one per `perItemMs`, never all at once;
- * - the first sentence waits until the writing state has been visible for
- *   `minBannerMs`;
- * - once `done` has arrived, the rest is revealed at `afterDoneMs` each, the
- *   view stays unlanded until the last one, and the landed view is the input
- *   object itself (nothing dropped);
- * - Stop mid-reveal freezes the count and leaves no pending timer;
- * - Stop before the first sentence withholds the whole answer (card 58);
- * - a run with no sentences (a refusal) passes straight through;
- * - a new run starts from zero.
+ * - every arrived sentence and record shows at once, and the view is the
+ *   input object itself (nothing held, dropped or reworded);
+ * - Stop before any of the answer was on screen withholds the whole answer
+ *   (card 58, F-58-J02, F-58-A01);
+ * - Stop after records were on screen keeps exactly those records, and
+ *   nothing that arrives afterwards shows: no summary, no count-line change,
+ *   no note, no trust line (the owner, 2026-09-27);
+ * - Stop mid-summary keeps what was shown and shows nothing new;
+ * - a failed stream, a refusal and a new run pass straight through.
  *
- * WHAT IT DOES NOT PIN: the rise animation (CSS, see AnswerScreen tests).
+ * WHAT IT DOES NOT PIN: the rise animation (CSS, see the AnswerScreen tests).
  */
 
-import { act, renderHook } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { Claim } from "../components/screens/AnswerScreen";
 import { EMPTY_RUN_VIEW } from "./useRunView";
 import type { RunView } from "./useRunView";
-import { REVEAL_TIMING, useAnswerReveal } from "./useAnswerReveal";
+import { useAnswerReveal, whatStopLeavesOnScreen } from "./useAnswerReveal";
 
-function viewWith(n: number, overrides: Partial<RunView> = {}): RunView {
+const sentence = (i: number): Claim => ({ text: `Sentence ${i}.`, layer: 2, citations: [i] });
+const record = (i: number): Claim => ({
+  text: `Disease name: Disease ${i} [${i}].`,
+  layer: 1,
+  citations: [i],
+  kind: "table_row",
+  cells: [`Disease ${i}`],
+  placement: "listing",
+});
+
+function viewWith(claims: Claim[], overrides: Partial<RunView> = {}): RunView {
   return {
     ...EMPTY_RUN_VIEW,
     activeStep: "Write",
     reachedSteps: ["Guard", "Think", "Plan", "Act", "Write"],
-    claims: Array.from({ length: n }, (_, i) => ({
-      text: `Sentence ${i + 1}.`,
-      layer: 2 as const,
-      citations: [i + 1],
-    })),
+    claims,
+    sources: claims.map((_, i) => ({
+      n: i + 1,
+      name: `Record ${i + 1}`,
+      tool: "cypher_query",
+      layer: 1 as const,
+      url: "https://www.ncbi.nlm.nih.gov/gene/672",
+      rows: [],
+    })) as unknown as RunView["sources"],
     ...overrides,
   };
 }
 
+const records = [record(1), record(2), record(3)];
+/** What arrives after the records: the summary, its verdict and `done`. */
+const landedAnswer = viewWith([...records, sentence(4), sentence(5)], {
+  landed: true,
+  activeStep: null,
+  meta: "3 tools · 5 sources",
+  outcome: "Answered",
+  trust: [{ kind: "good", label: "Grounded · every claim cited" }],
+  systemNotes: ["Note: one further record was not shown."],
+});
+
 beforeEach(() => {
   vi.useFakeTimers();
 });
-
-/**
- * Advance in small steps, each inside its own `act`, because React schedules
- * the NEXT reveal timer in an effect that runs only after `act` returns.
- */
-function advance(ms: number, step = 10) {
-  for (let elapsed = 0; elapsed < ms; elapsed += step) {
-    act(() => vi.advanceTimersByTime(Math.min(step, ms - elapsed)));
-  }
-}
 afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("useAnswerReveal", () => {
-  it("reveals a burst of 5 sentences one at a time, not all at once", () => {
+describe("useAnswerReveal: the screen follows the stream", () => {
+  it("shows every arrived sentence in the render it arrives in, with no timer", () => {
     const { result, rerender } = renderHook(
       ({ view }) => useAnswerReveal(view, { runKey: "run-1", stopped: false }),
-      { initialProps: { view: viewWith(0) } },
+      { initialProps: { view: viewWith([]) } },
     );
-    // The writing state has already been on screen for longer than the minimum.
-    act(() => vi.advanceTimersByTime(REVEAL_TIMING.minBannerMs + 10));
-    rerender({ view: viewWith(5) });
-
-    // Populate-check: the input really carries five sentences.
-    expect(viewWith(5).claims).toHaveLength(5);
-    act(() => vi.advanceTimersByTime(0));
-    expect(result.current.claims).toHaveLength(1);
-    expect(result.current.activeStep).toBe("Write");
-
-    const seen = [result.current.claims.length];
-    for (let i = 0; i < 4; i += 1) {
-      act(() => vi.advanceTimersByTime(REVEAL_TIMING.perItemMs));
-      seen.push(result.current.claims.length);
-    }
-    expect(seen).toEqual([1, 2, 3, 4, 5]);
+    const five = viewWith([1, 2, 3, 4, 5].map(sentence));
+    // Populate-check: five sentences arrived.
+    expect(five.claims).toHaveLength(5);
+    rerender({ view: five });
+    // No time has passed and all five are shown: nothing arrived is held.
+    expect(result.current.claims).toHaveLength(5);
+    expect(result.current).toBe(five);
+    expect(vi.getTimerCount(), "a timer is still holding something back").toBe(0);
   });
 
-  it("keeps the writing banner up for the minimum before the first sentence", () => {
-    const { result, rerender } = renderHook(
-      ({ view }) => useAnswerReveal(view, { runKey: "run-1", stopped: false }),
-      { initialProps: { view: viewWith(0) } },
-    );
-    // Tokens land 200ms after Write began: a fast write.
-    act(() => vi.advanceTimersByTime(200));
-    rerender({ view: viewWith(3) });
-    act(() => vi.advanceTimersByTime(REVEAL_TIMING.minBannerMs - 300));
-    expect(result.current.claims).toHaveLength(0);
-    act(() => vi.advanceTimersByTime(150));
-    expect(result.current.claims).toHaveLength(1);
+  it("shows a landed answer as it arrived, landed, the very object", () => {
+    const { result } = renderHook(() => useAnswerReveal(landedAnswer, { runKey: "run-1", stopped: false }));
+    expect(result.current).toBe(landedAnswer);
+    expect(result.current.landed).toBe(true);
+    expect(result.current.meta).toBe("3 tools · 5 sources");
   });
 
-  it("finishes quickly once done arrives, stays unlanded until the end, and drops nothing", () => {
-    const landedView = viewWith(5, { landed: true, activeStep: null, meta: "1 tool · 5 sources" });
-    const { result } = renderHook(
-      ({ view }) => useAnswerReveal(view, { runKey: "run-1", stopped: false }),
-      { initialProps: { view: landedView } },
-    );
-    act(() => vi.advanceTimersByTime(REVEAL_TIMING.minBannerMs));
-    expect(result.current.claims).toHaveLength(1);
-    expect(result.current.landed).toBe(false);
-    expect(result.current.activeStep).toBe("Write");
-    expect(result.current.meta).toBe("");
-
-    for (let i = 2; i <= 4; i += 1) {
-      act(() => vi.advanceTimersByTime(REVEAL_TIMING.afterDoneMs));
-      expect(result.current.claims).toHaveLength(i);
-      expect(result.current.landed).toBe(false);
-    }
-    act(() => vi.advanceTimersByTime(REVEAL_TIMING.afterDoneMs));
-    // Landed, and it is the very object that arrived.
-    expect(result.current).toBe(landedView);
-    expect(result.current.claims.map((c) => c.text)).toEqual(landedView.claims.map((c) => c.text));
-  });
-
-  it("freezes cleanly when Stop latches mid-reveal", () => {
-    const { result, rerender } = renderHook(
-      ({ view, stopped }) => useAnswerReveal(view, { runKey: "run-1", stopped }),
-      { initialProps: { view: viewWith(5), stopped: false } },
-    );
-    advance(REVEAL_TIMING.minBannerMs + REVEAL_TIMING.perItemMs);
-    expect(result.current.claims).toHaveLength(2);
-
-    rerender({ view: viewWith(5), stopped: true });
-    expect(vi.getTimerCount()).toBe(0);
-    act(() => vi.advanceTimersByTime(5000));
-    expect(result.current.claims).toHaveLength(2);
+  it("shows records the moment they arrive, before any summary", () => {
+    const listingOnly = viewWith(records);
+    const { result } = renderHook(() => useAnswerReveal(listingOnly, { runKey: "run-1", stopped: false }));
+    expect(result.current.claims.map((claim) => claim.text)).toEqual(records.map((claim) => claim.text));
     expect(result.current.landed).toBe(false);
   });
+});
 
-  it("withholds the whole answer when Stop latches before the first sentence (card 58, F-58-J02, F-58-A01)", () => {
-    // What Stop's flush hands the reveal: the per-question cap's partial
-    // result, landed, with no sentence to hold back, carrying its note, a
-    // verdict, and a clarification the person had already read.
-    const flushed = viewWith(0, {
+describe("useAnswerReveal: what Stop leaves on screen", () => {
+  it("withholds the whole answer when Stop latches before any of it was on screen (card 58, F-58-J02, F-58-A01)", () => {
+    // What Stop's flush hands the hook: the per-question cap's partial
+    // result, landed, with no sentence, carrying its note, a verdict, and a
+    // clarification the person had already read.
+    const flushed = viewWith([], {
       landed: true,
       activeStep: null,
       meta: "3 tools · 0 sources",
@@ -161,27 +140,78 @@ describe("useAnswerReveal", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("cuts the banner minimum under reduced motion, keeping banner-then-sentences order", () => {
+  it("withholds an answer that arrives in the same moment as a Stop pressed during the search", () => {
+    // Stop pressed while the helpers were still searching; the whole answer
+    // then reaches the hook in the same render as the Stop.
     const { result, rerender } = renderHook(
-      ({ view }) => useAnswerReveal(view, { runKey: "run-1", stopped: false, reducedMotion: true }),
-      { initialProps: { view: viewWith(0) } },
+      ({ view, stopped }) => useAnswerReveal(view, { runKey: "run-1", stopped }),
+      { initialProps: { view: viewWith([], { activeStep: "Act" }), stopped: false } },
     );
-    rerender({ view: viewWith(3) });
-    // Populate-check: the reduced minimum really is shorter.
-    expect(REVEAL_TIMING.reducedMinBannerMs).toBeLessThan(REVEAL_TIMING.minBannerMs);
-    act(() => vi.advanceTimersByTime(REVEAL_TIMING.reducedMinBannerMs - 50));
     expect(result.current.claims).toHaveLength(0);
-    act(() => vi.advanceTimersByTime(60));
-    expect(result.current.claims).toHaveLength(1);
+    rerender({ view: landedAnswer, stopped: true });
+    expect(result.current.claims, "part of an answer the reader had not seen showed after Stop").toEqual([]);
+    expect(result.current.landed).toBe(false);
   });
 
-  it("shows everything at once when the stream failed", () => {
-    const failed = viewWith(4);
-    const { result } = renderHook(() =>
-      useAnswerReveal(failed, { runKey: "run-1", stopped: false, flush: true }),
+  it("keeps the records already on screen when Stop latches, and shows nothing that arrives after it (the owner, 2026-09-27)", () => {
+    const listingOnly = viewWith(records);
+    const { result, rerender } = renderHook(
+      ({ view, stopped }) => useAnswerReveal(view, { runKey: "run-1", stopped }),
+      { initialProps: { view: listingOnly, stopped: false } },
     );
-    // Populate-check: four sentences arrived, and all four show immediately.
-    expect(result.current.claims).toHaveLength(4);
+    // Populate-check: the records were on screen before Stop.
+    expect(result.current.claims).toHaveLength(3);
+
+    rerender({ view: listingOnly, stopped: true });
+    expect(result.current.claims.map((claim) => claim.text), "the records were taken back by Stop").toEqual(
+      records.map((claim) => claim.text),
+    );
+    expect(result.current.landed).toBe(false);
+
+    // The server's summary, verdict, note and `done` arrive after Stop.
+    // Populate-check: they really arrive, and would show without the Stop.
+    expect(landedAnswer.claims).toHaveLength(5);
+    rerender({ view: landedAnswer, stopped: true });
+    expect(
+      result.current.claims.map((claim) => claim.text),
+      "something arrived after Stop and was shown",
+    ).toEqual(records.map((claim) => claim.text));
+    expect(result.current.trust, "a trust line showed after Stop").toEqual([]);
+    expect(result.current.systemNotes, "a note showed after Stop").toEqual([]);
+    expect(result.current.meta).toBe("");
+    expect(result.current.outcome).toBeNull();
+    expect(result.current.landed, "a stopped run landed on the result page").toBe(false);
+    // The citation markers still resolve through the same sources.
+    expect(result.current.sources).toBe(listingOnly.sources);
+  });
+
+  it("keeps a summary already partly on screen when Stop latches mid-write, and shows nothing new", () => {
+    const partly = viewWith([...records, sentence(4)]);
+    const { result, rerender } = renderHook(
+      ({ view, stopped }) => useAnswerReveal(view, { runKey: "run-1", stopped }),
+      { initialProps: { view: partly, stopped: false } },
+    );
+    rerender({ view: partly, stopped: true });
+    rerender({ view: landedAnswer, stopped: true });
+    expect(result.current.claims).toBe(partly.claims);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("keeps the rule in one function: nothing shown means nothing kept, something shown means exactly that", () => {
+    expect(whatStopLeavesOnScreen(landedAnswer, null).claims).toEqual([]);
+    expect(whatStopLeavesOnScreen(landedAnswer, viewWith([])).claims).toEqual([]);
+    const shown = viewWith(records);
+    const kept = whatStopLeavesOnScreen(landedAnswer, shown);
+    expect(kept.claims).toBe(shown.claims);
+    expect(kept.trust).toEqual([]);
+    expect(kept.landed).toBe(false);
+  });
+});
+
+describe("useAnswerReveal: runs that pass straight through", () => {
+  it("shows everything at once when the stream failed", () => {
+    const failed = viewWith([1, 2, 3, 4].map(sentence));
+    const { result } = renderHook(() => useAnswerReveal(failed, { runKey: "run-1", stopped: false, flush: true }));
     expect(result.current).toBe(failed);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -190,20 +220,17 @@ describe("useAnswerReveal", () => {
     const refusal = { ...EMPTY_RUN_VIEW, landed: true, refusal: "No answer found." };
     const { result } = renderHook(() => useAnswerReveal(refusal, { runKey: "run-1", stopped: false }));
     expect(result.current).toBe(refusal);
-    expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("starts a new run from zero", () => {
+  it("does not carry what one run showed into a Stop on the next", () => {
     const { result, rerender } = renderHook(
-      ({ view, runKey }) => useAnswerReveal(view, { runKey, stopped: false }),
-      { initialProps: { view: viewWith(2, { landed: true }), runKey: "run-1" } },
+      ({ view, runKey, stopped }) => useAnswerReveal(view, { runKey, stopped }),
+      { initialProps: { view: viewWith(records), runKey: "run-1", stopped: false } },
     );
-    advance(REVEAL_TIMING.minBannerMs + 200);
-    expect(result.current.claims).toHaveLength(2);
-
-    rerender({ view: viewWith(3), runKey: "run-2" });
-    expect(result.current.claims).toHaveLength(0);
-    act(() => vi.advanceTimersByTime(REVEAL_TIMING.minBannerMs));
-    expect(result.current.claims).toHaveLength(1);
+    expect(result.current.claims).toHaveLength(3);
+    // Run two is stopped before anything of it was shown. Run one's records
+    // must not be what Stop keeps.
+    rerender({ view: landedAnswer, runKey: "run-2", stopped: true });
+    expect(result.current.claims).toEqual([]);
   });
 });

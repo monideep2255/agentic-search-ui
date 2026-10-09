@@ -192,6 +192,28 @@ describe("AgentEvent union: every non-cost payload shape", () => {
     expect(parseAgentEvent("token", event)).toEqual(event);
   });
 
+  it("accepts a token carrying either placement, build phase 8.7", () => {
+    for (const placement of ["listing", "summary"] as const) {
+      const payload: TokenPayload = { text: "Found 4 disease records.", marker_ids: [], placement };
+      const event = { ...BASE, type: "token" as const, payload } satisfies AgentEvent;
+      expect(parseAgentEvent("token", event)).toEqual(event);
+    }
+  });
+
+  it("accepts a token with no placement and one with a null placement, an older producer's shapes", () => {
+    const without = { ...BASE, type: "token" as const, payload: { text: "A sentence.", marker_ids: [], kind: "claim" } };
+    expect(parseAgentEvent("token", without)).toEqual(without);
+    const nullPlacement = { ...BASE, type: "token" as const, payload: { text: "A sentence.", marker_ids: [], placement: null } };
+    expect(parseAgentEvent("token", nullPlacement)).toEqual(nullPlacement);
+  });
+
+  it("rejects a token whose placement is outside the two values", () => {
+    for (const placement of ["header", "", "LISTING", 1]) {
+      const malformed = { ...BASE, type: "token", payload: { text: "ok", marker_ids: [], placement } };
+      expect(() => parseAgentEvent("token", malformed)).toThrow(/does not match/);
+    }
+  });
+
   it("accepts a citation event", () => {
     const payload: CitationPayload = {
       citation_id: "cit-1",

@@ -32,7 +32,9 @@ holds each decision point's fixed description and the list of points.
 What this decides, and what it never decides: `decide()` answers exactly
 one closed-option question at a time (`point`, e.g. "guardrail.relevancy",
 "think.ask_back", "think.recent_years", "think.asks_features",
-"plan.literature"), never free text. "guardrail.injection" is not one of
+"plan.literature", and since build phase 8.7 "write.lead_sentence", whose
+fixed description sits in its own section below), never free text.
+"guardrail.injection" is not one of
 `decide()`'s points: it is built by `core/graph.py`'s `_injection_record`,
 which calls `call_jev` directly and asks the guard classifier beside it on
 every Jev-mode question, never through this function (F-8.6-V05).
@@ -562,6 +564,115 @@ def _jev_mode_record(
         decided_by="guard",
         fallback_reason=f"{NO_USABLE_PICK}:{jev}",
     )
+
+
+# ---------------------------------------------------------------------------
+# The lead sentence (build phase 8.7, card 2, design C). One decision, asked
+# after grounding, over the question and the first one or two sentences the
+# grounding pass already accepted and that carry a citation. The Write step
+# (`core/graph.py`, `_lead_sentence_choice`) asks it through `decide()`, so
+# Jev decides and the guard tier steps in only when Jev fails, and it reads
+# the pick through the seam's own `_usable_choice`. Everything here is fixed,
+# code-authored text: no test question, no answer text, and nothing matched
+# against the question's words (DECISIONS.md 2026-09-24).
+# ---------------------------------------------------------------------------
+
+#: The decision point's name on `DecisionRecord.name`.
+LEAD_SENTENCE_POINT: Final[str] = "write.lead_sentence"
+
+#: The option that leaves today's code-built line leading. It is also the
+#: fail-closed default: no usable pick, a late pick, a failed call, the cost
+#: cap or too little budget all act on it.
+LEAD_SENTENCE_NEITHER: Final[str] = "neither"
+
+#: The options by how many candidates there are, in candidate order.
+LEAD_SENTENCE_PICKS: Final[tuple[str, ...]] = ("first", "second")
+
+#: The most candidates one decision reads.
+MAX_LEAD_CANDIDATES: Final[int] = len(LEAD_SENTENCE_PICKS)
+
+#: Each candidate's cap inside `state`, so two sentences and the question
+#: always fit `_STATE_MAX_CHARS` whole.
+_LEAD_CANDIDATE_MAX_CHARS: Final[int] = 1200
+_LEAD_QUESTION_MAX_CHARS: Final[int] = 1000
+
+LEAD_SENTENCE_INSTRUCTIONS: Final[str] = (
+    "The state is a question a person typed into a biomedical evidence search "
+    "engine, then the first one or two sentences of the written answer, each "
+    "already checked word for word against the record it cites. Decide whether "
+    "one of these sentences, read on its own as the opening line, answers what "
+    "the question asks."
+)
+
+_LEAD_CRITERIA: Final[dict[str, str]] = {
+    "first": (
+        "Sentence 1, read on its own, states a fact that answers what the question "
+        "asks, or at least one part of it: the thing, the answer, the number or the "
+        "yes-or-no fact the question asks for, or a plain statement that the records "
+        "do not give it. It is not only a record's name, a count of records or the "
+        "question's subject repeated."
+    ),
+    "second": (
+        "Sentence 1 does not, and sentence 2, read on its own without sentence 1 "
+        "before it, states a fact that answers what the question asks, or at least "
+        "one part of it, as above."
+    ),
+    "neither": (
+        "No sentence does: each only names or counts records, describes a record "
+        "without answering what was asked, needs an earlier sentence to make sense, "
+        "or answers a different question."
+    ),
+}
+
+_MARKERS_IN_TEXT: Final[re.Pattern[str]] = re.compile(r"\s*\[\d{1,3}\]")
+
+
+def lead_sentence_options(candidate_count: int) -> tuple[str, ...]:
+    """The closed options for `candidate_count` candidates, "neither" last.
+
+    Raises:
+        ValueError: for a count outside 1 to `MAX_LEAD_CANDIDATES`.
+    """
+    if not 1 <= candidate_count <= MAX_LEAD_CANDIDATES:
+        raise ValueError(
+            f"the lead-sentence decision reads 1 to {MAX_LEAD_CANDIDATES} candidates, "
+            f"got {candidate_count}"
+        )
+    return (*LEAD_SENTENCE_PICKS[:candidate_count], LEAD_SENTENCE_NEITHER)
+
+
+def lead_sentence_criteria(options: Sequence[str]) -> dict[str, str]:
+    """One fixed criterion per offered option, as `decide()` requires."""
+    return {option: _LEAD_CRITERIA[option] for option in options}
+
+
+def lead_sentence_state(question: str, candidates: Sequence[str]) -> str:
+    """The bounded text the decision reads: the question, then each
+    candidate with its citation markers removed, each capped on its own so
+    neither can crowd the other out of `_STATE_MAX_CHARS`.
+
+    The candidates are already-grounded sentences whose words come from
+    retrieved records, so they are data in `state` like the question, never
+    part of the instructions.
+    """
+    parts = [f"Question: {question.strip()[:_LEAD_QUESTION_MAX_CHARS]}"]
+    for number, sentence in enumerate(candidates[:MAX_LEAD_CANDIDATES], start=1):
+        plain = _MARKERS_IN_TEXT.sub("", sentence).strip()[:_LEAD_CANDIDATE_MAX_CHARS]
+        parts.append(f"Sentence {number}: {plain}")
+    return "\n\n".join(parts)[:_STATE_MAX_CHARS]
+
+
+def lead_sentence_index(choice: str | None, candidate_count: int) -> int | None:
+    """The candidate a usable pick names, or None for "neither" and anything
+    else, so every path but a named candidate leaves the code-built line
+    leading."""
+    if choice is None or choice == LEAD_SENTENCE_NEITHER:
+        return None
+    if choice in LEAD_SENTENCE_PICKS:
+        index = LEAD_SENTENCE_PICKS.index(choice)
+        if index < candidate_count:
+            return index
+    return None
 
 
 # ---------------------------------------------------------------------------

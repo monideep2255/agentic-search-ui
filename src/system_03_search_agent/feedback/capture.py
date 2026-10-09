@@ -39,6 +39,7 @@ from system_03_search_agent.contracts.events import (
     TokenPayload,
 )
 from system_03_search_agent.contracts.query import Query
+from system_03_search_agent.contracts.token_order import in_reading_order
 from system_03_search_agent.core.session_memory import _account_uuid, session_row_key
 from system_03_search_agent.feedback.contracts import (
     MAX_CITATIONS_PER_ANSWER,
@@ -177,10 +178,14 @@ def answer_markdown_from(events: list[Event]) -> str | None:
         flush_prose()
         flush_table()
 
-    for event in events:
-        if event.type != "token":
-            continue
-        payload = TokenPayload.model_validate(event.payload)
+    # Build phase 8.7: the saved answer reads summary first, then the record
+    # listing, whatever order the two arrived in. No placement reads as summary.
+    token_payloads = in_reading_order(
+        TokenPayload.model_validate(event.payload)
+        for event in events
+        if event.type == "token"
+    )
+    for payload in token_payloads:
         kind = payload.kind
         cells = payload.cells or []
         markers = _markers_for(payload.marker_ids, display_index_by_id)

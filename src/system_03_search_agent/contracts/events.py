@@ -28,7 +28,15 @@ enumerates a number.
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    ValidationError,
+    model_serializer,
+    model_validator,
+)
 
 ToolName = Literal[
     "cypher_query",
@@ -416,6 +424,41 @@ class TokenPayload(BaseModel):
     emphasis: list[Annotated[str, Field(max_length=200)]] | None = Field(
         None, max_length=12
     )
+    # Build phase 8.7, T-8.7-03 (2026-09-27, card 50, option E). WHERE on the
+    # answer screen this chunk belongs, so the records can be shown the moment
+    # Act ends and the written summary placed above them when it lands:
+    #
+    #   - "listing": the code-built record listing (its headings, table and
+    #     list rows) and the notes under it. The listing is sent live before
+    #     the writing model is called, grounded in code, so nothing shown
+    #     here is ever withdrawn.
+    #   - "summary": the code-built count line ("Found N ... records") and
+    #     the written answer, placed ABOVE the listing whatever order the
+    #     two arrive in.
+    #
+    # Opt-in per request (fix round, F-8.7-A01 and F-8.7-A14). Only a client
+    # that declares it reads the field gets it: the web bundle and the
+    # command line send `POST /v1/query?reads=placement`, and the in-process
+    # surfaces (MCP, GraphQL) set `RequestContext.reads_placement`. Every
+    # other request gets None here, which is left OUT of the payload when it
+    # is serialized (`_omit_absent_placement`), so its stream is byte for
+    # byte what it was before this phase: no `placement` key, and the
+    # listing after the summary. A client built before the field, whose own
+    # copy of this model forbids extra keys, therefore never meets it.
+    #
+    # Additive per Section 2.6 and `system-design-patterns` pattern 10: a
+    # payload without the field validates, and reads as "summary", which is
+    # where every token built before this phase rendered.
+    placement: Literal["listing", "summary"] | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_absent_placement(self, handler: SerializerFunctionWrapHandler) -> Any:
+        """Leave `placement` out of the serialized payload when it is None,
+        so a request that did not ask for it gets today's bytes."""
+        data = handler(self)
+        if isinstance(data, dict) and data.get("placement") is None:
+            data.pop("placement", None)
+        return data
 
 
 class CitationPayload(BaseModel):

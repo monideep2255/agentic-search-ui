@@ -22,8 +22,13 @@ Arms:
   error follows `done`, and the run is not marked cancelled.
 - A2: stop while the history write is in progress after `done`. The row is
   written in full.
-- B: stop before `done`, during the writing call. Today's behaviour exactly:
-  no `done`, the `cancelled` error, no memory write, a `refuse` row.
+- B: stop before `done`, in Write before any answer event. Today's
+  behaviour exactly: no `done`, the `cancelled` error, no memory write, a
+  `refuse` row.
+- B2, build phase 8.7: stop before `done`, during the writing call, which
+  now runs with the record listing already on screen. The same as B, and
+  the records stay with nothing after the `cancelled` error (the owner's
+  decision of 2026-09-27).
 
 The fix round (judge and adversary round 1):
 
@@ -67,6 +72,8 @@ from tests.system_03_search_agent.core.test_phase_4_16_premise import (  # noqa:
     _stub_symbol_resolution,
 )
 from tests.system_03_search_agent.core.test_run_registry_stop_mid_write import (
+    _is_listing_token,
+    _stop_before_listing,
     _stop_mid_write,
 )
 
@@ -212,6 +219,11 @@ async def test_b_a_stop_before_done_still_stops_and_records_nothing_answered(
 ) -> None:
     """Today's behaviour, unchanged: card 59 must not weaken a real stop.
 
+    Build phase 8.7: a stop during the writing call now lands after the
+    listing is on screen, so this arm stops Write before the listing (card
+    58's `_stop_before_listing`), the case where nothing of the answer
+    exists. B2 is the stop after the listing.
+
     Mutation: make `cancel_run` a no-op. The run then finishes, `done`
     arrives and memory is written, and this arm goes red.
     """
@@ -224,11 +236,50 @@ async def test_b_a_stop_before_done_still_stops_and_records_nothing_answered(
     capture = AsyncMock(return_value=None)
     monkeypatch.setattr(feedback_module, "capture_run", capture)
 
-    registry, run_id, _synth, _at_stop = await _stop_mid_write(monkeypatch, request)
+    registry, run_id, _reader, _synth, _at_stop = await _stop_before_listing(
+        monkeypatch, request
+    )
     entry = registry.get_run(run_id)
 
     assert not any(event.type == "done" for event in entry.events)
     assert entry.events[-1].payload["error_class"] == "cancelled"
+    assert entry.cancelled
+    assert remembered == [], "a stopped run was folded into session memory."
+    assert capture.await_count == 1
+    _query_arg, captured = capture.await_args.args
+    assert DonePayload.model_validate(captured[-1].payload).trust_outcome == "refuse"
+
+
+@pytest.mark.asyncio
+async def test_b2_a_stop_after_the_records_keeps_them_and_records_nothing_answered(
+    monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest
+) -> None:
+    """Build phase 8.7, the owner's decision of 2026-09-27: Stop pressed
+    after the records are on screen keeps them under "Search stopped", and
+    nothing new appears after it. On the server the run is still stopped,
+    never answered: no `done` to readers, no memory write, one `refuse` row.
+
+    Mutation: make `cancel_run` a no-op. The summary and `done` then arrive
+    after the records and memory is written, and this arm goes red.
+    """
+    remembered: list[list[Event]] = []
+
+    async def _remember(_query: object, events: list[Event]) -> None:
+        remembered.append(list(events))
+
+    monkeypatch.setattr(run_module, "_remember_turn", _remember)
+    capture = AsyncMock(return_value=None)
+    monkeypatch.setattr(feedback_module, "capture_run", capture)
+
+    registry, run_id, _synth, at_stop = await _stop_mid_write(monkeypatch, request)
+    entry = registry.get_run(run_id)
+
+    # The records that were on screen at the stop are still there, and the
+    # `cancelled` error is the one thing after them.
+    assert any(_is_listing_token(event) for event in entry.events[:at_stop])
+    assert [event.type for event in entry.events[at_stop:]] == ["error"]
+    assert entry.events[-1].payload["error_class"] == "cancelled"
+    assert not any(event.type == "done" for event in entry.events)
     assert entry.cancelled
     assert remembered == [], "a stopped run was folded into session memory."
     assert capture.await_count == 1

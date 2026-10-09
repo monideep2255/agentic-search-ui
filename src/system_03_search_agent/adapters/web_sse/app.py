@@ -427,6 +427,27 @@ def get_health() -> HealthResponse:
 # ---------------------------------------------------------------------------
 
 
+#: `POST /v1/query?reads=placement`: the client lays the answer out by
+#: `TokenPayload.placement`, so the record listing may be sent ahead of the
+#: summary and every token says where it belongs (build phase 8.7, card 50).
+#: A client that does not send it gets the stream every client built before
+#: that field reads: no `placement` key, the listing after the summary
+#: (fix round, F-8.7-A01 and F-8.7-A14). Documented in
+#: `visualizations/Schema_visualization.md` (the `placement` bullet) and
+#: `visualizations/System_3_deep_dive.md` (the API surface).
+_READS_PLACEMENT = "placement"
+_MAX_READS_LENGTH = 64
+
+
+def _reads_placement(reads: str | None) -> bool:
+    """Whether a `reads` query value declares `placement`. Any other value,
+    and any other name in the list, is ignored, so a later client may name
+    more without an older server refusing it."""
+    if not reads:
+        return False
+    return _READS_PLACEMENT in {part.strip() for part in reads.split(",")}
+
+
 class CreateRunRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1203,6 +1224,13 @@ def _guest_refund_callback(
 async def post_v1_query(
     request: CreateRunRequest,
     http_request: Request,
+    # Build phase 8.7 fix round, F-8.7-A01 and F-8.7-A14: what this client
+    # reads beyond the stream every client reads, as a comma-separated list
+    # (`_READS_PLACEMENT`). A query parameter, not a body field or a header:
+    # `CreateRunRequest` forbids extra keys, so a body field would make a new
+    # client fail against an older server, and a custom header would need a
+    # CORS preflight an older server refuses. An older server ignores it.
+    reads: str | None = FastAPIQuery(None, max_length=_MAX_READS_LENGTH),
     caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
     session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI dependency injection
 ) -> CreateRunResponse:
@@ -1483,7 +1511,7 @@ async def post_v1_query(
         owner_id=caller.owner_id,
         audience_depth=audience_depth,
     )
-    context = RequestContext(surface="rest_sse")
+    context = RequestContext(surface="rest_sse", reads_placement=_reads_placement(reads))
     try:
         default_registry.create_run(
             query,

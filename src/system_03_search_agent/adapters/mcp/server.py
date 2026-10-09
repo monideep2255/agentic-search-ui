@@ -141,6 +141,7 @@ from system_03_search_agent.contracts.events import (
     TrustSignalPayload,
 )
 from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.contracts.token_order import joined_text
 from system_03_search_agent.core.persona import persona_for_session
 from system_03_search_agent.core.run_registry import (
     ConcurrentRunCapExceededError,
@@ -1132,7 +1133,7 @@ async def _fold_run_to_response(
     directly against a never-terminating fake stream before this fix
     landed).
     """
-    answer_parts: list[str] = []
+    answer_parts: list[TokenPayload] = []
     citations: list[CitationPayload] = []
     citation_events_seen = 0
     answer_trust_signal: TrustSignalPayload | None = None
@@ -1164,7 +1165,7 @@ async def _fold_run_to_response(
                                 if option.strip()
                             ]
                 elif event.type == "token":
-                    answer_parts.append(TokenPayload(**event.payload).text)
+                    answer_parts.append(TokenPayload(**event.payload))
                 elif event.type == "citation":
                     citation_events_seen += 1
                     if len(citations) < _MAX_CITATIONS:
@@ -1238,7 +1239,7 @@ async def _fold_run_to_response(
                 scope="answer",
             )
 
-    raw_answer_text = "".join(answer_parts).strip()
+    raw_answer_text = joined_text(answer_parts).strip()
     answer_text = raw_answer_text
     if not answer_text:
         answer_text = _fallback_answer_text(
@@ -1398,7 +1399,10 @@ async def ask_biomedical_question(
     # allowlisted operator account calling through this surface gets
     # `operator_mode=False`, and `_fold_run_to_response` above never reads
     # a cost-shaped field out of any event regardless.
-    context = RequestContext(surface="mcp", operator_mode=False)
+    # Build phase 8.7 fix round, F-8.7-A01: this surface folds the tokens in
+    # reading order (`contracts.token_order.joined_text`), so it reads
+    # `placement` and opts in; nothing it returns carries the field.
+    context = RequestContext(surface="mcp", operator_mode=False, reads_placement=True)
     # F-4.10-J-04 / F-4.10-A-08: the concurrent-run cap build phase 4.10
     # added to `create_run` reaches this surface too, because with
     # `owner_id` omitted `create_run` derives `user:<uuid>` from

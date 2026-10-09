@@ -51,6 +51,8 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from system_03_search_agent.contracts.token_order import joined_text
+
 # The join key across LangSmith, the `interactions` table and the audit log
 # is `trace_id` (Section 20.1). It is the only field that is never optional,
 # because a record that cannot be joined cannot be audited.
@@ -214,7 +216,7 @@ def record_from_runs(
     """
     events = iter_events(runs)
 
-    tokens = "".join(str(p.get("text") or "") for p in _payloads(events, "token"))
+    tokens = joined_text(_payloads(events, "token"))
     citations = _payloads(events, "citation")
     trust = _payloads(events, "trust_signal")
     done = _payloads(events, "done")
