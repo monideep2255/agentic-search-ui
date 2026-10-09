@@ -24,6 +24,7 @@ The test every step is ranked against, in the owner's words: a person types a qu
 
 Newest first.
 
+- 2026-10-08, the night to 09: cards 71, 37 (part), 32, 36, 51 (part) and 85 (part) are live and wait for the owner's retest (#212 to #215, #219, #220). Phase 8.7 (cards 2, 50 and 5) is built and waits for the owner on #218. The guardrail (84 and 72), card 15's next step and card 101's last slices were built and parked after their reviews. Every buildable To do card nobody was on is diagnosed; cards 18, 19, 30, 38 and 94 wait on phase 8.7, card 35 on the guardrail re-split; cards 105 to 107 were filed from the night's checks (`DECISIONS.md`, 2026-10-08).
 - 2026-10-08, overnight: cards 71 (part), 54, 101 (part), 103, 104, 67 and 59 are live and wait for the owner's retest (#202 to #208); cards 103 and 104 were filed from the product checks' loose ends. The guardrail design for cards 84 and 72 is written for the owner's yes or no and its two parked branches are deleted (`DECISIONS.md`, 2026-10-08).
 - 2026-10-07, overnight: cards 22, 23 and 102 are live and wait for the owner's retest (#197 to #199); card 102 (a saved answer listed no sources) was found by card 22's product review and built the same night. Card 101's copied-cut fix is parked on `fix/card101-copied-cuts` for the owner's decision. Factory's next cards are 75, 24 and 100 (`DECISIONS.md`, 2026-10-07).
 - 2026-10-06: cards 43, 43b, 44, 47 and 61 (Factory), 99 and part of 101 went live and wait for retest; card 56's smallest fix is live and the card stays open (#181 to #193).

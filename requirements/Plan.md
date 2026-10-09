@@ -1050,6 +1050,21 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-08. THE UI FIX LOOP, THE NIGHT OF 2026-10-08 TO 09: PULL REQUESTS #212 TO #215, #219 AND #220 MERGED; PHASE 8.7 WAITS FOR THE OWNER. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
+
+- What landed, by what a person notices:
+  - A reopened answer shows the same trust words and High-risk claim tag the live answer showed, and never reads more sure of itself (card 71, #212, with migration 0011, the owner's yes of 2026-10-08).
+  - A question about rs334 lists only rs334, never its near misses (card 37, #213).
+  - A graph column named like MedGen's clinical features is never shown as them (card 32, #214).
+  - When a date range in a question could not be applied, the plan line says so (card 36, #215).
+  - The About page no longer describes the retired track beside each answer (card 51, part, #219).
+  - A crash or failed step logs which search and why, never the error's text (card 85, part, #220).
+- Held: phase 8.7 (#218) built in full from its parked branches, reviewed, fixed once and checked live on its branch ($3.67 of a $20 ceiling; records at a median 9.3 s against 27.3 s for the whole answer); its fresh verifier found two things worse than develop, so it waits for the owner.
+- Parked, no third round: the guardrail (cards 84 and 72), card 15's next step and card 101's last slices, each after its reviews found it worse than develop on its own promise.
+- Reverted inside a fix round before merge: card 37's case-insensitive rs ids and card 51's stop 5 rewording.
+- Checks: every merge behind CI, a judge, an adversary, one fix round and a fresh verifier finding nothing worse than develop, then the test queries on develop at 1280 and 390; no golden run, at the owner's choice.
+- Also: card 40's itemized list of hook and rule changes written; every buildable To do card and partly live card on the owner's list diagnosed, in `testing/Developer/reports/2026-10-08_overnight/`. Decisions: `DECISIONS.md`, rows dated 2026-10-08.
+
 2026-10-08. THE UI FIX LOOP, THE NIGHT OF 2026-10-07 TO 08: PULL REQUESTS #202 TO #208 MERGED. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
 
 - What landed, by what a person notices:
