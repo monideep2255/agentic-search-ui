@@ -534,3 +534,44 @@ class TestThroughTheRealSchema:
         assert ask["trustLine"] == _TRUST_LINE
         assert ask["clarifyingQuestion"] is None
         assert ask["clarifyingOptions"] is None
+
+    @pytest.mark.asyncio
+    async def test_a_graphql_run_reads_placement(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Build phase 8.7 fix round, F-8.7-A01: the fold joins tokens in
+        reading order, so the run it starts opts in to `placement`. Mutation
+        that turns this red: build the GraphQL `RequestContext` without
+        `reads_placement=True`."""
+        import httpx
+
+        from system_03_search_agent.adapters.web_sse.app import app
+
+        contexts: list[RequestContext] = []
+        answering = _long_answer_stream(2)
+
+        async def _capturing(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+            contexts.append(context)
+            async for event in answering(query, context):
+                yield event
+
+        monkeypatch.setenv("AUTH_SECRET", "graphql-parity-fields-test-secret")
+        monkeypatch.setattr(run_registry_module, "run_streaming", _capturing)
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            email, password = f"{uuid.uuid4()}@example.com", "Str0ngPassw0rd!"
+            signup = await client.post("/auth/signup", json={"email": email, "password": password})
+            assert signup.status_code == 201, signup.text
+            login = await client.post("/auth/login", json={"email": email, "password": password})
+            assert login.status_code == 200, login.text
+            headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+            response = await client.post(
+                "/graphql",
+                json={
+                    "query": _ASK_DOCUMENT,
+                    "variables": {"input": {"text": "What is BRCA1?", "sessionId": "s-place"}},
+                },
+                headers=headers,
+            )
+
+        assert "errors" not in response.json(), response.json().get("errors")
+        assert [context.reads_placement for context in contexts] == [True]

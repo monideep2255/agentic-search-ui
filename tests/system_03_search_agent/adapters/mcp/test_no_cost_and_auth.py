@@ -512,6 +512,27 @@ class TestAuth:
         entry = run_registry_module.default_registry.get_run(run_id)
         assert entry.user_id == user_id
 
+    @pytest.mark.asyncio
+    async def test_an_mcp_run_reads_placement(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Build phase 8.7 fix round, F-8.7-A01: this surface folds tokens
+        in reading order, so the run it starts opts in to `placement`.
+        Mutation that turns this red: build the MCP `RequestContext` without
+        `reads_placement=True`."""
+        contexts: list[RequestContext] = []
+
+        async def _capturing(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+            contexts.append(context)
+            async for event in _golden_path_stream(query, context):
+                yield event
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _capturing)
+        _user_id, headers = await _real_user_headers()
+
+        result = await _call_tool(headers, {"query": "What gene is BRCA1?"})
+
+        assert result.is_error is False
+        assert [context.reads_placement for context in contexts] == [True]
+
 
 class TestARefusedTokenSaysWhatToDo:
     """Card 62, PR-8.10-11: a guest who reached MCP with the token

@@ -22,10 +22,10 @@ The owner's words, one arm group each:
   nothing to do. Each of the seven points the plan's "What the hand merges
   must get right" names has an arm here that fails if the point is broken.
 
-The placement arms stand in for the contract's field with a subclass of
-`TokenPayload` carrying exactly the field the lead fixed: `placement`, one of
-"listing" or "summary", default "summary". Another builder adds it to
-`contracts/events.py`; this code works with or without it.
+The placement arms stand in for the request's declaration
+(`RequestContext.reads_placement`, fix round F-8.7-A01) by patching
+`_request_reads_placement`; the "opt-in per request" group at the end builds
+it for real.
 """
 
 from __future__ import annotations
@@ -33,13 +33,12 @@ from __future__ import annotations
 import asyncio
 import re
 import time
-from typing import Literal
 from unittest.mock import AsyncMock
 
 import pytest
+from pydantic import BaseModel, ConfigDict, Field
 
-from system_03_search_agent.contracts import events as events_module
-from system_03_search_agent.contracts.events import TokenPayload
+from system_03_search_agent.contracts.query import RequestContext
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import cost_control
 from system_03_search_agent.harness import decide as decide_module
@@ -71,23 +70,20 @@ REQUIREMENT = "COMPLETENESS REQUIREMENT"
 CORRECTION = "COMPLETENESS CORRECTION"
 
 
-class _PlacedToken(TokenPayload):
-    """`TokenPayload` with the one field the contract adds in this phase."""
-
-    placement: Literal["listing", "summary"] = "summary"
-
-
 @pytest.fixture
 def placement_contract(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(graph_module, "TokenPayload", _PlacedToken)
-    monkeypatch.setitem(events_module.PAYLOAD_MODEL_BY_TYPE, "token", _PlacedToken)
+    """A client that reads `placement` asked (fix round, F-8.7-A01): the
+    listing may leave early and every token carries the field. The arms
+    below that build the request for real are the "opt-in per request"
+    group at the end of this file."""
+    monkeypatch.setattr(graph_module, "_request_reads_placement", lambda _state: True)
 
 
 @pytest.fixture
 def no_placement_contract(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The contract as it was before `placement`, whether or not today's
-    `TokenPayload` carries the field: nothing may leave early."""
-    monkeypatch.setattr(graph_module, "_contract_carries_placement", lambda: False)
+    """A client that does not read `placement` asked: nothing may leave
+    early, and no token carries the field."""
+    monkeypatch.setattr(graph_module, "_request_reads_placement", lambda _state: False)
 
 
 @pytest.fixture
@@ -622,7 +618,7 @@ async def test_the_early_listing_is_the_listing_the_answer_would_show(
     nothing is sent early: same text, same citations, same cells."""
     _models(monkeypatch)
     early = await graph_module.write_node(_write_state(audience_depth="researcher"))
-    monkeypatch.setattr(graph_module, "_contract_carries_placement", lambda: False)
+    monkeypatch.setattr(graph_module, "_request_reads_placement", lambda _state: False)
     late = await graph_module.write_node(_write_state(audience_depth="researcher"))
 
     assert _rows(early["events"]) == _rows(late["events"]), (
@@ -884,3 +880,82 @@ def test_the_second_draft_leaves_the_stable_prefix_byte_identical() -> None:
     assert REQUIREMENT in beside[1]["content"]
     assert "previous answer" not in findings_module.build_listing_gap_directive(findings)
 
+
+
+# ---------------------------------------------------------------------------
+# Fix round, F-8.7-A01 and F-8.7-A14: `placement` and the early listing are
+# opt-in per request. Built here from a real `RequestContext`, not patched.
+# ---------------------------------------------------------------------------
+
+
+class _TokenPayloadBefore87(BaseModel):
+    """The token contract every client built before this phase holds: the
+    same fields and bounds as `TokenPayload` without `placement`, and
+    `extra="forbid"`, so a key it does not know fails the frame."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(..., max_length=1000)
+    marker_ids: list[str] = Field(default_factory=list, max_length=20)
+    kind: str | None = None
+    cells: list[str] | None = None
+    emphasis: list[str] | None = None
+
+
+def _asked_by(state: dict[str, object], *, reads_placement: bool) -> dict[str, object]:
+    state["context"] = RequestContext(surface="rest_sse", reads_placement=reads_placement)
+    return state
+
+
+@pytest.mark.asyncio
+async def test_a_client_that_does_not_ask_gets_the_stream_it_got_before(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An installed command line or a cached web bundle sends no
+    declaration. Nothing leaves before the writer, the listing follows the
+    summary, and every token frame is one its own strict contract accepts:
+    no `placement` key on the wire. Mutation that turns this red: decide
+    the early send per process again (`_request_reads_placement` returning
+    True), or serialize `placement` when it is None."""
+    _models(monkeypatch)
+    timeline = _record_timeline(monkeypatch)
+
+    result = await graph_module.write_node(
+        _asked_by(_write_state(audience_depth="researcher"), reads_placement=False)
+    )
+
+    writer_at = next(i for i, (kind, _) in enumerate(timeline) if kind == "writer_call")
+    assert [kind for kind, _ in timeline[:writer_at]] == ["step"], timeline[:writer_at]
+    token_events = [event for event in result["events"] if event.type == "token"]
+    for event in token_events:
+        assert "placement" not in event.payload, event.payload
+        assert '"placement"' not in event.model_dump_json()
+        _TokenPayloadBefore87.model_validate(event.payload)
+    kinds = [event.payload["kind"] for event in token_events]
+    assert kinds.index("table_row") > kinds.index("claim"), kinds
+    assert token_events[0].payload["text"].startswith(COUNT_LINE_START)
+
+
+@pytest.mark.asyncio
+async def test_a_client_that_asks_gets_placement_and_the_early_listing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The web bundle and the command line built with this phase ask. The
+    listing leaves before the writer is called and every token says where
+    it belongs. Mutation that turns this red: never read the declaration
+    (`_request_reads_placement` returning False)."""
+    _models(monkeypatch)
+    timeline = _record_timeline(monkeypatch)
+
+    result = await graph_module.write_node(
+        _asked_by(_write_state(audience_depth="researcher"), reads_placement=True)
+    )
+
+    writer_at = next(i for i, (kind, _) in enumerate(timeline) if kind == "writer_call")
+    early = [payload for kind, payload in timeline[:writer_at] if kind == "token"]
+    assert early and all(token.placement == "listing" for token in early)  # type: ignore[attr-defined]
+    tokens = _tokens(result["events"])
+    assert all(t.get("placement") in ("listing", "summary") for t in tokens), tokens
+    assert next(t for t in tokens if t["placement"] == "summary")["text"].startswith(
+        COUNT_LINE_START
+    )

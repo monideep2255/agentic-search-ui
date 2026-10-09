@@ -10031,10 +10031,10 @@ def _code_built_lines_will_cite(
 # - The listing first (option E, server half). The code-built listing of
 #   every record is grounded and numbered BEFORE any writer call, so its
 #   records take the first numbers, in the listing's own order, and the
-#   model's prose is renumbered into them. Once the event
-#   contract's `TokenPayload` carries `placement`, it is sent at once with
-#   its citations, each token placed "listing"; the written summary follows
-#   placed "summary". Nothing sent early is ever taken back: an answer whose
+#   model's prose is renumbered into them. When the client that asked reads
+#   `TokenPayload.placement` (`_request_reads_placement`), it is sent at
+#   once with its citations, each token placed "listing"; the count line and
+#   the written summary follow placed "summary". Nothing sent early is ever taken back: an answer whose
 #   listing grounded can no longer refuse (every grounded claim's trust is
 #   answer, flag or ask), a writer that fails after the listing was sent
 #   leaves the listing as the answer with a note saying why, and a citation
@@ -10047,39 +10047,44 @@ def _code_built_lines_will_cite(
 # ---------------------------------------------------------------------------
 
 #: The token placement a surface lays the answer out by (the field
-#: `TokenPayload.placement`, one of these two, default "summary"): the
-#: listing is shown as it arrives, and the written summary goes in a slot
-#: above it when it lands.
+#: `TokenPayload.placement`, one of these two; absent reads as "summary"):
+#: the listing and the notes under it are shown as they arrive, and the
+#: count line and written summary go in a slot above them when they land.
 _PLACEMENT_LISTING: Final[str] = "listing"
 _PLACEMENT_SUMMARY: Final[str] = "summary"
 
 
-def _contract_carries_placement() -> bool:
-    """Whether the event contract's `TokenPayload` has the `placement` field.
+def _request_reads_placement(state: GraphState) -> bool:
+    """Whether the client that asked this question reads `placement`.
 
-    The listing goes out ahead of the summary only when it does. Every
-    surface that joins token text in arrival order (the MCP server, the
-    GraphQL fold, the command line, the interaction capture, the golden
-    harness) would otherwise read the listing ABOVE the summary, and none of
-    them can tell the two apart without the field. Until the contract has
-    it, the listing is still grounded first and numbered first, and simply
+    Decided per request, never per process (fix round, F-8.7-A01 and
+    F-8.7-A14): `RequestContext.reads_placement`, which the REST surface
+    sets only for a client that sends `POST /v1/query?reads=placement` (the
+    web bundle and the command line built with this phase), and the
+    in-process MCP and GraphQL surfaces set themselves. Only then does the
+    listing go out ahead of the summary and does any token carry the field.
+
+    Every other request gets the stream as it was before the field: an
+    installed command line whose contract forbids extra keys, or a browser
+    still holding an older web bundle, joins the tokens in arrival order,
+    and would otherwise fail every answer or read it upside down. For those
+    the listing is still grounded first and numbered first, and simply
     leaves after the summary, as it always has.
     """
-    return "placement" in TokenPayload.model_fields
+    context = state.get("context")
+    return bool(getattr(context, "reads_placement", False)) if context is not None else False
 
 
-def _with_placement(token: TokenPayload, placement: str) -> TokenPayload:
-    """`token` carrying `placement`, once the event contract has the field.
+def _with_placement(token: TokenPayload, placement: str, reads_placement: bool) -> TokenPayload:
+    """`token` carrying `placement` when the request reads it, else unchanged.
 
-    Until the contract has `placement`, whose `extra="forbid"` would reject
-    it, the token goes out unchanged, so this ships ahead of the contract
-    without breaking a single event. Rebuilt through the model, never copied
-    around it, so the field is validated like every other.
+    A token left unchanged has no `placement` (None), which is left out of
+    its serialized payload altogether. Rebuilt through the model, never
+    copied around it, so the field is validated like every other.
     """
-    model = type(token)
-    if "placement" not in model.model_fields:
+    if not reads_placement:
         return token
-    return model(**{**token.model_dump(), "placement": placement})
+    return type(token)(**{**token.model_dump(), "placement": placement})
 
 
 def _listing_uncitable(
@@ -13697,10 +13702,10 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     # nothing were already this same computation over the same findings.
     # Its numbers run in its own order, the order its sentences are
     # grounded, and the prose is renumbered into them. Measured (answer speed report, 2026-09-26): the records reach the
-    # screen at a median 7.6 s instead of 16.8 s. Sent early only once the
-    # contract carries `placement` (`_contract_carries_placement`); until
-    # then it is grounded and numbered here and leaves after the summary,
-    # as before. Built once, whole, before anything of it is sent, so a row
+    # screen at a median 7.6 s instead of 16.8 s. Sent early only when the
+    # client that asked reads `placement` (`_request_reads_placement`);
+    # otherwise it is grounded and numbered here and leaves after the
+    # summary, as before. Built once, whole, before anything of it is sent, so a row
     # card 104 folds a repeat into is final before it leaves.
     listing_grounding: GroundingResult | None = None
     listing_citations: list[CitationPayload] = []
@@ -13739,7 +13744,8 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         )
         if listing_grounding.claims:
             listing_citations, listing_tokens = build_listing(listing_grounding)
-    listing_sent = bool(listing_tokens) and _contract_carries_placement()
+    reads_placement = _request_reads_placement(state)
+    listing_sent = bool(listing_tokens) and reads_placement
     if listing_sent:
         # Its own paragraph: in reading order the summary always precedes it.
         sink.emit_live(
@@ -13747,10 +13753,11 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             _with_placement(
                 TokenPayload(text="\n\n", marker_ids=[], kind="paragraph_break"),
                 _PLACEMENT_LISTING,
+                reads_placement,
             ),
         )
         for token in listing_tokens:
-            sink.emit_live("token", _with_placement(token, _PLACEMENT_LISTING))
+            sink.emit_live("token", _with_placement(token, _PLACEMENT_LISTING, reads_placement))
         for citation in listing_citations:
             sink.emit_live("citation", citation)
 
@@ -14785,14 +14792,15 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         #
         # Build phase 8.7: the summary goes in the slot above the listing,
         # and the notes follow the listing, so a surface lays the answer out
-        # from `placement` alone. Without the field, the order is the
-        # reading order, token for token as before.
+        # from `placement` alone. For a request that does not read the field
+        # no token carries it, and the order is the reading order, token for
+        # token as before (F-8.7-A01).
         for token in summary_tokens:
-            sink.emit_live("token", _with_placement(token, _PLACEMENT_SUMMARY))
+            sink.emit_live("token", _with_placement(token, _PLACEMENT_SUMMARY, reads_placement))
         for token in parts.listing:
-            sink.emit_live("token", _with_placement(token, _PLACEMENT_LISTING))
+            sink.emit_live("token", _with_placement(token, _PLACEMENT_LISTING, reads_placement))
         for token in note_tokens:
-            sink.emit_live("token", _with_placement(token, _PLACEMENT_LISTING))
+            sink.emit_live("token", _with_placement(token, _PLACEMENT_LISTING, reads_placement))
 
         # The listing's citations went out with it; only the ones the prose
         # added are new.

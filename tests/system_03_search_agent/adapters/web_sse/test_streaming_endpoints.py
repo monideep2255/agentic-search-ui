@@ -267,6 +267,48 @@ class TestCreateRun:
     run_id/trace_id/ownership wiring."""
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("params", "reads_placement"),
+        [
+            (None, False),
+            ({"reads": "placement"}, True),
+            ({"reads": "something-later, placement"}, True),
+            ({"reads": "something-later"}, False),
+            ({"reads": ""}, False),
+        ],
+    )
+    async def test_only_a_client_that_asks_reads_placement(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        params: dict[str, str] | None,
+        reads_placement: bool,
+    ) -> None:
+        """Build phase 8.7 fix round, F-8.7-A01 and F-8.7-A14: the run reads
+        `placement`, and so may send its records ahead of the summary, only
+        when the request asks with `?reads=placement`. An installed command
+        line or a cached web bundle that predates the field never asks, and
+        gets today's stream. Mutation that turns this red: build the context
+        with `reads_placement=True` unconditionally, or drop the parameter."""
+        registry = run_registry_module.default_registry
+        real_create_run = registry.create_run
+        contexts: list[RequestContext] = []
+
+        def _capture(query: Query, context: RequestContext, **kwargs: object):
+            contexts.append(context)
+            return real_create_run(query, context, **kwargs)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(registry, "create_run", _capture)
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            response = await client.post(
+                "/v1/query", json=_create_body(), headers=headers, params=params
+            )
+            assert response.status_code == 202
+            await _drain_run_task(response.json()["run_id"])
+
+        assert [context.reads_placement for context in contexts] == [reads_placement]
+
+    @pytest.mark.asyncio
     async def test_returns_202_with_a_run_id_and_a_real_persona_name(self) -> None:
         """T-4.5-10: the "Assistant" stub is gone.
 

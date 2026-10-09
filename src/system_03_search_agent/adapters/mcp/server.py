@@ -1399,7 +1399,10 @@ async def ask_biomedical_question(
     # allowlisted operator account calling through this surface gets
     # `operator_mode=False`, and `_fold_run_to_response` above never reads
     # a cost-shaped field out of any event regardless.
-    context = RequestContext(surface="mcp", operator_mode=False)
+    # Build phase 8.7 fix round, F-8.7-A01: this surface folds the tokens in
+    # reading order (`contracts.token_order.joined_text`), so it reads
+    # `placement` and opts in; nothing it returns carries the field.
+    context = RequestContext(surface="mcp", operator_mode=False, reads_placement=True)
     # F-4.10-J-04 / F-4.10-A-08: the concurrent-run cap build phase 4.10
     # added to `create_run` reaches this surface too, because with
     # `owner_id` omitted `create_run` derives `user:<uuid>` from

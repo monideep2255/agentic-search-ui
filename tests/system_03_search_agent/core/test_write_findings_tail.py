@@ -52,7 +52,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from system_03_search_agent.contracts.query import Query
+from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.contracts.token_order import in_reading_order
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import harness as harness_module
@@ -164,6 +164,9 @@ def _state(total_available: int | None = 3, truncated: bool = False) -> dict[str
     return {
         "query": query,
         "harness": harness_module.Harness(trace_id=query.trace_id),
+        # The web bundle built with build phase 8.7 asks for `placement`
+        # (fix round, F-8.7-A14), so the listing leaves first.
+        "context": RequestContext(surface="web_ui", reads_placement=True),
         "seq": 0,
         "start_monotonic": time.monotonic(),
         "findings": [finding],
