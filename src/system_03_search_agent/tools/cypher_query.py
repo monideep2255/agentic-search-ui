@@ -34,6 +34,12 @@ question return the same sources every run: the product owner measured
 "Which diseases are associated with BRCA1?" returning 4 sources on one run
 and 5 on the next while the model wrote a different query each time.
 
+Card 15, decision D5 (2026-10-08): the model path (steps 1 to 3 above)
+now runs only for a true count question no template fits
+(`cypher_templates.written_search_allowed`). Any other question with no
+checked template returns `status: "empty"` with no graph search and no
+plan-tier call (`NO_CHECKED_SEARCH_MESSAGE`).
+
 The main agent never sees raw Cypher. The generated string appears only
 in `CypherQueryOutput.cypher_executed`, an audit-trail field, and this
 module never places it anywhere else: not in `error`, not in a row, not
@@ -228,6 +234,7 @@ from system_03_search_agent.tools.cypher_templates import (
     MAX_FOLD_ITEMS,
     CypherTemplate,
     select_template,
+    written_search_allowed,
 )
 from system_03_search_agent.tools.cypher_validator import ValidationResult, validate_cypher
 from system_03_search_agent.tools.graph_connection import GraphError, execute_cypher
@@ -1476,6 +1483,31 @@ def _error_output(
     )
 
 
+# Card 15, decision D5: the reason carried when no checked graph search fits
+# a question that is not a true count. A note in `error`, beside an `empty`
+# status, so a run log says why the graph returned nothing. The Act step
+# builds its stream summary from row counts on an `empty` result, but the
+# structured fields Write reads do carry `error`, so the sentence is in
+# plain words and true if repeated: no internal names, no decision ids.
+NO_CHECKED_SEARCH_MESSAGE = (
+    "No checked graph search fits this question, so the knowledge graph was "
+    "not searched; the answer rests on the live sources."
+)
+
+
+def _no_checked_search_output() -> CypherQueryOutput:
+    return CypherQueryOutput(
+        status="empty",
+        rows=[],
+        row_count=0,
+        total_available=None,
+        truncated=False,
+        cypher_executed=None,
+        error=NO_CHECKED_SEARCH_MESSAGE,
+        template=None,
+    )
+
+
 
 # F-2.1-A5-04. `_derived_source_curie`'s reasoning, "a count over a single
 # gene is about that gene", is sound for an AGGREGATE and false for a
@@ -1930,6 +1962,16 @@ async def _run_pipeline(
     template = forced_template if forced_template is not None else select_template(
         tool_input, entity_bindings
     )
+    # Card 15, decision D5 (2026-10-08): no model-written graph search
+    # except a true count question. With no checked template, any other
+    # question runs no graph search at all: `empty`, never `error`, because
+    # nothing failed. The answer then rests on Layers 2 and 3, as it does
+    # when the graph holds nothing for the question, and the person is not
+    # told a search did not finish. Before this, the plan tier wrote a
+    # query here that the validator rejected or the graph timed out on
+    # (G-037, G-039, G-033), or that answered a different question (G-014).
+    if template is None and not written_search_allowed(tool_input):
+        return _no_checked_search_output()
     template_name: str | None = None
     # A template may carry ONE fallback (`CypherTemplate.fallback`), run
     # only when the template itself returns no rows: the disease-genes

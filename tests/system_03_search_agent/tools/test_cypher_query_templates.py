@@ -241,6 +241,100 @@ async def test_the_empty_and_error_outputs_carry_the_template_too(
 
 
 # ---------------------------------------------------------------------------
+# Card 15, decision D5 (2026-10-08): no model-written graph search except a
+# true count. A question no checked template fits, that is not a count,
+# makes no plan-tier call and no graph call, and returns `empty` (nothing
+# failed), never `error` (which would tell the person a search did not
+# finish).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("intent", "query_class", "entities"),
+    [
+        # A label mix other than Gene with Disease.
+        ("Does PMID 11237011 discuss BRCA1?", "single_hop", [BRCA1, "PMID:11237011"]),
+        # Several Diseases with no shape on a hop class (G-014).
+        ("What is linked to these diseases?", "multi_hop", ["MedGen:C0346153", "MedGen:C0024796"]),
+        # Several Articles with no shape.
+        ("Compare PMID 11237011 and PMID 11237012", "single_hop", ["PMID:11237011", "PMID:11237012"]),
+        # Gene with Disease, the variants shape over several genes.
+        (
+            "Variants in MLH1 and MSH2 causing Lynch syndrome",
+            "single_hop",
+            ["NCBIGene:4292", "NCBIGene:4436", "MedGen:C1333990"],
+        ),
+        # Two shapes over several anchors on multi_hop.
+        ("Variants and orthologs for BRCA1 and BRCA2", "multi_hop", [BRCA1, "NCBIGene:675"]),
+        # An anchor with no checked template: a GO term.
+        ("Which genes take part in GO:0006281?", "single_hop", ["GO:0006281"]),
+    ],
+)
+@pytest.mark.asyncio
+async def test_a_question_no_checked_search_fits_runs_no_written_search(
+    monkeypatch: pytest.MonkeyPatch, intent: str, query_class: str, entities: list[str]
+) -> None:
+    executed: list[str] = []
+
+    def _fake_execute(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
+        executed.append(cypher)
+        return _disease_rows(), 4
+
+    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake_execute)
+    harness = _RefusingHarness()
+
+    output = await cypher_query(harness, _input(intent, query_class, entities))
+
+    assert harness.calls == [], "the plan tier must not write a graph search for a non-count question"
+    assert executed == [], "no graph search runs when no checked one fits"
+    assert output.status == "empty"
+    assert output.template is None
+    assert output.cypher_executed is None
+    assert output.error == cypher_query_module.NO_CHECKED_SEARCH_MESSAGE
+    assert output.rows == [] and output.row_count == 0
+
+
+@pytest.mark.parametrize(
+    ("intent", "query_class", "curie", "expected_template", "label"),
+    [
+        ("What conditions is ClinVar:17661 linked to?", "multi_hop", "ClinVar:17661",
+         "sequencevariant_record_one", "SequenceVariant"),
+        ("Tell me about NCBITaxon:9606", "single_hop", "NCBITaxon:9606",
+         "organismtaxon_record_one", "OrganismTaxon"),
+        ("What is linked to Marfan syndrome?", "multi_hop", "MedGen:C0024796",
+         "disease_record_one", "Disease"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_one_named_entity_with_no_shaped_template_runs_its_record_not_a_written_search(
+    monkeypatch: pytest.MonkeyPatch,
+    intent: str,
+    query_class: str,
+    curie: str,
+    expected_template: str,
+    label: str,
+) -> None:
+    executed: list[tuple[str, dict[str, Any]]] = []
+
+    def _fake_execute(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
+        executed.append((cypher, dict(params or {})))
+        return [{"c0": _vertex(label, curie, "a record", "https://www.ncbi.nlm.nih.gov/x")}], 1
+
+    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake_execute)
+    harness = _RefusingHarness()
+
+    output = await cypher_query(harness, _input(intent, query_class, [curie]))
+
+    assert harness.calls == []
+    assert output.template == expected_template
+    assert len(executed) == 1
+    cypher, params = executed[0]
+    assert cypher.startswith(f"MATCH (a:{label} {{id: $")
+    assert list(params.values()) == [curie]
+    assert output.status == "ok" and [row.curie for row in output.rows] == [curie]
+
+
+# ---------------------------------------------------------------------------
 # Live: same rows, same order, against the real graph.
 # ---------------------------------------------------------------------------
 

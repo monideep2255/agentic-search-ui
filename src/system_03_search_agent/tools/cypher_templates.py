@@ -38,10 +38,13 @@ static binding check in `cypher_query`, then the same execution and row
 shaping as a generated query. And it does not guess: when the keyword test
 matches two shapes at once ("the gene record, associated conditions,
 clinically significant variants"), when the bound CURIEs span two vertex
-labels, or when no shape matches at all, `select_template` returns None
-and the model path runs exactly as before. Falling back is the honest
-answer to an ambiguous question; a wrong template answered consistently
-would be F-2.1-B01 with better reproducibility.
+labels, or when no shape matches at all, no shaped template is chosen.
+Falling back is the honest answer to an ambiguous question; a wrong
+template answered consistently would be F-2.1-B01 with better
+reproducibility. Since 2026-10-08 (card 15, decision D5) the fallback is
+never a model-written search unless the question is a true count: it is
+the one named entity's own record, or no graph search at all
+(`select_template`, `written_search_allowed`).
 
 The variant-to-disease shapes (2026-09-14, `testing/Developer/reports/
 2026-09-14_variant_disease_detail/`). An earlier version of this docstring
@@ -81,9 +84,10 @@ template was. Both are now corrected: `EDGE_ENDPOINTS["has_phenotype"]` reads
 its real, measured pair (SequenceVariant to Disease, already used by the fold
 templates above), and the `("Disease", "phenotypes")` hop and its
 `"phenotypes"` shape keyword are gone. A phenotype question about a Disease
-now falls through `select_template` to the model path (`None`), the same path
-that already reaches Layer 2 for the graph's other genuinely absent shapes,
-rather than being routed to a template guaranteed to return nothing.
+now finds no shaped template, so it takes the disease's own record when one
+disease is named and no graph search otherwise (card 15, D5), and Layer 2
+answers it, rather than being routed to a template guaranteed to return
+nothing.
 
 Depends on:
     - system_03_search_agent.tools.cypher_schemas (CypherQueryInput,
@@ -170,19 +174,35 @@ class CypherTemplate:
 # LABEL_CURIE_PREFIXES so the two cannot disagree.
 # --------------------------------------------------------------------------
 
+# The labels a template may anchor on. SequenceVariant and OrganismTaxon
+# joined on 2026-10-08 (card 15, decision D5), after a read-only check
+# against the live graph: the inline id match on each answers in about
+# 0.4 s with the id, name and source_url the citation path needs
+# (`testing/Developer/reports/2026-10-08_card15/build.md`). Each prefix
+# names exactly one of these labels, so the inversion stays unambiguous
+# (MedGen is also a PhenotypicFeature prefix, and PhenotypicFeature is not
+# here).
+_TEMPLATED_LABELS: Final[tuple[str, ...]] = (
+    "Gene",
+    "Disease",
+    "Article",
+    "SequenceVariant",
+    "OrganismTaxon",
+)
 _LABEL_BY_PREFIX: Final[dict[str, str]] = {
     prefix: label
     for label, prefixes in LABEL_CURIE_PREFIXES.items()
     for prefix in prefixes
-    if label in ("Gene", "Disease", "Article")
+    if label in _TEMPLATED_LABELS
 }
 
 
 def anchor_label_for(curies: list[str]) -> str | None:
     """Return the one vertex label every CURIE in `curies` belongs to, or
     None when they span labels, when any prefix is not one this module
-    templates (SequenceVariant, OntologyClass and the GO labels are
-    answered by the model path), or when the list is empty.
+    templates (OntologyClass, the GO labels, PhenotypicFeature and any
+    prefix the graph does not hold have no checked search), or when the
+    list is empty.
     """
     labels: set[str] = set()
     for curie in curies:
@@ -274,9 +294,8 @@ _HOPS: Final[dict[tuple[str, str], _Hop]] = {
 # anchor's shape list ("gene" in a gene-anchored question) is ignored
 # rather than counted as ambiguity.
 _SHAPES_BY_ANCHOR: Final[dict[str, tuple[str, ...]]] = {
-    "Gene": tuple(shape for (anchor, shape) in _HOPS if anchor == "Gene"),
-    "Disease": tuple(shape for (anchor, shape) in _HOPS if anchor == "Disease"),
-    "Article": tuple(shape for (anchor, shape) in _HOPS if anchor == "Article"),
+    label: tuple(shape for (anchor, shape) in _HOPS if anchor == label)
+    for label in _TEMPLATED_LABELS
 }
 
 # Variable names, fixed so the ORDER BY key and the RETURN list are stable
@@ -757,15 +776,72 @@ def _article_links_template(article_param: str) -> CypherTemplate:
     )
 
 
+def written_search_allowed(tool_input: CypherQueryInput) -> bool:
+    """Whether a model may write the graph search when no template fits.
+
+    Decision D5 (`testing/Board_plan.md`, answered yes): no model-written
+    graph search except a true count question. "True count" is the same
+    test that switches a template to its count form, `_wants_count`: "how
+    many" on any class, or "count" or "number of" on a question Think
+    classified as an aggregate. No other question may reach
+    `cypher_generation.generate_cypher`; `cypher_query` declines the graph
+    search for it instead, and the answer rests on the live layers, as it
+    does when the graph holds nothing for the question.
+    """
+    return _wants_count(tool_input)
+
+
+def _record_fallback(entity_bindings: dict[str, str]) -> CypherTemplate | None:
+    """The checked answer for a question no shaped template fits and no
+    written search may answer (card 15, D5): the record of the ONE entity
+    the question names, on any label a template may anchor on. None for
+    several entities or a mix of labels.
+
+    Why one and never several, from the user's chair: one bound entity is
+    the thing the person named, so its record is the safe answer. Several
+    Disease concepts are often Think resolving a common noun ("diseases",
+    "tumour") into a list, and their records would be a page of unrelated
+    diseases (G-014, pass 3); several entities of mixed labels have no one
+    record that answers the question. Those take no graph search.
+    """
+    if len(entity_bindings) != 1:
+        return None
+    [(param_name, curie)] = entity_bindings.items()
+    label = anchor_label_for([curie])
+    if label is None:
+        return None
+    return _record_template(label, [param_name])
+
+
 def select_template(
     tool_input: CypherQueryInput, entity_bindings: dict[str, str]
 ) -> CypherTemplate | None:
-    """Choose the template for `tool_input`, or None to run the model path.
+    """Choose the checked template for `tool_input`, or None.
+
+    One routing rule over every path (card 15, decision D5, 2026-10-08):
+    when no shaped template fits (`_shaped_template`) and the question is
+    not a true count (`written_search_allowed`), the answer is the one
+    named entity's own record (`_record_fallback`). None then means one of
+    two things, and `cypher_query` tells them apart with
+    `written_search_allowed`: a true count no template fits, which may
+    still run a model-written search, or any other question, which runs no
+    graph search at all.
+    """
+    template = _shaped_template(tool_input, entity_bindings)
+    if template is not None or written_search_allowed(tool_input):
+        return template
+    return _record_fallback(entity_bindings)
+
+
+def _shaped_template(
+    tool_input: CypherQueryInput, entity_bindings: dict[str, str]
+) -> CypherTemplate | None:
+    """Choose the shaped template for `tool_input`, or None when none fits.
 
     The decision, in order:
 
-    1. Every bound CURIE must belong to one of Gene, Disease or Article, and
-       all to the same one. Gene and Disease CURIEs bound together take the
+    1. Every bound CURIE must belong to one label in `_TEMPLATED_LABELS`,
+       and all to the same one. Gene and Disease CURIEs bound together take the
        two narrow forms `_mixed_gene_disease_template` names; any other mix
        is None.
     2. The anchor's shapes are tested against the question. One match is
@@ -783,13 +859,13 @@ def select_template(
        Article on a hop class or a no-count `aggregate` takes the paper's
        linked-records template (2026-10-05, card 15). An `aggregate`
        question that asks for a count, or a Disease anchor on the two hop
-       classes, is None, the model path.
+       classes, is None here (`select_template` then decides).
     4. A matched hop on a question asking "how many" (any class), or on an
        `aggregate` question saying "count" or "number of", becomes the
        count form, for a single anchor only (a count over several anchors
        has no single record to cite it to, the same refusal
-       `cypher_query._derived_source_curie` already makes, so it goes to
-       the model path).
+       `cypher_query._derived_source_curie` already makes, so it is None
+       here and, being a true count, may take a written search).
     """
     if not entity_bindings:
         return None
@@ -824,8 +900,8 @@ def select_template(
         # on the passes it answered, and its one lost pass was the mixed
         # path, fixed the same evening in `_mixed_gene_disease_template`.
         #
-        # What still takes the model path with no shape, each for a
-        # measured reason: an `aggregate` question, which computes a count
+        # What still finds no shaped template here, each for a measured
+        # reason (`select_template` then routes it, card 15): an `aggregate` question, which computes a count
         # the record cannot (G-034); and a Disease or Article anchor on
         # the two hop classes, because a disease list Think resolved from
         # a common noun ("diseases", "tumour") would turn a correct
@@ -842,7 +918,7 @@ def select_template(
         # that asks for no count is not a count question, so it takes the
         # record like the other classes; the generated query for it was
         # rejected by the validator and no graph search ran. A count request
-        # (`_wants_count`) and a Disease or Article anchor keep the model path.
+        # (`_wants_count`) and a Disease or Article anchor find none here.
         if (
             anchor_label == "Gene"
             and tool_input.query_class is QueryClass.AGGREGATE

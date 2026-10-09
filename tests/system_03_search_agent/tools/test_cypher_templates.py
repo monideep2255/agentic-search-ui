@@ -63,6 +63,7 @@ from system_03_search_agent.tools.cypher_templates import (
     anchor_label_for,
     matched_shapes,
     select_template,
+    written_search_allowed,
 )
 from system_03_search_agent.tools.cypher_validator import validate_cypher
 
@@ -82,6 +83,12 @@ def _select(
         query_intent=intent, query_class=query_class, target_entities=entities
     )
     return select_template(tool_input, entity_param_bindings(entities))
+
+
+def _tool_input(intent: str, entities: list[str], query_class: str) -> CypherQueryInput:
+    return CypherQueryInput(
+        query_intent=intent, query_class=query_class, target_entities=entities
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -345,59 +352,113 @@ def test_the_mixed_variants_template_binds_the_gene_and_the_disease() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Fallback: None means the model path runs exactly as before.
+# Fallback. Card 15, decision D5 (2026-10-08): None now means one of two
+# things, and `written_search_allowed` tells them apart. A true count no
+# template fits may still take a model-written search; any other question
+# no template fits takes the one named entity's record, or no graph search.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
     ("intent", "entities", "query_class"),
     [
-        # 2026-09-22: a gene question with no shape takes the record on every
-        # class but `aggregate` (see the template table). What still takes
-        # the model path with no shape, each for a measured reason: a count
-        # class, which computes what a record cannot (G-034), and a Disease
-        # or Article anchor on the hop classes, where a list Think resolved
-        # from a common noun would turn a correct refusal into a page of
-        # unrelated records (G-014, pass 3).
+        # A count computes what a record cannot (G-034).
         ("How many records does BRCA1 have?", [BRCA1], "aggregate"),
         ("Count the records for BRCA1", [BRCA1], "aggregate"),
-        ("Tell me about breast cancer", [BREAST_CANCER], "single_hop"),
-        ("Tell me about breast cancer", [BREAST_CANCER], "multi_hop"),
-        # A count about one Article keeps the model path (card 15, D5).
+        # A count about one Article (card 15, D5).
         ("How many records does PMID:11237011 link to?", [PMID], "multi_hop"),
         ("Count what PMID:11237011 links to", [PMID], "aggregate"),
+        # A count over several anchors has no one record to cite it to.
+        ("How many variants does BRCA1 have compared with BRCA2?", [BRCA1, BRCA2], "aggregate"),
+        ("Compare NCBIGene:7157 and NCBIGene:672: how many diseases is NCBIGene:672 linked to?", [BRCA1, "NCBIGene:7157"], "lookup"),
+        ("How many variants of GCK cause MODY?", ["NCBIGene:2645", "MedGen:C0342276"], "lookup"),
+        ("How many conditions do MLH1 and MSH2 share?", [MLH1, MSH2, "MedGen:C0009402"], "aggregate"),
+        # An aggregate count on a Disease with no shape (diagnosis, last row).
+        ("How many records mention Marfan syndrome?", ["MedGen:C0024796"], "aggregate"),
+    ],
+)
+def test_a_true_count_no_template_fits_may_take_a_written_search(
+    intent: str, entities: list[str], query_class: str
+) -> None:
+    assert _select(intent, entities, query_class) is None
+    assert written_search_allowed(_tool_input(intent, entities, query_class)) is True
+
+
+@pytest.mark.parametrize(
+    ("intent", "entities", "query_class"),
+    [
+        # Several Articles with no shape, not a lookup.
         ("Tell me about PMID:11237011 and PMID:11237012", [PMID, "PMID:11237012"], "multi_hop"),
+        ("Compare PMID 11237011 and PMID 11237012", [PMID, "PMID:11237012"], "single_hop"),
+        # Two or more shapes over several anchors outside lookup,
+        # single-hop and aggregate.
         (
             ("Which diseases are associated with BRCA1 and BRCA2 variants, and which "
              "papers mention them?"),
             [BRCA1, BRCA2],
             "multi_hop",
         ),
-        ("Which diseases are associated with rs334?", ["ClinVar:17661"], "single_hop"),
-        # 2026-09-23 (Worker F): the graph has no Disease-to-PhenotypicFeature
-        # edge at all (`testing/Developer/reports/2026-09-23_overnight/
-        # findings.md`, "Worker F"). The `("Disease", "phenotypes")` hop that
-        # used to answer this question was removed; it could never return a
-        # row. This question now takes the model path, the same one that
-        # already reaches Layer 2 for the graph's other genuinely absent
-        # shapes, rather than a template guaranteed to come back empty.
+        ("Variants and orthologs for BRCA1 and BRCA2", [BRCA1, BRCA2], "multi_hop"),
+        # A label mix other than Gene with Disease.
+        ("Which diseases are associated with BRCA1?", [BRCA1, PMID], "single_hop"),
+        ("Does PMID 11237011 discuss BRCA1?", [BRCA1, PMID], "single_hop"),
+        ("Is ClinVar:17661 a variant of BRCA1?", [BRCA1, "ClinVar:17661"], "single_hop"),
+        # Gene with Disease: the variants shape with several genes, and a
+        # shape other than diseases or variants.
+        ("Variants in MLH1 and MSH2 causing Lynch syndrome", [MLH1, MSH2, "MedGen:C1333990"], "single_hop"),
+        ("Orthologs of BRCA1 in breast cancer", [BRCA1, BREAST_CANCER], "single_hop"),
+        # Several Diseases with no shape on a hop class, and on a no-count
+        # aggregate: a list Think resolved from a common noun would be a
+        # page of unrelated records (G-014, pass 3).
+        ("What is linked to these diseases?", [BREAST_CANCER, "MedGen:C0024796"], "multi_hop"),
+        ("Summarise what the graph holds on these diseases", [BREAST_CANCER, "MedGen:C0024796"], "aggregate"),
+        # Anchors with no checked template at all: a GO term, a MeSH term,
+        # a phenotype, an identifier the graph does not hold.
+        ("Which genes take part in GO:0006281?", ["GO:0006281"], "single_hop"),
+        ("Which papers carry MeSH:D001943?", ["MeSH:D001943"], "single_hop"),
+        ("What is HP:0001166?", ["HP:0001166"], "lookup"),
+        ("Which diseases are associated with BRCA1?", ["not-a-curie"], "single_hop"),
+    ],
+)
+def test_a_question_no_checked_template_fits_takes_no_written_search(
+    intent: str, entities: list[str], query_class: str
+) -> None:
+    assert _select(intent, entities, query_class) is None
+    assert written_search_allowed(_tool_input(intent, entities, query_class)) is False
+
+
+@pytest.mark.parametrize(
+    ("intent", "entities", "query_class", "expected_name"),
+    [
+        # One Disease with no shape on a hop class (the G-014 reason was a
+        # LIST of diseases; one is the disease the person named).
+        ("Tell me about breast cancer", [BREAST_CANCER], "single_hop", "disease_record_one"),
+        ("What is linked to Marfan syndrome?", ["MedGen:C0024796"], "multi_hop", "disease_record_one"),
+        # One Disease, no shape, aggregate, no count.
+        ("Summarise what the graph holds on Marfan syndrome", ["MedGen:C0024796"], "aggregate", "disease_record_one"),
+        # The removed phenotypes shape (2026-09-23) on one Disease.
         (
             "What phenotypic features are associated with Marfan syndrome?",
             ["MedGen:C0024796"],
             "single_hop",
+            "disease_record_one",
         ),
-        ("Which diseases are associated with BRCA1?", [BRCA1, PMID], "single_hop"),
-        ("How many variants does BRCA1 have compared with BRCA2?", [BRCA1, BRCA2], "aggregate"),
-        ("Compare NCBIGene:7157 and NCBIGene:672: how many diseases is NCBIGene:672 linked to?", [BRCA1, "NCBIGene:7157"], "lookup"),
-        ("How many variants of GCK cause MODY?", ["NCBIGene:2645", "MedGen:C0342276"], "lookup"),
-        ("How many conditions do MLH1 and MSH2 share?", [MLH1, MSH2, "MedGen:C0009402"], "aggregate"),
-        ("Which diseases are associated with BRCA1?", ["not-a-curie"], "single_hop"),
+        # An organism anchor, on any class.
+        ("Tell me about NCBITaxon:9606", ["NCBITaxon:9606"], "single_hop", "organismtaxon_record_one"),
+        ("What does the graph hold on NCBITaxon:562?", ["NCBITaxon:562"], "lookup", "organismtaxon_record_one"),
+        # A ClinVar variant anchor with no shape.
+        ("Tell me about ClinVar:17661", ["ClinVar:17661"], "multi_hop", "sequencevariant_record_one"),
+        ("What is ClinVar:17661?", ["ClinVar:17661"], "lookup", "sequencevariant_record_one"),
     ],
 )
-def test_ambiguous_or_unknown_shapes_fall_back_to_the_model(
-    intent: str, entities: list[str], query_class: str
+def test_one_named_entity_no_shaped_template_fits_takes_its_own_record(
+    intent: str, entities: list[str], query_class: str, expected_name: str
 ) -> None:
-    assert _select(intent, entities, query_class) is None
+    template = _select(intent, entities, query_class)
+    assert template is not None and template.name == expected_name
+    [param] = entity_param_bindings(entities)
+    label = expected_name.split("_record_")[0]
+    assert template.cypher.lower() == f"match (a:{label} {{id: ${param.lower()}}}) return a"
 
 
 @pytest.mark.parametrize("query_class", ["single_hop", "multi_hop", "aggregate"])
@@ -444,7 +505,13 @@ def test_anchor_label_for_requires_one_known_label() -> None:
     assert anchor_label_for([BREAST_CANCER, "MONDO:0007254"]) == "Disease"
     assert anchor_label_for([PMID]) == "Article"
     assert anchor_label_for([BRCA1, BREAST_CANCER]) is None
-    assert anchor_label_for(["ClinVar:17661"]) is None
+    # Card 15: a ClinVar variant and an organism are record anchors now,
+    # after a live read-only check of their records.
+    assert anchor_label_for(["ClinVar:17661"]) == "SequenceVariant"
+    assert anchor_label_for(["NCBITaxon:9606"]) == "OrganismTaxon"
+    assert anchor_label_for(["ClinVar:17661", BRCA1]) is None
+    assert anchor_label_for(["GO:0006281"]) is None
+    assert anchor_label_for(["HP:0001166"]) is None
     assert anchor_label_for([]) is None
     assert anchor_label_for(["nocolon"]) is None
 

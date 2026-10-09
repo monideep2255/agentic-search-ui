@@ -107,6 +107,11 @@ def _model_path_only(monkeypatch: pytest.MonkeyPatch) -> None:
     which asserts the opposite property, that the harness is NOT called.
     """
     monkeypatch.setattr(cypher_query_module, "select_template", lambda *_: None)
+    # Card 15, decision D5: with no template, only a true count may reach
+    # the generated path. These tests exercise that path's own mechanics,
+    # so they open the gate; `test_cypher_query_templates.py` asserts it
+    # stays shut for every other question.
+    monkeypatch.setattr(cypher_query_module, "written_search_allowed", lambda *_: True)
 
 
 def _gene_lookup_input(**overrides: object) -> CypherQueryInput:
