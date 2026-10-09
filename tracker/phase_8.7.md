@@ -82,7 +82,9 @@ Resumed 2026-10-08 (night of 2026-10-08 to 09):
 
 | Role | Model | Effort | Started | Ended | Tokens |
 |---|---|---|---|---|---|
-| builder W, steps 5 and 6 | depth | high | 00:33 | | |
+| builder W, steps 5 and 6 | depth | high | 00:33 | 02:22 | 369,476 |
+| builder R, step 8 | depth | high | 02:40 | | |
+| integration fixer | depth | high | 02:45 | | |
 | builder S, steps 2 and 7 | balance | medium | 00:33 | 01:29 | 160,731 |
 | builder F, step 4 | balance | medium | 00:33 | 01:14 | 105,106 |
 
@@ -180,5 +182,8 @@ A and C touch disjoint functions of `core/graph.py`. The lead fixes the placemen
 
 - 2026-10-09 01:16 UTC: builder F's step 4 merged into this branch (f0022125): `TokenPayload.placement` (cherry-pick of 1e030148, clean) and one reading-order helper, `contracts/token_order.py`, used by MCP, GraphQL, the command line, feedback capture, the trace source and one script. The guard held every commit the builder tried, so the lead reviewed the staged diff and committed it (d44d44da). Its runs: adapters 857, contracts 214, feedback 220 passed.
 - 2026-10-09 01:30 UTC: builder S's steps 2 and 7 merged (af8be31c), committed by the lead for the same reason. cb407508 had three conflicts, resolved around card 59's `stopping` and `answerStood` and card 23's `openTableRow`; six arms of `App.stopUntilAnswer.test.tsx` and two of `App.stopAfterAnswer.test.tsx` reshaped to the owner's Stop rule of 2026-09-27. On the merged branch: `tsc` clean, 77 of 77 in the placement, listing-first and lib tests. Open for review: the writing mark above the records is cb407508's choice and is not in `streaming.html`; the Stop count in `summarySentencesShown` has no biting test.
+
+- 2026-10-09 02:25 UTC: builder W's steps 5 and 6 merged (ae1b0bef), step 6 committed by the lead after the guard held the builder's commit. Builder W's open questions, for review: two Opus drafts price at $0.264 against the 25-cent cap, so the second draft never starts and option B's speed gain will not show; shown-order numbering holds in Plain language but not in grouped Researcher answers; a listing citation's chip never gains the prose quote.
+- 2026-10-09 02:38 UTC: the full unit suite on the merged branch: 14 failed, 7350 passed, 143 skipped. Five Stop tests whose premise was a stop before any answer, five ordering tests, two rewording-repair arms, and two debugging-guide coverage tests for the new `contracts/token_order.py`. An integration fixer takes all 14 in `feat/8.7-int`; builder R takes step 8 in `feat/8.7-r` (act_node only). OpenRouter unchanged at $36.11: no live spend yet.
 
 ## Findings
