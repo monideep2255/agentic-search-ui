@@ -4,6 +4,14 @@ fastapi>=0.111
 uvicorn[standard]>=0.29
 langgraph>=0.2
 langchain-core>=0.3
+# A-87F-05, 2026-10-09: `contracts/events.py` leaves a token's `placement` out
+# through `Field(exclude_if=...)`, which pydantic added at the field level in
+# 2.12.0 (its changelog, v2.12.0b1, #12141). On an older release the keyword
+# is only a warning and `placement: null` would reach every older client. The
+# floor is the version this environment and the command line package
+# (`clients/system3-cli`, pinned exactly) already run, and `mcp>=2.0` already
+# requires pydantic>=2.12.0, so no install changes: it states the need here.
+pydantic>=2.13.4
 
 # LLM providers
 anthropic>=0.34

@@ -180,6 +180,7 @@ from system_03_search_agent.contracts.events import (
 from system_03_search_agent.contracts.token_order import (
     LISTING,
     joined_text,
+    names_same_record,
     updates_citation,
 )
 
@@ -906,7 +907,19 @@ class Renderer:
             # earlier one's place, with no warning.
             self._citations[payload.citation_id] = payload
             return
-        if existing is not None and existing != payload:
+        if (
+            existing is not None
+            and existing.display_index == payload.display_index
+            and names_same_record(existing, payload)
+        ):
+            # A-87F-04: a repeat with the same number naming the same record
+            # (source, id there, link) is that source sent again, never a
+            # conflict, so nothing is printed. Anything else it changes is
+            # not taken: the first payload, which may already be on screen,
+            # is kept. A renumbered repeat still warns below, since its
+            # number is not the one a reader may already see.
+            return
+        if existing is not None:
             # F-4.2-A-19: a second `citation` event citing an id already
             # bound to a DIFFERENT source is a conflicting redefinition.
             # A `[n]` marker for this id may already be visible on
@@ -916,8 +929,8 @@ class Renderer:
             # Reject the redefinition (the first source for this id
             # wins, matching what may already be on screen) and flag it
             # audibly rather than accept the swap silently. A genuine
-            # duplicate (same id, identical fields) is not a conflict
-            # and is not warned about.
+            # duplicate (same id, same record) is not a conflict and is
+            # not warned about (the arm above).
             self._err.write(
                 f"warning: citation {payload.citation_id!r} was redefined "
                 "mid-run; the redefinition was ignored and the first "

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import uuid
 from collections.abc import AsyncIterator, Callable
 from datetime import UTC, datetime
@@ -349,3 +350,129 @@ def test_cli_json_answer_lists_one_citation_per_id_with_the_checked_words() -> N
     citations = json.loads(out.getvalue())["citations"]
     assert [(c["citation_id"], c["display_index"]) for c in citations] == [("c1", 1), ("c2", 2)]
     assert citations[0]["claim_text"] == _GROWN
+
+
+def _another_record_items() -> list[tuple[str, Any]]:
+    """Record 2's id sent again naming another record (A-87F-03): never an
+    update, and never something the server's own guard sends."""
+    items = _resent_items()
+    done = items.pop()
+    items.append(
+        (
+            "citation",
+            _citation(
+                2,
+                "Disease 99",
+                source_id="MedGen:C99",
+                source_url="https://www.ncbi.nlm.nih.gov/medgen/C99",
+            ),
+        )
+    )
+    items.append(done)
+    return items
+
+
+def _repeat_warnings(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [
+        record.getMessage()
+        for record in caplog.records
+        if record.levelno >= logging.WARNING and "different record" in record.getMessage()
+    ]
+
+
+@pytest.mark.asyncio
+async def test_mcp_logs_a_repeat_naming_another_record_by_its_id_only(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A-87F-03: the rows stay as they were (the first record kept), and
+    the drop leaves a warning naming the id, never the record. A re-send
+    of the same record logs nothing. Mutation that turns this red: drop
+    the warning (the fold at 9fe8f166)."""
+    run_id = _registry_run(monkeypatch, server_module, [], "mcp", items=_resent_items())
+    with caplog.at_level(logging.WARNING):
+        await server_module._fold_run_to_response(run_id, session_id="s-place")
+    assert _repeat_warnings(caplog) == []
+
+    caplog.clear()
+    run_id = _registry_run(monkeypatch, server_module, [], "mcp", items=_another_record_items())
+    with caplog.at_level(logging.WARNING):
+        result = await server_module._fold_run_to_response(run_id, session_id="s-place")
+    assert [(c.citation_id, c.source_id) for c in result.citations] == [
+        ("c1", "MedGen:C1"),
+        ("c2", "MedGen:C2"),
+    ]
+    warnings = _repeat_warnings(caplog)
+    assert len(warnings) == 1 and "'c2'" in warnings[0], warnings
+    assert "C99" not in warnings[0] and "Disease 99" not in warnings[0]
+
+
+@pytest.mark.asyncio
+async def test_rest_citations_export_logs_a_repeat_naming_another_record_by_its_id_only(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A-87F-03, `GET /v1/query/{run_id}/citations`: rows unchanged, one
+    warning naming the id only. Mutation that turns this red: drop the
+    warning (the export at 9fe8f166)."""
+    principal = Principal(owner_id="user:u1", user_id="u1", kind="user")
+    app_module.app.dependency_overrides[get_caller] = lambda: principal
+
+    async def _export(items: list[tuple[str, Any]]) -> list[dict[str, Any]]:
+        events = [_event(t, "t-resend", seq, p) for seq, (t, p) in enumerate(items)]
+        entry = SimpleNamespace(finished=True, cancelled=False, events=events)
+        monkeypatch.setattr(app_module, "_get_owned_run", lambda run_id, caller: entry)
+        transport = ASGITransport(app=app_module.app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/v1/query/run-1/citations")
+        assert response.status_code == 200
+        return response.json()
+
+    try:
+        with caplog.at_level(logging.WARNING):
+            await _export(_resent_items())
+        assert _repeat_warnings(caplog) == []
+        caplog.clear()
+        with caplog.at_level(logging.WARNING):
+            body = await _export(_another_record_items())
+    finally:
+        app_module.app.dependency_overrides.pop(get_caller, None)
+    assert [(c["citation_id"], c["source_id"]) for c in body] == [
+        ("c1", "MedGen:C1"),
+        ("c2", "MedGen:C2"),
+    ]
+    warnings = _repeat_warnings(caplog)
+    assert len(warnings) == 1 and "'c2'" in warnings[0], warnings
+    assert "C99" not in warnings[0] and "Disease 99" not in warnings[0]
+
+
+def _cli_warnings(items: list[tuple[str, Any]]) -> tuple[Renderer, str]:
+    out, err = io.StringIO(), io.StringIO()
+    renderer = Renderer(out, err, operator=False)
+    for seq, (event_type, payload) in enumerate(items):
+        renderer.handle(_event(event_type, "t-resend", seq, payload))
+    renderer.finish()
+    return renderer, err.getvalue()
+
+
+def test_cli_stream_takes_a_resend_naming_the_same_record_without_a_warning() -> None:
+    """A-87F-04: a re-send under the same id and number that names the same
+    record prints no "redefined" warning, even when a field besides the
+    checked words differs (the first payload is kept). Mutation that turns
+    this red: warn on any field that differs (the renderer at 9fe8f166)."""
+    items = _items([])
+    done = items.pop()
+    items += [
+        ("citation", _citation(1, "Disease 1")),
+        ("citation", _citation(1, _GROWN, entity_name="disease 1")),
+        done,
+    ]
+    renderer, warnings = _cli_warnings(items)
+    assert "redefined" not in warnings, warnings
+    assert renderer._citations["c1"].source_id == "MedGen:C1"
+
+
+def test_cli_stream_still_warns_on_a_resend_naming_another_record() -> None:
+    """A-87F-04's other half: a re-send naming a different record under one
+    id still warns, and the first record is kept."""
+    renderer, warnings = _cli_warnings(_another_record_items())
+    assert "'c2' was redefined" in warnings, warnings
+    assert renderer._citations["c2"].source_id == "MedGen:C2"

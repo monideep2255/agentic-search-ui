@@ -1283,13 +1283,15 @@ async def test_a_chip_under_a_summary_sentence_shows_the_words_it_was_checked_ag
         c["citation_id"]: c
         for c in one_per_citation_id(e.payload for e in result["events"] if e.type == "citation")
     }
+    # J-87F-03: the sentence's checked words first, as before build phase
+    # 8.7, then the record row's.
     assert folded["cq-completeness-1"]["claim_text"] == (
-        "Disease MedGen:C1, name: disease name number 1 "
-        "NCBIGene:672 is associated with disease name number 1"
+        "NCBIGene:672 is associated with disease name number 1 "
+        "Disease MedGen:C1, name: disease name number 1"
     )
     assert folded["cq-completeness-3"]["claim_text"] == (
-        "Disease MedGen:C3, name: disease name number 3 "
-        "Disease name number 3 is also associated with NCBIGene:672"
+        "Disease name number 3 is also associated with NCBIGene:672 "
+        "Disease MedGen:C3, name: disease name number 3"
     )
     assert folded["cq-completeness-4"]["claim_text"] == (
         "Disease MedGen:C4, name: disease name number 4"
@@ -1313,6 +1315,99 @@ async def test_the_early_send_ends_with_the_citations_a_request_without_it_gets(
         return one_per_citation_id(e.payload for e in events if e.type == "citation")
 
     assert _folded(early["events"]) == _folded(plain["events"])
+
+
+@pytest.mark.asyncio
+async def test_a_follow_up_turns_memory_holds_each_resent_citation_once(
+    monkeypatch: pytest.MonkeyPatch, placement_contract: None
+) -> None:
+    """A-87F-01, J-87F-01: session memory files one finding per citation id,
+    the re-sent one with the words its summary sentence was checked against.
+    Develop filed 5 findings for this answer, 9fe8f166 filed 8 (records 1 to
+    3 twice). Mutation that turns this red: build a finding per citation
+    event (`core/run.py` at 9fe8f166)."""
+    from system_03_search_agent.core import run as run_module
+    from system_03_search_agent.core import session_memory
+
+    _models(monkeypatch)
+    state = _write_state(audience_depth="researcher")
+    result = await graph_module.write_node(state)
+    filed: dict[str, object] = {}
+
+    async def _capture(**kwargs: object) -> None:
+        filed.update(kwargs)
+
+    monkeypatch.setattr(session_memory, "remember_turn_for_caller", _capture)
+    await run_module._remember_turn(state["query"], result["events"])  # type: ignore[arg-type]
+
+    findings = filed["findings"]
+    ids = [f.citation_ids[0] for f in findings]  # type: ignore[attr-defined, union-attr]
+    assert ids == [f"cq-completeness-{n}" for n in range(1, 6)], ids
+    words = {f.citation_ids[0]: f.claim_summary for f in findings}  # type: ignore[attr-defined, union-attr]
+    assert "NCBIGene:672 is associated with disease name number 1" in words["cq-completeness-1"]
+    assert (
+        "Disease name number 3 is also associated with NCBIGene:672"
+        in words["cq-completeness-3"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_record_row_too_long_to_join_still_leaves_the_sentences_words(
+    monkeypatch: pytest.MonkeyPatch, placement_contract: None
+) -> None:
+    """J-87F-03: when the row's words and the sentence's do not both fit in
+    `claim_text`, the sentence's are kept, as before build phase 8.7, and the
+    citation is sent again with them. The bound stands in for a long row
+    here; the next test uses a real one. Mutation that turns this red: join
+    the listing row's words first (9fe8f166), which leaves record 1 with its
+    row's words only and never re-sent."""
+    _models(monkeypatch)
+    monkeypatch.setattr(graph_module, "_CLAIM_TEXT_MAX", 80)
+    result = await graph_module.write_node(_write_state(audience_depth="researcher"))
+    folded = {
+        c["citation_id"]: c
+        for c in one_per_citation_id(e.payload for e in result["events"] if e.type == "citation")
+    }
+    assert folded["cq-completeness-1"]["claim_text"] == (
+        "NCBIGene:672 is associated with disease name number 1"
+    )
+    assert folded["cq-completeness-3"]["claim_text"] == (
+        "Disease name number 3 is also associated with NCBIGene:672"
+    )
+    _assert_resends_are_updates(result["events"])
+
+
+def test_a_long_record_row_never_pushes_out_the_sentences_words() -> None:
+    """J-87F-03 with a real row near the 1000-character bound: the sentence's
+    checked words come first and are kept whole; the row, which no longer
+    fits beside them, is the part left out."""
+    from system_03_search_agent.synthesis.findings import SynthFinding
+    from system_03_search_agent.synthesis.grounding import GroundedClaim
+
+    long_name = "disease name number 1 " + "with a long record summary " * 35
+    finding = SynthFinding(
+        ref_index=1,
+        citation_id="cq-long-1",
+        layer="layer_1_graph",
+        tool="cypher_query",
+        field="name",
+        field_value=long_name,
+        source_url="https://www.ncbi.nlm.nih.gov/medgen/C1",
+        curie="MedGen:C1",
+        entity_type="Disease",
+    )
+    row = GroundedClaim(claim_text=f"Disease MedGen:C1, name: {long_name}", finding=finding)
+    sentence = GroundedClaim(
+        claim_text="NCBIGene:672 is associated with disease name number 1", finding=finding
+    )
+    assert len(row.claim_text) < 1000 < len(row.claim_text) + len(sentence.claim_text) + 1
+    grounding = GroundingResult(
+        narrative="", claims=[row, sentence], stripped_count=0, refused=False
+    )
+    [citation] = graph_module._citations_from_grounded_claims(
+        grounding, [], row_claims=(row,)
+    )
+    assert citation.claim_text == sentence.claim_text
 
 
 def test_a_sentence_without_a_marker_is_never_offered_to_lead() -> None:

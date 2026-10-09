@@ -100,6 +100,23 @@ def updates_citation(earlier: Any, later: Any) -> bool:
     return all(before.get(key) == after.get(key) for key in keys)
 
 
+#: The fields that name a citation's record: its source, its id there and
+#: its link. Two payloads under one `citation_id` that agree on these name
+#: the same record, whatever else differs.
+CITATION_RECORD_FIELDS = ("source", "source_id", "source_url")
+
+
+def names_same_record(earlier: Any, later: Any) -> bool:
+    """True when two citations name the same record (`CITATION_RECORD_FIELDS`).
+
+    A repeat of an id that names another record is the conflict a reader
+    must hear about (F-4.2-A-19, A-87F-03); one that names the same record is
+    the same source sent again and is never warned about (A-87F-04)."""
+    before = citation_fields(earlier)
+    after = citation_fields(later)
+    return all(before.get(key) == after.get(key) for key in CITATION_RECORD_FIELDS)
+
+
 def one_per_citation_id(citations: Iterable[T]) -> list[T]:
     """One citation per `citation_id`, in the order the ids first arrived.
 

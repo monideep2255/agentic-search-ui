@@ -11172,8 +11172,16 @@ def _citations_from_grounded_claims(
     findings: list[Finding],
     layer2_raw_outputs: dict[str, NcbiEfetchOutput] | None = None,
     layer3_raw_outputs: dict[str, Any] | None = None,
+    *,
+    row_claims: Sequence[GroundedClaim] = (),
 ) -> list[CitationPayload]:
     """Build one `CitationPayload` per surviving grounded claim.
+
+    `row_claims` (J-87F-03): the claims of a code-built listing merged into
+    `grounding`. They lead the merged claims so the listing keeps its
+    numbers, but a citation's checked words put every other claim's first,
+    the summary sentences' words before the record row's, as before build
+    phase 8.7, so a long row is the part left out, never the sentence's.
 
     This replaces build phase 2.1's `_citations_from_findings` on the live
     path, and the difference is the whole point of this phase: 2.1 emitted
@@ -11211,7 +11219,11 @@ def _citations_from_grounded_claims(
     }
     checked_words_by_citation_id: dict[str, list[str]] = {}
     finding_by_citation_id: dict[str, SynthFinding] = {}
-    for claim in grounding.claims:
+    row_claim_ids = {id(claim) for claim in row_claims}
+    words_order = [claim for claim in grounding.claims if id(claim) not in row_claim_ids] + [
+        claim for claim in grounding.claims if id(claim) in row_claim_ids
+    ]
+    for claim in words_order:
         citation_id = claim.finding.citation_id
         # Every claim with one citation_id carries the same finding, so the
         # first is as good as any here.
@@ -14382,6 +14394,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
 
     model_grounding: GroundingResult | None = None if structured_fallback_used else grounding
     tail_sentences: tuple[str, ...] = ()
+    # J-87F-03: the listing's claims when merged below, so each citation's
+    # checked words put the summary sentences' words before the row's.
+    listing_row_claims: tuple[GroundedClaim, ...] = ()
     tail_findings = synth_findings if tail_is_listing else omitted_findings
     if (
         tail_is_listing
@@ -14400,6 +14415,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         # never change. The prose, which arrives later, is renumbered into
         # that numbering, so a record it cites prints the listing's number.
         merged_claims = list(listing_grounding.claims) + list(grounding.claims)
+        listing_row_claims = tuple(listing_grounding.claims)
         merged_slots = display_index_by_citation_id(
             GroundingResult(narrative="", claims=merged_claims, stripped_count=0, refused=False)
         )
@@ -14472,7 +14488,11 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     else:
         claim_trusts = trust_for_claims(grounding.claims, synth_findings, row_types)
         citations = _citations_from_grounded_claims(
-            grounding, findings, layer2_raw_outputs, layer3_raw_outputs
+            grounding,
+            findings,
+            layer2_raw_outputs,
+            layer3_raw_outputs,
+            row_claims=listing_row_claims,
         )
         if listing_sent:
             # Build phase 8.7, card 50: a citation already on screen keeps

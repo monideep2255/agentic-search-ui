@@ -11,6 +11,7 @@ Builder report for the two follow-ups of build phase 8.7 (merged to `develop` as
 - [Test queries](#test-queries)
 - [Test runs](#test-runs)
 - [Deviations and open items](#deviations-and-open-items)
+- [Fix round](#fix-round)
 
 ## Summary
 
@@ -134,3 +135,44 @@ No live model calls. No full suite.
 - Outside the fence, two more readers join raw citation events and would see a re-sent citation twice: `core/run.py` (session memory stores a second finding for the same id) and `eval/trace_source.py`. Each is a one-line change to `one_per_citation_id`. Not touched. `visualizations/Schema_visualization.md` should state the re-send rule; not touched.
 - GraphQL keeps disclosing an exact duplicate citation, as an existing test pins; only a repeat that changes `claim_text` replaces.
 - The REST export's truncation header now counts distinct valid citations, not every citation event.
+
+## Fix round
+
+One round on the findings in `judge.md` (verdict MERGE) and `adversary.md` (verdict FAIL on A-87F-01). Most come from the re-send in `916b5c37`. In the person's words: a follow-up question remembers each record once, with the words its summary sentence was checked against; the chip's words lead with that sentence again; and a repeated source never prints a false alarm.
+
+| Finding | What changed |
+|---|---|
+| A-87F-01, J-87F-01 | `core/run.py` `_remember_turn` folds the citation events through `one_per_citation_id` before building findings, so memory holds one entry per id, the re-sent one carrying the sentence's words |
+| A-87F-02, J-87F-02 | `eval/trace_source.py` `record_from_runs` folds the same way, so a trace counts one citation and one claim per id |
+| A-87F-04, J-87F-04 | `adapters/cli/render.py` prints no "redefined" warning for a repeat with the same id and number that names the same record (source, id there, link), whatever else differs; the first payload is kept. A repeat naming another record, or renumbered, still warns. The shared test is `names_same_record` in `contracts/token_order.py`. A command line already built from develop cannot change; it needs this branch's command line |
+| A-87F-03 | MCP (`adapters/mcp/server.py`) and the REST citations export (`adapters/web_sse/app.py`) log one warning naming the citation id, never record text, when a repeat names a different record. Their rows are unchanged |
+| J-87F-03 | `core/graph.py` `_citations_from_grounded_claims` takes `row_claims`, the listing's claims in the merge. Those still lead the merged claims for numbering, but a citation's checked words put the summary sentence's first and the row's after, within the same 1000-character bound, as before 8.7. A row that no longer fits is the part left out |
+| A-87F-05, J-87F-05 | pydantic added field-level `exclude_if` in 2.12.0 (installed changelog, v2.12.0b1, #12141). Installed here: 2.13.4; the command line package pins 2.13.4; deployment installs `requirements.txt` unpinned, where `mcp>=2.0` (mcp 2.0.0) already requires pydantic>=2.12.0. `requirements.txt` now states `pydantic>=2.13.4`, the version already installed and resolved. The supply-chain rule asks before installing a new or unfamiliar package, a postinstall script, or moving an MCP pin; a floor equal to what already resolves installs nothing and changes no version, so it falls under none of those |
+
+Tests, each red at `9fe8f166` and green after (the base run used a copy of that commit's `src` and `tests` with the new test files):
+
+| Test | At 9fe8f166 |
+|---|---|
+| `core/test_write_answers_sooner.py::test_a_follow_up_turns_memory_holds_each_resent_citation_once` | 8 findings, records 1 to 3 twice; after: 5, each re-sent one with its sentence's words |
+| `core/test_write_answers_sooner.py::test_a_record_row_too_long_to_join_still_leaves_the_sentences_words` | record 1 kept its row's words only and was never re-sent |
+| `core/test_write_answers_sooner.py::test_a_long_record_row_never_pushes_out_the_sentences_words` | a real row near the bound; `row_claims` absent at the base |
+| `core/test_write_answers_sooner.py::test_a_chip_under_a_summary_sentence_shows_the_words_it_was_checked_against` | updated to pin the sentence first; red at the base on the order |
+| `eval/test_trace_source_placement.py::test_a_resent_citation_is_one_citation_and_one_claim` | `['c1', 'c2', 'c1']` |
+| `adapters/test_token_placement_surfaces.py::test_cli_stream_takes_a_resend_naming_the_same_record_without_a_warning` | printed the "redefined" warning |
+| `adapters/test_token_placement_surfaces.py::test_cli_stream_still_warns_on_a_resend_naming_another_record` | green on both, as intended |
+| `adapters/test_token_placement_surfaces.py::test_mcp_logs_a_repeat_naming_another_record_by_its_id_only` | no warning |
+| `adapters/test_token_placement_surfaces.py::test_rest_citations_export_logs_a_repeat_naming_another_record_by_its_id_only` | no warning |
+
+Runs after the fix:
+
+| Run | Result |
+|---|---|
+| The three touched test files | `72 passed` (at the base: `8 failed, 64 passed`) |
+| `tests/system_03_search_agent/contracts` and `tests/system_03_search_agent/adapters` (MCP, REST, GraphQL, the command line) | `1095 passed, 2 warnings` |
+| `tests/system_03_search_agent/core` | `1486 passed, 56 skipped, 2 warnings` |
+| `tests/system_03_search_agent/eval`, `feedback`, the run, write, graph and memory tests, `tests/ci/test_gate_scripts.py` | `878 passed, 12 skipped, 2 warnings` |
+| `npx tsc --noEmit -p .` (no frontend file touched, so no vitest run) | exit 0 |
+| `ruff check` (whole repository) | `All checks passed!` |
+| `isort --check-only --diff src tests services tracker alembic .claude .github` | exit 0 |
+
+No live model calls. No full suite. Not touched: `visualizations/Schema_visualization.md` still does not state the re-send rule.
