@@ -246,6 +246,41 @@ def answer_markdown_from(events: list[Event]) -> str | None:
     return markdown
 
 
+#: The order the live answer ranks risk tiers in
+#: (`frontend/src/hooks/useRunView.ts`, `RISK_ORDER`). A tier not in this
+#: list outranks every known one there, so it does here: the safe direction
+#: for a risk label is to over-report, never to vanish.
+_RISK_ORDER = ("low", "moderate", "high", "critical")
+
+
+def worst_risk_tier_from(events: list[Event]) -> str | None:
+    """The worst `risk_tier` over the run's `trust_signal` events, or None.
+
+    The same reduction the live answer uses to build its "High-risk claim"
+    tag, so a reopened answer shows what the live one showed. None when the
+    run emitted no usable `trust_signal`: the stored value then means "not
+    recorded" and the saved screen shows no tag.
+    """
+    tiers = [
+        tier
+        for event in events
+        if event.type == "trust_signal"
+        for tier in [event.payload.get("risk_tier")]
+        if isinstance(tier, str) and tier
+    ]
+    if not tiers:
+        return None
+
+    def rank(tier: str) -> int:
+        return _RISK_ORDER.index(tier) if tier in _RISK_ORDER else len(_RISK_ORDER)
+
+    worst = tiers[0]
+    for tier in tiers[1:]:
+        if rank(tier) > rank(worst):
+            worst = tier
+    return worst
+
+
 def _last_of_type(events: list[Event], event_type: str) -> Event | None:
     """The most recent event of one type, or `None` if the run never emitted one.
 
@@ -453,11 +488,13 @@ def assemble_interaction(query: Query, events: list[Event]) -> InteractionRow | 
     answer_markdown: str | None = None
     audience_depth: str | None = None
     answer_trust_line: str | None = None
+    risk_tier: str | None = None
     if owner_id.startswith("user:") and trust_signal in _SAVEABLE_OUTCOMES:
         answer_markdown = answer_markdown_from(events)
         if answer_markdown is not None:
             audience_depth = query.audience_depth
             answer_trust_line = done_payload.trust_line
+            risk_tier = worst_risk_tier_from(events)
 
     return InteractionRow(
         trace_id=done_event.trace_id,
@@ -488,4 +525,5 @@ def assemble_interaction(query: Query, events: list[Event]) -> InteractionRow | 
         answer_markdown=answer_markdown,
         audience_depth=audience_depth,  # type: ignore[arg-type]
         answer_trust_line=answer_trust_line,
+        risk_tier=risk_tier,
     )

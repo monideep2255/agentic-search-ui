@@ -96,6 +96,7 @@ async def _seed(
     answer_markdown: str | None = None,
     audience_depth: str | None = None,
     user_id: uuid.UUID | None = None,
+    risk_tier: str | None = None,
 ) -> str:
     """Write one real `interactions` row through the real writer."""
     from system_03_search_agent.feedback.contracts import InteractionRow
@@ -114,6 +115,7 @@ async def _seed(
             citations=[_citation_payload()],
             answer_markdown=answer_markdown,
             audience_depth=audience_depth,  # type: ignore[arg-type]
+            risk_tier=risk_tier,
         )
     )
     return trace_id
@@ -229,6 +231,38 @@ async def test_the_owner_gets_the_answer_they_already_had() -> None:
     assert saved.trust_signal == "answer"
     assert len(saved.citations) == 1
     assert saved.citations[0]["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/7157"
+
+
+@pytest.mark.asyncio
+async def test_the_stored_risk_tier_is_returned_and_an_old_row_reads_none() -> None:
+    """Card 71: a reopened answer carries the tier the live one had; a row
+    saved without one (as every row before alembic 0011) reads None."""
+    from system_03_search_agent.feedback.history import get_saved_answer
+
+    owner = _account()
+    tiered = await _seed(
+        owner_id=owner,
+        question=f"tiered {uuid.uuid4().hex[:8]}",
+        answer_markdown=_ANSWER,
+        audience_depth="researcher",
+        risk_tier="high",
+    )
+    old = await _seed(
+        owner_id=owner,
+        question=f"old {uuid.uuid4().hex[:8]}",
+        answer_markdown=_ANSWER,
+        audience_depth="researcher",
+    )
+    # POPULATE CHECK: both rows landed, so the two reads below differ because
+    # of the column and not because a seed was lost.
+    assert _stored_answer(tiered) == _ANSWER
+    assert _stored_answer(old) == _ANSWER
+
+    got = get_saved_answer(owner_id=owner, trace_id=tiered)
+    got_old = get_saved_answer(owner_id=owner, trace_id=old)
+    assert got is not None and got_old is not None
+    assert got.risk_tier == "high"
+    assert got_old.risk_tier is None
 
 
 @pytest.mark.asyncio

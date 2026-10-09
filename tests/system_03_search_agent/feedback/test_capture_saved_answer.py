@@ -539,3 +539,48 @@ def test_the_trust_line_is_stored_beside_the_answer(real_run_events) -> None:
     assert no_line is not None
     assert no_line.answer_markdown is not None
     assert no_line.answer_trust_line is None
+
+
+def _trust_signal(risk_tier: str, *, scope: str = "claim") -> Event:
+    return _event(
+        "trust_signal",
+        {"outcome": "answer", "risk_tier": risk_tier, "grounded": True, "scope": scope},
+    )
+
+
+def test_the_worst_risk_tier_is_stored_beside_the_answer(real_run_events) -> None:
+    """Card 71: the tier the live "High-risk claim" tag is built from.
+
+    The live answer reduces EVERY trust_signal event (claim and answer scope)
+    to its worst, so a high claim with a low answer-level signal still shows
+    the tag. A guest and a run with no trust_signal store None.
+    """
+    events = [
+        *real_run_events,
+        _trust_signal("low"),
+        _trust_signal("high"),
+        _trust_signal("low", scope="answer"),
+        _done(),
+    ]
+    row = assemble_interaction(_query(_ACCOUNT), events)
+    assert row is not None
+    # POPULATE CHECK: the answer itself stored.
+    assert row.answer_markdown is not None
+    assert row.risk_tier == "high"
+
+    guest = assemble_interaction(_query(_GUEST), events)
+    assert guest is not None
+    assert guest.risk_tier is None
+
+    silent = assemble_interaction(_query(_ACCOUNT), [*real_run_events, _done()])
+    assert silent is not None
+    assert silent.answer_markdown is not None
+    assert silent.risk_tier is None
+
+
+def test_an_unrecognised_risk_tier_outranks_the_known_ones_as_on_the_live_answer() -> None:
+    from system_03_search_agent.feedback.capture import worst_risk_tier_from
+
+    assert worst_risk_tier_from([_trust_signal("low"), _trust_signal("moderate")]) == "moderate"
+    assert worst_risk_tier_from([_trust_signal("high"), _trust_signal("brand-new")]) == "brand-new"
+    assert worst_risk_tier_from([]) is None

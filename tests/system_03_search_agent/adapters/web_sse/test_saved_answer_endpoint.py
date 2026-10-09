@@ -126,6 +126,7 @@ def _saved(
     depth: str = "researcher",
     citations: list | None = None,
     trust_line: str | None = None,
+    risk_tier: str | None = None,
 ) -> SavedAnswer:
     return SavedAnswer(
         trace_id=trace_id,
@@ -136,6 +137,7 @@ def _saved(
         citations=[_citation()] if citations is None else citations,
         trust_signal="answer",
         trust_line=trust_line,
+        risk_tier=risk_tier,
     )
 
 
@@ -185,6 +187,7 @@ async def test_the_owner_gets_the_whole_wire_shape(fake_saved) -> None:
         "citations",
         "trust_signal",
         "trust_line",
+        "risk_tier",
     }
     assert body["trace_id"] == "trace-abc"
     assert body["question"] == "What does TP53 do?"
@@ -218,6 +221,24 @@ async def test_trust_line_travels_through_when_the_row_has_one(fake_saved) -> No
 
     assert response.status_code == 200
     assert response.json()["trust_line"] == "Sources disagree on at least one claim."
+
+
+@pytest.mark.asyncio
+async def test_risk_tier_travels_through_and_is_null_for_an_old_row(fake_saved) -> None:
+    """Card 71: the stored tier reaches the wire; a row saved before the
+    column existed answers null (no tag), never a made-up tier."""
+    caller = _account_principal()
+    _set_caller(caller)
+    fake_saved.seed(caller.owner_id, _saved("trace-high", risk_tier="high"))
+    fake_saved.seed(caller.owner_id, _saved("trace-old"))
+
+    async with _client() as client:
+        high = await client.get(_path("trace-high"))
+        old = await client.get(_path("trace-old"))
+
+    assert high.status_code == 200 and old.status_code == 200
+    assert high.json()["risk_tier"] == "high"
+    assert old.json()["risk_tier"] is None
 
 
 @pytest.mark.asyncio

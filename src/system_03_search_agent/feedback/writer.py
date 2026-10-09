@@ -245,6 +245,8 @@ def _interaction_values(row: InteractionRow) -> dict[str, Any]:
         "answer_markdown": row.answer_markdown,
         "audience_depth": row.audience_depth,
         "answer_trust_line": row.answer_trust_line,
+        # alembic 0011, card 71. Named here for the same reason as the three above.
+        "risk_tier": row.risk_tier,
     })
 
 
@@ -320,6 +322,7 @@ def _minimal_interaction_values(row: InteractionRow) -> dict[str, Any]:
         "answer_markdown": None,
         "audience_depth": None,
         "answer_trust_line": None,
+        "risk_tier": None,
     })
 
 

@@ -247,6 +247,11 @@ class InteractionRow(BaseModel):
     #: re-derived, so this can never reject a value the event already
     #: accepted.
     answer_trust_line: str | None = Field(None, max_length=200)
+    #: The worst risk tier of the run's `trust_signal` events (alembic 0011,
+    #: card 71), so a reopened answer can show the same "High-risk claim" tag
+    #: the live one showed. None means "not recorded", never "low". Bounded
+    #: to `TrustSignalPayload.risk_tier`'s own `max_length=16`.
+    risk_tier: str | None = Field(None, max_length=16)
 
     # Implementation columns Section 15 names as required to make the table
     # usable, inherited from the parent session or the harness.
