@@ -27,6 +27,7 @@ import { useMemo } from "react";
 
 import type { AgentEvent, GuardPayload } from "../lib/events";
 import { layerNumber } from "../lib/events";
+import { riskTagLabel } from "../lib/riskTag";
 import { deriveStopEnabled } from "../components/chat/StopButton";
 import { CATEGORY_COPY } from "../components/chat/GuardrailBanner";
 import { isCapShapedError, CAP_MESSAGE_COPY } from "../components/chat/CapMessage";
@@ -977,12 +978,10 @@ export function useRunView(events: AgentEvent[]): RunView {
       if (summary !== null) {
         if (!payload.grounded) trust.push({ kind: "risk", label: "Not fully grounded" });
         trust.push({ kind: summary.startsWith("Confirmed") ? "good" : "plain", label: summary });
-        if (payload.risk_tier && payload.risk_tier !== "low" && payload.risk_tier !== "unknown") {
-          trust.push({
-            kind: "risk",
-            label: payload.risk_tier === "high" ? "High-risk claim" : `${payload.risk_tier} risk claim`,
-          });
-        }
+        // Card 71: the tag's words come from `riskTagLabel`, the one source
+        // the reopened answer's tag uses too.
+        const summaryRiskLabel = riskTagLabel(payload.risk_tier);
+        if (summaryRiskLabel !== null) trust.push({ kind: "risk", label: summaryRiskLabel });
       } else {
       trust.push(
         payload.grounded
@@ -1003,9 +1002,10 @@ export function useRunView(events: AgentEvent[]): RunView {
       // it here restores the pre-existing display for a refusal (only
       // "Not fully grounded") while still over-reporting, unchanged, for
       // any OTHER unrecognised string a future backend value might send.
-      if (payload.risk_tier && payload.risk_tier !== "low" && payload.risk_tier !== "unknown") {
-        trust.push({ kind: "risk", label: `${payload.risk_tier} risk claim` });
-      }
+      // Card 71: `riskTagLabel` holds this exclusion and the words, shared
+      // with the summary branch above and with the reopened answer.
+      const pillRiskLabel = riskTagLabel(payload.risk_tier);
+      if (pillRiskLabel !== null) trust.push({ kind: "risk", label: pillRiskLabel });
       // R-01: "agreed" needs at least two things to agree. The A-05 fix moved
       // the nonsense rather than removing it, so "0 layers agreed" was still
       // reachable, now from a run that queried layers and cited nothing.

@@ -62,6 +62,13 @@ RubricOutcome = Literal["pass", "fail", "abstain"]
 #: citation after the fiftieth.
 MAX_CITATIONS_PER_ANSWER = 100
 
+#: The longest risk tier a saved answer keeps (card 71), the same bound the
+#: live event carries (`TrustSignalPayload.risk_tier`, `max_length=16`). It
+#: is enforced in code, in `feedback/capture.py`, and not by a database
+#: CHECK: capture stores a tier outside it as None, so an odd tier costs the
+#: reopened answer its tag and never the saved answer itself (A-71T-03).
+MAX_RISK_TIER_CHARS = 16
+
 
 def _bound_each_item(values: list[str], *, field: str, limit: int) -> list[str]:
     """Reject any item in a list of strings longer than `limit`.
@@ -247,6 +254,12 @@ class InteractionRow(BaseModel):
     #: re-derived, so this can never reject a value the event already
     #: accepted.
     answer_trust_line: str | None = Field(None, max_length=200)
+    #: The worst risk tier of the run's `trust_signal` events (alembic 0011,
+    #: card 71), so a reopened answer can show the same "High-risk claim" tag
+    #: the live one showed. None means "not recorded", never "low". Bounded
+    #: to `TrustSignalPayload.risk_tier`'s own `max_length=16`; capture never
+    #: hands this model a longer one (it stores None instead).
+    risk_tier: str | None = Field(None, max_length=MAX_RISK_TIER_CHARS)
 
     # Implementation columns Section 15 names as required to make the table
     # usable, inherited from the parent session or the harness.

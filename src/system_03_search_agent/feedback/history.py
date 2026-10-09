@@ -349,6 +349,10 @@ class SavedAnswer:
     #: of this module directly gets the fact; the endpoint does not publish
     #: it until the product owner says so.
     trust_line: str | None = None
+    #: The worst risk tier the live answer carried (card 71, alembic 0011),
+    #: so the reopened answer can show the same "High-risk claim" tag. None
+    #: for a row saved before 0011: no tag, never a wrong one.
+    risk_tier: str | None = None
 
 
 def get_saved_answer(owner_id: str, trace_id: str) -> SavedAnswer | None:
@@ -396,6 +400,7 @@ def get_saved_answer(owner_id: str, trace_id: str) -> SavedAnswer | None:
                 Interaction.answer_markdown,
                 Interaction.audience_depth,
                 Interaction.answer_trust_line,
+                Interaction.risk_tier,
             ).where(
                 Interaction.owner_id == owner_id,
                 Interaction.trace_id == trace_id,
@@ -419,6 +424,7 @@ def get_saved_answer(owner_id: str, trace_id: str) -> SavedAnswer | None:
         citations=row.citations if isinstance(row.citations, list) else [],
         trust_signal=row.trust_signal,
         trust_line=row.answer_trust_line,
+        risk_tier=row.risk_tier,
     )
 
 
@@ -460,6 +466,11 @@ def forget_saved_answers_for_account(user_id: UUID) -> int:
                 Interaction.user_id == user_id,
                 Interaction.answer_markdown.isnot(None),
             )
-            .values(answer_markdown=None, audience_depth=None, answer_trust_line=None)
+            .values(
+                answer_markdown=None,
+                audience_depth=None,
+                answer_trust_line=None,
+                risk_tier=None,
+            )
         )
     return int(result.rowcount or 0)

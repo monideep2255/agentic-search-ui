@@ -587,6 +587,12 @@ export interface HistoryAnswerResponse {
    * it as `null`.
    */
   trust_line: string | null;
+  /**
+   * The worst risk tier the live answer carried (card 71), so a reopened
+   * answer shows the same "High-risk claim" tag. `null` or absent for an
+   * answer saved before the tier was stored: the screen shows no tag.
+   */
+  risk_tier?: string | null;
 }
 
 /**
@@ -644,6 +650,7 @@ export async function fetchHistoryAnswer(
       .filter((citation): citation is HistoryAnswerCitation => citation !== null),
     trust_signal: typeof body.trust_signal === "string" ? body.trust_signal : "",
     trust_line: typeof body.trust_line === "string" ? body.trust_line : null,
+    risk_tier: typeof body.risk_tier === "string" ? body.risk_tier : null,
   };
 }
 

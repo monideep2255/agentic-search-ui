@@ -495,6 +495,7 @@ What you should see:
 
 - The question's own words are never mistaken for a disease name.
 - The answer ends without a note listing conditions you never mentioned: no "Patient condition unchanged", no "Condition of fetal membrane".
+- Only rs334's own records are listed. Never rs334348, rs334353, rs334558 or rs334773, which are different variants that only start with the same digits.
 - Why it matters: the person asked about sickle cell trait's variant, not about unrelated MedGen entries that happened to share the word "condition" with their own question; a made-up list of conditions reads as evidence when it is noise.
 
 ### 24. Comparing two genes in a disease context (G-033)
@@ -1103,6 +1104,7 @@ What you should see:
 - Guests do not get this. The account is what stores the answer, and deleting the account deletes it with them.
 - A reopened table longer than ten rows shows ten at a time, with the same "Showing 1–10 of N" bar and page controls as the live answer. On a phone each row stacks: the first value leads the row and every other value carries its column name, and nothing runs past the screen edge (card 71).
 - A long answer reopens with every source it cited, up to 100: its "Based on N sources cited" line, its Sources rows and the history list's count agree, and every marker points at a listed source. An answer saved before 2026-10-08 still reopens with at most 50 (card 54).
+- An answer that showed "High-risk claim" in red under it when live, for example query 5's EGFR question, shows the same "High-risk claim" on the same line when reopened; one that showed none reopens with none. An answer saved before 2026-10-09 reopens with no tag rather than a guessed one. A reopened answer never reads more sure of itself than it did live: an answer stopped by the per-question cost limit, which read "Not verified" live, reopens reading "Not verified", never with a tick (card 71).
 - Why it matters: clicking your own earlier question, being charged a second search for it, and waiting thirty seconds to read something you already read is the kind of small dishonesty that makes a history rail feel like decoration rather than a record.
 
 ### 100. A "not yet confirmed" answer reopens too (card 63)
@@ -1577,6 +1579,19 @@ What you should see:
 - `recent-onset diabetes treatment` is not asked back: "recent" there describes the disease, not the papers.
 - Known: after develop restarts or redeploys, a choice clicked on an earlier question searches without the year limit.
 
+### 108. A picked window that could not be applied says so (card 36)
+
+Queries to try:
+
+- Ask `recent papers on BRCA1`, wait for the three "How far back" choices, then redeploy or restart the service (developer step: restart the local server), then click "from the last 10 years".
+
+What you should see:
+
+- The plan line says the date range in your question could not be applied, so papers from any year were searched.
+- The answer heading does not claim a window that was not used.
+- Without a restart, the same click still limits to the last 10 years and says so.
+- Why it matters: a quiet change to what was searched is worse than an honest one.
+
 ### 85. Whether a question wants papers is a classifier's choice (12.16 part 3)
 
 Queries to try:
@@ -1811,6 +1826,7 @@ What you should see:
 - They say what the PubTator3 and LitVar2 searches return, that each source has its own time limit with Pathogen Detection's 120 seconds the longest, and that some follow-up searches run in a second round after the first.
 - No page or README names LitSense, which nothing calls, and README names no Redis cache.
 - Known, card 76: the layer 3 stop names three kinds of question searched another way where there are five, and the About walk says BRCA1's live searches run at the same time as the graph, where four of its thirteen run in a second round.
+- About, "Cite or refuse": every sentence there describes something you can see on an answer. It does not mention a coloured track beside the answer, which the answer screen no longer has. It says each claim's marker carries its layer's colour and a line of framing with no source shows in muted ink with no marker. Stop 5 says a copied cut is judged by the same model check, and a sentence with any copied piece held back is dropped whole.
 - Why it matters: a researcher who reads how the system works and then sees it do something else stops trusting the rest of what it says.
 
 ## Workflow for the product owner

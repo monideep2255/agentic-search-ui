@@ -41,7 +41,11 @@ from system_03_search_agent.contracts.events import (
 from system_03_search_agent.contracts.query import Query
 from system_03_search_agent.contracts.token_order import in_reading_order
 from system_03_search_agent.core.session_memory import _account_uuid, session_row_key
-from system_03_search_agent.feedback.contracts import MAX_CITATIONS_PER_ANSWER, InteractionRow
+from system_03_search_agent.feedback.contracts import (
+    MAX_CITATIONS_PER_ANSWER,
+    MAX_RISK_TIER_CHARS,
+    InteractionRow,
+)
 from system_03_search_agent.feedback.coverage import coverage_tags_for
 from system_03_search_agent.feedback.rubric import rubric_outcome_for
 
@@ -251,6 +255,56 @@ def answer_markdown_from(events: list[Event]) -> str | None:
     return markdown
 
 
+#: The order the live answer ranks risk tiers in
+#: (`frontend/src/hooks/useRunView.ts`, `RISK_ORDER`). A tier not in this
+#: list outranks every known one there, so it does here: the safe direction
+#: for a risk label is to over-report, never to vanish.
+_RISK_ORDER = ("low", "moderate", "high", "critical")
+
+
+def worst_risk_tier_from(events: list[Event]) -> str | None:
+    """The worst `risk_tier` over the run's `trust_signal` events, or None.
+
+    The live answer's reduction, step for step (`frontend/src/hooks/
+    useRunView.ts`, `worstRisk`), so a reopened answer shows what the live
+    one showed:
+
+    - Every `trust_signal` takes part, whatever its tier holds. Nothing is
+      filtered out first: live does not filter, so an empty tier ranks as
+      unrecognised there and here (J-71T-01, A-71T-01).
+    - A tier not in `_RISK_ORDER` outranks every known one.
+    - The first event starts the reduction and a later one replaces it only
+      when it ranks strictly higher, so of two unrecognised tiers the
+      earlier wins, as `reduce` without a seed does.
+
+    Stored as found, an empty string included (live shows no tag for it,
+    and neither does the saved screen). None when the run emitted no
+    `trust_signal`, and None when the worst tier is not a string of at most
+    `MAX_RISK_TIER_CHARS`: such a tier cannot come from a validated event,
+    and storing None loses only the tag, never the saved answer
+    (A-71T-03).
+    """
+    tiers = [
+        event.payload.get("risk_tier") for event in events if event.type == "trust_signal"
+    ]
+    if not tiers:
+        return None
+
+    def rank(tier: object) -> int:
+        for index, known in enumerate(_RISK_ORDER):
+            if tier == known:
+                return index
+        return len(_RISK_ORDER)
+
+    worst = tiers[0]
+    for tier in tiers[1:]:
+        if rank(tier) > rank(worst):
+            worst = tier
+    if not isinstance(worst, str) or len(worst) > MAX_RISK_TIER_CHARS:
+        return None
+    return worst
+
+
 def _last_of_type(events: list[Event], event_type: str) -> Event | None:
     """The most recent event of one type, or `None` if the run never emitted one.
 
@@ -458,11 +512,13 @@ def assemble_interaction(query: Query, events: list[Event]) -> InteractionRow | 
     answer_markdown: str | None = None
     audience_depth: str | None = None
     answer_trust_line: str | None = None
+    risk_tier: str | None = None
     if owner_id.startswith("user:") and trust_signal in _SAVEABLE_OUTCOMES:
         answer_markdown = answer_markdown_from(events)
         if answer_markdown is not None:
             audience_depth = query.audience_depth
             answer_trust_line = done_payload.trust_line
+            risk_tier = worst_risk_tier_from(events)
 
     return InteractionRow(
         trace_id=done_event.trace_id,
@@ -493,4 +549,5 @@ def assemble_interaction(query: Query, events: list[Event]) -> InteractionRow | 
         answer_markdown=answer_markdown,
         audience_depth=audience_depth,  # type: ignore[arg-type]
         answer_trust_line=answer_trust_line,
+        risk_tier=risk_tier,
     )

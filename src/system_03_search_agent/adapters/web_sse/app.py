@@ -919,6 +919,11 @@ class SavedAnswerResponse(BaseModel):
     #: line` already mirrors at the write path, rather than inventing a
     #: third number for the same fact.
     trust_line: str | None = Field(None, max_length=200)
+    #: The worst risk tier the live answer carried (card 71, alembic 0011),
+    #: so a reopened answer shows the same "High-risk claim" tag. Additive
+    #: within v1: `None` for a row saved before the column existed, which
+    #: the screen reads as "show no tag".
+    risk_tier: str | None = Field(None, max_length=16)
 
 
 class HistoryResponse(BaseModel):
@@ -1148,6 +1153,7 @@ def get_v1_history_answer(
         citations=citations[:MAX_CITATIONS_PER_ANSWER],
         trust_signal=saved.trust_signal,
         trust_line=saved.trust_line,
+        risk_tier=saved.risk_tier,
     )
 
 

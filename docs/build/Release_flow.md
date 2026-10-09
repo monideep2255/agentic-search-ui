@@ -86,6 +86,8 @@ Railway's rollback is a manual action taken in the Railway console: open the aff
 
 The API and web services are separate Railway services, so rolling one back does not roll back the other. Roll back each one that needs it. Rolling back a deploy does not revert `production` in git, and it does not undo a tag, a changelog entry, or a GitHub Release the automation already published. The next merge to `production` redeploys forward again unless `production` itself is fixed first.
 
+A release that ran a database migration rolls back in a fixed order. First run `alembic downgrade` to the previous revision from the new build's code, since the previous build's start command cannot find the new revision and the service will not start. Then redeploy the previous build at once: until it is live, the new build serves on the old schema and breaks, for alembic 0011 every reopened saved answer. Each migration's docstring names its exact command under "Rollback plan".
+
 ## What this flow does not protect against
 
 Said plainly rather than implied:
