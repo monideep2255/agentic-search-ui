@@ -1505,20 +1505,22 @@ What you should see:
 
 Queries to try:
 
-- `Tell me about the tree of life.` and `Tell me about apple trees.`, each as a new search in a fresh conversation.
-- Controls, each in a fresh conversation: `How do birds fly?` and `What genes are associated with cystic fibrosis?`.
-- After one of the first two is asked back, click one of the offered choices.
-- Inside a conversation, after any answer, type `Tell me about apple trees.` as a follow-up.
+- `Tell me about the tree of life.` and `Tell me about apple trees.`, each as the first question after reloading the page. Reload for each: "New search" keeps the same conversation, so only a reload starts a fresh one.
+- Controls, each first after a reload: `How do birds fly?`, `What is Marfan syndrome?`, `what does the literature say about metformin` and `Tell me about PMID 33057194.`.
+- After one of the first two is asked back, click one of the offered choices, or type a reply such as `Tell me more about the second one.`.
+- Type `What can you do?` first after a reload.
 
 What you should see:
 
-- The first two show a "What would you like to know about ...?" question with three or four clickable choices written for that subject, and no search has run yet.
-- `How do birds fly?` and the cystic fibrosis question are searched at once, with no question back: each says what it wants to know.
-- Clicking a choice runs an ordinary search on it.
-- The follow-up is answered, never asked back, since the conversation already says what it is about.
-- A real question waits no longer than before. An asked-back question takes two or three seconds more than query 76's short ones, since its choices are written only after the decision to ask.
-- Known: a model makes the call, not a list, so a borderline opening question can go either way.
-- Why it matters: a confident list of papers that sit beside the question is worse than one short question that finds out what the person wants.
+- The first two show a "What would you like to know about ...?" question with clickable choices written for that subject, and no search has run yet.
+- The four controls are searched with no question back: each asks something of its own, or names one exact record.
+- A clicked choice or a typed reply is never asked which aspect again. It is searched, or, for a reply that points back to something the product no longer holds, told which detail to add.
+- `What can you do?` is never asked which aspect, however it is punctuated.
+- A real question waits at most one second longer than before, and only when the decision is slow; the decision took 0.27 s at the median in this card's live runs.
+- Known: a model makes the call, not a list. In the fix round's live runs (three each) it asked back none of 118 real questions and 33 of 33 broad subjects; a subject with a narrow name, such as `Tell me about TP53.`, is usually asked back too.
+- Known: an asked-back question shows its choices only after a second, writing call; the review measured that call alone at 1.4 to 6.4 s.
+- Known: the server remembers which conversations have begun in memory only, so after a server restart the next message of an ongoing conversation is treated as an opening one.
+- Why it matters: a confident list of papers that sit beside the question is worse than one short question that finds out what the person wants, and a real question asked back is worse than either.
 
 ## 12. The overnight build of 2026-09-25
 
