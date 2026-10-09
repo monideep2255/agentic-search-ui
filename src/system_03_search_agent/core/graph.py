@@ -515,7 +515,18 @@ from system_03_search_agent.harness.coordinator_worker import (
     ToolExecutionResult,
     coordinator_worker_execute,
 )
-from system_03_search_agent.harness.decide import decide, jev_decides
+from system_03_search_agent.harness.decide import (
+    LEAD_SENTENCE_INSTRUCTIONS,
+    LEAD_SENTENCE_NEITHER,
+    LEAD_SENTENCE_POINT,
+    MAX_LEAD_CANDIDATES,
+    decide,
+    jev_decides,
+    lead_sentence_criteria,
+    lead_sentence_index,
+    lead_sentence_options,
+    lead_sentence_state,
+)
 from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
@@ -536,6 +547,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     PLAIN_SOURCES_HEADING,
     TABLE_COLUMNS,
     TABLE_HEADINGS,
+    AskedField,
     GroundingInput,
     answer_summary_sentence,
     collected_placeholder,
@@ -12232,6 +12244,112 @@ def _answer_call_ids(planned_tool_calls: list[Any], question: str) -> frozenset[
     return frozenset(ids)
 
 
+# ---------------------------------------------------------------------------
+# Build phase 8.7, card 2 (design C): the first sentence answers the
+# question. After grounding, one classifier decision reads the question and
+# the first one or two grounded, cited sentences of the model's prose and
+# says whether one of them answers it. Yes: that sentence opens the answer
+# and the code-built count line follows it. No, or any failure: the count
+# line opens it, exactly as before. Code reads no word of the question.
+# ---------------------------------------------------------------------------
+
+#: The least Write budget left in which the lead decision is asked at all.
+#: Below it the count line leads, as it did before the decision existed.
+_LEAD_DECISION_MIN_BUDGET_S: Final[float] = 1.5
+
+#: The longest the answer waits for the lead decision. Jev answers in 0.3 to
+#: 0.8 s (answer speed report, 2026-09-26); a pick later than this is a
+#: late pick, and a late pick leaves the count line leading.
+_LEAD_DECISION_MAX_WAIT_S: Final[float] = 4.0
+
+
+def _lead_candidates(model_grounding: GroundingResult | None) -> list[int]:
+    """Indexes into `model_grounding.sentences` of the first one or two
+    sentences that carry a citation marker.
+
+    Only sentences the grounding pass already accepted exist here: this
+    reads the pass's own output and nothing else, so a sentence it stripped
+    can never be offered, let alone lead.
+    """
+    if model_grounding is None:
+        return []
+    return [
+        index
+        for index, sentence in enumerate(model_grounding.sentences)
+        if _MARKER_PATTERN.search(sentence)
+    ][:MAX_LEAD_CANDIDATES]
+
+
+async def _lead_sentence_choice(
+    harness: Harness,
+    trace_id: str,
+    question: str,
+    model_grounding: GroundingResult | None,
+    budget_s: float,
+) -> int | None:
+    """The index of the model sentence that should open the answer, or None
+    for the code-built count line (build phase 8.7, card 2, design C).
+
+    One decision through the classifier seam (`_decide_point`, so Jev
+    decides and the guard tier steps in only when Jev fails, and the record
+    reaches `done.decisions`). Asked only when Jev is the classifier
+    (`CLASSIFIER_PROVIDER=jev`): with the guard tier deciding alone, the
+    question would wait on a guard call of about 2 s (answer speed report,
+    2026-09-26) on every answer, against Jev's 0.3 to 0.8 s, so the count
+    line leads there as before. Fails closed to None, the count line, when:
+    there is no candidate; less than `_LEAD_DECISION_MIN_BUDGET_S` of the
+    Write budget is left; no pick comes within `_LEAD_DECISION_MAX_WAIT_S`
+    or what is left of the budget; no model made a usable pick; or the pick
+    is "neither". Code reads no word of the question: the question and the
+    candidates are only the decision's bounded `state`.
+    """
+    candidates = _lead_candidates(model_grounding)
+    if (
+        not candidates
+        or model_grounding is None
+        or budget_s < _LEAD_DECISION_MIN_BUDGET_S
+        or not _jev_decides()
+    ):
+        return None
+    options = lead_sentence_options(len(candidates))
+    spec = _DecisionSpec(
+        point=LEAD_SENTENCE_POINT,
+        options=options,
+        instructions=LEAD_SENTENCE_INSTRUCTIONS,
+        criteria=lead_sentence_criteria(options),
+        fail_open=LEAD_SENTENCE_NEITHER,
+    )
+    state_text = lead_sentence_state(
+        question, [model_grounding.sentences[index] for index in candidates]
+    )
+    wait_s = min(_LEAD_DECISION_MAX_WAIT_S, budget_s - 0.5)
+    try:
+        record = await asyncio.wait_for(
+            _decide_point(harness, trace_id, spec, state_text), timeout=wait_s
+        )
+    except TimeoutError:
+        logger.warning("lead sentence decision was late (trace %s); the count line leads", trace_id)
+        return None
+    picked = lead_sentence_index(_usable_choice(record), len(candidates))
+    return None if picked is None else candidates[picked]
+
+
+def _asked_field(clinical_features_asked: bool) -> AskedField | None:
+    """What kind of fact the question asks for, when a decision already made
+    says so, for the opening line's honest-gap clause (card 2).
+
+    Today one decision supplies one: `think.asks_features` picking
+    `asks_features` means the question asks for a condition's clinical
+    features. The plan names no other asked-for field yet (phase 8.9 adds
+    organism, title and gene), so every other question gets None and the
+    line is unchanged. Never read off the question's words (DECISIONS.md
+    2026-09-24).
+    """
+    if clinical_features_asked:
+        return AskedField(label="clinical features", field_names=(CLINICAL_FEATURES_FIELD,))
+    return None
+
+
 def _answer_tokens(
     *,
     audience_depth: str,
@@ -12248,8 +12366,15 @@ def _answer_tokens(
     notes: list[str],
     summary_sentence: str | None = None,
     condition_names: dict[str, str | None] | None = None,
+    lead_index: int | None = None,
 ) -> list[TokenPayload]:
     """The answer as typed token chunks, in reading order.
+
+    Build phase 8.7, card 2. `lead_index` names the sentence of
+    `model_grounding` the lead decision picked (`_lead_sentence_choice`):
+    it opens the answer, the code-built count line follows it in the same
+    paragraph, and it is not repeated in the prose. None, the fail-closed
+    default, leaves the count line opening the answer, exactly as before.
 
     UI fix set 9. Every sentence here was already accepted by the grounding
     pass; this function adds structure around them and never adds, removes
@@ -12784,7 +12909,24 @@ def _answer_tokens(
         for remaining in feature_blocks.values():
             feature_block(remaining)
 
-    if summary_sentence:
+    # Build phase 8.7, card 2 (design C): the sentence the lead decision
+    # picked opens the answer, with the count line straight after it;
+    # otherwise the count line opens it, as before.
+    lead_text = (
+        model_grounding.sentences[lead_index]
+        if model_grounding is not None
+        and lead_index is not None
+        and 0 <= lead_index < len(model_grounding.sentences)
+        else None
+    )
+    if lead_text is not None:
+        # The lead carries the emphasis: it is the one claim `mainPointFor`
+        # reads on the frontend, the first that is not a list row.
+        sentence_token(lead_text, emphasize=True)
+        if summary_sentence:
+            sentence_token(summary_sentence, emphasize=researcher)
+        paragraph_break()
+    elif summary_sentence:
         # Always emphasize the lead summary, not Researcher only: it is the
         # one claim `mainPointFor` reads on the frontend, in every depth.
         sentence_token(summary_sentence, emphasize=True)
@@ -12802,9 +12944,11 @@ def _answer_tokens(
     elif model_grounding is not None:
         headings_shown = 0
         last_paragraph: int | None = None
-        for sentence, origin in zip(
-            model_grounding.sentences, model_grounding.sentence_origins, strict=False
+        for position, (sentence, origin) in enumerate(
+            zip(model_grounding.sentences, model_grounding.sentence_origins, strict=False)
         ):
+            if lead_text is not None and position == lead_index:
+                continue
             paragraph = (
                 model_layout.sentence_paragraph[origin]
                 if origin < len(model_layout.sentence_paragraph)
@@ -14096,6 +14240,26 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             lambda finding: _row_for(finding, findings),
             condition_names,
             audience_depth=query.audience_depth,
+            # Build phase 8.7, card 2: the honest gap, when a decision
+            # already made says what kind of fact was asked for and code
+            # finds no record in the answer that gives it.
+            asked_field=_asked_field(clinical_features_asked),
+            all_findings=synth_findings,
+        )
+        # Build phase 8.7, card 2 (design C): whether a grounded, cited
+        # sentence of the model's prose answers the question and should
+        # open the answer. Asked only when there is a count line it could
+        # lead ahead of; every failure leaves the count line leading.
+        lead_index = (
+            await _lead_sentence_choice(
+                harness,
+                trace_id,
+                query.text,
+                model_grounding,
+                write_budget_s - (time.monotonic() - write_started_at),
+            )
+            if summary_sentence
+            else None
         )
         for token in _answer_tokens(
             audience_depth=query.audience_depth,
@@ -14116,6 +14280,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             notes=notes,
             summary_sentence=summary_sentence,
             condition_names=condition_names,
+            lead_index=lead_index,
         ):
             # UI fix set 11.16 (2026-09-14): `emit_live`, not `emit`, for
             # every event from here to the answer-scope verdict. Each token
