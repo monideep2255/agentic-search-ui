@@ -1350,3 +1350,76 @@ def test_two_distinct_go_terms_survive_both_dedupes() -> None:
     assert sorted(row.curie for row in mapped) == ["GO:0003677", "GO:0006281"]
 
 
+
+
+# ---------------------------------------------------------------------------
+# Card 32: a graph column aliased to a reserved MedGen feature field name.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "alias", ["clinical_features", "clinical_features_total", "hpo_id", "disease_title"]
+)
+def test_graph_column_aliased_to_a_reserved_feature_name_is_renamed(alias: str) -> None:
+    rows = to_output_rows(
+        {"c0": "3"},
+        snapshot_version="2026-07-01",
+        derived_source_curie="NCBIGene:2200",
+        column_labels={"c0": alias},
+    )
+
+    assert len(rows) == 1
+    fields = rows[0]["fields"]
+    assert alias not in fields, "a graph column must never carry MedGen's feature field name"
+    assert fields == {f"graph_{alias}": 3}
+
+
+def test_graph_column_with_an_ordinary_alias_keeps_its_name() -> None:
+    rows = to_output_rows(
+        {"c0": "42"},
+        snapshot_version="2026-07-01",
+        derived_source_curie="NCBIGene:672",
+        column_labels={"c0": "variant_count"},
+    )
+
+    assert rows[0]["fields"] == {"variant_count": 42}
+
+
+@pytest.mark.parametrize(
+    "reserved", ["clinical_features", "clinical_features_total", "hpo_id", "disease_title"]
+)
+def test_renamed_column_never_collides_with_a_real_alias(reserved: str) -> None:
+    rows = to_output_rows(
+        {"c0": "3", "c1": "7"},
+        snapshot_version="2026-07-01",
+        derived_source_curie="NCBIGene:2200",
+        column_labels={"c0": reserved, "c1": f"graph_{reserved}"},
+    )
+
+    fields = rows[0]["fields"]
+    assert len(fields) == 2, "no graph value may be lost to the rename"
+    assert fields[f"graph_{reserved}"] == 7
+    assert 3 in fields.values()
+    assert reserved not in fields
+
+
+@pytest.mark.parametrize(
+    "reserved", ["clinical_features", "clinical_features_total", "hpo_id", "disease_title"]
+)
+def test_vertex_property_with_a_reserved_name_is_renamed_and_keeps_its_value(
+    reserved: str,
+) -> None:
+    raw_row = {
+        "result": (
+            '{"id": 1125899906858506, "label": "Disease", "properties": '
+            '{"id": "MedGen:C0024796", "name": "Marfan", "' + reserved + '": "x", '
+            '"graph_' + reserved + '": "y"}}::vertex'
+        )
+    }
+
+    fields = to_output_rows(raw_row, snapshot_version="2026-07-01")[0]["fields"]
+
+    assert reserved not in fields
+    assert fields[f"graph_{reserved}"] == "y"
+    assert "x" in fields.values(), "the renamed property keeps its value"
+    assert fields["name"] == "Marfan"
