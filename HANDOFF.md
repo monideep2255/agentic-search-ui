@@ -2,7 +2,7 @@
 
 The current state a fresh session needs, and nothing else. `/phase-checkpoint` rewrites it in place at every session end and keeps it to about 4 KB. Earlier versions, and the setup steps for a new laptop, are in `docs/build/Handoff_history.md`.
 
-Last updated: 2026-10-08.
+Last updated: 2026-10-09.
 
 ## Table of contents
 
@@ -18,7 +18,7 @@ Last updated: 2026-10-08.
 - Parked, code under local `parked/` tags, reports kept: the guardrail (84 and 72), card 15's next step, card 101's last slices. Why: the `DECISIONS.md` rows of 2026-10-08.
 - OpenRouter: $31.77 left of $36.11; phase 8.7 spent $3.67 of its $20, everything else about $0.66.
 - GitHub also holds `phase/8.7-answers-sooner` (open pull request #218) and `feat/8.7-s1` to `s3`, whose work it carries.
-- Locally, besides `develop`: worktrees `asu-card22` (raw review files not on develop) and `asu-card56`, `asu-card99`, `asu-factory-43`, `-43b`, `-44`, `-47` (still downloading from iCloud, unchecked).
+- Locally, besides `develop`: worktrees `asu-card22` (raw review files not on develop) and `asu-card56`, `asu-factory-43`, `-43b`, `-44`, `-47` (still downloading from iCloud, unchecked). `asu-audit` and `asu-card99` were checked and removed.
 
 ## What awaits the product owner
 
