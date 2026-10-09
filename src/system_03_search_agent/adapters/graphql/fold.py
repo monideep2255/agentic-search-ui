@@ -94,7 +94,7 @@ from system_03_search_agent.contracts.events import (
     ToolResultPayload,
     TrustSignalPayload,
 )
-from system_03_search_agent.contracts.token_order import joined_text
+from system_03_search_agent.contracts.token_order import joined_text, updates_citation
 from system_03_search_agent.core.run_registry import RunEntry, default_registry
 from system_03_search_agent.harness.cost_control import sanitize_event_for_end_user
 from system_03_search_agent.synthesis.trust import aggregate
@@ -614,6 +614,16 @@ class _CitationCollector:
     answer then resolved to two sources asserting opposite things and the
     caller had no way to pick, and a claim-scoped trust signal naming that
     `citation_id` could not be bound to one citation either.
+
+    One repeat is not a duplicate (F-8.7-A04, card 57): the same citation
+    sent again, every field equal but its `claim_text`
+    (`contracts.token_order.updates_citation`). The listing's citations go
+    out before the writer, and one the summary also cites is sent again once
+    the summary is checked, carrying the words each sentence was checked
+    against. That payload takes the earlier one's place, so the caller gets
+    one citation per id with the fuller checked words, and nothing is
+    omitted or disclosed for it. An exact repeat changes nothing and is
+    still counted as a duplicate id, as before.
     """
 
     events_seen: int = 0
@@ -622,6 +632,8 @@ class _CitationCollector:
     duplicate_display_indexes: int = 0
     seen_ids: set[str] = field(default_factory=set)
     seen_display_indexes: set[int] = field(default_factory=set)
+    payload_by_id: dict[str, dict[str, Any]] = field(default_factory=dict)
+    capped_payload_by_id: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     @property
     def omitted_total(self) -> int:
@@ -637,9 +649,30 @@ class _CitationCollector:
             self._omit(_OMISSION_INVALID)
             return
         if citation.citation_id in self.seen_ids:
+            earlier = self.payload_by_id.get(citation.citation_id)
+            if (
+                earlier is not None
+                and earlier != event.payload
+                and updates_citation(earlier, event.payload)
+            ):
+                self.payload_by_id[citation.citation_id] = dict(event.payload)
+                self.citations = [
+                    citation if kept.citation_id == citation.citation_id else kept
+                    for kept in self.citations
+                ]
+                return
             self._omit(_OMISSION_DUPLICATE_ID)
             return
         if len(self.citations) >= MAX_CITATIONS:
+            capped = self.capped_payload_by_id.get(citation.citation_id)
+            if (
+                capped is not None
+                and capped != event.payload
+                and updates_citation(capped, event.payload)
+            ):
+                # The same citation, already counted against the cap once.
+                return
+            self.capped_payload_by_id.setdefault(citation.citation_id, dict(event.payload))
             self._omit(_OMISSION_CAP)
             return
         if citation.display_index in self.seen_display_indexes:
@@ -649,6 +682,7 @@ class _CitationCollector:
             self.duplicate_display_indexes += 1
         self.seen_ids.add(citation.citation_id)
         self.seen_display_indexes.add(citation.display_index)
+        self.payload_by_id[citation.citation_id] = dict(event.payload)
         self.citations.append(citation)
 
     def disclosure_notes(self) -> list[str]:
