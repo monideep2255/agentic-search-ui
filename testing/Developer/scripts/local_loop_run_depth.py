@@ -38,6 +38,7 @@ os.environ["TOOL_AUDIT_LOG_ENABLED"] = "false"
 sys.path.insert(0, str(root / "src"))
 
 from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.contracts.token_order import in_reading_order
 from system_03_search_agent.core.run import run
 
 _MARKER = re.compile(r"\s*\[\d{1,3}\]")
@@ -74,7 +75,8 @@ async def measure(question: str, depth: str, show: bool) -> dict:
     in_paragraph = False
     unmarked = 0
     lines: list[str] = []
-    for token in tokens:
+    # Build phase 8.7: read the summary above the record listing.
+    for token in in_reading_order(tokens):
         kind = token.get("kind")
         text = token["text"]
         if kind == "paragraph_break" or kind == "heading" or kind == "note":

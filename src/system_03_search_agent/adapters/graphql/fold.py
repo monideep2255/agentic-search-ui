@@ -94,6 +94,7 @@ from system_03_search_agent.contracts.events import (
     ToolResultPayload,
     TrustSignalPayload,
 )
+from system_03_search_agent.contracts.token_order import joined_text
 from system_03_search_agent.core.run_registry import RunEntry, default_registry
 from system_03_search_agent.harness.cost_control import sanitize_event_for_end_user
 from system_03_search_agent.synthesis.trust import aggregate
@@ -688,7 +689,7 @@ class _CitationCollector:
 
 @dataclass
 class _Accumulator:
-    answer_parts: list[str] = field(default_factory=list)
+    answer_parts: list[TokenPayload] = field(default_factory=list)
     citations_collector: _CitationCollector = field(default_factory=_CitationCollector)
     trust_signals: list[TrustSignalPayload] = field(default_factory=list)
     unscoped_trust_signals: int = 0
@@ -760,7 +761,7 @@ def _consume_event(acc: _Accumulator, event: Event) -> None:
     if event.type == "token":
         payload = _parse_payload(acc, event, TokenPayload)
         if payload is not None:
-            acc.answer_parts.append(payload.text)
+            acc.answer_parts.append(payload)
     elif event.type == "citation":
         acc.citations_collector.accept(event)
     elif event.type == "trust_signal":
@@ -1065,7 +1066,7 @@ def _finalize(acc: _Accumulator, *, run_finished: bool) -> _Finalized:
         if update:
             trust_payload = trust_payload.model_copy(update=update)
 
-    answer_text = "".join(acc.answer_parts).strip()
+    answer_text = joined_text(acc.answer_parts).strip()
     if not answer_text:
         answer_text = _fallback_answer_text(
             guard_payload=acc.guard_payload,

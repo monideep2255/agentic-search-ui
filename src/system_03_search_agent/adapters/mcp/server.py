@@ -141,6 +141,7 @@ from system_03_search_agent.contracts.events import (
     TrustSignalPayload,
 )
 from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.contracts.token_order import joined_text
 from system_03_search_agent.core.persona import persona_for_session
 from system_03_search_agent.core.run_registry import (
     ConcurrentRunCapExceededError,
@@ -1132,7 +1133,7 @@ async def _fold_run_to_response(
     directly against a never-terminating fake stream before this fix
     landed).
     """
-    answer_parts: list[str] = []
+    answer_parts: list[TokenPayload] = []
     citations: list[CitationPayload] = []
     citation_events_seen = 0
     answer_trust_signal: TrustSignalPayload | None = None
@@ -1164,7 +1165,7 @@ async def _fold_run_to_response(
                                 if option.strip()
                             ]
                 elif event.type == "token":
-                    answer_parts.append(TokenPayload(**event.payload).text)
+                    answer_parts.append(TokenPayload(**event.payload))
                 elif event.type == "citation":
                     citation_events_seen += 1
                     if len(citations) < _MAX_CITATIONS:
@@ -1238,7 +1239,7 @@ async def _fold_run_to_response(
                 scope="answer",
             )
 
-    raw_answer_text = "".join(answer_parts).strip()
+    raw_answer_text = joined_text(answer_parts).strip()
     answer_text = raw_answer_text
     if not answer_text:
         answer_text = _fallback_answer_text(

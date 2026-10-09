@@ -416,6 +416,22 @@ class TokenPayload(BaseModel):
     emphasis: list[Annotated[str, Field(max_length=200)]] | None = Field(
         None, max_length=12
     )
+    # Build phase 8.7, T-8.7-03 (2026-09-27, card 50, option E). WHERE on the
+    # answer screen this chunk belongs, so the records can be shown the moment
+    # Act ends and the written summary placed above them when it lands:
+    #
+    #   - "listing": the code-built count line and the record listing, sent
+    #     live before the writing model is called. Grounded in code, so
+    #     nothing shown here is ever withdrawn.
+    #   - "summary": the written answer, placed ABOVE the listing whatever
+    #     order the two arrive in.
+    #
+    # Additive per Section 2.6 and `system-design-patterns` pattern 10: a
+    # payload without the field validates, and reads as "summary", which is
+    # where every token built before this phase rendered, so an older
+    # producer's answer reads exactly as before. A client that ignores the
+    # field joins the chunks in arrival order, as it always has.
+    placement: Literal["listing", "summary"] = "summary"
 
 
 class CitationPayload(BaseModel):
