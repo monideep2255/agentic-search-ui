@@ -40,3 +40,18 @@ No other defect found. Nothing here sits inside a defect of the fix round itself
 PASS against the merge bar: nothing worse than develop for a person. The lookup is gone, every non-isolate table is unchanged, and the isolate cell shows when and where from the record's own fields. F-94-V-01 is minor and not worse than develop.
 
 MERGE
+
+## Delta check, 6b723160
+
+Scope: git diff ce2df6de..6b723160 (answer_layout.py placeholder fold, one added test value).
+
+Probes I ran against _is_placeholder:
+- Real places stay places (False): "USA: St. Louis", "N.A. region", "Canada: N/A County", "Nashville", "USA: N.Y.", "." and "/" alone.
+- Placeholders still caught (True): "na", "NA", "N/A", "n/a", "N.A.", "N//A", "Not Applicable", "not collected", "not provided", "restricted access", "NULL", "unknown", "Missing", "missing: x".
+- The fold only applies to the whole value, so a dot or slash inside a longer place never turns it into a placeholder.
+
+Runs: test_tiers.py, test_isolate_search_wiring.py and test_write_answer_structure.py together: 104 passed (the model-id scan now passes). ruff check with no path: all checks passed.
+
+Nothing was mutated; the working tree has no edits from this check.
+
+Verdict: MERGE
