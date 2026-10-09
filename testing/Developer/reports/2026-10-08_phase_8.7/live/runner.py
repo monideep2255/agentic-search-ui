@@ -28,9 +28,9 @@ os.environ["LANGCHAIN_TRACING_V2"] = "false"
 os.environ["TOOL_AUDIT_LOG_ENABLED"] = "false"
 sys.path.insert(0, str(BRANCH / "src"))
 
-from system_03_search_agent.contracts.query import Query, RequestContext  # noqa: E402
-from system_03_search_agent.contracts.token_order import in_reading_order  # noqa: E402
-from system_03_search_agent.core.run import run  # noqa: E402
+from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.contracts.token_order import in_reading_order
+from system_03_search_agent.core.run import run
 
 QUESTIONS = [
     ("q1", "researcher", "Which diseases are associated with BRCA1?"),
@@ -118,7 +118,7 @@ async def main() -> None:
             n += 1
             try:
                 row = await one(tag, depth, question, n)
-            except Exception as e:  # record and continue
+            except Exception as e:  # noqa: BLE001 - record any failure and continue
                 row = {"n": n, "tag": tag, "depth": depth, "exception": f"{type(e).__name__}: {e}"[:300]}
             row["spent_since_start"] = round(credits_used() - start, 4)
             with out.open("a") as f:
