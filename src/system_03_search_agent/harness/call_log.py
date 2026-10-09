@@ -19,13 +19,16 @@ The level is WARNING on purpose, for every outcome, ok included. The service
 configures no root log level, so Python's default (WARNING) drops INFO
 lines before they reach the deployment's log, and the data this line exists
 to gather is the latency of the calls that succeeded as much as of the ones
-that failed. Lower it to INFO once the guardrail's design is decided.
+that failed. Lower it to INFO once step 2 of the guardrail design (host
+routing) has ranked the upstream hosts from a week of these lines
+(F-84-A08); the design is decided, the ranking is not.
 """
 
 from __future__ import annotations
 
 import contextlib
 import logging
+import re
 import time
 from typing import Any, Final
 
@@ -34,6 +37,13 @@ logger = logging.getLogger(__name__)
 #: The provider name is the router's own text; cap it so a log line stays
 #: one short line whatever the router sent.
 _PROVIDER_MAX_CHARS: Final[int] = 64
+
+#: Every character a host name needs: ASCII letters, digits, dots, hyphens
+#: and spaces. Anything else in the router's field is dropped before it is
+#: logged (step 3c of the guardrail design, F-84-J07): the field is
+#: untrusted text from outside, and a control character, an escape
+#: sequence or a line break must never reach the log.
+_NOT_IN_A_HOST_NAME: Final[re.Pattern[str]] = re.compile(r"[^A-Za-z0-9. -]")
 
 OK: Final[str] = "ok"
 TIMEOUT: Final[str] = "timeout"
@@ -78,12 +88,18 @@ def provider_of(response: Any) -> str | None:
 
     OpenRouter names the provider that served a call in a top-level
     `provider` field of its reply. Only a plain string is believed, so a
-    reply without one, or a test double, reads as None.
+    reply without one, or a test double, reads as None. Only the
+    characters a host name needs are kept, ASCII letters, digits, dots,
+    hyphens and spaces, then the result is trimmed and capped; a field with
+    none of them reads as None (step 3c of the guardrail design, F-84-J07).
     """
     value = getattr(response, "provider", None)
-    if not isinstance(value, str) or not value.strip():
+    if not isinstance(value, str):
         return None
-    return value.strip()[:_PROVIDER_MAX_CHARS]
+    kept = _NOT_IN_A_HOST_NAME.sub("", value).strip()
+    if not kept:
+        return None
+    return kept[:_PROVIDER_MAX_CHARS]
 
 
 def log_model_call(
