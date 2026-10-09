@@ -1539,6 +1539,16 @@ _JEV_INJECTION_WAIT_S: Final[float] = JEV_TOTAL_TIMEOUT_S + 0.5
 #: own wait, so a longer wait there cannot quietly cut Jev's pick off here.
 _JEV_OWN_PICK_WINDOW_S: Final[float] = _JEV_INJECTION_WAIT_S + 0.25
 
+#: Card 35 fix round (J-35-03, A-35-01): how long after it began a topic
+#: decision asked ONLY because the card made a memory-bound follow-up the
+#: allowlist admits subject to it may be waited for. Jev answered that
+#: decision in about 0.3 s, 0.77 s at most, beside a guard classifier that
+#: takes 1.9 to 4.4 s, so a healthy decision is always read inside this. A
+#: decision still running past it reads as no pick, which admits the
+#: follow-up exactly as develop did, instead of holding it for the whole
+#: guardrail budget (15 s).
+_FOLLOW_UP_TOPIC_CHECK_BOUND_S: Final[float] = 1.5
+
 #: The share of the guardrail's remaining budget the guard classifier's
 #: FIRST attempt may use (re-land, R-01); a second attempt, after a timeout
 #: or a transient error, gets the rest. A share, not a figure: the budget
@@ -1895,9 +1905,18 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     # question is judged by the classifier, started NOW so it runs alongside
     # the injection classifier below rather than after it: the person waits
     # for one model call, not two. Only its "off_topic" refuses, below.
+    #
+    # Card 35 (owner, 2026-10-09): "An off-topic follow-up that happens to
+    # contain a word such as 'cell' or 'study' is checked for topic like any
+    # other question." A follow-up that points back at a remembered entity
+    # is judged by the decision whatever the allowlist says, because the
+    # referring word alone would otherwise set aside the classifier's
+    # off-topic verdict with nothing left to check it.
     relevancy_task: asyncio.Task[DecisionRecord | None] | None = None
     relevancy_started: list[float] = []
-    if not prefilter.clears_biomedical_allowlist(query.text):
+    if not prefilter.clears_biomedical_allowlist(query.text) or _is_memory_bound_follow_up(
+        query.text, state
+    ):
         relevancy_task = asyncio.create_task(
             _relevancy_decision(
                 harness, trace_id, _relevancy_state(query.text, state), relevancy_started
@@ -2287,11 +2306,22 @@ async def _guardrail_after_prefilter(
     if relevancy_task is not None:
         if not relevancy_read:
             certain_refusal = jev_says_injection and classifier_verdict.admitted
+            # Card 35 fix round: the decision exists only for the card's new
+            # case when the allowlist cleared the question, so it gets its own
+            # short bound, counted from when it began.
+            follow_up_only = prefilter.clears_biomedical_allowlist(query.text)
+            follow_up_deadline = min(
+                step_deadline,
+                (relevancy_started[0] if relevancy_started else time.monotonic())
+                + _FOLLOW_UP_TOPIC_CHECK_BOUND_S,
+            )
             relevancy_record = await _await_within_step(
                 relevancy_task,
                 (
                     _jev_own_pick_deadline(relevancy_started, step_deadline)
                     if certain_refusal
+                    else follow_up_deadline
+                    if follow_up_only
                     else step_deadline
                 ),
                 None,
@@ -2300,6 +2330,8 @@ async def _guardrail_after_prefilter(
                 why=(
                     "Jev's own pick could no longer arrive"
                     if certain_refusal
+                    else "the follow-up topic check's bound passed"
+                    if follow_up_only
                     else "its step's budget ran out"
                 ),
             )
@@ -2308,7 +2340,15 @@ async def _guardrail_after_prefilter(
             return _decline_for_guardrail(
                 state, sink, refused("off_topic", prefilter.OFF_TOPIC_REASON), charged=True
             )
-        if relevancy is None and classifier_off_topic_set_aside:
+        # Card 35 (2026-10-09): `guardrail_node` now also asks this decision
+        # for a memory-bound follow-up the allowlist admitted. There, as
+        # before the card, no usable pick admits the question; only a real
+        # "off_topic" pick, above, refuses it.
+        if (
+            relevancy is None
+            and classifier_off_topic_set_aside
+            and not prefilter.clears_biomedical_allowlist(query.text)
+        ):
             return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
 
     # Step 4, Section 10.5. Runs after classification clears, per 10.1.

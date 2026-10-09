@@ -918,6 +918,22 @@ What you should see:
 - Never an invented answer.
 - Why it matters: a product that stays quiet about what it cannot do, rather than guessing, is one a person can trust when it does answer.
 
+### 111. An off-topic follow-up with a biomedical word in it (card 35)
+
+Queries to try:
+
+- Ask query 1 (`Which diseases are associated with BRCA1?`), then `Which cell phone is it best to buy this year?`
+- Then `Is it effective to invest in bitcoin right now?`
+- Controls, each after query 1: `and what about it in children?`, `what about its symptoms` and `tell me more about it`.
+
+What you should see:
+
+- The two off-topic follow-ups are refused with the "Outside biomedical research" label, and no search runs.
+- Each control is answered about BRCA1, as before this card.
+- A follow-up that points back at the conversation now gets one more quick topic check, run beside the safety check, so the person waits for the slower of the two, not both.
+- Known: a model makes the topic call, not a word list, so a borderline follow-up can go either way.
+- Why it matters: a person should not pay for, or trust, a biomedical answer to a question that is not biomedical because one word matched.
+
 ### 46. A question with no data (Product test 19)
 
 Queries to try:
@@ -2013,6 +2029,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 35 | An off-topic follow-up that contains a word such as "cell" or "study" is checked for topic like any other question | Query 111 |
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
 | card 67 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now" | Query 100 |
 | card 104 | An answer lists one record once in its tables and Plain language list | Query 107 |
