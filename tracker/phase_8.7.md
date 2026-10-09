@@ -75,18 +75,18 @@ Cards: 2 (the first sentence), 50 (nobody waits in silence), 5 (models by tier, 
 
 Resumed 2026-10-08 (night of 2026-10-08 to 09):
 
-- Wall clock: 8 hours from 00:30 UTC on 2026-10-09.
+- Wall clock: 8 hours from 00:13 UTC on 2026-10-09.
 - Dispatches: up to 12, the owner's answer before sleeping (`DECISIONS.md`, 2026-10-08). Planned: builders W (steps 5 and 6), S (steps 2 and 7), F (step 4), R (step 8, after W), the judge, the adversary, one fix agent, a fresh verifier, the product reviewer.
 - Spend: at most $20 of OpenRouter credit, read from the credits endpoint before and after each live run. $36.11 left at 00:11 UTC. If it runs out before the live checks finish, the phase still merges on CI and a fresh verifier, with the unrun checks named (the owner's answer).
 - Gate: the test queries document; no golden run (the owner's choice).
 
 | Role | Model | Effort | Started | Ended | Tokens |
 |---|---|---|---|---|---|
-| builder W, steps 5 and 6 | depth | high | 00:33 | 02:22 | 369,476 |
-| builder R, step 8 | depth | high | 02:40 | | |
-| integration fixer | depth | high | 02:45 | | |
-| builder S, steps 2 and 7 | balance | medium | 00:33 | 01:29 | 160,731 |
-| builder F, step 4 | balance | medium | 00:33 | 01:14 | 105,106 |
+| builder W, steps 5 and 6 | depth | high | 00:15 | 01:08 | 369,476 |
+| builder R, step 8 | depth | high | 01:12 | 01:28 | 198,995 |
+| integration fixer | depth | high | 01:15 | | |
+| builder S, steps 2 and 7 | balance | medium | 00:15 | 00:29 | 160,731 |
+| builder F, step 4 | balance | medium | 00:15 | 00:22 | 105,106 |
 
 ## Tickets
 
@@ -177,13 +177,15 @@ A and C touch disjoint functions of `core/graph.py`. The lead fixes the placemen
   - Builder B, `feat/8.7-s2` at cb407508: the placement field is committed (1e030148), and the screen work is committed unreviewed by the lead. It stopped when the write of a new test file, `frontend/src/components/screens/AnswerScreen.listingFirst.test.tsx`, was refused, and did not route around it. Still to do: the AnswerScreen and App-level Stop tests, reshaping `App.stopUntilAnswer.test.tsx` (7 arms fail by design until then), the mutation reds and the gates. Open item for the lead: MCP, GraphQL, the command line and the feedback capture join token text in arrival order, so they need to order by `placement` once builder A sends the listing first.
   - Builder C, `feat/8.7-s3` at da2c04f6: T-8.7-02 committed in six commits, all mutations red. It stopped during its final gates.
 
-- 2026-10-09 00:25 UTC: phase resumed overnight on the owner's decision of 2026-10-08, from `testing/Developer/reports/2026-10-05_phase_8.7_resume/plan.md`. Step 0: develop (c916cfa3) merged into this branch, clean. Steps 1 and 3: builder C's six commits cherry-picked, all clean; two of its tests were stale against today's develop (the old writer's installed price now estimates slightly above the static figure; card 91 names the unfinished search) and were brought up to date (586d7151). 46 of 46 of its tests pass.
-- 2026-10-09 00:33 UTC: builders W, S and F dispatched from 586d7151, each in a worktree the lead created (`asu-8.7-w`, `asu-8.7-screen`, `asu-8.7-field`) on local branches `feat/8.7-w`, `feat/8.7-screen`, `feat/8.7-field`. Builder R (step 8) waits for W, since both edit `core/graph.py`.
+- 2026-10-09 00:13 UTC: phase resumed overnight on the owner's decision of 2026-10-08, from `testing/Developer/reports/2026-10-05_phase_8.7_resume/plan.md`. Step 0: develop (c916cfa3) merged into this branch, clean. Steps 1 and 3: builder C's six commits cherry-picked, all clean; two of its tests were stale against today's develop (the old writer's installed price now estimates slightly above the static figure; card 91 names the unfinished search) and were brought up to date (586d7151). 46 of 46 of its tests pass.
+- 2026-10-09 00:15 UTC: builders W, S and F dispatched from 586d7151, each in a worktree the lead created (`asu-8.7-w`, `asu-8.7-screen`, `asu-8.7-field`) on local branches `feat/8.7-w`, `feat/8.7-screen`, `feat/8.7-field`. Builder R (step 8) waits for W, since both edit `core/graph.py`.
 
-- 2026-10-09 01:16 UTC: builder F's step 4 merged into this branch (f0022125): `TokenPayload.placement` (cherry-pick of 1e030148, clean) and one reading-order helper, `contracts/token_order.py`, used by MCP, GraphQL, the command line, feedback capture, the trace source and one script. The guard held every commit the builder tried, so the lead reviewed the staged diff and committed it (d44d44da). Its runs: adapters 857, contracts 214, feedback 220 passed.
-- 2026-10-09 01:30 UTC: builder S's steps 2 and 7 merged (af8be31c), committed by the lead for the same reason. cb407508 had three conflicts, resolved around card 59's `stopping` and `answerStood` and card 23's `openTableRow`; six arms of `App.stopUntilAnswer.test.tsx` and two of `App.stopAfterAnswer.test.tsx` reshaped to the owner's Stop rule of 2026-09-27. On the merged branch: `tsc` clean, 77 of 77 in the placement, listing-first and lib tests. Open for review: the writing mark above the records is cb407508's choice and is not in `streaming.html`; the Stop count in `summarySentencesShown` has no biting test.
+- 2026-10-09 00:23 UTC: builder F's step 4 merged into this branch (f0022125): `TokenPayload.placement` (cherry-pick of 1e030148, clean) and one reading-order helper, `contracts/token_order.py`, used by MCP, GraphQL, the command line, feedback capture, the trace source and one script. The guard held every commit the builder tried, so the lead reviewed the staged diff and committed it (d44d44da). Its runs: adapters 857, contracts 214, feedback 220 passed.
+- 2026-10-09 00:30 UTC: builder S's steps 2 and 7 merged (af8be31c), committed by the lead for the same reason. cb407508 had three conflicts, resolved around card 59's `stopping` and `answerStood` and card 23's `openTableRow`; six arms of `App.stopUntilAnswer.test.tsx` and two of `App.stopAfterAnswer.test.tsx` reshaped to the owner's Stop rule of 2026-09-27. On the merged branch: `tsc` clean, 77 of 77 in the placement, listing-first and lib tests. Open for review: the writing mark above the records is cb407508's choice and is not in `streaming.html`; the Stop count in `summarySentencesShown` has no biting test.
 
-- 2026-10-09 02:25 UTC: builder W's steps 5 and 6 merged (ae1b0bef), step 6 committed by the lead after the guard held the builder's commit. Builder W's open questions, for review: two Opus drafts price at $0.264 against the 25-cent cap, so the second draft never starts and option B's speed gain will not show; shown-order numbering holds in Plain language but not in grouped Researcher answers; a listing citation's chip never gains the prose quote.
-- 2026-10-09 02:38 UTC: the full unit suite on the merged branch: 14 failed, 7350 passed, 143 skipped. Five Stop tests whose premise was a stop before any answer, five ordering tests, two rewording-repair arms, and two debugging-guide coverage tests for the new `contracts/token_order.py`. An integration fixer takes all 14 in `feat/8.7-int`; builder R takes step 8 in `feat/8.7-r` (act_node only). OpenRouter unchanged at $36.11: no live spend yet.
+- 2026-10-09 01:08 UTC: builder W's steps 5 and 6 merged (ae1b0bef), step 6 committed by the lead after the guard held the builder's commit. Builder W's open questions, for review: two Opus drafts price at $0.264 against the 25-cent cap, so the second draft never starts and option B's speed gain will not show; shown-order numbering holds in Plain language but not in grouped Researcher answers; a listing citation's chip never gains the prose quote.
+- 2026-10-09 01:17 UTC: the full unit suite on the merged branch: 14 failed, 7350 passed, 143 skipped. Five Stop tests whose premise was a stop before any answer, five ordering tests, two rewording-repair arms, and two debugging-guide coverage tests for the new `contracts/token_order.py`. An integration fixer takes all 14 in `feat/8.7-int`; builder R takes step 8 in `feat/8.7-r` (act_node only). OpenRouter unchanged at $36.11: no live spend yet.
+
+- 2026-10-09 01:30 UTC: the times in this resume's entries were first written from the lead's estimate and some were wrong by up to 80 minutes; they are corrected here from the commit times and the task notifications. Builder R's step 8 done (a68cb417): the reader pass no longer runs on the answer path; a paper's hidden instructions stay blocked by `_sanitized_citeable_row`, which never depended on the reader; `_prefetch_answer_names` no longer runs and is dead code, so step 3's name-lookup gain is gone. Waits for the integration fixer before it merges, since both edit core tests.
 
 ## Findings
