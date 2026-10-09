@@ -1,0 +1,62 @@
+{
+  "tag": "S3_window",
+  "question": "recent papers on BRCA1",
+  "mode": "",
+  "steps": [
+    {
+      "step": "bundle",
+      "bundle": [
+        "index-DB6gWcmy.js"
+      ]
+    },
+    {
+      "step": "signed in",
+      "ok": true
+    },
+    {
+      "step": "landed",
+      "secs": 3.86,
+      "which": [
+        "answer-refusal",
+        "clarifying-options"
+      ]
+    },
+    {
+      "step": "offer",
+      "options": [
+        "Recent papers on BRCA1 from the last 12 months?",
+        "Recent papers on BRCA1 from the last 5 years?",
+        "Recent papers on BRCA1 from the last 10 years?"
+      ],
+      "prompt": "One more detail needed\nHow far back should I search?\nhttps://www.ncbi.nlm.nih.gov/search/all/?term=recent%20papers%20on%20BRCA1"
+    },
+    {
+      "step": "trust lines before pick",
+      "before": 0
+    },
+    {
+      "step": "picked landed",
+      "secs": 37.7,
+      "picked": "5 years"
+    },
+    {
+      "step": "answer texts",
+      "emailStillVisible": false,
+      "answerBody": "? Answered34.9s · 13 tool calls · 58 sources cited from 3 layers\n\nHide work ▴\n0.0s\nGUARD\nIn scope. The question can be grounded in NCBI records.\n7.1s\nTHINK\nThe query asks for a collection of recent papers (last 5 years) about a specific gene, which requires assembling a set of evidence/publications across multiple records rather than a single direct answer.\n7.1s\nPLAN\nsearching 3 layers for NCBIGene:672. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; PubMed papers published in the last 5 years only\n7.3s\nACT\npubtator_annotate — 1 result\n7.3s\nACT\nncbi_efetch — 10 results\n7.4s\nACT\nncbi_efetch — 5 results\n7.4s\nACT\nclinicaltrials_search — 5 results\n7.4s\nACT\nncbi_efetch — 1 result\n7.5s\nACT\nncbi_efetch — 10 results\n7.8s\nACT\nncbi_efetch — 1 result\n7.9s\nACT\ncypher_query — 40 results\n17.1s\nACT\ncypher_query — 100 results\n17.3s\nACT\npubtator_annotate — 5 results\n17.6s\nACT\nncbi_efetch — 5 results\n17.6s\nACT\nncbi_efetch — 8 results\n17.8s\nACT\nncbi_efetch — 1 result\n\nFound 41 article records for BRCA1, of 3487 available.⁠1–20\n\nARTICLE RECORDS FOUND\nPAPER IDENTIFIER \nPMID:10026184 PMID:10026184 ⁠1\nPMID:10196224 PMID:10196224 ⁠2\nPMID:10196379 PMID:10196379 ⁠3\nPMID:10220405 PMID:10220405 ⁠4\nPMID:10323242 PMID:10323242 ⁠5\nPMID:10334989 PMID:10334989 ⁠6\nPMID:10369075 PMID:10369075 ⁠7\nPMID:10373534 PMID:10373534 ⁠8\nPMID:10403822 PMID:10403822 ⁠9\nPMID:10417300 PMID:10417300 ⁠10\nShowing 1–10 of 41\n‹ Previous\nPage 1 of 5\nNext ›\nGENE RECORDS FOUND\nGENE IDENTIFIER \nBRCA1 NCBIGene:672 ⁠42, 46\nPUBMED RECORDS FOUND\nPAPER IDENTIFIER \nBRCA1: An Endocrine and Metabolic Regulator. PMID:35432218 ⁠43\nEXO1 protects BRCA1-deficient cells against toxic DNA lesions. PMID:38266640 ⁠49\nPromotion of DNA end resection by BRCA1-BARD1 in homologous recombination. PMID:39261729 ⁠52\nBRCA1 and BRCA2: from cancer susceptibility to synthetic lethality. PMID:39510841 ⁠55\nCLINVAR RECORDS FOUND\nVARIANT IDENTIFIER \nNM_007294.4(BRCA1):c.5243_5277+2788del VCV000267740 ⁠44\nNM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG VCV000267741 ⁠50\nNG_005905.2:g.(147057_150288)_(160933_166866)del VCV000373892 ⁠53\nGRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 VCV004823850 ⁠56\nNM_007294.4(BRCA1):c.2145C>G (p.Thr715=) VCV004848411 ⁠58\nOMIM RECORDS FOUND\nRECORD IDENTIFIER \nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1 omim 113705 ⁠45\nCLINICAL TRIAL RECORDS FOUND\nTRIAL IDENTIFIER STATUS \nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer NCT00590109 COMPLETED ⁠47\nBRCA1 Haploinsufficiency and Gene Expression NCT00597987 COMPLETED ⁠51\nStudy to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma NCT00617656 TERMINATED ⁠54\nLetrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation NCT00673335 COMPLETED ⁠57\nRecombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations NCT00700778 TERMINATED ⁠59\nPUBLICATION RECORDS FOUND\nPAPER IDENTIFIER \n20301425 PMID:20301425 ⁠48\nNOTES\nNote: this answer was truncated because only 140 of the 3487 records that matched this question in the graph were retrieved\nNote: no written summary could be checked against the records, so the records found are listed below with their sources\n▶\nSOURCES\n58\n▶\nKNOWLEDGE GRAPH\n41\n▶\n[1]\n\nPMID 10026184\n\nL1 · graph\n▶\n[2]\n\nPMID 10196224\n\nL1 · graph\n▶\n[3]\n\nPMID 10196379\n\nL1 · graph\n▶\n[4]\n\nPMID 10220405\n\nL1 · graph\n▶\n[5]\n\nPMID 10323242\n\nL1 · graph\n▶\n[6]\n\nPMID 10334989\n\nL1 · graph\n▶\n[7]\n\nPMID 10369075\n\nL1 · graph\n▶\n[8]\n\nPMID 10373534\n\nL1 · graph\n▶\n[9]\n\nPMID 10403822\n\nL1 · graph\n▶\n[10]\n\nPMID 10417300\n\nL1 · graph\n▶\n[11]\n\nPMID 10417779\n\nL1 · graph\n▶\n[12]\n\nPMID 10426999\n\nL1 · graph\n▶\n[13]\n\nPMID 10441573\n\nL1 · graph\n▶\n[14]\n\nPMID 10477523\n\nL1 · graph\n▶\n[15]\n\nPMID 10486320\n\nL1 · graph\n▶\n[16]\n\nPMID 10500182\n\nL1 · graph\n▶\n[17]\n\nPMID 10518542\n\nL1 · graph\n▶\n[18]\n\nPMID 10542266\n\nL1 · graph\n▶\n[19]\n\nPMID 10550055\n\nL1 · graph\n▶\n[20]\n\nPMID 10608806\n\nL1 · graph\n▶\n[21]\n\nPMID 10635334\n\nL1 · graph\n▶\n[22]\n\nPMID 10655477\n\nL1 · graph\n▶\n[23]\n\nPMID 10720440\n\nL1 · graph\n▶\n[24]\n\nPMID 10724175\n\nL1 · graph\n▶\n[25]\n\nPMID 10725406\n\nL1 · graph\n▶\n[26]\n\nPMID 10764811\n\nL1 · graph\n▶\n[27]\n\nPMID 10783165\n\nL1 · graph\n▶\n[28]\n\nPMID 10788334\n\nL1 · graph\n▶\n[29]\n\nPMID 10792030\n\nL1 · graph\n▶\n[30]\n\nPMID 10827109\n\nL1 · graph\n▶\n[31]\n\nPMID 10851248\n\nL1 · graph\n▶\n[32]\n\nPMID 10855792\n\nL1 · graph\n▶\n[33]\n\nPMID 10866324\n\nL1 · graph\n▶\n[34]\n\nPMID 10868478\n\nL1 · graph\n▶\n[35]\n\nPMID 10905363\n\nL1 · graph\n▶\n[36]\n\nPMID 10910365\n\nL1 · graph\n▶\n[37]\n\nPMID 10918303\n\nL1 · graph\n▶\n[38]\n\nPMID 10943845\n\nL1 · graph\n▶\n[39]\n\nPMID 10945975\n\nL1 · graph\n▶\n[40]\n\nPMID 10959836\n\nL1 · graph\n▶\n[41]\n\nPMID 10972993\n\nL1 · graph\n▶\nLIVE NCBI APIS\n11\n▶\nENRICHMENT\n6\n▶\n[47]\n\nclinicaltrials.gov NCT00590109\n\nL3 · literature\n▶\n[48]\n\npubmed 20301425\n\nL3 · literature\n▶\n[51]\n\nclinicaltrials.gov NCT00597987\n\nL3 · literature\n▶\n[54]\n\nclinicaltrials.gov NCT00617656\n\nL3 · literature\n▶\n[57]\n\nclinicaltrials.gov NCT00673335\n\nL3 · literature\n▶\n[59]\n\nclinicaltrials.gov NCT00700778\n\nL3 · literature\nBased on 58 sources cited, not yet confirmed",
+      "answerMeta": "? Answered34.9s · 13 tool calls · 58 sources cited from 3 layers",
+      "trust": "Based on 58 sources cited, not yet confirmed",
+      "workPanel": "0.0s\nGUARD\nIn scope. The question can be grounded in NCBI records.\n7.1s\nTHINK\nThe query asks for a collection of recent papers (last 5 years) about a specific gene, which requires assembling a set of evidence/publications across multiple records rather than a single direct answer.\n7.1s\nPLAN\nsearching 3 layers for NCBIGene:672. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; PubMed papers published in the last 5 years only\n7.3s\nACT\npubtator_annotate — 1 result\n7.3s\nACT\nncbi_efetch — 10 results\n7.4s\nACT\nncbi_efetch — 5 results\n7.4s\nACT\nclinicaltrials_search — 5 results\n7.4s\nACT\nncbi_efetch — 1 result\n7.5s\nACT\nncbi_efetch — 10 results\n7.8s\nACT\nncbi_efetch — 1 result\n7.9s\nACT\ncypher_query — 40 results\n17.1s\nACT\ncypher_query — 100 results\n17.3s\nACT\npubtator_annotate — 5 results\n17.6s\nACT\nncbi_efetch — 5 results\n17.6s\nACT\nncbi_efetch — 8 results\n17.8s\nACT\nncbi_efetch — 1 result",
+      "sources": "▶\nSOURCES\n58\n▶\nKNOWLEDGE GRAPH\n41\n▶\n[1]\n\nPMID 10026184\n\nL1 · graph\n▶\n[2]\n\nPMID 10196224\n\nL1 · graph\n▶\n[3]\n\nPMID 10196379\n\nL1 · graph\n▶\n[4]\n\nPMID 10220405\n\nL1 · graph\n▶\n[5]\n\nPMID 10323242\n\nL1 · graph\n▶\n[6]\n\nPMID 10334989\n\nL1 · graph\n▶\n[7]\n\nPMID 10369075\n\nL1 · graph\n▶\n[8]\n\nPMID 10373534\n\nL1 · graph\n▶\n[9]\n\nPMID 10403822\n\nL1 · graph\n▶\n[10]\n\nPMID 10417300\n\nL1 · graph\n▶\n[11]\n\nPMID 10417779\n\nL1 · graph\n▶\n[12]\n\nPMID 10426999\n\nL1 · graph\n▶\n[13]\n\nPMID 10441573\n\nL1 · graph\n▶\n[14]\n\nPMID 10477523\n\nL1 · graph\n▶\n[15]\n\nPMID 10486320\n\nL1 · graph\n▶\n[16]\n\nPMID 10500182\n\nL1 · graph\n▶\n[17]\n\nPMID 10518542\n\nL1 · graph\n▶\n[18]\n\nPMID 10542266\n\nL1 · graph\n▶\n[19]\n\nPMID 10550055\n\nL1 · graph\n▶\n[20]\n\nPMID 10608806\n\nL1 · graph\n▶\n[21]\n\nPMID 10635334\n\nL1 · graph\n▶\n[22]\n\nPMID 10655477\n\nL1 · graph\n▶\n[23]\n\nPMID 10720440\n\nL1 · graph\n▶\n[24]\n\nPMID 10724175\n\nL1 · graph\n▶\n[25]\n\nPMID 10725406\n\nL1 · graph\n▶\n[26]\n\nPMID 10764811\n\nL1 · graph\n▶\n[27]\n\nPMID 10783165\n\nL1 · graph\n▶\n[28]\n\nPMID 10788334\n\nL1 · graph\n▶\n[29]\n\nPMID 10792030\n\nL1 · graph\n▶\n[30]\n\nPMID 10827109\n\nL1 · graph\n▶\n[31]\n\nPMID 10851248\n\nL1 · graph\n▶\n[32]\n\nPMID 10855792\n\nL1 · graph\n▶\n[33]\n\nPMID 10866324\n\nL1 · graph\n▶\n[34]\n\nPMID 10868478\n\nL1 · graph\n▶\n[35]\n\nPMID 10905363\n\nL1 · graph\n▶\n[36]\n\nPMID 10910365\n\nL1 · graph\n▶\n[37]\n\nPMID 10918303\n\nL1 · graph\n▶\n[38]\n\nPMID 10943845\n\nL1 · graph\n▶\n[39]\n\nPMID 10945975\n\nL1 · graph\n▶\n[40]\n\nPMID 10959836\n\nL1 · graph\n▶\n[41]\n\nPMID 10972993\n\nL1 · graph\n▶\nLIVE NCBI APIS\n11\n▶\nENRICHMENT\n6\n▶\n[47]\n\nclinicaltrials.gov NCT00590109\n\nL3 · literature\n▶\n[48]\n\npubmed 20301425\n\nL3 · literature\n▶\n[51]\n\nclinicaltrials.gov NCT00597987\n\nL3 · literature\n▶\n[54]\n\nclinicaltrials.gov NCT00617656\n\nL3 · literature\n▶\n[57]\n\nclinicaltrials.gov NCT00673335\n\nL3 · literature\n▶\n[59]\n\nclinicaltrials.gov NCT00700778\n\nL3 · literature",
+      "notes": "NOTES\nNote: this answer was truncated because only 140 of the 3487 records that matched this question in the graph were retrieved\nNote: no written summary could be checked against the records, so the records found are listed below with their sources",
+      "refusal": null
+    },
+    {
+      "step": "rail open at 390 after hide attempt",
+      "open": false
+    },
+    {
+      "step": "answer 390",
+      "overflow390": 0
+    }
+  ]
+}

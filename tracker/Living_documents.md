@@ -67,10 +67,7 @@ Last updated: 2026-10-08.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-10-08 that begins "Card 59's builder fence is widened by one file", the last row at the overnight checkpoint of 2026-10-07 to 08. Of the rows read at this checkpoint, none changes a registered document's shape or job. Two restate or add process outside the registry, each recorded where it applies:
-
-- The test queries are the standard and the golden run an alarm, run only when the owner asks: already the registered rule for `testing/Test_queries_and_workflows.md` since 2026-10-05.
-- The overnight-development skill and the end-state check of branches and tags: a skill, `.claude/skills/overnight-development/SKILL.md`, not a registered document.
+Guarded through the DECISIONS.md row dated 2026-10-08 that begins "Cards 18, 19, 30, 38 and 94's remaining slices are not built tonight", the last row at the overnight checkpoint of 2026-10-08 to 09. Of the rows read at this checkpoint, none changes a registered document's shape or job: they record the owner's overnight approvals and answers, and the lead's merges, parks and deferrals of single cards.
 
 ## Why the registry lives here
 

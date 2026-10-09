@@ -1,0 +1,26 @@
+{
+  "develop_1280": {
+    "url": "https://search-agent-web-develop-2aeb.up.railway.app/about",
+    "modal": true,
+    "overflow": 0,
+    "overflowing": [],
+    "bundle": [
+      "https://search-agent-web-develop-2aeb.up.railway.app/assets/index-Bvd0kBlI.js"
+    ]
+  },
+  "prototype_1280": {
+    "overflow": 0
+  },
+  "develop_390": {
+    "url": "https://search-agent-web-develop-2aeb.up.railway.app/about",
+    "modal": true,
+    "overflow": 0,
+    "overflowing": [],
+    "bundle": [
+      "https://search-agent-web-develop-2aeb.up.railway.app/assets/index-Bvd0kBlI.js"
+    ]
+  },
+  "prototype_390": {
+    "overflow": 0
+  }
+}
