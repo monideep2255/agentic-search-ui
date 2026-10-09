@@ -172,10 +172,11 @@ const DAILY_CAP_COPY: Record<"anon_daily_cap_reached" | "anon_source_daily_cap_r
  * `id` INVARIANT, stated here because F-4.13-RV-01 shipped for want of it
  * being written down anywhere: an id must be unique across the whole list
  * and must stay the same for that row's whole life. It is therefore NEVER
- * derived from the row's position or from the list's length. The list can
- * SHRINK, since `ask` filters the re-asked question out before unshifting a
- * fresh row, so a positional id is reused the moment a re-ask keeps the
- * length flat, and three consumers read the id as though it were unique:
+ * derived from the row's position or from the list's length. The list
+ * could SHRINK while `ask` filtered the re-asked question out before
+ * unshifting a fresh row (removed by card 112), and a positional id was
+ * reused the moment a re-ask kept the length flat. Three consumers read the
+ * id as though it were unique:
  * `FollowUp.tsx` renders it as React's `key` and compares it to `activeId`,
  * and `onOpen` below resolves a click with `history.find`, first match wins.
  * Two rows sharing an id means clicking one question runs a different one.
@@ -265,6 +266,14 @@ function nextLocalHistoryId(): string {
  * that is not a date ("not-a-date"), that one catches a value that is not a
  * string at all.
  */
+/**
+ * The most rows `GET /v1/history` returns (`DEFAULT_LIMIT` in
+ * `feedback/history.py`; `fetchHistory` sends no limit). A re-ask keeps the
+ * in-tab list to it, dropping the oldest, so the list before a reload has
+ * the rows the list after one will.
+ */
+const HISTORY_LIST_LIMIT = 20;
+
 function formatHistoryMeta(item: HistoryItem): string | undefined {
   const parts: string[] = [];
   if (item.has_saved_answer === false) {
@@ -504,6 +513,9 @@ export function App() {
    * it state would re-run the effect on every ask for no benefit.
    */
   const activeEntryId = useRef<string | null>(null);
+  // Card 112: the row a person opened to read its saved answer, for the rail
+  // highlight (a ref would not re-render when it changes).
+  const [openedRowId, setOpenedRowId] = useState<string | null>(null);
   /**
    * Stop was pressed on the run in flight (F-4.8-A-10), and how many events
    * had arrived at that moment.
@@ -1294,6 +1306,52 @@ export function App() {
     );
   }, [view.landed, signedIn, searchView]);
 
+  /*
+   * Card 112: a search the server confirmed as stopped reads, in "Your
+   * searches", what the same row reads after a reload: "No answer saved"
+   * and its date (`formatHistoryMeta`, card 109). It used to have no second
+   * line at all until a reload, because the meta effect above writes only
+   * when a run lands, and a stopped run never does.
+   *
+   * Only on the server's own terminal reply (a fatal error event, the
+   * `cancelled` one in practice). A stop whose request failed closes the
+   * stream without a reply, and the server may then still answer and save
+   * that answer, so the row is left as it is rather than claim a fact the
+   * screen cannot know. The date is taken when the stop is confirmed, which
+   * is closer to the server's own: it stores `asked_at` (`created_at`) when
+   * it saves the row after the stop, not when the question was sent. The
+   * two can still differ (a browser clock off, a server a moment later), so
+   * a reload shows the server's date.
+   */
+  const stopConfirmed =
+    stopped && events.some((event) => event.type === "error" && event.payload.fatal === true);
+  const stopConfirmedAt = useRef<{ id: string; at: number } | null>(null);
+  useEffect(() => {
+    if (!stopConfirmed || !signedIn || runStartedAt === null) return;
+    const question = searchView.name === "answer" || searchView.name === "run"
+      ? searchView.question
+      : null;
+    if (question === null) return;
+    const entryId = activeEntryId.current;
+    if (entryId === null) return;
+    if (stopConfirmedAt.current?.id !== entryId) {
+      stopConfirmedAt.current = { id: entryId, at: Date.now() };
+    }
+    const meta = formatHistoryMeta({
+      trace_id: entryId,
+      question,
+      asked_at: new Date(stopConfirmedAt.current.at).toISOString(),
+      has_saved_answer: false,
+    });
+    setHistory((current) =>
+      current.map((item) =>
+        item.id === entryId && item.question === question && (item.meta !== meta || item.hasSavedAnswer !== false)
+          ? { ...item, meta, hasSavedAnswer: false }
+          : item,
+      ),
+    );
+  }, [stopConfirmed, signedIn, runStartedAt, searchView]);
+
   const ask = useCallback(
     async (
       question: string,
@@ -1338,7 +1396,9 @@ export function App() {
       // which is what a re-ask actually is: a new run for an old question,
       // not an edit of the old run's record. Transcribed the same way here,
       // so the freshly unshifted entry starts with no `meta` and no
-      // `traceId` of its own, exactly like a brand-new question.
+      // `traceId` of its own, exactly like a brand-new question. Card 112
+      // kept the unshift and dropped the filter: see the comment on the
+      // `setHistory` call below.
       //
       // F-4.13-FV-02. This comment used to claim the rail holds "at most one
       // item per question text". THAT IS FALSE and stating it was actively
@@ -1368,10 +1428,14 @@ export function App() {
       // row and no other. Set before the state update rather than after, so
       // a run that lands unusually fast cannot find a stale id here.
       activeEntryId.current = entryId;
-      setHistory((current) => [
-        { id: entryId, question },
-        ...current.filter((item) => item.question !== question),
-      ]);
+      // Card 112: no text filter. It used to drop every row with the same
+      // question the moment it was asked again, so a person who re-asked a
+      // question, and then stopped it or let it answer, watched every
+      // earlier search of it leave "Your searches" until a reload brought
+      // them back (11 rows fell to 5). Each search is its own row on the
+      // server (`mergeServerHistory` keys on `traceId`, never on text), so
+      // the list before a reload now matches the list after one.
+      setHistory((current) => [{ id: entryId, question }, ...current].slice(0, HISTORY_LIST_LIMIT));
       const seq = ++askSeq.current;
       /*
        * T-4.16-02. Archive the turn now on screen BEFORE anything resets,
@@ -1519,13 +1583,13 @@ export function App() {
         // row will carry, so `mergeServerHistory` can recognise the SAME
         // run when the server later echoes it back, rather than matching
         // on question text (see that function's own docstring for why
-        // text is the wrong key). Matched by `question`, the same way the
-        // meta-on-landing effect above matches this run's item: the
-        // in-session dedup a few lines up already guarantees at most one
-        // item exists per question text, so this cannot mis-tag a sibling.
+        // text is the wrong key). Card 112: matched by this ask's own row
+        // id, because the rail now keeps every earlier row of the same
+        // question, and an older one with no trace id yet (a run that never
+        // started) must not be tagged with this run's id.
         setHistory((current) =>
           current.map((item) =>
-            item.question === question && item.traceId === undefined
+            item.id === entryId && item.traceId === undefined
               ? { ...item, traceId: response.run_id }
               : item,
           ),
@@ -2139,7 +2203,9 @@ export function App() {
                 searchView.name === "answer" ||
                 searchView.name === "run" ||
                 searchView.name === "savedAnswer"
-                  ? history.find((item) => item.question === searchView.question)?.id ?? null
+                  ? // Card 112: by row id, not question text, since several rows
+                    // can share a question.
+                    (searchView.name === "savedAnswer" ? openedRowId : activeEntryId.current)
                   : null
               }
               // F-4.8-J-08's original fix, superseded by item 10.2 (overnight
@@ -2161,6 +2227,7 @@ export function App() {
                   savedAnswerRequestId.current = requestId;
                   setSavedAnswer(null);
                   setSavedAnswerLoading(true);
+                  setOpenedRowId(item.id);
                   setSearchView({ name: "savedAnswer", question: item.question });
                   fetchHistoryAnswer(token, item.traceId)
                     .then((response) => {
