@@ -1449,8 +1449,8 @@ export function AnswerBody({
 
   /*
    * Build phase 8.7, T-8.7-03 (card 50): THE SUMMARY ABOVE, THE LISTING
-   * BELOW, whatever order they arrived in. The server sends the count line
-   * and the records the moment the searches end and the written summary
+   * BELOW, whatever order they arrived in. The server sends the records the
+   * moment the searches end and the count line with the written summary
    * later, so the records are on screen while the summary is still being
    * written, and the summary is placed above them when it lands.
    *
