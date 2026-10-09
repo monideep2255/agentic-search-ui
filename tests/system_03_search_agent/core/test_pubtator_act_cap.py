@@ -293,7 +293,11 @@ async def test_an_answer_with_a_cut_off_search_says_one_did_not_finish(
     assert "Trial NCT00000001" in text or "NCT00000001" in text, (
         "populate-check: the answer carries the search that did finish"
     )
-    assert FAILED_SEARCH_NOTE in text
+    # Card 91 names the source and the reason; with nothing typed it is
+    # FAILED_SEARCH_NOTE itself.
+    assert FAILED_SEARCH_NOTE in text or (
+        "PubTator did not finish because it took too long" in text
+    )
     done = next(e for e in write_result["events"] if e.type == "done")
     assert done.payload["trust_outcome"] == "ask"
 

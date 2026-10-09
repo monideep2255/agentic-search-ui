@@ -329,7 +329,6 @@ def test_an_ordinary_cap_hit_is_not_logged_as_a_misconfiguration(
         ("guard", "deepseek/deepseek-v4-flash"),
         ("plan", "deepseek/deepseek-v4-flash"),
         ("plan", "moonshotai/kimi-k2.6"),
-        ("synth", "z-ai/glm-5.2"),
     ],
 )
 def test_the_cheaper_models_keep_todays_static_estimate(
@@ -343,6 +342,19 @@ def test_the_cheaper_models_keep_todays_static_estimate(
     price = harness.price_per_token(tier)  # type: ignore[arg-type]
     static = cost_control.estimate_call_cost_usd(tier)  # type: ignore[arg-type]
     assert cost_control.estimate_call_cost_usd(tier, price) == static  # type: ignore[arg-type]
+
+
+def test_the_old_writer_is_never_priced_below_the_static_estimate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The old writer's installed price now estimates a call slightly above
+    the static figure, so its check is the priced one; it is never looser
+    than the static estimate it replaced."""
+    monkeypatch.setenv(_ENV_BY_TIER["synth"], "z-ai/glm-5.2")
+    harness = Harness(trace_id="trace-old-writer")
+    price = harness.price_per_token("synth")
+    static = cost_control.estimate_call_cost_usd("synth")
+    assert cost_control.estimate_call_cost_usd("synth", price) >= static
 
 
 def test_an_unpriced_model_gets_todays_static_estimate(
