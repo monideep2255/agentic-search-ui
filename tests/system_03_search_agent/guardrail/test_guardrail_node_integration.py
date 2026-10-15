@@ -1120,6 +1120,41 @@ async def test_with_jev_an_injection_pick_refuses_though_the_classifier_admits(
 
 
 @pytest.mark.asyncio
+async def test_with_jev_a_follow_up_called_injection_is_refused_within_the_topic_check_bound(
+    monkeypatch: pytest.MonkeyPatch, _jev: list[str]
+) -> None:
+    """Card 35 fix round 2 (V-35-03): an allowlisted memory-bound follow-up
+    that Jev calls injection, with the classifier admitting it and the topic
+    check hung, is refused as injection within `_FOLLOW_UP_TOPIC_CHECK_BOUND_S`
+    of the topic check's START, not Jev's own 3.75 s window.
+
+    MUTATION PROOF: ordering `certain_refusal` ahead of `follow_up_only` again
+    in `_guardrail_after_prefilter`'s wait deadline turns this red.
+    """
+    import asyncio
+    import time
+
+    started: list[float] = []
+
+    async def _hang(*_a: Any, **_k: Any) -> Any:
+        started.append(time.monotonic())
+        await asyncio.sleep(60)
+
+    _mock_decide(monkeypatch, side_effect=_hang)
+    _install_jev(monkeypatch, "injection")
+    events, _ = await _run_guardrail(
+        "Which variants of it are pathogenic?", session_memory=_memory_with_brca1()
+    )
+    finished = time.monotonic()
+    assert started, "the topic check must have been asked"
+    guard = _payload(events, "guard")
+    assert guard is not None and guard["passed"] is False and guard["category"] == "injection"
+    bound = graph_module._FOLLOW_UP_TOPIC_CHECK_BOUND_S
+    assert bound <= 1.5
+    assert finished - started[0] < bound + 0.5, finished - started[0]
+
+
+@pytest.mark.asyncio
 async def test_with_jev_both_judges_clearing_admits(
     monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock, _jev: list[str]
 ) -> None:

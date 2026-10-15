@@ -2329,7 +2329,14 @@ async def _guardrail_after_prefilter(
             relevancy_record = await _await_within_step(
                 relevancy_task,
                 (
-                    _jev_own_pick_deadline(relevancy_started, step_deadline)
+                    (
+                        min(
+                            follow_up_deadline,
+                            _jev_own_pick_deadline(relevancy_started, step_deadline),
+                        )
+                        if follow_up_only
+                        else _jev_own_pick_deadline(relevancy_started, step_deadline)
+                    )
                     if certain_refusal
                     else follow_up_deadline
                     if follow_up_only
