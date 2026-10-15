@@ -218,13 +218,28 @@ def test_the_harness_reports_the_price_of_the_model_a_question_resolved(
     assert harness.price_per_token("synth") == (_OPUS_INPUT_PRICE, _OPUS_OUTPUT_PRICE)
 
 
-def test_the_rollback_writer_glm_5_2_is_still_priced_by_the_installed_map() -> None:
-    """Setting `SYNTH_MODEL=z-ai/glm-5.2` is the one-setting rollback. Its
-    fallback entry left the table together with its place in
-    `_DEFAULT_MODELS` (the repository-wide model-id scan allows no other),
-    so this arm holds that the installed litellm map still prices it."""
+def test_the_rollback_writer_glm_5_2_is_priced_when_litellm_has_no_entry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Setting `SYNTH_MODEL=z-ai/glm-5.2` is the one-setting rollback, and
+    develop's current writer. litellm's map no longer carries it, so the
+    fallback table must price it, never raise."""
+    _litellm_map_lacks_everything(monkeypatch)
     input_price, output_price = harness_module._price_per_token("z-ai/glm-5.2")
-    assert input_price > 0 and output_price > 0
+    assert (input_price, output_price) == (0.0000007182, 0.0000022572)
+
+
+def test_a_model_litellm_maps_at_zero_gets_the_tables_price(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """litellm maps Opus 5.5 at zero. A zero there is a gap, so the table's
+    price counts against the per-question cost cap."""
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 0.0, "output_cost_per_token": 0.0},
+    )
+    assert harness_module._price_per_token(_OPUS) == (_OPUS_INPUT_PRICE, _OPUS_OUTPUT_PRICE)
 
 
 # ---------------------------------------------------------------------------

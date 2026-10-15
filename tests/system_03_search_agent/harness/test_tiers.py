@@ -15,6 +15,7 @@ import pytest
 
 from system_03_search_agent.harness.tiers import (
     _DEFAULT_MODELS,
+    _FALLBACK_PRICES_USD_PER_TOKEN,
     TierContext,
     UnknownTierError,
     resolve_model,
@@ -228,7 +229,10 @@ def test_no_model_id_shaped_string_outside_the_default_table() -> None:
     harness/tiers.py's _DEFAULT_MODELS values, never inline in any other
     harness, node, or graph module.
     """
-    allowed_values = set(_DEFAULT_MODELS.values())
+    # The fallback price table is keyed by model identity and lives in
+    # tiers.py by design, so its keys are allowed there too: the one-setting
+    # rollback model is priced there without being a default.
+    allowed_values = set(_DEFAULT_MODELS.values()) | set(_FALLBACK_PRICES_USD_PER_TOKEN)
     violations: list[str] = []
     for path in sorted(_SRC_ROOT.rglob("*.py")):
         for lineno, value in _iter_string_constants(path):

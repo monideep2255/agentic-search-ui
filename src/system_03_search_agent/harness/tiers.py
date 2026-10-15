@@ -60,7 +60,8 @@ _ENV_VAR_BY_TIER: dict[Tier, str] = {
 # (`record.model_id` in its raw results). It runs at `minimal` effort, not
 # `none`, which it refuses: see `_REASONING_EFFORT_BY_MODEL` below. The
 # previous default, z-ai/glm-5.2, is the one-setting rollback
-# (`SYNTH_MODEL=z-ai/glm-5.2`), priced by litellm's own map.
+# (`SYNTH_MODEL=z-ai/glm-5.2`), priced by `_FALLBACK_PRICES_USD_PER_TOKEN`
+# below, because litellm's map no longer carries it.
 #
 # Develop sets no `SYNTH_MODEL`, so this default reaches develop when the
 # phase merges. Production reaches it only at a release, and only if
@@ -140,16 +141,17 @@ def resolve_jev_model() -> str:
 # installed map can differ from the tested one, and the writer must stay
 # priced before it is called (T-8.6-08) whatever that map holds.
 #
-# z-ai/glm-5.2 left this table when it stopped being a default:
-# `test_no_model_id_shaped_string_outside_the_default_table` allows a model
-# id in this file only as a `_DEFAULT_MODELS` value. It is still the
-# one-setting rollback, and litellm's map prices it ($0.6496 and $2.0416 per
-# million in 1.93.0); `tests/.../harness/test_opus_writer.py` holds that the
-# installed map still does.
+# z-ai/glm-5.2 is back in this table (CI repair, 2026-10-15). Phase 8.7
+# removed it on the belief that litellm's map prices it, but litellm no
+# longer has any openrouter/z-ai/glm-5.x entry, so `_price_per_token` raised
+# and the writer failed. The entry is the price for the one-setting rollback
+# (`SYNTH_MODEL=z-ai/glm-5.2`) and for develop's current writer, which sets
+# that model in its API environment. Values are the ones production carries.
 _FALLBACK_PRICES_USD_PER_TOKEN: dict[str, tuple[float, float]] = {
     "deepseek/deepseek-v4-flash": (0.00000014, 0.00000028),
     "moonshotai/kimi-k2.6": (0.000000646, 0.00000272),
     "anthropic/claude-opus-5.5": (0.000004, 0.00002),
+    "z-ai/glm-5.2": (0.0000007182, 0.0000022572),
 }
 
 # Per-model reasoning effort, for a model whose tier's effort it refuses

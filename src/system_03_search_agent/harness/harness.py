@@ -258,7 +258,7 @@ def _price_per_token(model_id: str) -> tuple[float, float]:
     litellm updates its map upstream.
 
     Fallback: `_FALLBACK_PRICES_USD_PER_TOKEN`, for a model litellm does not
-    yet map.
+    map, or maps at zero for both prices.
 
     Raises:
         HarnessCallError: error_class="unexpected", if neither source has a
@@ -271,7 +271,13 @@ def _price_per_token(model_id: str) -> tuple[float, float]:
         input_price = info.get("input_cost_per_token")
         output_price = info.get("output_cost_per_token")
         if input_price is not None and output_price is not None:
-            return float(input_price), float(output_price)
+            # litellm can map a model at zero (anthropic/claude-opus-5.5 is
+            # one). A zero there is a gap, not a free model: when the local
+            # table names the model, its price wins, so the per-question cost
+            # cap counts the real price.
+            is_zero = float(input_price) == 0.0 and float(output_price) == 0.0
+            if not (is_zero and model_id in _FALLBACK_PRICES_USD_PER_TOKEN):
+                return float(input_price), float(output_price)
     except Exception:  # noqa: BLE001, S110 - fall through to the local table below; no data is lost, the fallback path is exercised next
         pass
 
