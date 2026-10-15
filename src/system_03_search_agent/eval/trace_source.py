@@ -51,7 +51,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from system_03_search_agent.contracts.token_order import joined_text
+from system_03_search_agent.contracts.token_order import joined_text, one_per_citation_id
 
 # The join key across LangSmith, the `interactions` table and the audit log
 # is `trace_id` (Section 20.1). It is the only field that is never optional,
@@ -217,7 +217,10 @@ def record_from_runs(
     events = iter_events(runs)
 
     tokens = joined_text(_payloads(events, "token"))
-    citations = _payloads(events, "citation")
+    # A-87F-02: one citation per id. A citation sent again with its checked
+    # words grown takes the earlier one's place, so a run that read
+    # `placement` counts each citation, and its claim, once.
+    citations = one_per_citation_id(_payloads(events, "citation"))
     trust = _payloads(events, "trust_signal")
     done = _payloads(events, "done")
     think = _payloads(events, "think")

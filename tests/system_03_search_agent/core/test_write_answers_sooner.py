@@ -39,6 +39,10 @@ import pytest
 from pydantic import BaseModel, ConfigDict, Field
 
 from system_03_search_agent.contracts.query import RequestContext
+from system_03_search_agent.contracts.token_order import (
+    one_per_citation_id,
+    updates_citation,
+)
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import cost_control
 from system_03_search_agent.harness import decide as decide_module
@@ -311,6 +315,74 @@ async def test_a_late_pick_leaves_the_count_line_leading(
 
     assert _summary_claims(result["events"])[0].startswith(COUNT_LINE_START)
     assert time.monotonic() - started < 1.0, "the answer must not wait for a late pick"
+
+
+def _summary_timing(monkeypatch: pytest.MonkeyPatch) -> dict[str, float]:
+    """When the writer's draft came back and when the first summary token
+    left the Write step, on the event loop's clock."""
+    marks: dict[str, float] = {}
+    original_emit_live = graph_module._EventSink.emit_live
+    original_dispatch = graph_module._dispatch_tier_call
+
+    def _emit_live(self, event_type: str, payload: object):
+        if (
+            event_type == "token"
+            and getattr(payload, "kind", None) == "claim"
+            and getattr(payload, "placement", None) in (None, "summary")
+        ):
+            marks.setdefault("first_summary_token", asyncio.get_running_loop().time())
+        return original_emit_live(self, event_type, payload)
+
+    async def _dispatch(*args: object, **kwargs: object):
+        reply = await original_dispatch(*args, **kwargs)  # type: ignore[arg-type]
+        if len(args) > 2 and args[2] == "synth":
+            marks["writer_done"] = asyncio.get_running_loop().time()
+        return reply
+
+    monkeypatch.setattr(graph_module._EventSink, "emit_live", _emit_live)
+    monkeypatch.setattr(graph_module, "_dispatch_tier_call", _dispatch)
+    return marks
+
+
+@pytest.mark.asyncio
+async def test_a_slow_pick_never_holds_the_summary_past_jevs_own_answer_time(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None, no_placement_contract: None
+) -> None:
+    """F-8.7-A07: "The written summary no longer waits up to 3.5 s on the
+    classifier's first-sentence pick." The module's own bound, not a patched
+    one, on the event loop's real clock: Jev is made far slower than it ever
+    answers (10 s against its measured 0.3 to 0.8 s), and the first summary
+    token must still leave within the 1 s bound, plus room for the step's
+    own work, of the writer's draft coming back. Before the fix it left
+    3.5 s later. Mutation that turns this red: put
+    `_LEAD_DECISION_MAX_WAIT_S` back to 4.0."""
+    _models(monkeypatch)
+    _jev(monkeypatch, choice="first", delay_s=10.0)
+    marks = _summary_timing(monkeypatch)
+
+    result = await graph_module.write_node(_write_state(audience_depth="researcher"))
+
+    assert {"writer_done", "first_summary_token"} <= set(marks), marks
+    held_s = marks["first_summary_token"] - marks["writer_done"]
+    assert held_s < 1.5, f"the summary waited {held_s:.2f} s on a slow pick"
+    assert _summary_claims(result["events"])[0].startswith(COUNT_LINE_START)
+    assert _lead_record(result["events"]) is None, "a late pick is never recorded as made"
+
+
+@pytest.mark.asyncio
+async def test_a_pick_that_arrives_in_time_still_leads(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """A pick within Jev's measured 0.3 to 0.8 s still leads. Mutation that
+    turns this red: a bound shorter than the pick, such as 0.5 s."""
+    _models(monkeypatch)
+    _jev(monkeypatch, choice="first", delay_s=0.7)
+
+    result = await graph_module.write_node(_write_state(audience_depth="researcher"))
+    claims = _summary_claims(result["events"])
+
+    assert claims[0] == LEAD, claims
+    assert claims[1].startswith(COUNT_LINE_START), claims
 
 
 @pytest.mark.asyncio
@@ -598,6 +670,20 @@ def _notes(events: list) -> list[str]:
     return [t["text"] for t in _tokens(events) if t["kind"] == "note"]
 
 
+def _assert_resends_are_updates(events: list) -> None:
+    """Every citation event that repeats an id is that citation sent again:
+    the same number, record and link, only `claim_text` changed."""
+    first: dict[str, dict] = {}
+    for event in events:
+        if event.type != "citation":
+            continue
+        payload = event.payload
+        earlier = first.setdefault(payload["citation_id"], payload)
+        if earlier is not payload:
+            assert updates_citation(earlier, payload), (earlier, payload)
+            assert payload["claim_text"] != earlier["claim_text"], "a re-send must change something"
+
+
 @pytest.mark.asyncio
 async def test_the_listing_leaves_before_the_writer_is_called_placed_as_the_listing(
     monkeypatch: pytest.MonkeyPatch, placement_contract: None
@@ -621,11 +707,12 @@ async def test_the_listing_leaves_before_the_writer_is_called_placed_as_the_list
     summary = [t for t in tokens if t["placement"] == "summary"]
     assert summary and summary[0]["text"].startswith(COUNT_LINE_START), summary
     assert all(t["kind"] in ("claim", "paragraph_break", "heading") for t in summary)
-    # No listing row is ever sent twice, and every citation is sent once.
+    # No listing row is ever sent twice. A citation is sent again only as
+    # itself with its checked words grown (F-8.7-A04), so each id folds to
+    # one row.
     rows = [t["text"] for t in tokens if t["kind"] == "table_row"]
     assert len(rows) == len(set(rows)) == 5, rows
-    citation_ids = [e.payload["citation_id"] for e in result["events"] if e.type == "citation"]
-    assert len(citation_ids) == len(set(citation_ids)), citation_ids
+    _assert_resends_are_updates(result["events"])
 
 
 @pytest.mark.asyncio
@@ -675,8 +762,9 @@ async def test_a_number_shown_early_is_the_number_the_answer_ends_with(
     monkeypatch: pytest.MonkeyPatch, placement_contract: None
 ) -> None:
     """Record 3 is cited first in the prose. It keeps the listing's [3] in
-    the prose, in its chip and everywhere else, and its citation is sent
-    once, early, never again with another number."""
+    the prose, in its chip and everywhere else, and its citation is never
+    sent again with another number: a second send is the same citation
+    with its checked words grown (F-8.7-A04)."""
     _models(
         monkeypatch,
         first=(
@@ -699,7 +787,7 @@ async def test_a_number_shown_early_is_the_number_the_answer_ends_with(
         for e in result["events"]
         if e.type == "citation"
     ]
-    assert len(final) == len({cid for cid, _ in final}), final
+    _assert_resends_are_updates(result["events"])
     for citation_id, number in final:
         if citation_id in early:
             assert number == early[citation_id], (citation_id, number, early)
@@ -1098,28 +1186,44 @@ async def test_a_client_that_asks_gets_placement_and_the_early_listing(
 
 
 @pytest.mark.asyncio
-async def test_the_answer_keeps_each_early_citation_exactly_as_it_was_sent(
+async def test_the_answer_keeps_each_early_citations_number_record_and_link(
     monkeypatch: pytest.MonkeyPatch, placement_contract: None
 ) -> None:
-    """A citation already on screen is the one the answer keeps: the
-    payload the conflict flags read is the very payload sent early, so no
-    surface is ever told two things about one chip. The prose here cites
-    records 1 to 3, which makes a freshly built payload for them differ
-    from the early one (its `claim_text` joins the prose's words, F-8.7-A04),
-    so dropping the substitution is visible. Mutation that turns this red:
-    remove `citations = [sent_by_id.get(c.citation_id, c) for c in citations]`."""
+    """A citation already on screen keeps everything it was sent with except
+    its checked words (F-8.7-A04): a final payload for an early id that
+    differs in anything else is replaced by the payload sent early, and is
+    not sent again, so no surface is ever told two things about one chip.
+    The stand-in below changes record 1's `entity_name` after the writer,
+    which the real builder never does. Mutation that turns this red: keep
+    the fresh payload whatever differs (drop the `updates_citation` guard
+    in `_write_answer`)."""
     _models(monkeypatch)
     timeline = _record_timeline(monkeypatch)
     seen: list[list] = []
     real_flags = graph_module._apply_conflict_flags_to_claim_trusts
+    real_build = graph_module._citations_from_grounded_claims
+    builds: list[int] = []
 
     def _spy(claim_trusts, citations, findings_by_id):
         seen.append(list(citations))
         return real_flags(claim_trusts, citations, findings_by_id)
 
-    monkeypatch.setattr(graph_module, "_apply_conflict_flags_to_claim_trusts", _spy)
+    def _build(*args, **kwargs):
+        built = real_build(*args, **kwargs)
+        builds.append(len(built))
+        if len(builds) == 1:
+            return built  # the listing's own, sent early
+        return [
+            c.model_copy(update={"entity_name": "another name"})
+            if c.citation_id == "cq-completeness-1"
+            else c
+            for c in built
+        ]
 
-    await graph_module.write_node(_write_state(audience_depth="researcher"))
+    monkeypatch.setattr(graph_module, "_apply_conflict_flags_to_claim_trusts", _spy)
+    monkeypatch.setattr(graph_module, "_citations_from_grounded_claims", _build)
+
+    result = await graph_module.write_node(_write_state(audience_depth="researcher"))
 
     writer_at = next(i for i, (kind, _) in enumerate(timeline) if kind == "writer_call")
     sent_early = {
@@ -1128,9 +1232,182 @@ async def test_the_answer_keeps_each_early_citation_exactly_as_it_was_sent(
         if kind == "citation"
     }
     assert sent_early, "populate-check: nothing was sent early"
+    assert len(builds) >= 2, "populate-check: the answer built its own citations"
     used = {citation.citation_id: citation for citation in seen[-1]}
+    assert used["cq-completeness-1"] == sent_early["cq-completeness-1"]
     for citation_id, payload in sent_early.items():
-        assert used[citation_id] == payload, (citation_id, used[citation_id], payload)
+        assert used[citation_id] == payload or updates_citation(payload, used[citation_id])
+    resent_1 = [
+        e.payload
+        for e in result["events"]
+        if e.type == "citation" and e.payload["citation_id"] == "cq-completeness-1"
+    ]
+    assert len(resent_1) == 1, resent_1
+    assert resent_1[0]["entity_name"] == "disease name number 1"
+    _assert_resends_are_updates(result["events"])
+
+
+@pytest.mark.asyncio
+async def test_a_chip_under_a_summary_sentence_shows_the_words_it_was_checked_against(
+    monkeypatch: pytest.MonkeyPatch, placement_contract: None
+) -> None:
+    """F-8.7-A04, card 57: with the listing sent early, a record the summary
+    also cites ends with the checked words a request without the early send
+    gets: the listing row's words and the summary sentence's, joined. The
+    citation is sent again with the same id and number, after the summary,
+    and only for the records the summary cites. Mutation that turns this
+    red: skip every id the listing already sent when the citations go out."""
+    _models(monkeypatch)
+    timeline = _record_timeline(monkeypatch)
+
+    result = await graph_module.write_node(_write_state(audience_depth="researcher"))
+
+    writer_at = next(i for i, (kind, _) in enumerate(timeline) if kind == "writer_call")
+    early_ids = [
+        payload.citation_id  # type: ignore[attr-defined]
+        for kind, payload in timeline[:writer_at]
+        if kind == "citation"
+    ]
+    later = [
+        (kind, payload) for kind, payload in timeline[writer_at:] if kind in ("token", "citation")
+    ]
+    resent = [p.citation_id for kind, p in later if kind == "citation"]  # type: ignore[attr-defined]
+    # The prose cites records 1, 2 and 3; 4 and 5 are only in the listing.
+    assert resent == ["cq-completeness-1", "cq-completeness-2", "cq-completeness-3"], resent
+    assert set(resent) <= set(early_ids)
+    last_token = max(i for i, (kind, _) in enumerate(later) if kind == "token")
+    first_resend = min(i for i, (kind, _) in enumerate(later) if kind == "citation")
+    assert first_resend > last_token, "the checked words follow the summary they check"
+
+    folded = {
+        c["citation_id"]: c
+        for c in one_per_citation_id(e.payload for e in result["events"] if e.type == "citation")
+    }
+    # J-87F-03: the sentence's checked words first, as before build phase
+    # 8.7, then the record row's.
+    assert folded["cq-completeness-1"]["claim_text"] == (
+        "NCBIGene:672 is associated with disease name number 1 "
+        "Disease MedGen:C1, name: disease name number 1"
+    )
+    assert folded["cq-completeness-3"]["claim_text"] == (
+        "Disease name number 3 is also associated with NCBIGene:672 "
+        "Disease MedGen:C3, name: disease name number 3"
+    )
+    assert folded["cq-completeness-4"]["claim_text"] == (
+        "Disease MedGen:C4, name: disease name number 4"
+    )
+    _assert_resends_are_updates(result["events"])
+
+
+@pytest.mark.asyncio
+async def test_the_early_send_ends_with_the_citations_a_request_without_it_gets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Folded one row per id, the citations of a request that reads
+    `placement` equal, field for field, those of one that does not."""
+    _models(monkeypatch)
+    monkeypatch.setattr(graph_module, "_request_reads_placement", lambda _state: True)
+    early = await graph_module.write_node(_write_state(audience_depth="researcher"))
+    monkeypatch.setattr(graph_module, "_request_reads_placement", lambda _state: False)
+    plain = await graph_module.write_node(_write_state(audience_depth="researcher"))
+
+    def _folded(events: list) -> list[dict]:
+        return one_per_citation_id(e.payload for e in events if e.type == "citation")
+
+    assert _folded(early["events"]) == _folded(plain["events"])
+
+
+@pytest.mark.asyncio
+async def test_a_follow_up_turns_memory_holds_each_resent_citation_once(
+    monkeypatch: pytest.MonkeyPatch, placement_contract: None
+) -> None:
+    """A-87F-01, J-87F-01: session memory files one finding per citation id,
+    the re-sent one with the words its summary sentence was checked against.
+    Develop filed 5 findings for this answer, 9fe8f166 filed 8 (records 1 to
+    3 twice). Mutation that turns this red: build a finding per citation
+    event (`core/run.py` at 9fe8f166)."""
+    from system_03_search_agent.core import run as run_module
+    from system_03_search_agent.core import session_memory
+
+    _models(monkeypatch)
+    state = _write_state(audience_depth="researcher")
+    result = await graph_module.write_node(state)
+    filed: dict[str, object] = {}
+
+    async def _capture(**kwargs: object) -> None:
+        filed.update(kwargs)
+
+    monkeypatch.setattr(session_memory, "remember_turn_for_caller", _capture)
+    await run_module._remember_turn(state["query"], result["events"])  # type: ignore[arg-type]
+
+    findings = filed["findings"]
+    ids = [f.citation_ids[0] for f in findings]  # type: ignore[attr-defined, union-attr]
+    assert ids == [f"cq-completeness-{n}" for n in range(1, 6)], ids
+    words = {f.citation_ids[0]: f.claim_summary for f in findings}  # type: ignore[attr-defined, union-attr]
+    assert "NCBIGene:672 is associated with disease name number 1" in words["cq-completeness-1"]
+    assert (
+        "Disease name number 3 is also associated with NCBIGene:672"
+        in words["cq-completeness-3"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_record_row_too_long_to_join_still_leaves_the_sentences_words(
+    monkeypatch: pytest.MonkeyPatch, placement_contract: None
+) -> None:
+    """J-87F-03: when the row's words and the sentence's do not both fit in
+    `claim_text`, the sentence's are kept, as before build phase 8.7, and the
+    citation is sent again with them. The bound stands in for a long row
+    here; the next test uses a real one. Mutation that turns this red: join
+    the listing row's words first (9fe8f166), which leaves record 1 with its
+    row's words only and never re-sent."""
+    _models(monkeypatch)
+    monkeypatch.setattr(graph_module, "_CLAIM_TEXT_MAX", 80)
+    result = await graph_module.write_node(_write_state(audience_depth="researcher"))
+    folded = {
+        c["citation_id"]: c
+        for c in one_per_citation_id(e.payload for e in result["events"] if e.type == "citation")
+    }
+    assert folded["cq-completeness-1"]["claim_text"] == (
+        "NCBIGene:672 is associated with disease name number 1"
+    )
+    assert folded["cq-completeness-3"]["claim_text"] == (
+        "Disease name number 3 is also associated with NCBIGene:672"
+    )
+    _assert_resends_are_updates(result["events"])
+
+
+def test_a_long_record_row_never_pushes_out_the_sentences_words() -> None:
+    """J-87F-03 with a real row near the 1000-character bound: the sentence's
+    checked words come first and are kept whole; the row, which no longer
+    fits beside them, is the part left out."""
+    from system_03_search_agent.synthesis.findings import SynthFinding
+    from system_03_search_agent.synthesis.grounding import GroundedClaim
+
+    long_name = "disease name number 1 " + "with a long record summary " * 35
+    finding = SynthFinding(
+        ref_index=1,
+        citation_id="cq-long-1",
+        layer="layer_1_graph",
+        tool="cypher_query",
+        field="name",
+        field_value=long_name,
+        source_url="https://www.ncbi.nlm.nih.gov/medgen/C1",
+        curie="MedGen:C1",
+        entity_type="Disease",
+    )
+    row = GroundedClaim(claim_text=f"Disease MedGen:C1, name: {long_name}", finding=finding)
+    sentence = GroundedClaim(
+        claim_text="NCBIGene:672 is associated with disease name number 1", finding=finding
+    )
+    assert len(row.claim_text) < 1000 < len(row.claim_text) + len(sentence.claim_text) + 1
+    grounding = GroundingResult(
+        narrative="", claims=[row, sentence], stripped_count=0, refused=False
+    )
+    [citation] = graph_module._citations_from_grounded_claims(
+        grounding, [], row_claims=(row,)
+    )
+    assert citation.claim_text == sentence.claim_text
 
 
 def test_a_sentence_without_a_marker_is_never_offered_to_lead() -> None:

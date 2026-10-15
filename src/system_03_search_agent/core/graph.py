@@ -488,6 +488,7 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import SessionMemorySummary
+from system_03_search_agent.contracts.token_order import updates_citation
 from system_03_search_agent.core import (
     accession,
     breadth_plan,
@@ -552,6 +553,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     GroundingInput,
     answer_summary_sentence,
     collected_placeholder,
+    collected_with_place,
     condition_ids_for_row,
     drop_record_restatements,
     emphasis_for,
@@ -560,6 +562,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     grounding_input,
     heading_is_supported,
     is_plain_language,
+    isolate_place,
     key_terms,
     parse_synth_layout,
     placeholder_link_count,
@@ -1734,11 +1737,13 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
             timeout=_JEV_INJECTION_WAIT_S,
         )
     except JevCallError as exc:
-        # A reply that came back but could not be used was still billed:
-        # charge `billed_cost_usd`, exactly as `decide()`'s own Jev call does
-        # (fix round, F-8.6-J10). It is never above `MAX_JEV_COST_USD`: the
-        # stated amount when that is a usable one within the ceiling, the
-        # ceiling otherwise (F-8.6-V01, V03, RA01, RJ05).
+        # A reply that came back but could not be used, or an error status,
+        # was still billed: charge `billed_cost_usd`, exactly as `decide()`'s
+        # own Jev call does (fix round, F-8.6-J10). `jev_client.jev_charge_usd`
+        # fixed it by the owner's rule of 2026-09-29 as written: the stated
+        # cost when it is above $0 and at most the ceiling, otherwise the
+        # floor; nothing for a timeout (step 3a, F-84-J04, F-72-V03,
+        # V-GRS-09).
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)
         _log_jev_injection_call(trace_id, started, call_log.jev_outcome(exc.reason))
@@ -2145,13 +2150,21 @@ async def _guardrail_after_prefilter(
         # the parse error's own text, "the guard tier did not return valid JSON",
         # which named an internal part and said nothing to do. The parse
         # error itself is in the log line of each unusable attempt above.
+        #
+        # Fix round of the guardrail design, A-GR-10: "transient", not
+        # "recoverable". Two unreadable replies are the guardrail's own
+        # check not finishing, like two timeouts, and asking again usually
+        # works (twelve of thirteen replies parsed). "recoverable" is the
+        # class of a failure the question itself caused, a provider's
+        # content-policy refusal or a 400, whose words tell the person to
+        # rephrase; the web app now tells the two apart by this class alone.
         _log_step_failed("guardrail", "recoverable", unusable_error)
         return {
             "step_error": {
                 "fatal": True,
                 "scope": "step",
                 "source": "guardrail",
-                "error_class": "recoverable",
+                "error_class": "transient",
                 "message": _GUARDRAIL_NO_USABLE_VERDICT_MESSAGE,
                 "retry_after_s": 0,
             }
@@ -11211,8 +11224,16 @@ def _citations_from_grounded_claims(
     findings: list[Finding],
     layer2_raw_outputs: dict[str, NcbiEfetchOutput] | None = None,
     layer3_raw_outputs: dict[str, Any] | None = None,
+    *,
+    row_claims: Sequence[GroundedClaim] = (),
 ) -> list[CitationPayload]:
     """Build one `CitationPayload` per surviving grounded claim.
+
+    `row_claims` (J-87F-03): the claims of a code-built listing merged into
+    `grounding`. They lead the merged claims so the listing keeps its
+    numbers, but a citation's checked words put every other claim's first,
+    the summary sentences' words before the record row's, as before build
+    phase 8.7, so a long row is the part left out, never the sentence's.
 
     This replaces build phase 2.1's `_citations_from_findings` on the live
     path, and the difference is the whole point of this phase: 2.1 emitted
@@ -11250,7 +11271,11 @@ def _citations_from_grounded_claims(
     }
     checked_words_by_citation_id: dict[str, list[str]] = {}
     finding_by_citation_id: dict[str, SynthFinding] = {}
-    for claim in grounding.claims:
+    row_claim_ids = {id(claim) for claim in row_claims}
+    words_order = [claim for claim in grounding.claims if id(claim) not in row_claim_ids] + [
+        claim for claim in grounding.claims if id(claim) in row_claim_ids
+    ]
+    for claim in words_order:
         citation_id = claim.finding.citation_id
         # Every claim with one citation_id carries the same finding, so the
         # first is as good as any here.
@@ -12652,7 +12677,15 @@ _LEAD_DECISION_MIN_BUDGET_S: Final[float] = 1.5
 #: The longest the answer waits for the lead decision. Jev answers in 0.3 to
 #: 0.8 s (answer speed report, 2026-09-26); a pick later than this is a
 #: late pick, and a late pick leaves the count line leading.
-_LEAD_DECISION_MAX_WAIT_S: Final[float] = 4.0
+#:
+#: F-8.7-A07 (2026-10-09): 4.0 s before, so a slow or failing classifier
+#: held the written summary up to 3.5 s and the count line led anyway. Now
+#: the same 1 s grace phase 8.6 gives every other decision read late
+#: (`_LATE_DECISION_GRACE_S`): Jev's own answer time with room, and no
+#: more. The guard tier stepping in for a failed Jev takes about 2 s, so
+#: its pick leads only when it is that quick; otherwise the count line
+#: leads, as it did before this decision existed.
+_LEAD_DECISION_MAX_WAIT_S: Final[float] = 1.0
 
 
 def _lead_candidates(model_grounding: GroundingResult | None) -> list[int]:
@@ -13258,6 +13291,16 @@ def _answer_parts(
                 for (_, finding), row_fields in zip(entries, row_fields_by_entry, strict=True)
             ]
             extra_label = next((extra[0] for extra in extras if extra is not None), None)
+            # Card 94 (2026-10-09): an isolate row shows where it was
+            # collected beside when, both read from its own record, in its
+            # "Collected" cell (`collected_with_place`). The column shows on
+            # every isolate table, even when no isolate holds a date.
+            places = [
+                isolate_place(entity_type, row_fields) if finding is not None else None
+                for (_, finding), row_fields in zip(entries, row_fields_by_entry, strict=True)
+            ]
+            if extra_label is None and any(place is not None for place in places):
+                extra_label = "Collected"
             has_identifier = any(identifiers)
             columns = [first_column_label(entity_type)]
             if has_identifier:
@@ -13280,8 +13323,14 @@ def _answer_parts(
             else:
                 heading(records_heading)
             listed_records: dict[tuple[str, str], list[ListedRow]] = {}
-            for (sentence, finding), row_fields, second, identifier, extra in zip(
-                entries, row_fields_by_entry, second_cells, identifiers, extras, strict=True
+            for (sentence, finding), row_fields, second, identifier, extra, place in zip(
+                entries,
+                row_fields_by_entry,
+                second_cells,
+                identifiers,
+                extras,
+                places,
+                strict=True,
             ):
                 if finding is None:
                     sentence_token(sentence)
@@ -13301,10 +13350,15 @@ def _answer_parts(
                             )
                         )
                     if extra_label is not None:
-                        cells.append(
+                        when = (
                             extra[1]
                             if extra is not None and extra[0] == extra_label
                             else collected_placeholder(extra_label, row_fields)
+                        )
+                        cells.append(
+                            when
+                            if place is None or extra_label != "Collected"
+                            else collected_with_place(when, place)
                         )
                 # One row per record: two claims about the same record (its
                 # title and its symbol) are one row, not two identical ones.
@@ -14413,6 +14467,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
 
     model_grounding: GroundingResult | None = None if structured_fallback_used else grounding
     tail_sentences: tuple[str, ...] = ()
+    # J-87F-03: the listing's claims when merged below, so each citation's
+    # checked words put the summary sentences' words before the row's.
+    listing_row_claims: tuple[GroundedClaim, ...] = ()
     tail_findings = synth_findings if tail_is_listing else omitted_findings
     if (
         tail_is_listing
@@ -14431,6 +14488,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         # never change. The prose, which arrives later, is renumbered into
         # that numbering, so a record it cites prints the listing's number.
         merged_claims = list(listing_grounding.claims) + list(grounding.claims)
+        listing_row_claims = tuple(listing_grounding.claims)
         merged_slots = display_index_by_citation_id(
             GroundingResult(narrative="", claims=merged_claims, stripped_count=0, refused=False)
         )
@@ -14503,16 +14561,34 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     else:
         claim_trusts = trust_for_claims(grounding.claims, synth_findings, row_types)
         citations = _citations_from_grounded_claims(
-            grounding, findings, layer2_raw_outputs, layer3_raw_outputs
+            grounding,
+            findings,
+            layer2_raw_outputs,
+            layer3_raw_outputs,
+            row_claims=listing_row_claims,
         )
         if listing_sent:
-            # Build phase 8.7, card 50: a citation already on screen is the
-            # one the answer keeps, exactly as it was sent. Its number
-            # cannot differ (the listing's claims lead the merged claims,
-            # see the listing merge above); the payload is kept too, so no
-            # surface is ever told two things about one chip.
+            # Build phase 8.7, card 50: a citation already on screen keeps
+            # its number, record and link exactly as they were sent. Its
+            # number cannot differ (the listing's claims lead the merged
+            # claims, see the listing merge above).
+            #
+            # F-8.7-A04, card 57: its `claim_text` may grow. A record the
+            # summary also cites carries the words each summary sentence was
+            # checked against, joined after the listing row's own words, so
+            # its chip shows what supports the sentence a reader is
+            # checking. That payload is sent again below with the same id;
+            # every surface keeps the later one in the earlier one's place
+            # (`contracts.token_order.one_per_citation_id`). Anything else
+            # that differs keeps the payload as sent, so no surface is ever
+            # told two things about one chip.
             sent_by_id = {citation.citation_id: citation for citation in listing_citations}
-            citations = [sent_by_id.get(c.citation_id, c) for c in citations]
+            citations = [
+                c
+                if c.citation_id not in sent_by_id or updates_citation(sent_by_id[c.citation_id], c)
+                else sent_by_id[c.citation_id]
+                for c in citations
+            ]
         # T-3.4-07, Section 7.2: floor a conflicted claim's outcome at
         # `flag` AFTER citations exist (it needs their `source_url` for
         # `ConflictResult`) and BEFORE the answer-level aggregate below, so
@@ -14981,11 +15057,16 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         for token in note_tokens:
             sink.emit_live("token", _with_placement(token, _PLACEMENT_LISTING, reads_placement))
 
-        # The listing's citations went out with it; only the ones the prose
-        # added are new.
-        sent_ids = {citation.citation_id for citation in listing_citations} if listing_sent else set()
+        # The listing's citations went out with it. New here: the ones the
+        # prose added, and a listing citation whose checked words the
+        # summary added to (F-8.7-A04), sent again with its own id.
+        sent_by_id = (
+            {citation.citation_id: citation for citation in listing_citations}
+            if listing_sent
+            else {}
+        )
         for citation in citations:
-            if citation.citation_id in sent_ids:
+            if sent_by_id.get(citation.citation_id) == citation:
                 continue
             sink.emit_live("citation", citation)
 

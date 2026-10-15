@@ -17,6 +17,30 @@ afterEach(() => {
 });
 
 describe("fetchHistory", () => {
+  it("keeps has_saved_answer when it is a boolean, true or false, and leaves it undefined when absent", async () => {
+    // Mutation: keeping the flag only when true (the card 109 round 1 bug)
+    // turns the first row red: false arrives as undefined.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            items: [
+              { trace_id: "a", question: "q", citation_count: 21, has_saved_answer: false },
+              { trace_id: "b", question: "q", citation_count: 21, has_saved_answer: true },
+              { trace_id: "c", question: "q", citation_count: 21 },
+              { trace_id: "d", question: "q", has_saved_answer: "false" },
+            ],
+            count: 4,
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    const result = await fetchHistory("token-1", { baseUrl: "https://api.test" });
+    expect(result.items.map((i) => i.has_saved_answer)).toEqual([false, true, undefined, undefined]);
+  });
+
   it("GETs the history path with a bearer token, and returns items and count", async () => {
     // Mutation: building the URL wrong, sending the wrong HTTP method, or
     // omitting the Authorization header turns this red.

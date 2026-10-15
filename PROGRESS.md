@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-10-08.
+Last updated: 2026-10-09.
 
 ## Table of contents
 
@@ -56,6 +56,18 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+### 9 October
+
+NEW ON 9 OCTOBER, on the practice site, each change read by three fresh reviewers, fixed once, checked again and then tried on the site itself:
+
+- The records for your question now appear within seconds, before the written answer, and the answer's first sentence answers the question instead of counting what was found. The written answer is never held more than about a second while the system picks that first sentence.
+- The progress steps above an answer say "writing the answer" only after the last search has come back.
+- In your list of past searches, a search you stopped reads "No answer saved" instead of a count of sources, and asking a question again no longer hides your earlier searches of the same question.
+- A table of bacterial isolates now says where and when each one was collected, for example "2011, France: Bordeaux", or that the record does not say.
+- When the safety check every question passes cannot finish, the message now says that nothing was searched and that the problem was ours, so asking again is the fix.
+- Two more changes are built and reviewed and wait for the product owner's call: catching off-topic follow-up questions more often, and asking which aspect you mean when you type only a broad subject such as "the tree of life".
+- A network outage of about five hours paused all the work in the middle of the night; every piece picked up again where it stopped.
 
 ### The night of 8 to 9 October
 
@@ -1132,10 +1144,10 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. The product owner decides on the faster answer: put it on the practice site now and fix its two small problems after, or fix them first.
-2. The product owner retests what went live on 8 and 9 October, newest first.
-3. Then the small fixes that wait on the faster answer: a record split into several rows, the sentence about unclassified variants, missing species and titles, and the bacterial sample place column.
-4. Agree how to split the gatekeeper's fixes into a safe small part and a separate part for server pauses.
+1. The product owner retests what went live on 8 and 9 October, newest first.
+2. The product owner decides on two finished changes waiting on their pull requests: the off-topic follow-up check, and asking which aspect a broad subject means.
+3. The product owner chooses how the bacterial isolate search reads a year and a place from the question, and whether a single named isolate may take about 20 seconds to look up.
+4. The answer's first sentence: let the picker see more than the first two sentences, and stop a sentence made only of record titles.
 5. Finish the coronavirus question: the unusual spellings and the follow-up cases the first fix left open.
 6. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
 7. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting.

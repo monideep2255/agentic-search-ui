@@ -612,6 +612,86 @@ def collected_placeholder(label: str, row_fields: dict[str, Any] | None) -> str:
     return "" if isinstance(value, str) and value.strip() else "Not recorded"
 
 
+#: Card 94 (2026-10-09): what a "Collected" cell says when its record holds
+#: no date. A cell that also carries a place says which half is missing.
+NOT_RECORDED = "Not recorded"
+
+
+#: Card 94 fix round (2026-10-09, J-94-01, A-94-05): the words a submitter
+#: puts in a place field when there is no place. The first five, and the
+#: "missing: <reason>" forms, are the INSDC missing value reporting list
+#: (https://www.insdc.org/technical-specifications/missing-value-reporting/),
+#: which BioSample and Pathogen Detection metadata follow. "NULL" is how a
+#: graph row writes an empty field; "unknown", "N/A" and "NA" are the
+#: informal forms submitters also use. Compared without case, and without
+#: dots or slashes, so "N/A" and "N.A." both read as "na".
+PLACE_PLACEHOLDERS = frozenset(
+    {
+        "missing",
+        "not applicable",
+        "not collected",
+        "not provided",
+        "restricted access",
+        "null",
+        "unknown",
+        "na",
+    }
+)
+_MISSING_WITH_REASON = "missing:"
+#: The mark a place cut at `MAX_IDENTIFIER_CHARS` ends with (J-94-02, A-94-06).
+CUT_MARK = "\u2026"
+
+
+def _is_placeholder(value: str) -> bool:
+    """True for an INSDC missing-value word or a "missing: <reason>" form."""
+    folded = value.strip().casefold()
+    if folded.startswith(_MISSING_WITH_REASON):
+        return True
+    return folded.replace(".", "").replace("/", "") in PLACE_PLACEHOLDERS
+
+
+def isolate_place(entity_type: str, row_fields: dict[str, Any] | None) -> str | None:
+    """An isolate row's own place, "" when it holds none, None for any other type.
+
+    Card 94: "An isolate answer shows each isolate's place." Read verbatim
+    from the isolate record's own `geo_loc_name`, the place Pathogen
+    Detection holds for it ("USA: Minnesota"), never inferred. A missing
+    value word ("missing", "not collected") is not a place, so the row reads
+    as holding none. A place longer than `MAX_IDENTIFIER_CHARS` is cut and
+    ends with a mark that says so, never cut silently.
+    """
+    if entity_type != ISOLATE_ENTITY_TYPE:
+        return None
+    value = row_fields.get("geo_loc_name") if isinstance(row_fields, dict) else None
+    if not isinstance(value, str) or not value.strip() or _is_placeholder(value):
+        return ""
+    place = value.strip()
+    if len(place) > MAX_IDENTIFIER_CHARS:
+        return place[: MAX_IDENTIFIER_CHARS - len(CUT_MARK)].rstrip() + CUT_MARK
+    return place
+
+
+def collected_with_place(when: str, place: str) -> str:
+    """An isolate's "Collected" cell: when, then where, each from its record.
+
+    Card 94 (2026-10-09). The place shares the "Collected" cell rather than
+    taking a fifth column, because a table row carries at most four cells
+    (`contracts.events.TokenPayload.cells`). "2013, USA: Minnesota" reads as
+    collected in 2013 in Minnesota. A half the record does not hold is
+    named as missing, so a reader never takes a year for the whole story or
+    a blank for a broken cell: "2013, place not recorded", "USA: Minnesota,
+    date not recorded", and "Not recorded" when the record holds neither.
+    """
+    has_when = bool(when) and when != NOT_RECORDED
+    if has_when and place:
+        return f"{when}, {place}"
+    if place:
+        return f"{place}, date not recorded"
+    if has_when:
+        return f"{when}, place not recorded"
+    return NOT_RECORDED
+
+
 def condition_ids_for_row(entity_type: str, row_fields: dict[str, Any] | None) -> list[str]:
     """The fold's CURIE list on one row, or an empty list."""
     spec = TABLE_COLUMNS.get(entity_type)

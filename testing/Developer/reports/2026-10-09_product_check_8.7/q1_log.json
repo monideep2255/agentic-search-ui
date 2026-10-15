@@ -1,0 +1,2762 @@
+{
+ "mode": "q1",
+ "steps": [
+  {
+   "k": "signed in, email visible unmasked",
+   "v": false
+  },
+  {
+   "k": "bundle",
+   "v": [
+    "index-BUMzWQlH.js"
+   ]
+  },
+  {
+   "k": "depth pressed",
+   "v": "true"
+  },
+  {
+   "k": "screenshot",
+   "v": "q1_1280_0_asked.png"
+  },
+  {
+   "k": "asked",
+   "v": {
+    "q": "Which diseases are associated with BRCA1?",
+    "depth": "Researcher",
+    "width": 1280
+   }
+  },
+  {
+   "k": "first record row on screen",
+   "v": {
+    "t": 10.1,
+    "listingFirst": {
+     "tid": "claim-text-0",
+     "tag": "TR",
+     "top": 540,
+     "docTop": 540,
+     "text": "Familial cancer of breastMedGen:C0346153⁠1"
+    },
+    "summaryCount": 0,
+    "stop": {
+     "text": "Stop",
+     "disabled": false
+    },
+    "slot": true,
+    "overflow": 0
+   }
+  },
+  {
+   "k": "screenshot",
+   "v": "q1_1280_1_records.png"
+  },
+  {
+   "k": "first summary sentence on screen",
+   "v": {
+    "t": 14.69,
+    "summaryFirst": "BRCA1 is associated with familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4",
+    "listingFirst": {
+     "tid": "claim-text-0",
+     "tag": "TR",
+     "top": 689,
+     "docTop": 689,
+     "text": "Familial cancer of breastMedGen:C0346153⁠1"
+    },
+    "recSnapListingFirst": {
+     "tid": "claim-text-0",
+     "tag": "TR",
+     "top": 540,
+     "docTop": 540,
+     "text": "Familial cancer of breastMedGen:C0346153⁠1"
+    },
+    "scrollY": 0,
+    "overflow": 0
+   }
+  },
+  {
+   "k": "screenshot",
+   "v": "q1_1280_2_summary.png"
+  },
+  {
+   "k": "answer landed (meta shown)",
+   "v": {
+    "t": 14.69,
+    "meta": "? Answered14.4s · 13 tool calls · 21 sources cited from 2 layers"
+   }
+  },
+  {
+   "k": "final",
+   "v": {
+    "t": 17.73,
+    "recAt": 10.1,
+    "sumAt": 14.69,
+    "landAt": 14.69,
+    "stopAt": null,
+    "stoppedAt": null,
+    "scrolledForAnchor": false,
+    "listingFirst": {
+     "tid": "claim-text-0",
+     "tag": "TR",
+     "top": 689,
+     "docTop": 689,
+     "text": "Familial cancer of breastMedGen:C0346153⁠1"
+    },
+    "listingCount": 21,
+    "summaryCount": 4,
+    "summaryFirst": "BRCA1 is associated with familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4",
+    "stopped": false,
+    "stoppedText": null,
+    "meta": "? Answered14.4s · 13 tool calls · 21 sources cited from 2 layers",
+    "overflow": 0
+   }
+  },
+  {
+   "k": "final claims text",
+   "v": "BRCA1 is associated with familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4 Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.⁠1–4\n\nDISEASE ASSOCIATIONS AND INHERITED RISK\n\nBRCA1 mutations are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers.⁠23 The gene encodes a 190 kD nuclear phosphoprotein that functions as a tumor suppressor and maintains genomic stability through the BRCA1-associated genome surveillance complex.⁠23\n\nDISEASE RECORDS FOUND\nDISEASE\tIDENTIFIER\t\nFamilial cancer of breast\tMedGen:C0346153\t⁠1\nFamilial breast-ovarian cancer susceptibility 1\tMedGen:C2676676\t⁠2\nPancreatic cancer susceptibility 4\tMedGen:C3280442\t⁠3\nFanconi anemia complementation group S\tMedGen:C4554406\t⁠4\nGENE RECORDS FOUND\nGENE\tIDENTIFIER\t\nBRCA1\tNCBIGene:672\t⁠5, 9\nPUBMED RECORDS FOUND\nPAPER\tIDENTIFIER\t\nBRCA1: An Endocrine and Metabolic Regulator.\tPMID:35432218\t⁠6\nPreneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.\tPMID:36914836\t⁠11\nBRCA1 safeguards genome integrity by activating chromosome asynapsis checkpoint to eliminate recombination-defective oocytes.\tPMID:38696471\t⁠14\nMechanism of BRCA1-BARD1 function in DNA end resection and DNA protection.\tPMID:39261728\t⁠17\nTargeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors.\tPMID:39265497\t⁠20\nCLINVAR RECORDS FOUND\nVARIANT\tIDENTIFIER\t\nNM_007294.4(BRCA1):c.5243_5277+2788del\tVCV000267740\t⁠7\nNM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG\tVCV000267741\t⁠12\nNG_005905.2:g.(147057_150288)_(160933_166866)del\tVCV000373892\t⁠15\nGRCh37/hg19 17q21.31(chr17:41267743-41267796)x3\tVCV004823850\t⁠18\nNM_007294.4(BRCA1):c.2145C>G (p.Thr715=)\tVCV004848411\t⁠21\nOMIM RECORDS FOUND\nRECORD\tIDENTIFIER\t\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1\tomim 113705\t⁠8\nCLINICAL TRIAL RECORDS FOUND\nTRIAL\tIDENTIFIER\tSTATUS\t\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer\tNCT00590109\tCOMPLETED\t⁠10\nBRCA1 Haploinsufficiency and Gene Expression\tNCT00597987\tCOMPLETED\t⁠13\nStudy to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma\tNCT00617656\tTERMINATED\t⁠16\nLetrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation\tNCT00673335\tCOMPLETED\t⁠19\nRecombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations\tNCT00700778\tTERMINATED\t⁠22"
+  },
+  {
+   "k": "final summary all",
+   "v": "BRCA1 is associated with familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4 | Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.⁠1–4 | BRCA1 mutations are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers.⁠23 | The gene encodes a 190 kD nuclear phosphoprotein that functions as a tumor suppressor and maintains genomic stability through the BRCA1-associated genome surveillance complex.⁠23"
+  },
+  {
+   "k": "screenshot",
+   "v": "q1_1280_3_final.png"
+  }
+ ],
+ "timeline": [
+  {
+   "t": 0.04,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 0.15,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 0.25,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 0.35,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 0.46,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 0.56,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 0.66,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 0.76,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 0.86,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 0.97,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 1.07,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 1.18,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 1.28,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 1.38,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 1.48,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 1.59,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 1.69,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 1.79,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 1.89,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 2,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 2.1,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 2.2,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 2.3,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 2.41,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 2.51,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 2.61,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 2.71,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 2.81,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 2.92,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 3.02,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 3.12,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 3.22,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 3.33,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 3.43,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 3.53,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 3.63,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 3.74,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 3.84,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 3.94,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 4.04,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 4.14,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 4.25,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 4.35,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 4.45,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 4.55,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 4.66,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 4.76,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": true
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 4.86,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 4.96,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 5.06,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 5.17,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 5.27,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 5.37,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 5.47,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 5.57,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 5.68,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 5.78,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 5.88,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 5.98,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 6.08,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 6.19,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 6.29,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 6.39,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 6.5,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 6.6,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 6.7,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 6.8,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 6.9,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 7.01,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 7.11,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 7.21,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 7.32,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 7.42,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 7.52,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 7.64,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 7.74,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 7.84,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 7.95,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 8.05,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 8.15,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 8.26,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 8.36,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 8.46,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 8.56,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 8.66,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 8.76,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 8.87,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 8.97,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 9.07,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 9.17,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 9.28,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 9.38,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 9.48,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 9.58,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 9.68,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 9.79,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 9.89,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 9.99,
+   "lc": 0,
+   "lf": null,
+   "ldoc": null,
+   "sc": 0,
+   "slot": false,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 10.1,
+   "lc": 21,
+   "lf": 540,
+   "ldoc": 540,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 10.34,
+   "lc": 21,
+   "lf": 534,
+   "ldoc": 534,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 10.45,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 10.55,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 10.65,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 10.75,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 10.86,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 10.96,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 11.06,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 11.16,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 11.27,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 11.38,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 11.48,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 11.58,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 11.69,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 11.79,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 11.89,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 11.99,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 12.1,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 12.2,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 12.3,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 12.4,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 12.51,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 12.61,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 12.72,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 12.83,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 12.93,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 13.04,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 13.14,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 13.24,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 13.34,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 13.45,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 13.55,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 13.65,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 13.75,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 13.86,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 13.96,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 14.06,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 14.16,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 14.27,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 14.37,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 14.48,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 14.58,
+   "lc": 21,
+   "lf": 533,
+   "ldoc": 533,
+   "sc": 0,
+   "slot": true,
+   "stop": {
+    "text": "Stop",
+    "disabled": false
+   },
+   "stopped": false,
+   "meta": false,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 14.69,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 14.91,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 15.02,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 15.12,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 15.22,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 15.32,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 15.42,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 15.53,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 15.63,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 15.73,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 15.83,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 15.94,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 16.04,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 16.14,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 16.25,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 16.35,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 16.45,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 16.56,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 16.68,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 16.78,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 16.89,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 16.99,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 17.1,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 17.2,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 17.31,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 17.42,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 17.52,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 17.62,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  },
+  {
+   "t": 17.73,
+   "lc": 21,
+   "lf": 689,
+   "ldoc": 689,
+   "sc": 4,
+   "slot": false,
+   "stop": null,
+   "stopped": false,
+   "meta": true,
+   "sy": 0,
+   "of": 0
+  }
+ ]
+}

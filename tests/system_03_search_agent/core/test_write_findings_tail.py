@@ -53,7 +53,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from system_03_search_agent.contracts.query import Query, RequestContext
-from system_03_search_agent.contracts.token_order import in_reading_order
+from system_03_search_agent.contracts.token_order import in_reading_order, one_per_citation_id
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
@@ -176,7 +176,14 @@ def _state(total_available: int | None = 3, truncated: bool = False) -> dict[str
 
 
 def _events(result, event_type: str) -> list:
-    return [e for e in result["events"] if e.type == event_type]
+    events = [e for e in result["events"] if e.type == event_type]
+    if event_type != "citation":
+        return events
+    # As every surface reads them (F-8.7-A04, card 57): one per citation id,
+    # a listing citation sent again with its checked words in the first
+    # one's place.
+    event_by_payload = {id(e.payload): e for e in events}
+    return [event_by_payload[id(p)] for p in one_per_citation_id(e.payload for e in events)]
 
 
 def _tokens(result) -> list[tuple[str, list[str]]]:

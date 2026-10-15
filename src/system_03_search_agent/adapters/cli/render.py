@@ -180,6 +180,8 @@ from system_03_search_agent.contracts.events import (
 from system_03_search_agent.contracts.token_order import (
     LISTING,
     joined_text,
+    names_same_record,
+    updates_citation,
 )
 
 if TYPE_CHECKING:
@@ -898,7 +900,26 @@ class Renderer:
         payload = CitationPayload.model_validate(event.payload)
         self._citations_seen += 1
         existing = self._citations.get(payload.citation_id)
-        if existing is not None and existing != payload:
+        if existing is not None and updates_citation(existing, payload):
+            # F-8.7-A04, card 57: the same citation sent again once the
+            # summary is checked, only its checked words grown. Its number,
+            # record and link are what is on screen already, so it takes the
+            # earlier one's place, with no warning.
+            self._citations[payload.citation_id] = payload
+            return
+        if (
+            existing is not None
+            and existing.display_index == payload.display_index
+            and names_same_record(existing, payload)
+        ):
+            # A-87F-04: a repeat with the same number naming the same record
+            # (source, id there, link) is that source sent again, never a
+            # conflict, so nothing is printed. Anything else it changes is
+            # not taken: the first payload, which may already be on screen,
+            # is kept. A renumbered repeat still warns below, since its
+            # number is not the one a reader may already see.
+            return
+        if existing is not None:
             # F-4.2-A-19: a second `citation` event citing an id already
             # bound to a DIFFERENT source is a conflicting redefinition.
             # A `[n]` marker for this id may already be visible on
@@ -908,8 +929,8 @@ class Renderer:
             # Reject the redefinition (the first source for this id
             # wins, matching what may already be on screen) and flag it
             # audibly rather than accept the swap silently. A genuine
-            # duplicate (same id, identical fields) is not a conflict
-            # and is not warned about.
+            # duplicate (same id, same record) is not a conflict and is
+            # not warned about (the arm above).
             self._err.write(
                 f"warning: citation {payload.citation_id!r} was redefined "
                 "mid-run; the redefinition was ignored and the first "
@@ -1351,8 +1372,12 @@ class JsonRenderer:
     def _handle_citation(self, event: Event) -> None:
         payload = CitationPayload.model_validate(event.payload)
         self._citations_seen += 1
-        # The first source for an id wins, as in `Renderer` (F-4.2-A-19).
-        self._citations.setdefault(payload.citation_id, payload)
+        # The first source for an id wins, as in `Renderer` (F-4.2-A-19),
+        # except the same citation sent again with its checked words grown
+        # (F-8.7-A04, card 57), which takes the earlier one's place.
+        existing = self._citations.get(payload.citation_id)
+        if existing is None or updates_citation(existing, payload):
+            self._citations[payload.citation_id] = payload
 
     def _handle_trust_signal(self, event: Event) -> None:
         payload = TrustSignalPayload.model_validate(event.payload)
