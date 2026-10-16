@@ -1,0 +1,7 @@
+69 distinct recorded writer drafts, no model call, no writer quotes (replay_r6.py).
+
+develop: items 5, not sent for length 0; shown none 9, all 12
+new tree: items 5, not sent for length 0; shown none 9, all 12
+
+new tree vs develop, approves none: shown that develop does not show 0; develop sentences dropped 0; drafts emptied 0
+new tree vs develop, approves all: shown that develop does not show 0; develop sentences dropped 0; drafts emptied 0

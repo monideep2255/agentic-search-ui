@@ -49,6 +49,7 @@ which is the correct outcome rather than a missed one.
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
 
 from system_03_search_agent.synthesis.findings import SynthFinding, render_finding_body
@@ -789,7 +790,7 @@ class SynthesisCandidate:
 
     Card 89 (2026-10-05): `quotes` is what the model reads, each of the
     writer's quotes widened to its whole record sentence(s)
-    (`widen_to_record_sentences`). `key` is built from the writer's own
+    (`record_sentence_run`). `key` is built from the writer's own
     quotes, the ones every exact check ran on.
     """
 
@@ -808,14 +809,128 @@ _RECORD_SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+(?=[A-Z\"(])")
 #: The longest widened quote the model check is shown. It equals
 #: `sentence_check.MAX_QUOTE_CHARS`, the most of one quote a check item
 #: carries, so a widened quote is never cut short; a run of record sentences
-#: longer than this is not used and the model reads the writer's own words.
+#: longer than this has no run, and its sentence is held (card 101, slice 1).
 MAX_WIDENED_QUOTE_CHARS = 600
 
+# Card 101, slice 2 (design: `testing/Developer/reports/2026-10-15_card101/design.md`).
+# A record sentence unit is where develop has always put it: split at
+# `_RECORD_SENTENCE_BOUNDARY`, never joined, so no unit is longer than
+# develop's. What changes is that each break is GRADED. A break that sits
+# inside a quotation or a bracket the record itself opens and closes is
+# `mark`: the sentence after it is part of what the quotation says, not a
+# sentence the paper asserts. Every other break is `hard`. A copy is a whole
+# record sentence only after a hard break, and the run the sentence check
+# reads is glued across soft breaks, so it carries the words that frame the
+# quotation ("claimed that", "since retracted"). Marks are read by Unicode
+# category and by the shape of a straight quote, never from a list of marks.
+_HARD = "hard"
+_MARK = "mark"
+_ABBREV = "abbrev"
 
-def widen_to_record_sentences(
+# A4-101-01 / J-101N-04 (slice 3): a break after a word shaped like an
+# abbreviation is soft too. Two shapes, by category and never by a list of
+# abbreviations: one capital letter ("S. Typhimurium", "vitamin D.") or
+# letters with an inner full stop ("U.S. FDA", "e.g. Aspirin"). The break is
+# kept, so the unit is develop's; but the sentence after it may be the back
+# half of the same sentence, so a copy of it is a cut, and the run the check
+# reads takes one unit each side. Fails toward the check, never past develop.
+_ABBREVIATION_SHAPE = re.compile(r"(?:[A-Z]|[A-Za-z]+(?:\.[A-Za-z]+)+)\.")
+# What may sit before such a word's first letter: an opening quote or bracket.
+_WORD_OPENERS = "\"'“‘(["
+# No abbreviation is longer than this; a longer tail is read only this far.
+_ABBREVIATION_WINDOW = 64
+
+
+def _ends_on_abbreviation(text: str, end: int) -> bool:
+    """Whether `text[:end]` closes on a word shaped like an abbreviation."""
+    tail = text[max(0, end - _ABBREVIATION_WINDOW) : end].rstrip()
+    words = tail.rsplit(None, 1)
+    last = words[-1].lstrip(_WORD_OPENERS) if words else ""
+    return _ABBREVIATION_SHAPE.fullmatch(last) is not None
+
+
+def _straight_quote_role(text: str, index: int) -> str | None:
+    """Whether a straight quote at `index` opens or closes, by its neighbours.
+
+    An opener follows whitespace or an opening mark and precedes a word; a
+    closer follows a word and precedes whitespace, a closing mark or
+    punctuation. Anything else (an inch mark `5"`, an apostrophe inside a
+    word) is neither, so it never flips a count.
+    """
+    before = text[index - 1] if index else " "
+    after = text[index + 1] if index + 1 < len(text) else " "
+    if (before.isspace() or unicodedata.category(before) in ("Ps", "Pi")) and not after.isspace():
+        return "open"
+    if not before.isspace() and (
+        after.isspace() or unicodedata.category(after) in ("Pe", "Pf", "Po")
+    ):
+        return "close"
+    return None
+
+
+def _mark_spans(value: str) -> list[tuple[int, int]]:
+    """`(start, end)` of every quotation or bracket `value` opens and closes.
+
+    Openers are Unicode categories Ps and Pi; closers Pe and Pf; a straight
+    quote by `_straight_quote_role`. A closer pairs with the nearest open
+    mark of its class, and a closer with nothing open pairs with nothing. An
+    opener still open at the value's end is ignored and the value read again
+    without it, so a stray mark holds nothing (A-101N-13).
+    """
+    ignored: set[int] = set()
+    while True:
+        stack: list[tuple[str, int]] = []
+        spans: list[tuple[int, int]] = []
+        for index, character in enumerate(value):
+            if index in ignored:
+                continue
+            category = unicodedata.category(character)
+            if character in "\"'":
+                role = _straight_quote_role(value, index)
+                kind = "q" + character
+                if role == "open":
+                    stack.append((kind, index))
+                elif role == "close" and stack and stack[-1][0] == kind:
+                    spans.append((stack.pop()[1], index))
+            elif category in ("Ps", "Pi"):
+                stack.append(("b" if category == "Ps" else "q", index))
+            elif category in ("Pe", "Pf"):
+                kind = "b" if category == "Pe" else "q"
+                for depth in range(len(stack) - 1, -1, -1):
+                    if stack[depth][0] == kind:
+                        spans.append((stack[depth][1], index))
+                        del stack[depth:]
+                        break
+        if not stack:
+            return spans
+        ignored.update(index for _, index in stack)
+
+
+def _record_breaks(value: str) -> list[tuple[int, int, str]]:
+    """Every break `_RECORD_SENTENCE_BOUNDARY` finds in `value`, graded.
+
+    `(end of the sentence before, start of the sentence after, grade)`. The
+    breaks are exactly develop's; only the grade is new.
+    """
+    spans = _mark_spans(value)
+    breaks: list[tuple[int, int, str]] = []
+    for match in _RECORD_SENTENCE_BOUNDARY.finditer(value):
+        inside = any(start < match.start() < end for start, end in spans)
+        if inside:
+            grade = _MARK
+        elif _ends_on_abbreviation(value, match.start()):
+            grade = _ABBREV
+        else:
+            grade = _HARD
+        breaks.append((match.start(), match.end(), grade))
+    return breaks
+
+
+def record_sentence_run(
     quote: str, record: str, max_chars: int = MAX_WIDENED_QUOTE_CHARS
-) -> str:
-    """The shortest run of whole record sentences that contains `quote`.
+) -> str | None:
+    """The shortest run of whole record sentences that contains `quote`, or
+    None when the quote is not found or the run is longer than `max_chars`.
 
     Card 89, the owner's decision of 2026-10-05 (option 1 of
     `testing/Developer/reports/2026-10-05_sentence_check/design.md`). The
@@ -824,37 +939,38 @@ def widen_to_record_sentences(
     the model check is right to reject it, and 36 of 47 measured rejections
     were exactly that. So the model reads the whole record sentence, or the
     two or more a quote crosses, as exact record text sliced from `record`.
+    The quote is found the way `_quote_is_valid` finds it, in `_quote_form`.
 
-    Only what the model check READS changes. The exact checks (quote in the
-    record, numbers, negation) have already run on the writer's own quote,
-    and a candidate's key stays built from it. The quote is found the way
-    `_quote_is_valid` finds it, in `_quote_form`. A quote not found, or a run
-    longer than `max_chars`, comes back unchanged.
-    """
-    widened = record_sentence_run(quote, record, max_chars)
-    return quote if widened is None else widened
-
-
-def record_sentence_run(
-    quote: str, record: str, max_chars: int = MAX_WIDENED_QUOTE_CHARS
-) -> str | None:
-    """`widen_to_record_sentences`' run of whole record sentences, or None
-    when the quote is not found or the run is longer than `max_chars`.
-
-    Card 101, round 5 (A4-101-07): a copied cut needs the run itself. Its
-    fallback, the writer's own words, would show the check the cut as the
-    record text behind it, so a cut with no run is held instead.
+    Card 101, slice 1 (A4-101-07, J5-101-01): there is no fallback. The old
+    widener gave back the writer's own quote when no run could be found, so
+    the check read a cut as the record text behind it and approved "X
+    shortened the illness" from "There was no evidence that X shortened the
+    illness". A sentence with no run is held, never sent.
     """
     target = _quote_form(quote)
     if not target or not record:
         return None
-    starts = [0] + [match.end() for match in _RECORD_SENTENCE_BOUNDARY.finditer(record)]
-    ends = [match.start() for match in _RECORD_SENTENCE_BOUNDARY.finditer(record)] + [len(record)]
+    breaks = _record_breaks(record)
+    starts = [0] + [start for _, start, _ in breaks]
+    ends = [end for end, _, _ in breaks] + [len(record)]
     for width in range(1, len(starts) + 1):
         for first in range(len(starts) - width + 1):
-            span = record[starts[first] : ends[first + width - 1]].strip()
-            if target in _quote_form(span):
-                return span if len(span) <= max_chars else None
+            last = first + width - 1
+            if target not in _quote_form(record[starts[first] : ends[last]].strip()):
+                continue
+            # Slice 2: glued across the soft breaks around the run, so the
+            # check reads the quotation a unit sits in, not a piece of it;
+            # slice 3: and the unit across an abbreviation break, once.
+            while first > 0 and breaks[first - 1][2] == _MARK:
+                first -= 1
+            if first > 0 and breaks[first - 1][2] == _ABBREV:
+                first -= 1  # slice 3: once, so a chain of "hepatitis B." never grows
+            while last < len(breaks) and breaks[last][2] == _MARK:
+                last += 1
+            if last < len(breaks) and breaks[last][2] == _ABBREV:
+                last += 1
+            span = record[starts[first] : ends[last]].strip()
+            return span if len(span) <= max_chars else None
     return None
 
 
@@ -931,7 +1047,7 @@ def synthesis_is_supported_by(
 # wrapped value, is not changed yet: see the note in `run_grounding_pass`.
 # ---------------------------------------------------------------------------
 
-# Card 101, round 4: a record sentence is what `widen_to_record_sentences`
+# Card 101, round 4: a record sentence is what `record_sentence_run`
 # calls one (`_RECORD_SENTENCE_BOUNDARY`): it runs from the value's start, or
 # from after a full stop, question or exclamation mark, whitespace and a
 # capital, quote mark or opening bracket, to the next such break or the
@@ -956,9 +1072,27 @@ def synthesis_is_supported_by(
 # (`testing/Developer/reports/2026-10-06_card101/build_r4.md`).
 
 
+def _record_units(value: str) -> list[tuple[str, str]]:
+    """`value`'s sentences, split where `record_sentence_run` splits, each
+    with the grade of the break before it (`"start"` for the first).
+
+    Always develop's units: `_record_breaks` grades the breaks and never
+    removes one, so no unit is longer than it was.
+    """
+    breaks = _record_breaks(value)
+    starts = [0] + [start for _, start, _ in breaks]
+    ends = [end for end, _, _ in breaks] + [len(value)]
+    grades = ["start"] + [grade for _, _, grade in breaks]
+    return [
+        (value[start:end], grade)
+        for start, end, grade in zip(starts, ends, grades)
+        if value[start:end].strip()
+    ]
+
+
 def _record_sentences(value: str) -> list[str]:
-    """`value`'s sentences, split where `widen_to_record_sentences` splits."""
-    return [part for part in _RECORD_SENTENCE_BOUNDARY.split(value) if part.strip()]
+    """`value`'s sentences, split where `record_sentence_run` splits."""
+    return [text for text, _ in _record_units(value)]
 
 
 def _whole_form(text: str) -> str:
@@ -1023,7 +1157,11 @@ def is_whole_record_sentence(claim_text: str, finding: SynthFinding) -> bool:
     if any(_same_but_first_letter(claim, row) for claim in forms):
         return True
     asks = _ends_as_question(claim_text)
-    for sentence in _record_sentences(" ".join(finding.field_value.split())):
+    for sentence, grade_before in _record_units(" ".join(finding.field_value.split())):
+        # Slice 2: a unit after a soft break is a cut, a sentence the record
+        # only quotes or brackets (A4-101-02), however exactly it is copied.
+        if grade_before not in ("start", _HARD):
+            continue
         if _ends_as_question(sentence) and not asks:
             continue
         record = _whole_form(sentence)
@@ -1086,12 +1224,33 @@ def _copied_record_span(claim_text: str, finding: SynthFinding) -> str | None:
 _SPACE_BEFORE_PUNCTUATION = re.compile(r"\s+([,;:])")
 
 
+def _joined_to_cut_head(
+    head: str, copy_text: str, finding: SynthFinding
+) -> str | None:
+    """`head` and `copy_text` joined, when together they are one stretch of
+    the record's value; None otherwise.
+
+    Slice 4 (J-101N-06, A-101N-15). The writer copied one paper sentence and
+    the writer's own splitter (`_SENTENCE_BOUNDARY`, which breaks at every
+    full stop) cut it at "St." or "vs.": the head was stripped as unmarked
+    and the tail looks like a whole record sentence. The writer's reply
+    names the cut, and the record confirms it: the two joined with a space
+    are contiguous in the same record value. Framing text that is not in the
+    record joins to nothing.
+    """
+    joined = f"{head.strip()} {copy_text.strip()}"
+    if normalize(joined) in normalize(finding.field_value):
+        return joined
+    return None
+
+
 def _copied_clause_candidate(
     sentence: str,
     segments: list[tuple[str, int | None, int | None]],
     upto: int,
     by_ref: dict[int, SynthFinding],
     evidence_quotes: tuple[str, ...],
+    joined_heads: dict[int, str] | None = None,
 ) -> SynthesisCandidate | None:
     """The check item for a copied cut, or a copied clause joined after one.
 
@@ -1108,15 +1267,21 @@ def _copied_clause_candidate(
     sentence(s), or a copied clause's own record span.
 
     None when a copied clause's record span cannot be given to the check
-    (`_copied_record_span`): the clause is then held, and with it the
-    sentence (round 5).
+    (`_copied_record_span`), or a writer's quote has no run of record
+    sentences the check can read (J5-101-01): the clause is then held, and
+    with it the sentence (round 5).
+
+    `joined_heads` (slice 4): a segment index mapped to the clause joined
+    to the reply sentence the writer's own splitter cut off before it
+    (`_joined_to_cut_head`). That clause's record span is the run around
+    the joined words, so the check reads the paper's whole sentence.
     """
     marker_ends = [match.end() for match in _KEYED_MARKER.finditer(sentence)]
     prefix = " ".join(_KEYED_MARKER.sub(" ", sentence[: marker_ends[upto]]).split())
     # As the reader sees it: no space left before a comma a marker stood at.
     prefix = _SPACE_BEFORE_PUNCTUATION.sub(r"\1", prefix).rstrip(" ,;:")
     spans: list[str] = []
-    for text, marker, quote_key in segments[: upto + 1]:
+    for position, (text, marker, quote_key) in enumerate(segments[: upto + 1]):
         finding = by_ref.get(marker) if marker is not None else None
         if finding is None:
             continue
@@ -1126,13 +1291,30 @@ def _copied_clause_candidate(
             else None
         )
         claim = _clean_claim(text)
-        if quote is not None and _quote_is_valid(quote, finding):
-            spans.append(widen_to_record_sentences(quote, finding.field_value))
+        joined = (joined_heads or {}).get(position)
+        if joined is not None:
+            run = record_sentence_run(joined, finding.field_value)
+            if run is None:
+                return None
+            spans.append(run)
         elif _asserts_something(claim) and ground_claim(claim, finding.field_value):
+            # Slice 5 (A-101N-10): the clause's own words come first. A
+            # valid writer quote may sit in an earlier, different sentence
+            # of the record ("in adults"), and the check would judge an
+            # infant claim against an adult sentence and never see the
+            # denial. The quote is used only for words that are not copied.
             span = _copied_record_span(claim, finding)
             if span is None:
                 return None
             spans.append(span)
+        elif quote is not None and _quote_is_valid(quote, finding):
+            # J5-101-01 (2026-10-08): the run itself. A writer that quotes
+            # its own words must not have the check read them as the record
+            # text behind them.
+            run = record_sentence_run(quote, finding.field_value)
+            if run is None:
+                return None
+            spans.append(run)
     quotes = tuple(dict.fromkeys(spans))
     return SynthesisCandidate(
         key=synthesis_key(prefix, quotes), sentence=prefix, quotes=quotes
@@ -1503,6 +1685,9 @@ def run_grounding_pass(
     # cited, so a reworded sentence that switches records can be held to
     # naming the record it switches to (`_names_its_record`).
     previous_refs: set[int] = set()
+    # Slice 4: the previous reply sentence when it carried no marker and was
+    # stripped for it, the head of a sentence the writer's splitter cut.
+    cut_head: str | None = None
 
     for sentence_index, sentence in enumerate(_split_sentences(narrative)):
         # Build phase 6.2, T-6.2-15. Nothing in this sentence is committed to
@@ -1540,6 +1725,8 @@ def run_grounding_pass(
         # Whether a clause of this sentence was a copied cut: every copied
         # clause after it is then read joined to it (J3-101-05).
         cut_in_sentence = False
+        # Slice 4: segment index -> the copy joined to `cut_head`.
+        joined_heads: dict[int, str] = {}
         segments = _segments(sentence)
         for segment_index, (text, marker, quote_key) in enumerate(segments):
             if marker is None:
@@ -1669,15 +1856,23 @@ def run_grounding_pass(
                 elif candidate_sink is not None:
                     # Card 89: the model reads each quote widened to its whole
                     # record sentence(s); the key keeps the writer's words.
-                    widened = tuple(
-                        dict.fromkeys(
-                            widen_to_record_sentences(pair_quote, cited.field_value)
-                            for pair_quote, cited in pairs
+                    # Card 101, slice 1: a quote with no run the check can
+                    # read (a record sentence over 600 characters, or one
+                    # that is not found) holds the sentence. The check is
+                    # never shown the writer's bare quote as the record text
+                    # (J5-101-01); the sentence is neither sent nor shown.
+                    runs = [
+                        record_sentence_run(pair_quote, cited.field_value)
+                        for pair_quote, cited in pairs
+                    ]
+                    if all(run is not None for run in runs):
+                        candidate_sink.append(
+                            SynthesisCandidate(
+                                key=key,
+                                sentence=claim_text,
+                                quotes=tuple(dict.fromkeys(r for r in runs if r is not None)),
+                            )
                         )
-                    )
-                    candidate_sink.append(
-                        SynthesisCandidate(key=key, sentence=claim_text, quotes=widened)
-                    )
             # Card 101, round 3: a copied clause shows with no check only
             # when it is a whole sentence of its record, word for word
             # (`is_whole_record_sentence`). A cut, or a cut joined to another
@@ -1707,6 +1902,24 @@ def run_grounding_pass(
                     is_whole_record_sentence(text, finding)
                     or (code_built_listing and _is_code_built_row(text, finding))
                 )
+                # Slice 4: a copy that is whole, opening the sentence right
+                # after a stripped unmarked reply sentence that continues
+                # into it in the record, is the back half of one paper
+                # sentence the writer's splitter cut: a cut, read joined.
+                if (
+                    not is_cut
+                    and cut_head is not None
+                    and not code_built_listing
+                    and not _wraps_record_value(claim_text, finding)
+                    and not any(
+                        _asserts_something(_clean_claim(earlier))
+                        for earlier, _, _ in segments[:segment_index]
+                    )
+                ):
+                    joined = _joined_to_cut_head(cut_head, text, finding)
+                    if joined is not None:
+                        is_cut = True
+                        joined_heads[segment_index] = joined
                 if is_cut or cut_in_sentence:
                     cut_in_sentence = True
                     strict_ok = False
@@ -1714,7 +1927,12 @@ def run_grounding_pass(
                     held_by_code = is_cut and _VERDICT_OPENER.match(claim_text) is not None
                     if not held_by_code:
                         copied = _copied_clause_candidate(
-                            sentence, segments, segment_index, by_ref, evidence_quotes
+                            sentence,
+                            segments,
+                            segment_index,
+                            by_ref,
+                            evidence_quotes,
+                            joined_heads,
                         )
                         # Round 5 (A4-101-07): None means no record text
                         # the check could read for this clause, so it stays
@@ -1905,6 +2123,13 @@ def run_grounding_pass(
         previous_survived = survived_this
         if not survived_this:
             previous_refs = set()
+        cut_head = (
+            sentence
+            if not survived_this
+            and all(marker is None for _, marker, _ in segments)
+            and _asserts_something(sentence)
+            else None
+        )
 
     if core_ask_required and not claims:
         # Step 7: stripping removed the query's core ask. Discard the

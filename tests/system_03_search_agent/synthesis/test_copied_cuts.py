@@ -919,17 +919,91 @@ def test_a_cut_the_widener_cannot_place_is_held_not_sent_as_its_own_quote(value:
     such a cut is held: never sent, never shown.
 
     MUTATION PROOF: falling back to the cut as its quote again
-    (`_copied_record_span` returning `widen_to_record_sentences(...)`
-    unchecked) turns both cases red: the item is collected."""
+    (`_copied_record_span` returning the cut unchecked) turns both cases
+    red: the item is collected."""
     finding = _finding(1, value)
     claim = narrative.rsplit(" [", 1)[0]
     assert grounding.ground_claim(claim, value), "populate-check: it is copied"
-    assert grounding.widen_to_record_sentences(claim, value) == claim, (
+    assert grounding.record_sentence_run(claim, value) is None, (
         "populate-check: the run around it is longer than the check reads"
     )
     sink, result = _first_pass(narrative, [finding], "Does azithromycin help bronchiolitis?")
     assert sink == [], [(c.sentence, c.quotes) for c in sink]
     assert result.sentences == (), result.sentences
+
+
+@pytest.mark.parametrize(
+    ("value", "narrative"),
+    [
+        (
+            NO_EVIDENCE_RUN,
+            (
+                "Azithromycin shortened the illness in infants with bronchiolitis "
+                '[1: "azithromycin shortened the illness in infants with bronchiolitis"].'
+            ),
+        ),
+        (
+            ONE_LONG_SENTENCE,
+            'Azithromycin shortened the illness by two days [1: "azithromycin shortened the illness by two days"].',
+        ),
+    ],
+    ids=["no evidence, a long run of sentences", "one long sentence"],
+)
+def test_a_quoted_cut_the_widener_cannot_place_is_held_not_sent_as_its_own_quote(
+    value: str, narrative: str
+) -> None:
+    """J5-101-01 (2026-10-08): the same cut as A4-101-07, with the writer
+    quoting its own copied words beside the record. The quoted branch fell
+    back to the quote, so the check read the cut as the record text behind
+    it. Now the clause is held: never sent, never shown.
+
+    MUTATION PROOF: the quoted branch of `_copied_clause_candidate` falling
+    back to the writer's quote when `record_sentence_run` is None turns both
+    cases red: one item is sent whose only quote is the cut."""
+    finding = _finding(1, value)
+    claim = narrative.split(" [", 1)[0]
+    quote = narrative.split('"')[1]
+    assert grounding.ground_claim(claim, value), "populate-check: it is copied"
+    assert grounding.record_sentence_run(quote, value) is None, (
+        "populate-check: the run around the quote is longer than the check reads"
+    )
+    sink, result = _first_pass(narrative, [finding], "Does azithromycin help bronchiolitis?")
+    assert sink == [], [(c.sentence, c.quotes) for c in sink]
+    assert result.sentences == (), result.sentences
+
+
+def test_a_reworded_sentence_whose_record_run_is_too_long_is_held_not_checked_on_its_quote() -> None:
+    """Card 101, slice 1 (J5-101-01, reworded half): the record is one 715
+    character sentence holding the paper's denial, and the writer rewords it
+    and quotes a span. Develop sent the span alone, so the check read
+    "azithromycin shortened the illness" with the denial gone. Now nothing is
+    sent and nothing is shown.
+
+    MUTATION PROOF: sending `quotes=(pair_quote,)` when the run is None (the
+    old widener fallback) turns this red: one item whose only quote is the
+    bare span."""
+    value = (
+        "There was no evidence that azithromycin shortened the illness in infants with "
+        "bronchiolitis, " + "and the groups were otherwise balanced " * 20 + "at the end of follow-up."
+    )
+    quote = "azithromycin shortened the illness in infants"
+    assert len(value) > 600
+    narrative = f'Azithromycin cut the length of illness in infants [1: "{quote}"].'
+    assert grounding.record_sentence_run(quote, value) is None, "populate-check"
+    sink, result = _first_pass(narrative, [_finding(1, value)], "Does azithromycin help bronchiolitis?")
+    assert sink == [], [(c.sentence, c.quotes) for c in sink]
+    assert result.sentences == ()
+
+
+def test_a_reworded_sentence_with_a_readable_run_is_still_sent_whole() -> None:
+    """The control for slice 1: a quote inside a short record sentence is
+    still sent with the whole sentence, the negation included."""
+    value = "There was no evidence that azithromycin shortened the illness in infants. Trials continue."
+    narrative = 'Azithromycin cut the length of illness [1: "azithromycin shortened the illness"].'
+    sink, _ = _first_pass(narrative, [_finding(1, value)], "Does azithromycin help bronchiolitis?")
+    assert [c.quotes for c in sink] == [
+        ("There was no evidence that azithromycin shortened the illness in infants.",)
+    ]
 
 
 # ------------------------------------------ round 5: the listing, as develop

@@ -37,9 +37,9 @@ from system_03_search_agent.synthesis.grounding import (
     MAX_WIDENED_QUOTE_CHARS,
     SynthesisCandidate,
     extract_evidence_quotes,
+    record_sentence_run,
     run_grounding_pass,
     synthesis_key,
-    widen_to_record_sentences,
 )
 from system_03_search_agent.synthesis.sentence_check import (
     MAX_CANDIDATES,
@@ -1334,7 +1334,7 @@ def test_a_quote_that_is_already_a_whole_sentence_is_unchanged() -> None:
     sink = _reflux_candidates(f'Acid-blocking pills work best for it [1: "{REFLUX_THIRD}"].')
     assert len(sink) == 1, sink
     assert sink[0].quotes == (REFLUX_THIRD,)
-    assert widen_to_record_sentences(REFLUX_THIRD, REFLUX_ABSTRACT) == REFLUX_THIRD
+    assert record_sentence_run(REFLUX_THIRD, REFLUX_ABSTRACT) == REFLUX_THIRD
 
 
 def test_the_exact_checks_still_run_on_the_writers_own_quote() -> None:
@@ -1377,15 +1377,12 @@ def test_two_quotes_in_one_record_sentence_are_shown_once() -> None:
     assert len(sink[0].key[1]) == 2, "the key keeps both of the writer's quotes"
 
 
-def test_a_run_of_record_sentences_too_long_to_show_keeps_the_writers_quote() -> None:
+def test_a_run_of_record_sentences_too_long_to_show_has_no_run() -> None:
+    """Card 101, slice 1: no fallback to the writer's bare quote."""
     long_sentence = "Reflux " + "and more words " * 60 + "ends here."
     record = f"First sentence here. {long_sentence} Last one."
-    assert widen_to_record_sentences("and more words and more words", record) == (
-        "and more words and more words"
-    )
-    assert widen_to_record_sentences("words not in the record at all", record) == (
-        "words not in the record at all"
-    )
+    assert record_sentence_run("and more words and more words", record) is None
+    assert record_sentence_run("words not in the record at all", record) is None
 
 
 def test_a_widened_quote_is_never_cut_short_in_the_check() -> None:

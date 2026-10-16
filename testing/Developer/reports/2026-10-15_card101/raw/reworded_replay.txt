@@ -1,0 +1,8 @@
+137 cases (69 quoted drafts, 68 reworded units), no model call (reworded_replay.py).
+
+develop: items 174; shown none 9, all 95
+design: items 174; shown none 9, all 95
+
+design vs develop: items whose quote lost text develop's carried 0; held where develop read only the bare quote or over 600 0; held where develop's run was within 600 0
+design vs develop, approves none: shown that develop does not show 0; develop sentences dropped 0
+design vs develop, approves all: shown that develop does not show 0; develop sentences dropped 0
