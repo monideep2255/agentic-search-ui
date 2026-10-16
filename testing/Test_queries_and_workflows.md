@@ -449,7 +449,9 @@ Queries to try:
 What you should see:
 
 - Where a written sentence moves to a different paper and its only link to that paper's title is one shared word, the sentence opens with `From the paper "<that paper's title>":` and then reads exactly as before. Click the sentence's citation: it opens the paper named in the lead-in.
-- A sentence that says more than one title word, or writes the paper's own abbreviation (such as GERD), has no lead-in: it already names its paper.
+- A sentence that says more than one title word, or writes an abbreviation only that paper defines, has no lead-in: it already names its paper. An abbreviation several papers in the answer define (such as GERD) does not count as naming one of them.
+- When another paper in the answer has the same title, the lead-in reads `From the paper "<title>" (<year>):` if the record carries a year, otherwise `From another paper titled "<title>":`.
+- Known and open: a sentence whose only link to its paper is an abbreviation several papers define, with no shared title word, still has no lead-in, as before this change.
 - The first written sentence, a sentence that continues in the same paper, and a sentence copied word for word from a record have no lead-in.
 - No written sentence is lost against the same question before this change. A lead-in only adds words in front.
 - A long title is cut at a word with "…" at the end, never in the middle of a word and never at a colon, so a label such as "RETRACTED:" is not dropped.
