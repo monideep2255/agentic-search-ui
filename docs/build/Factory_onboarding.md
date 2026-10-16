@@ -14,7 +14,6 @@ You do not need to read any other document to start. The rules you must follow a
 - [The pull request](#the-pull-request)
 - [Done so far](#done-so-far)
 - [Card 75: a renewal that cannot be read signs the person out everywhere](#card-75-a-renewal-that-cannot-be-read-signs-the-person-out-everywhere)
-- [Card 24: the Plain language and Researcher switch on an answer](#card-24-the-plain-language-and-researcher-switch-on-an-answer)
 - [Card 100: a very long email in the top bar](#card-100-a-very-long-email-in-the-top-bar)
 - [Not yours now](#not-yours-now)
 - [When you are stuck](#when-you-are-stuck)
@@ -50,7 +49,7 @@ Two values decide every close call:
 
 ## How you work here
 
-One card at a time, in this order: 75 (the renewal gap), then 24 (the mode switch), then 100 (the long email). Cards 43, 43b, 44, 47 and 61 are merged: see [Done so far](#done-so-far). Once a card's pull request is open you may start the next card, but never have more than two pull requests open, and answer review comments on an open one before new work.
+One card at a time, in this order: 75 (the renewal gap), then 100 (the long email). Cards 43, 43b, 44, 47, 61 and 24 are merged: see [Done so far](#done-so-far). Once a card's pull request is open you may start the next card, but never have more than two pull requests open, and answer review comments on an open one before new work.
 
 Once per machine, before your first Playwright run: `cd frontend && npx playwright install chromium`. It downloads the browser the pinned `@playwright/test` expects and changes no file in the repository.
 
@@ -188,7 +187,7 @@ Notes on the end-to-end run:
 - `CI=1` makes Playwright start its own servers and fail loudly if a port is taken. Without it, a server already on those ports from another checkout is silently reused and you would test someone else's code. If a port is taken, wait and retry; never stop another process.
 - The backend needs the local PostgreSQL database `search_agent_users` on `localhost:5432` and refuses to start without it. Every spec that signs in creates a throwaway user there, which is expected. If the database is unreachable, stop and ask the product owner; never create or migrate a database.
 
-Screenshots of the app beside the design prototype (card 24):
+Screenshots of the app beside the design prototype:
 
 1. Shell one, from the worktree root: `PATH="<main checkout>/venv/bin:$PATH" python3 -m tests.e2e_support.mock_llm_backend`.
 2. Shell two, from `frontend/`: `VITE_API_BASE_URL=http://127.0.0.1:8931 npm run dev -- --port 5273 --strictPort --host 127.0.0.1`.
@@ -243,6 +242,7 @@ Merged into `develop` and waiting for the product owner's retest. Leave them alo
 - Card 44 (#183): the "Take the tour" button stays readable when the pointer rests on it.
 - Card 47 (#188): the design prototype draws the light home page the app shows.
 - Card 61 (#190): the command line and its MCP bridge give a queued request its full time, say so when the person stopped a search, refuse invisible-only feedback and name the right credential fix without printing a path. Its one open gap is card 75, below.
+- Card 24 (#245, built by the lead on 2026-10-16 while Factory was paused): the Plain language and Researcher switch beside an answer says it runs a new search before it spends one. Its two small open marks are card 117 on the board.
 
 ## Card 75: a renewal that cannot be read signs the person out everywhere
 
@@ -342,107 +342,6 @@ Not in this card, named in your pull request under Not covered:
 - A renewal whose connection fails after it was sent (`httpx.ReadTimeout`, `httpx.ReadError`, `httpx.RemoteProtocolError`), where the server may have rotated the token.
 - A request that was already waiting on the renewal lock when another request was cancelled mid-renewal. The cancelled request lets go of the lock while its renewal still runs in the background, so the waiting one takes the lock before that renewal finishes, finds no latch yet, and can send the same token once more. Closing it needs the waiting request to await the same renewal task, a larger change.
 - `s3 ask`'s own remedy for a 200 it cannot use, "Retry, or report this to the operator if it recurs." (`credentials.py` lines 731, 743 and 751), which also leads to a resend.
-
-## Card 24: the Plain language and Researcher switch on an answer
-
-Dial 2, because a click re-runs a question: the lead runs a judge and an adversary on your pull request. Branch `factory/card24-answer-depth-switch`.
-
-What the person sees today: the Plain language and Researcher choice exists only on the home page (`frontend/src/components/screens/HomeScreen.tsx` line 390, `DepthControl`). A person who reads a Plain language answer and wants the Researcher one must press New search, change the mode and type the question again.
-
-What they should see, by the product owner's decision of 2026-10-06 and decision D21 (`testing/Board_plan.md`, the decisions table):
-
-- A two-button switch, Plain language and Researcher, beside the answer's header: in the status strip directly under the question, on the right, before Show work.
-- Clicking the mode they are not reading shows the cost first and re-runs nothing. The question runs again only when they confirm.
-- The new answer joins the conversation like a follow-up, and the answer they were reading folds above it. Later follow-ups use the new mode.
-- Clicking the mode already shown does nothing.
-
-Port the built version, then add the cost. The switch was built on 2026-09-25 in commit `df7d7a2c` ("feat(web-ui): add the Plain language / Researcher toggle to the answer status strip"). Its branch, `phase/8.4-answers-worth-reading`, is gone from the remote; the commit survives under the local tag `parked/phase-8.4-2026-09-25`, which your worktree shares with the main checkout.
-
-The tag is not on the remote, so a fresh clone cannot see it. Check first with `git cat-file -t df7d7a2c`; if it does not print `commit`, stop and ask the product owner. Port that one commit and nothing else from the tag:
-
-```bash
-git cherry-pick df7d7a2c
-```
-
-Keep the cherry-picked commit's message as it is, even though its subject starts in lowercase. Title the pull request with your own commit's subject, for example `feat(web-ui): Show the cost before the answer mode switch asks again`.
-
-What it brings:
-
-- `DepthStripToggle` and the exported `AUDIENCE_MODE_OPTIONS` in `frontend/src/components/controls/DepthControl.tsx`.
-- The `onDepthChange` and `depthValue` props on `AnswerBody` and `AnswerScreen` in `frontend/src/components/screens/AnswerScreen.tsx`, with the switch placed in the status strip.
-- `onDepthChange={(next) => void ask(searchView.question, next, true)}` in `frontend/src/App.tsx`.
-- Three test files: `App.depthToggle.test.tsx`, `AnswerScreen.depthToggle.test.tsx` and new cases in `DepthControl.test.tsx`.
-
-Its message and its comments say "Card 33", the card's number before the board was renumbered. Card 33 is now a different card. In your own commit, change the 12 comments and test names under `frontend/src` that say it to "card 24". Write card 24 in anything you add.
-
-The cherry-pick stops on one conflict, checked on 2026-10-06 against develop `5cf63d6c`: the import line of `frontend/src/components/controls/DepthControl.test.tsx`. Develop imports `{ DepthControl, displayedMode }`; the commit adds `ANSWER_MODE_EXPLAINER` and `DepthStripToggle`. Resolve it to `import { DepthControl, DepthStripToggle, displayedMode } from "./DepthControl";`, and add `ANSWER_MODE_EXPLAINER` only if a test in the file still uses it. The other files merge without conflict; build and test before you change anything else.
-
-Before you start, note that develop moved on 2026-10-07: cards 22, 23 and 102 (#197 to #199) changed the answer screen files. The conflict and line numbers below were checked against `5cf63d6c`, before those changes.
-
-- Files changed: `AnswerScreen.tsx`, `useRunView.ts`, `SavedAnswerScreen.tsx`, `lib/events.ts`.
-- Branch from today's develop, and expect the cherry-pick to stop on more conflicts in `AnswerScreen.tsx`; keep both sides' changes.
-- Find each place by the name the table gives, not by its line number.
-- Run the card 22, 23 and 102 tests as well as your own: `AnswerScreen.card22.test.tsx`, the card 23 block in `answerLayout.test.tsx`, and `SavedAnswerScreen.card102.test.tsx`.
-
-Line numbers in `AnswerScreen.tsx` from here on are the file's after the cherry-pick, checked on 2026-10-06 against develop `5cf63d6c`. The port moves every one of them by 47 to 50 lines from develop's:
-
-| What | After the cherry-pick | On develop before it |
-|---|---|---|
-| The status strip's outer `Box`, holding the row and the work panel | Line 1542 | Line 1516 |
-| The Show work button | Lines 1624 to 1640 | Lines 1577 to 1594 |
-| The work panel, `ReasoningLog` | Line 1645 | Line 1597 |
-| The folded previous turn's `AnswerBody` | Line 2311 | Line 2263 |
-| The New search button | Lines 2502 to 2524 | Lines 2452 to 2474 |
-| The streaming preview's `AnswerBody` | Line 2551 | Line 2501 |
-
-In `App.tsx` the port changes only lines further down (the ported `onDepthChange` lands at line 1835), so the two lines this card reads keep develop's numbers: `allowance` (line 404) and `dailyLimitLine` (line 982).
-
-Then add the cost on click, which the ported commit lacks (it re-runs at once):
-
-- In `AnswerBody`, hold the mode the person clicked in state. `DepthStripToggle` stays as ported and calls that state's setter, never `onDepthChange` directly.
-- While a mode is held, show one line inside the status strip, below its row, where the work panel opens (line 1645). `<mode>` is the held option's label from `AUDIENCE_MODE_OPTIONS`, "Researcher" or "Plain language". The line has two forms, both approved by the product owner on 2026-10-06:
-
-  | Who | When | The line |
-  |---|---|---|
-  | A guest | `allowance.counted` is true | `Ask this question again in <mode>? It counts as one new search (<N> left today).` |
-  | A signed-in person, whose searches are not limited per day, or anyone before the count has loaded | `allowance.counted` is false, or `allowance` is still null | `Ask this question again in <mode>? It runs as one new search.` |
-
-  `<N>` is `Math.max(allowance.total - allowance.used, 0)`. Never show "no search limit in effect yet" or any other number in this line. Give the line `data-testid="answer-depth-confirm"`, text in `body2` with colour `designTokens.inkMuted`.
-- Keep an `aria-live="polite"` box mounted for as long as the answer shows, and put the line inside it only while a mode is held: a live region that mounts with its text already inside is often not announced.
-- Two buttons on that line, the same in both forms. "Ask again" calls `onDepthChange` with the held mode and clears it; style it as the New search button (lines 2502 to 2524: 12.5 px, weight 600, `designTokens.blue` fill, `designTokens.navy` on hover). "Cancel" clears it and calls nothing; style it as the Show work button (lines 1624 to 1640: 13 px, `designTokens.link`, no border).
-- `<N>` comes from the same `allowance` state `dailyLimitPhrase` reads (`App.tsx` line 404 and line 982; `frontend/src/lib/guestSession.ts` line 148). Build the finished sentence in `App.tsx` and pass it down as a new prop, `depthConfirmCopy: (modeLabel: string) => string`, beside the ported `onDepthChange`; `AnswerScreen` hands it to the live `AnswerBody`. Never write a number of your own.
-- At "(0 left today)", "Ask again" still sends the run, and the server refuses it with the existing daily-limit refusal. Name that under Not covered unless a test proves it.
-- The switch renders only on the live, landed answer, as the ported commit does: never on the streaming preview (line 2551) or a folded previous turn (line 2311).
-
-The product owner approved this wording on 2026-10-06 (`DECISIONS.md`): the guest form as first proposed, and the signed-in form because a signed-in person has no daily count to show. Use it exactly; if they ask for different words at retest, only the strings change.
-
-The design:
-
-- The switch: `testing/Developer/reports/2026-09-14_handover_inputs/design/Main.dc.html` lines 50 to 61 and `Researcher.dc.html` at the same lines draw it in the status strip, right-aligned, before Show work: 12.5 px, the chosen mode on `layer1Wash` with `layer1` text and weight 700, the other in `inkMuted`, a 1 px `line` border and a 4 px radius.
-- The design system's own card, `docs/build/design/design-system/components/depth-control.html` (lines 28 to 32 for the styles), draws only the control before asking, on the navy hero, with the old three modes. The prototype has the same (`docs/build/design/design-system/prototype/app.html` lines 320 to 327 and 477 to 482). Use their tokens; the two-mode list is the app's (`AUDIENCE_MODE_OPTIONS`).
-- At phone width the mockup `Mobile.dc.html` (line 46) draws the strip with no switch, and `app.html` has no rule for it. The ported strip wraps (`flexWrap: "wrap"`), so the switch drops to its own line at 390. Keep that, and list it under Design gaps with the confirmation line, which no design draws.
-
-How to test:
-
-- `frontend/src/components/screens/AnswerScreen.depthToggle.test.tsx`, from the port: add that clicking Researcher shows `answer-depth-confirm` with the sentence `depthConfirmCopy` returns and does not call `onDepthChange`; that "Ask again" calls it once with `"researcher"`; that "Cancel" hides the line and calls nothing. Reverting to the ported commit does not count as a break: there the first test fails because `answer-depth-confirm` does not exist yet, the missing-name failure step 4 of [How you work here](#how-you-work-here) rules out. Each test's one-property break instead:
-  - (a) The toggle's handler both sets the held mode and calls `onDepthChange` (`(m) => { setHeld(m); onDepthChange?.(m); }`): the line shows, but `onDepthChange` was called, so the first test goes red on that assertion.
-  - (b) "Ask again" clears the held mode without calling `onDepthChange`: the second test goes red.
-  - (c) "Cancel" calls `onDepthChange` with the held mode: the third test goes red.
-- `frontend/src/App.depthToggle.test.tsx`, from the port: its test at line 144 clicks the strip's Researcher and expects a second `createRun` with `audience_depth: "researcher"` (lines 174 to 177). Make it assert `createRun` was still called once after the click on Researcher, then twice after "Ask again". Its break is (a) above.
-- In the same file, cover both forms of the line. With `getAllowance` answering `counted: true`, the line shows "(<N> left today)" with the right number; with it answering `counted: false`, as it does for a signed-in person, the line reads "It runs as one new search." with no number. Break: build the guest form whatever `counted` says.
-- A new `frontend/e2e/answer-depth-switch.spec.ts`. Copy from `frontend/e2e/answer-layout.spec.ts` the scripted answer (lines 30 to 186: `frame`, `head`, `token`, `answerTokens`, `landedStream`), `ask` (lines 188 to 212) and `noSidewaysScroll` (lines 214 to 220). Point screenshots at your own report folder, written only when `FACTORY_SHOTS=1`, as `frontend/e2e/long-variant-name.spec.ts` does (line 128). Use `test.use({ contextOptions: { reducedMotion: "reduce" } })`, and record each `POST` to `**/v1/query` with `page.on("request")`. Then, at 1280 and at 390:
-  - The switch is visible, with Plain language pressed.
-  - Clicking Researcher shows `answer-depth-confirm` and records no new `POST`.
-  - An axe scan of the status strip, with the line open, finds no violation. The strip has no test id today (`answer-meta` sits on its `Typography` and leaves out the switch and the line), so give the strip's outer `Box` (line 1542) ``data-testid={`${testIdPrefix}answer-status-strip`}`` and run `new AxeBuilder({ page }).include('[data-testid="answer-status-strip"]').withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze()`.
-  - The page never scrolls sideways.
-  - "Ask again" records exactly one new `POST`, whose JSON body has `audience_depth: "researcher"`.
-
-Done when:
-
-- The port, the cost line and the tests above are in, and each new test fails with its one property removed.
-- Build, unit tests, your spec and `accessibility.spec.ts` pass.
-- The report has the capture's answer screen at 1280 and 390 beside the prototype, from [Checks before you push](#checks-before-you-push), and your spec's screenshots at 1280 and 390 with the cost line open, compared with `Main.dc.html` lines 50 to 61. The capture's prototype draws no switch and never opens the cost line, so the cost line's screenshots can only come from your spec.
-- At most three live questions on the develop app, and none when the fake-model tests prove the change.
 
 ## Card 100: a very long email in the top bar
 
