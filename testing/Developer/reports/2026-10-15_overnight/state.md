@@ -2,7 +2,7 @@
 
 The live ledger of the night: where each card stands, which agent holds it, and the next step. The lead rewrites a row the moment a card moves, so a session that stops at a usage limit resumes from this file, not from memory. The plan and the owner's rules: `plan.md` beside this file.
 
-Last updated: 2026-10-16 00:15.
+Last updated: 2026-10-16 02:00.
 
 ## Table of contents
 
@@ -22,12 +22,12 @@ Last updated: 2026-10-16 00:15.
 
 | Card | Worktree, branch | Stage | Agent | Next step |
 |---|---|---|---|---|
-| 29 | card29, fix/card29-abstract-sentence | Fix round running | fix-29 | Fresh verifier (Fable), then CI, merge, product check |
-| 75 | card75, fix/card75-renewal-latch, #239 | Judge SHIP, adversary FAIL; fix round running | fix-75 | Fresh verifier (Opus), merge |
-| 115 | card115, fix/card115-readonly-reply-first, #240 | Judge and adversary running | judge-115, adversary-115 | One fix round if needed, fresh verifier, merge |
-| 94 | card94, fix/card94-isolate-lookup | Builder running | builder-94 | Commit, pull request, judge and adversary |
-| 17 | card17, fix/card17-name-the-paper | Builder running (design committed) | builder-17 | Commit, pull request, judge and adversary (Fable adversary) |
-| 110 | card110, fix/card110-first-sentence-redesign | Builder running (design committed) | builder-110 | Commit, pull request, judge and adversary |
+| 29 | card29, fix/card29-abstract-sentence, #243 | Fix round done (11 of 13); fresh verifier running (Fable) | verifier-29 | Merge on PASS, product check; then card 24 |
+| 75 | none (removed) | Closed: verifier HOLD (worse after a one-off 502 or lost connection); #239 closed, card back in To do | none | The owner's call in the morning |
+| 115 | card115, fix/card115-readonly-reply-first, #240 | Judge SHIP, adversary PASS; no fix round; fresh verifier running | verifier-115 | One fix round if needed, fresh verifier, merge |
+| 94 | card94, fix/card94-isolate-lookup, #244 | Judge and adversary running | judge-94, adversary-94 | One fix round if needed, fresh verifier, merge; then card 20 |
+| 17 | card17, fix/card17-name-the-paper, #241 | Adversary FAIL (lead-in judged before the final order; same-title papers); judge running | judge-17 | One fix round if needed, fresh verifier, merge |
+| 110 | card110, fix/card110-first-sentence-redesign, #242 | Judge and adversary running | judge-110, adversary-110 | One fix round if needed, fresh verifier, merge; then delete the parked cards 110/111 branch |
 | 101 | card101, fix/card101-record-sentence-end | Design committed | none yet | Builder (Sonnet) when the running count drops |
 | 15 | card15, fix/card15-checked-templates | Design committed (four shapes) | none yet | Builder (Sonnet) when the running count drops |
 | 84 and 72 | none (removed) | Design on develop; not built: needs the owner's yes on the guardrail rule | none | The owner's answer in the morning |
