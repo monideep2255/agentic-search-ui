@@ -778,6 +778,9 @@ def clip_to_word(value: str, limit: int = MAX_LABEL_CHARS) -> str:
 
 
 _LABEL_FIELDS = ("name", "title", "symbol", "preferred_name")
+#: The public name of the same list, for code outside this module that asks
+#: whether a finding's field is the one a listing row shows as its label.
+LABEL_FIELDS = _LABEL_FIELDS
 _URL_PREFIX = re.compile(r"^\s*https?://", re.IGNORECASE)
 
 
