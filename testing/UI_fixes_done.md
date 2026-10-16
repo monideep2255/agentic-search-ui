@@ -249,7 +249,7 @@ session starts here rather than reconstructing state.
 
 LAST UPDATED 2026-10-16, AT THE END OF THE OVERNIGHT OF 2026-10-15 TO 16. THE ONE THING TO KNOW:
 
-- Four cards merged overnight, each behind CI, its reviews and a fresh verifier: 115 (#240), 17 (#241), 94's timeout fix (#246) and 24 (#245). The first three passed the product check on deployed develop at 1280 and 390 (`testing/Developer/reports/2026-10-16_product_check/`); card 24's check is in `testing/Developer/reports/2026-10-16_product_check_card24/`. All four wait for your retest
+- Four cards merged overnight, each behind CI, its reviews and a fresh verifier: 115 (#240), 17 (#241), 94's timeout fix (#246) and 24 (#245). All four passed the product check on deployed develop at 1280 and 390 (`testing/Developer/reports/2026-10-16_product_check/` and `2026-10-16_product_check_card24/`) and wait for your retest
 - Eight cards were built and closed under your overnight rule because a review or verifier found something worse than develop: 48, 75, 29, 94's lookup, 110, 101, 20 and 15. Each is back in To do with its reviews and final diff kept on develop; each needs a redesign, not a fix
 - Nothing is parked any more: no parked branch, no parked tag, no leftover worktree. Locally only `develop`; on GitHub only `develop` and `production`
 
@@ -540,7 +540,7 @@ Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-
 | Card 115 (#240) | A graph-change follow-up gets the read-only reply before the topic check. Built, judged, attacked, verifier PASS; product check PASS, reply in under a second | Merged, in Retest |
 | Card 17 (#241) | Option E: a reworded sentence that moves to another paper names that paper. Designed, built, one fix round, verifier PASS; product check PASS | Merged, in Retest |
 | Card 94, timeout fix (#246) | An isolate search that runs out of time keeps the rest of the answer. Verifier PASS; product check PASS (query 33 in 34.2 s) | Merged, in Retest |
-| Card 24 (#245) | The Plain language and Researcher switch, its cost said before a search is spent. One fix round, verifier PASS with two minor items open as card 117 | Merged, in Retest |
+| Card 24 (#245) | The Plain language and Researcher switch, its cost said before a search is spent. One fix round, verifier PASS with two minor items open as card 117; product check PASS on all four steps of query 112 | Merged, in Retest |
 | Card 94, single-isolate lookup (#244) | Judge and adversary: it reached only 11 to 18 percent of isolates and could read the wrong genus folder | Closed, To do |
 | Card 75 (#239) | Verifier HOLD: after a one-off server error the person was signed out where develop keeps them signed in | Closed, To do, your rule needed |
 | Card 29 (#243) | Verifier HOLD: 3 of 24 quoted sentences misled | Closed, To do |
