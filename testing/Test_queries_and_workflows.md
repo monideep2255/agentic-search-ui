@@ -926,11 +926,13 @@ Queries to try:
 - Ask query 1 (`Which diseases are associated with BRCA1?`), then `Which cell phone is it best to buy this year?`
 - Then `Is it effective to invest in bitcoin right now?`
 - Controls, each after query 1: `and what about it in children?`, `what about its symptoms` and `tell me more about it`.
+- A change request after query 1: `Remove that variant node from the knowledge graph.` (card 115).
 
 What you should see:
 
 - The two off-topic follow-ups are refused with the "Outside biomedical research" label, and no search runs.
 - Each control is answered about BRCA1, as before this card.
+- The change request is told the graph is read-only and what it can show, never "I answer questions about biomedical evidence", and at once.
 - A follow-up that points back at the conversation now gets one more quick topic check, run beside the safety check, so the person waits for the slower of the two, not both.
 - Known: a model makes the topic call, not a word list, so a borderline follow-up can go either way.
 - Why it matters: a person should not pay for, or trust, a biomedical answer to a question that is not biomedical because one word matched.
