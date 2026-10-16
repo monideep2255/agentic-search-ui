@@ -494,6 +494,7 @@ from system_03_search_agent.core import (
     breadth_plan,
     clarify,
     coordinate_window,
+    isolate_filters,
     isolate_search,
     paper_links,
 )
@@ -6770,6 +6771,54 @@ async def _paper_link_plan(
     return _PaperLinkPlan(pmid=pmid, targets=targets) if targets else None
 
 
+#: The bound on the isolate filter extraction call (card 20). A small
+#: extraction on the guard tier, so a few seconds is generous; past it the
+#: search runs unfiltered and the answer says the question could not be checked.
+_ISOLATE_FILTER_BUDGET_S: Final[float] = 8.0
+
+
+async def _isolate_question_with_filters(
+    harness: Harness,
+    trace_id: str,
+    text: str,
+    question: isolate_search.IsolateQuestion,
+    sink: _EventSink,
+) -> isolate_search.IsolateQuestion:
+    """The isolate question with its verified year range and place (card 20).
+
+    ONE small guard-tier extraction call, made here and only here, so only a
+    question whose plan already holds an isolate search ever pays for it.
+    Think and every other path never reach this. The model's reply is a claim:
+    `isolate_filters.verify` checks it against the question, and the tool
+    checks the place against the file. A call that fails, times out, hits the
+    cost cap or returns something unreadable reads as "could not be checked",
+    which the answer says (`isolate_filters.CHECK_FAILED`), never as no filter.
+    """
+    messages = isolate_filters.build_messages(text, _query_block_tag())
+    try:
+        response = await _dispatch_tier_call(
+            harness,
+            trace_id,
+            "guard",
+            "plan",
+            messages,
+            budget_s=_ISOLATE_FILTER_BUDGET_S,
+            max_tokens=isolate_filters.EXTRACTION_MAX_TOKENS,
+            cache_prefix=None,
+        )
+    except (cost_control.QueryCapExceededError, HarnessCallError) as exc:
+        logger.warning(
+            "isolate filter extraction failed (trace %s): %s", trace_id, type(exc).__name__
+        )
+        return isolate_search.with_check_failed(question)
+    sink.emit("cost", cost_control.build_cost_event_payload(harness, trace_id, "guard"))
+    raw = isolate_filters.parse_reply(_response_text(response))
+    if raw is None:
+        logger.warning("isolate filter extraction reply unusable (trace %s)", trace_id)
+        return isolate_search.with_check_failed(question)
+    return isolate_search.with_filters(question, isolate_filters.verify(raw, text))
+
+
 async def plan_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
@@ -6902,6 +6951,13 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # isolate search and the organism's Taxonomy record, and no graph call,
     # since the graph holds no isolates.
     isolate_question = state.get("isolate_question")
+    # Card 20 (2026-10-16): the year and place an isolate search is narrowed
+    # by, read by one small extraction call made only when the plan holds an
+    # isolate search. No other question reaches it.
+    if isolate_question is not None and isolate_question.clarification is None:
+        isolate_question = await _isolate_question_with_filters(
+            harness, trace_id, query.text, isolate_question, sink
+        )
     # Card 56 (2026-10-05): an organism-anchored record question plans the
     # organism's SRA or assembly search and its Taxonomy record, and no
     # graph call, since the graph holds no runs and no assemblies.
@@ -7097,7 +7153,8 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             plan_payload = PlanPayload(
                 narrative=(
                     f"searching Pathogen Detection {isolate_question.organism.label} isolates "
-                    f"for AMR genotypes starting {', '.join(isolate_question.prefixes)}, "
+                    f"for AMR genotypes starting {', '.join(isolate_question.prefixes)}"
+                    f"{_isolate_filter_narrative(isolate_question)}, "
                     "and the organism's NCBI Taxonomy record"
                 )[:500],
                 tool_calls=[p.tool_call for p in planned_tool_calls],
@@ -7404,6 +7461,13 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         # answer to what has been published.
         topic_search_term=topic_term or "",
         **({"paper_link_plan": paper_link_plan} if paper_link_plan is not None else {}),
+        # Card 20: the isolate question now carries its verified filters, for
+        # Write's notes. Absent for every other question.
+        **(
+            {"isolate_question": isolate_question}
+            if isolate_question is not None and isolate_question.clarification is None
+            else {}
+        ),
         disease_lookup_failed=disease_lookup_failed,
     )
 
@@ -9941,6 +10005,72 @@ def _paper_link_notes(state: GraphState) -> list[str]:
     return notes
 
 
+def _isolate_filter_narrative(question: isolate_search.IsolateQuestion) -> str:
+    """", collected in USA, in 2020 or later" for the Plan narrative, or "" with
+    no verified filter (so a question with none keeps its narrative)."""
+    phrase = isolate_filters.applied_phrase(
+        place=", ".join(question.places[:1]) or None,
+        place_as_written=question.place_as_written,
+        year_min=question.year_min,
+        year_max=question.year_max,
+    )
+    return f", {phrase}" if phrase else ""
+
+
+def _isolate_filter_output(state: GraphState) -> PathogenDetectionOutput | None:
+    """The isolate search's typed output, or None."""
+    for output in (state.get("layer3_raw_outputs") or {}).values():
+        if isinstance(output, PathogenDetectionOutput) and output.mode == "isolate_search":
+            return output
+    return None
+
+
+def _isolate_filter_qualifier(state: GraphState) -> str:
+    """"collected in USA, in 2020 or later" for the count sentence, built from
+    what the tool reports it applied; "" when no filter was applied."""
+    question = state.get("isolate_question")
+    output = _isolate_filter_output(state)
+    if question is None or output is None or output.filter_report is None:
+        return ""
+    report = output.filter_report
+    matched = ", ".join(report.place_spellings_matched) if report.place_applied else None
+    return isolate_filters.applied_phrase(
+        place=matched or None,
+        place_as_written=question.place_as_written,
+        year_min=report.year_min,
+        year_max=report.year_max,
+    )
+
+
+def _isolate_filter_notes(state: GraphState) -> list[str]:
+    """Card 20: the sentences about the year and place filters, or none.
+
+    Built from the tool's own report of what it did, never from what was
+    asked, so a filter is shown as applied only when it was.
+    """
+    question = state.get("isolate_question")
+    if question is None or question.organism is None:
+        return []
+    output = _isolate_filter_output(state)
+    report = output.filter_report if output is not None else None
+    if report is None:
+        return list(question.filters_not_applied)
+    matched = ", ".join(report.place_spellings_matched) or None
+    return isolate_filters.filter_notes(
+        not_applied=question.filters_not_applied,
+        place_requested=bool(report.place_requested),
+        place_applied=report.place_applied,
+        place_text=matched,
+        place_as_written=question.place_as_written,
+        file_places=tuple(report.file_places_example),
+        place_countries=tuple(report.place_countries),
+        year_min=report.year_min,
+        year_max=report.year_max,
+        left_out_no_year=report.left_out_no_year,
+        scan_complete=output.scan_complete is not False if output is not None else True,
+    )
+
+
 def _isolate_count_note(state: GraphState) -> str | None:
     """The isolate search's own count sentence, or None for every other question.
 
@@ -9965,6 +10095,7 @@ def _isolate_count_note(state: GraphState) -> str | None:
             shown=min(output.isolate_count, _ISOLATE_ROW_CAP),
             total=output.total_available,
             complete=output.scan_complete is not False,
+            qualifier=_isolate_filter_qualifier(state),
         )
     return None
 
@@ -15049,6 +15180,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             for note in (
                 truncation_note,
                 _isolate_count_note(state),
+                *_isolate_filter_notes(state),
                 *_paper_link_notes(state),
                 _isolate_disclosure_note(state),
                 _disease_lookup_failed_note(state),

@@ -1,0 +1,97 @@
+"""Run Think then Plan on 20 non-isolate questions with every model call and
+network resolver stubbed, and dump a canonical JSON of what each returns.
+
+Usage: identity.py <src root> <questions.json> <out.json>
+"""
+
+import asyncio
+import hashlib
+import json
+import sys
+from types import SimpleNamespace
+
+src, qfile, out = sys.argv[1:4]
+sys.path.insert(0, src)
+
+from system_03_search_agent.contracts.query import Query  # noqa: E402
+from system_03_search_agent.core import graph as g  # noqa: E402
+from system_03_search_agent.harness import harness as hm  # noqa: E402
+
+CLASSES = ["lookup", "single_hop", "multi_hop", "exploratory", "aggregate"]
+calls = []
+
+
+async def fake_dispatch(harness, trace_id, tier, step, messages, **kw):
+    calls.append((tier, step))
+    user = messages[-1]["content"]
+    import re
+    stable = re.sub(r"</?[A-Za-z0-9_-]{6,}>", "", user)
+    digest = int(hashlib.sha256(stable.encode()).hexdigest(), 16)
+    words = [w.strip("?.,") for w in user.split() if w.isupper() and len(w) > 2][:2]
+    reply = {
+        "query_class": CLASSES[digest % 5],
+        "narrative": "stub narrative",
+        "entities": [{"text": w, "entity_type": "gene"} for w in words],
+        "record_type": "none",
+    }
+    return SimpleNamespace(content=json.dumps(reply))
+
+
+async def no_symbol(symbol, *, taxon="human"):
+    return None
+
+
+async def no_decision(*a, **k):
+    return None
+
+
+g._dispatch_tier_call = fake_dispatch
+g.resolve_symbol_to_curie = no_symbol
+g._decide_point = no_decision
+
+
+def canon(obj):
+    if hasattr(obj, "model_dump"):
+        obj = obj.model_dump(mode="json")
+    if isinstance(obj, dict):
+        return {k: canon(v) for k, v in obj.items() if k not in ("timestamp", "ts", "elapsed_s", "latency_ms", "id", "call_id", "persona", "persona_about", "persona_wikipedia", "helper", "cost_usd")}
+    if isinstance(obj, (list, tuple)):
+        return [canon(v) for v in obj]
+    if isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+    if hasattr(obj, "__dict__"):
+        return canon(vars(obj))
+    return repr(obj)
+
+
+async def main():
+    questions = json.load(open(qfile))
+    results = []
+    import os
+
+    os.environ.setdefault("GUARD_MODEL", "test-provider/guard-model")
+    os.environ.setdefault("PLAN_MODEL", "test-provider/plan-model")
+    os.environ.setdefault("SYNTH_MODEL", "test-provider/synth-model")
+    for i, text in enumerate(questions):
+        q = Query(text=text, session_id=f"s{i}", trace_id=f"t{i}", user_id=None)
+        state = {
+            "query": q,
+            "harness": hm.Harness(trace_id=f"t{i}"),
+            "seq": 0,
+            "findings": [],
+            "findings_count": 0,
+        }
+        think = await g.think_node(state)
+        merged = dict(state)
+        merged.update({k: v for k, v in think.items() if k not in ("events", "seq")})
+        merged["seq"] = think.get("seq", 0)
+        plan = await g.plan_node(merged)
+        results.append(
+            {"q": text, "think": canon({k: v for k, v in think.items() if k != "harness"}),
+             "plan": canon({k: v for k, v in plan.items() if k != "harness"})}
+        )
+    json.dump({"results": results, "model_calls": len(calls)}, open(out, "w"), indent=1, sort_keys=True, default=repr)
+    print(len(results), "questions,", len(calls), "stubbed model calls")
+
+
+asyncio.run(main())

@@ -67,9 +67,10 @@ Depended by:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Final
 
+from system_03_search_agent.core import isolate_filters
 from system_03_search_agent.core.breadth_plan import PlannedCall
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
 from system_03_search_agent.tools.pathogen_detection_schemas import PathogenDetectionInput
@@ -269,6 +270,15 @@ class IsolateQuestion:
     organism: Organism | None
     families: tuple[GeneFamily, ...]
     genes: tuple[str, ...]
+    # Card 20 (2026-10-16): the year range and place `core.isolate_filters`
+    # verified against the question, set by Plan's extraction call and only
+    # on an isolate search. All empty for a question that asked for neither,
+    # which plans exactly the call it planned before.
+    year_min: int | None = None
+    year_max: int | None = None
+    places: tuple[str, ...] = ()
+    place_as_written: str | None = None
+    filters_not_applied: tuple[str, ...] = ()
 
     @property
     def prefixes(self) -> tuple[str, ...]:
@@ -364,20 +374,27 @@ def plan_calls(question: IsolateQuestion) -> list[PlannedCall]:
     if question.organism is None or not question.prefixes:
         raise ValueError("an isolate question with a clarification pending plans no call")
     organism = question.organism
+    tool_input: dict[str, object] = {
+        "mode": "isolate_search",
+        "taxon": organism.taxon_folder,
+        "amr_gene_prefixes": list(question.prefixes),
+        "max_isolates": ISOLATES_SHOWN,
+    }
+    # Card 20: verified filters only, left out rather than sent as None, so a
+    # question with neither plans exactly the call it planned before.
+    if question.year_min is not None:
+        tool_input["collection_year_min"] = question.year_min
+    if question.year_max is not None:
+        tool_input["collection_year_max"] = question.year_max
+    if question.places:
+        tool_input["location_names"] = list(question.places)
     return [
         PlannedCall(
             tool="pathogen_detection",
             layer="layer_2_api",
             prefix="pd",
             purpose="isolate_search",
-            tool_input=PathogenDetectionInput.model_validate(
-                {
-                    "mode": "isolate_search",
-                    "taxon": organism.taxon_folder,
-                    "amr_gene_prefixes": list(question.prefixes),
-                    "max_isolates": ISOLATES_SHOWN,
-                }
-            ),
+            tool_input=PathogenDetectionInput.model_validate(tool_input),
         ),
         PlannedCall(
             tool="ncbi_efetch",
@@ -411,7 +428,27 @@ def disclosure(question: IsolateQuestion) -> str:
     return "; ".join(parts)
 
 
-def count_sentence(organism_label: str, shown: int, total: int, complete: bool) -> str:
+def with_filters(question: IsolateQuestion, verified: isolate_filters.VerifiedFilters) -> IsolateQuestion:
+    """The question with the verified year range and place set (card 20)."""
+    return replace(
+        question,
+        year_min=verified.year_min,
+        year_max=verified.year_max,
+        places=verified.places,
+        place_as_written=verified.place_as_written,
+        filters_not_applied=verified.not_applied,
+    )
+
+
+def with_check_failed(question: IsolateQuestion) -> IsolateQuestion:
+    """The question when the extraction step failed: no filter, and a note that
+    the question could not be checked for one."""
+    return replace(question, filters_not_applied=(isolate_filters.CHECK_FAILED,))
+
+
+def count_sentence(
+    organism_label: str, shown: int, total: int, complete: bool, qualifier: str = ""
+) -> str:
     """The sentence under the answer stating the count and the cut.
 
     Exact when the tool read the whole file, "at least" when its time ran
@@ -419,9 +456,12 @@ def count_sentence(organism_label: str, shown: int, total: int, complete: bool) 
     """
     total_words = f"{total:,}" if complete else f"at least {total:,}"
     noun = "isolate" if total == 1 else "isolates"
+    # Card 20: under a filter the sentence names it, so the count is never read
+    # as the number of isolates with these genes overall.
+    genes = f"with these genes {qualifier}" if qualifier else "with these genes"
     if shown >= total and complete:
-        return f"Pathogen Detection lists {total_words} {organism_label} {noun} with these genes, all shown."
+        return f"Pathogen Detection lists {total_words} {organism_label} {noun} {genes}, all shown."
     return (
-        f"Pathogen Detection lists {total_words} {organism_label} {noun} with these genes; "
+        f"Pathogen Detection lists {total_words} {organism_label} {noun} {genes}; "
         f"the first {shown:,} in the snapshot are shown."
     )

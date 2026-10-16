@@ -1,0 +1,137 @@
+"""Live runs of isolate questions through core.run.run_streaming.
+
+Usage: live_run.py <label> <runs> <question> [<question> ...]  (appends jsonl)
+Reads the project .env for keys (never printed), then forces develop's settings.
+"""
+
+import asyncio
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+ENV = Path("<repo-root>/.env")
+for line in ENV.read_text().splitlines():
+    line = line.strip()
+    if not line or line.startswith("#") or "=" not in line:
+        continue
+    k, v = line.split("=", 1)
+    os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+os.environ.update(
+    {
+        "CLASSIFIER_PROVIDER": "jev",
+        "GUARD_MODEL": "deepseek/deepseek-v4-flash",
+        "PLAN_MODEL": "deepseek/deepseek-v4-flash",
+        "SYNTH_MODEL": "z-ai/glm-5.2",
+        "PER_QUERY_COST_CAP_USD": "0.25",
+        "LANGCHAIN_TRACING_V2": "false",
+        "TOOL_AUDIT_LOG_ENABLED": "false",
+    }
+)
+sys.path.insert(0, "<repo-root>/src")
+
+import system_03_search_agent.core.graph as g  # noqa: E402
+from system_03_search_agent.contracts.query import Query, RequestContext  # noqa: E402
+from system_03_search_agent.core.run import run_streaming  # noqa: E402
+
+OUT = Path(sys.argv[1])
+RUNS = int(sys.argv[2])
+QUESTIONS = sys.argv[3:]
+
+captured: dict = {}
+_real = g.pathogen_detection
+
+
+async def _spy(input_data):
+    t0 = time.monotonic()
+    output = await _real(input_data)
+    captured["tool_input"] = input_data.model_dump(mode="json", exclude_none=True)
+    captured["tool_seconds"] = round(time.monotonic() - t0, 1)
+    captured["output"] = output
+    return output
+
+
+g.pathogen_detection = _spy
+
+_real_extract = g._isolate_question_with_filters
+
+
+async def _timed_extract(*a, **k):
+    t0 = time.monotonic()
+    result = await _real_extract(*a, **k)
+    captured["extract_seconds"] = round(time.monotonic() - t0, 1)
+    return result
+
+
+g._isolate_question_with_filters = _timed_extract
+
+
+async def one(question: str, i: int) -> dict:
+    captured.clear()
+    q = Query(text=question, session_id=f"live-{i}", trace_id=f"live-card20-{int(time.time())}-{i}", user_id=None)
+    ctx = RequestContext(surface="rest_sse", reads_placement=True)
+    started = time.monotonic()
+    texts: list[str] = []
+    plan_narrative = ""
+    cost = 0.0
+    done = None
+    errors = []
+    async for ev in run_streaming(q, ctx):
+        if ev.type == "plan":
+            plan_narrative = ev.payload.get("narrative", "")
+        elif ev.type == "token":
+            t = ev.payload.get("text") or ""
+            if t:
+                texts.append(t)
+        elif ev.type == "cost":
+            cost = max(cost, float(ev.payload.get("query_cost_usd", 0.0)))
+        elif ev.type == "done":
+            done = ev.payload
+        elif ev.type == "error":
+            errors.append(str(ev.payload)[:200])
+    elapsed = round(time.monotonic() - started, 1)
+    out = captured.get("output")
+    report = out.filter_report.model_dump(mode="json") if out is not None and out.filter_report else None
+    isolates = (
+        [
+            {"acc": x.biosample_acc, "place": x.geo_loc_name, "date": x.collection_date}
+            for x in out.isolates
+        ]
+        if out is not None
+        else []
+    )
+    notes = [t for t in texts if t.startswith(("Filters applied", "The place", "Pathogen Detection lists")) or "collection date the year filter" in t or "could not check" in t or "could not read a clear year" in t]
+    return {
+        "question": question,
+        "run": i,
+        "seconds": elapsed,
+        "tool_seconds": captured.get("tool_seconds"),
+        "extract_seconds": captured.get("extract_seconds"),
+        "cost_usd": round(cost, 4),
+        "tool_input": captured.get("tool_input"),
+        "plan": plan_narrative,
+        "status": out.status if out is not None else None,
+        "total_available": out.total_available if out is not None else None,
+        "rows": len(isolates),
+        "isolates": isolates,
+        "report": report,
+        "notes": notes,
+        "trust": (done or {}).get("trust_outcome"),
+        "errors": errors,
+    }
+
+
+async def main() -> None:
+    for question in QUESTIONS:
+        for i in range(1, RUNS + 1):
+            row = await one(question, i)
+            with OUT.open("a") as fh:
+                fh.write(json.dumps(row) + "\n")
+            print(
+                row["run"], row["seconds"], row["cost_usd"], row["rows"], row["total_available"],
+                json.dumps(row["tool_input"]), row["report"] and row["report"].get("place_applied"),
+            )
+
+
+asyncio.run(main())

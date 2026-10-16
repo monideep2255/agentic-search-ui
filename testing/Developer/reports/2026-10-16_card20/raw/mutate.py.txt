@@ -1,0 +1,33 @@
+"""One-property mutation: apply, run named tests (expect red), restore, run again (expect green)."""
+
+import shutil
+import subprocess
+import sys
+
+root = "<repo-root>/"
+path, old, new, tests = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:]
+full = root + path
+backup = full + ".mutbak"
+shutil.copy(full, backup)
+PY = "<python>"
+
+
+def run() -> tuple[int, str]:
+    p = subprocess.run([PY, "-m", "pytest", *tests, "-q", "-x", "-p", "no:cacheprovider"], cwd=root, capture_output=True, text=True)
+    tail = [line for line in p.stdout.splitlines() if line.strip()][-3:]
+    return p.returncode, " | ".join(tail)
+
+
+try:
+    text = open(full).read()
+    assert text.count(old) == 1, f"mutation target occurs {text.count(old)} times"
+    open(full, "w").write(text.replace(old, new))
+    red = run()
+finally:
+    shutil.copy(backup, full)
+    import os
+
+    os.remove(backup)
+green = run()
+print("MUTATED :", red)
+print("RESTORED:", green)

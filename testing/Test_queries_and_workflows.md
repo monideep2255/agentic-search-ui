@@ -848,7 +848,7 @@ Queries to try:
 What you should see:
 
 - A follow-up after an isolate search carries the organism and gene forward, and is honest about what it can and cannot do yet.
-- Honestly stated for the first version: a year filter is not built, and a follow-up does not yet carry an isolate search forward the way it carries a gene forward.
+- Since card 20 (2026-10-16) a year and place filter is built for a question that names its organism and gene in the same message (query 112). A follow-up still does not carry an isolate search forward the way it carries a gene forward, so this one cannot use it yet.
 - The answer asks which organism to search, or which gene, rather than pretending to filter.
 - It never repeats the same full list as if it had been filtered to 2023, and never invents a filtered list.
 - If the answer instead lists 2023 isolates that were genuinely filtered, that is a later version working, not this one; note it as a pleasant surprise rather than a pass.
@@ -934,6 +934,28 @@ What you should see:
 - A follow-up that points back at the conversation now gets one more quick topic check, run beside the safety check, so the person waits for the slower of the two, not both.
 - Known: a model makes the topic call, not a word list, so a borderline follow-up can go either way.
 - Why it matters: a person should not pay for, or trust, a biomedical answer to a question that is not biomedical because one word matched.
+
+### 112. An isolate search narrowed by year and place (card 20)
+
+Queries to try, each as a new search:
+
+- `Which Klebsiella pneumoniae isolates in Pathogen Detection carry blaKPC genes from Italy collected between 2018 and 2020?`
+- `Which Salmonella isolates in Pathogen Detection carry blaCTX-M genes from Guinea since 2020?`
+- `Which E. coli isolates carry blaNDM genes in a patient treated in Boston who had travelled to India, collected since 2019?`
+- `Which Klebsiella pneumoniae isolates carry blaKPC genes collected in Atlantis since 2019?`
+- Control: query 33, unchanged.
+
+What you should see:
+
+- The first: every isolate shown is from Italy and collected from 2018 to 2020. A note says "Filters applied: isolates collected in Italy, from 2018 to 2020", and the count sentence under the answer names the same filters.
+- A year filter counts the isolates it left out. A note says how many isolates have no collection date the year filter can read, so they are not counted, and tells you to ask again without the year to include them.
+- The second: a place matches whole names only, so Guinea never brings in Guinea-Bissau or Equatorial Guinea. If the file holds no such isolate, the note says the place could not be applied, that every place is counted, and which places do appear.
+- The third: the travel country is context, not a filter. Only the year is applied, and no note says the isolates are from India.
+- The fourth: the note says Atlantis could not be applied and isolates from every place are counted. It never looks as if the list were from Atlantis.
+- The control: no filter note, the same count sentence as before this card, and nothing about a year or place.
+- Known: one small model call reads the year and place, so a borderline wording can go either way. Code keeps a year only when it is a four-digit year written in the question, and shows the filter exactly as applied. "The last 5 years" is not applied, and the note says to write the years out.
+- Known: a question that asks for a year the model does not report is searched without it and no note says so; only a reported filter is shown.
+- Why it matters: a person asking for recent isolates from one country should not receive a list that only looks filtered, and should be told what the filter left out.
 
 ### 46. A question with no data (Product test 19)
 
@@ -2051,6 +2073,7 @@ Every feature accounted for, in three tables:
 | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
 | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
 | card 35 | An off-topic follow-up that contains a word such as "cell" or "study" is checked for topic like any other question | Query 111 |
+| card 20 | An isolate search narrows by collection year and place, and the answer says what was applied, what could not be applied and how many undated isolates were left out | Query 112 |
 | cards 84 and 72 | When the check every question passes first cannot finish, the message says nothing was searched, the problem was ours, and to ask again | Query 109 |
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
 | card 57, F-8.7-A04 | A citation under a summary sentence carries the record words that sentence was checked against, and each citation is listed once | Query 91 |

@@ -1464,3 +1464,193 @@ async def test_isolate_search_any_prefix_in_the_list_matches(
     )
 
     assert matched == ["SAMN00000001", "SAMN00000002"]
+
+
+# ---------------------------------------------------------------------------
+# isolate_search: place and collection-year filters (card 20, 2026-10-16).
+#
+# Each arm below is one of the findings the first build of this card drew from
+# its reviews on 2026-10-09 (`testing/Developer/reports/2026-10-09_card20/`),
+# run through the real predicate over a scripted table. Populate check: every
+# arm also asserts the rows that SHOULD match, so none passes on an empty list.
+# ---------------------------------------------------------------------------
+
+
+def _filter_row(
+    acc: str, place: str | None, date: str | None, genes: str = "blaKPC-2"
+) -> dict[str, str]:
+    row = _amr_row(acc, genes)
+    row["geo_loc_name"] = place if place is not None else "NULL"
+    row["collection_date"] = date if date is not None else "NULL"
+    return row
+
+
+def _filtered_input(
+    *,
+    places: list[str] | None = None,
+    year_min: int | None = None,
+    year_max: int | None = None,
+    prefixes: list[str] | None = None,
+) -> PathogenDetectionInput:
+    payload: dict[str, Any] = {
+        "mode": "isolate_search",
+        "taxon": "Escherichia_coli_Shigella",
+        "amr_gene_prefixes": prefixes or ["blaKPC"],
+        "max_isolates": 50,
+    }
+    if places is not None:
+        payload["location_names"] = places
+    if year_min is not None:
+        payload["collection_year_min"] = year_min
+    if year_max is not None:
+        payload["collection_year_max"] = year_max
+    return PathogenDetectionInput.model_validate(payload)
+
+
+async def _run_filtered(
+    monkeypatch: pytest.MonkeyPatch,
+    table: list[dict[str, str]],
+    action: PathogenDetectionInput,
+    *,
+    cut_after: int | None = None,
+) -> Any:
+    _install_snapshot(monkeypatch)
+    _install_predicate_scan(monkeypatch, table, cut_after=cut_after)
+    return await pathogen_detection(action)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("asked", "other_country_cell"),
+    [
+        ("Guinea", "Guinea-Bissau: Bissau"),
+        ("Netherlands", "Netherlands Antilles"),
+        ("Serbia", "Serbia and Montenegro"),
+    ],
+)
+async def test_a_place_matches_whole_names_only_so_guinea_never_brings_guinea_bissau(
+    monkeypatch: pytest.MonkeyPatch, asked: str, other_country_cell: str
+) -> None:
+    """J-20-01, A-20-02. A place filter equals the country, never starts with it."""
+    table = [
+        _filter_row("SAMN00000001", asked, "2021-01-01"),
+        _filter_row("SAMN00000002", other_country_cell, "2021-01-01"),
+        _filter_row("SAMN00000003", f"{asked}: Somewhere", "2021-01-01"),
+    ]
+    output = await _run_filtered(monkeypatch, table, _filtered_input(places=[asked]))
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001", "SAMN00000003"]
+    assert output.filter_report.place_applied is True
+    assert output.filter_report.place_countries == [], "one country matched, nothing to disclose"
+
+
+@pytest.mark.asyncio
+async def test_a_year_filter_counts_the_isolates_it_left_out_for_having_no_readable_date(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """J-20-02, J-20-10, A-20-04. Missing, placeholder, range-crossing and
+    unrecognised dates never pass a year filter and are all counted."""
+    table = [
+        _filter_row("SAMN00000001", "USA: AZ", "2021-05-04"),  # in
+        _filter_row("SAMN00000002", "USA: AZ", "2018"),  # out, not counted as left out
+        _filter_row("SAMN00000003", "USA: AZ", None),  # left out
+        _filter_row("SAMN00000004", "USA: AZ", "missing"),  # left out
+        _filter_row("SAMN00000005", "USA: AZ", "2019/2021"),  # crosses 2020: left out
+        _filter_row("SAMN00000006", "USA: AZ", "2020/2021"),  # whole range inside: in
+        _filter_row("SAMN00000007", "USA: AZ", "Oct-2020"),  # unrecognised: left out
+        _filter_row("SAMN00000008", "Canada", None),  # other place: not this answer's
+    ]
+    output = await _run_filtered(
+        monkeypatch, table, _filtered_input(places=["USA"], year_min=2020)
+    )
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001", "SAMN00000006"]
+    assert output.total_available == 2
+    assert output.filter_report.left_out_no_year == 4
+    assert output.filter_report.year_min == 2020 and output.filter_report.year_max is None
+
+
+@pytest.mark.asyncio
+async def test_a_place_the_file_does_not_hold_is_not_applied_and_the_list_is_the_unfiltered_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """J-20-09, J-20-11. The report says the place was not applied, the rows
+    are those the genes (and year) give with no place test, and the file's own
+    places are offered. The year range still applies."""
+    table = [
+        _filter_row("SAMN00000001", "USA: AZ", "2021"),
+        _filter_row("SAMN00000002", "Canada", "2022"),
+        _filter_row("SAMN00000003", "Canada", "2010"),  # year out
+        _filter_row("SAMN00000004", "USA: AZ", None),  # left out for no date
+    ]
+    output = await _run_filtered(
+        monkeypatch, table, _filtered_input(places=["Atlantis"], year_min=2020)
+    )
+    report = output.filter_report
+    assert report.place_applied is False
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001", "SAMN00000002"]
+    assert output.total_available == 2
+    assert report.left_out_no_year == 1
+    assert set(report.file_places_example) == {"USA", "Canada"}
+
+
+@pytest.mark.asyncio
+async def test_a_place_cannot_be_called_missing_from_a_file_that_was_not_read_to_the_end(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A deadline-cut scan cannot say the place is absent: it is not applied,
+    nothing is shown as filtered, and no list is passed off as complete."""
+    table = [_filter_row("SAMN00000001", "Canada", "2021"), _filter_row("SAMN00000002", "USA", "2021")]
+    output = await _run_filtered(
+        monkeypatch, table, _filtered_input(places=["USA"]), cut_after=1
+    )
+    assert output.status == "timeout"
+    assert output.scan_complete is False
+
+
+@pytest.mark.asyncio
+async def test_a_legacy_and_a_current_spelling_both_match_when_both_are_asked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-20-03, A-20-06. The file holds both spellings of some countries; the
+    caller sends both and each is matched on whole names."""
+    table = [
+        _filter_row("SAMN00000001", "Czech Republic", "2021"),
+        _filter_row("SAMN00000002", "Czechia", "2021"),
+        _filter_row("SAMN00000003", "Czech", "2021"),
+    ]
+    output = await _run_filtered(
+        monkeypatch, table, _filtered_input(places=["Czechia", "Czech Republic"])
+    )
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001", "SAMN00000002"]
+    assert sorted(output.filter_report.place_spellings_matched) == ["Czech Republic", "Czechia"]
+
+
+@pytest.mark.asyncio
+async def test_a_place_name_that_is_a_country_and_a_region_elsewhere_discloses_both(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """J-20-08. "Georgia" is a country and a US state; both are counted, and
+    the report names the countries so the answer can say so."""
+    table = [
+        _filter_row("SAMN00000001", "Georgia", "2021"),
+        _filter_row("SAMN00000002", "USA: Georgia", "2021"),
+        _filter_row("SAMN00000003", "USA: Texas", "2021"),
+    ]
+    output = await _run_filtered(monkeypatch, table, _filtered_input(places=["Georgia"]))
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001", "SAMN00000002"]
+    assert sorted(output.filter_report.place_countries) == ["Georgia: 1", "USA: 1"]
+
+
+@pytest.mark.asyncio
+async def test_no_filter_leaves_the_search_exactly_as_it_was(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The control: no place, no year, no report, the same rows."""
+    table = [_filter_row("SAMN00000001", "USA", None), _filter_row("SAMN00000002", None, None)]
+    output = await _run_filtered(monkeypatch, table, _filtered_input())
+    assert output.filter_report is None
+    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001", "SAMN00000002"]
+
+
+def test_a_year_range_whose_ends_are_reversed_is_refused_at_construction() -> None:
+    with pytest.raises(ValueError, match="must not exceed"):
+        _filtered_input(year_min=2022, year_max=2020)

@@ -249,8 +249,10 @@ from __future__ import annotations
 import hashlib
 import re
 import time
+from collections import Counter
 from collections.abc import Callable, Sequence
-from typing import Final
+from dataclasses import dataclass, field
+from typing import Final, Literal
 from urllib.parse import quote
 
 import httpx
@@ -261,6 +263,7 @@ from system_03_search_agent.tools import pathogen_ftp_transport
 from system_03_search_agent.tools.pathogen_detection_schemas import (
     PATHOGEN_SOURCE_URL_PATTERN,
     PATHOGEN_TAXON_PATTERN,
+    IsolateFilterReport,
     PathogenClusterSnpNeighborsInput,
     PathogenDetectionInput,
     PathogenDetectionOutput,
@@ -547,6 +550,185 @@ def _amr_prefix_predicate(prefixes: Sequence[str]) -> Callable[[dict[str, str]],
         return False
 
     return _row_carries_a_named_gene
+
+
+# ---------------------------------------------------------------------------
+# Card 20 (2026-10-16): narrowing an isolate search by place and collection year.
+# ---------------------------------------------------------------------------
+
+# Values a collection_date cell takes when the submitter gave none. None of
+# these, and no unparseable value, ever satisfies a year filter: a missing
+# date is not evidence an isolate falls in any range. Such rows are COUNTED
+# (`_IsolateFilterTally.left_out_no_year`) so the answer can say how many were
+# left out.
+_MISSING_DATE_TOKENS: Final[frozenset[str]] = frozenset(
+    {"missing", "not collected", "not applicable", "na", "unknown", "not provided"}
+)
+
+# One date in a collection_date cell: a bare year, year-month or full date.
+_ONE_DATE: Final[str] = r"(\d{4})(?:-\d{2}(?:-\d{2})?)?"
+_COLLECTION_DATE_PATTERN: Final[re.Pattern[str]] = re.compile(
+    rf"^{_ONE_DATE}(?:/{_ONE_DATE})?$"
+)
+
+# The most distinct countries the tally remembers, so a hostile file cannot
+# grow it without bound.
+_MAX_TALLIED_PLACES: Final[int] = 500
+
+
+def _collection_year_span(raw: str | None) -> tuple[int, int] | None:
+    """The first and last year a collection_date cell can mean, or None when
+    it is missing or unreadable.
+
+    A bare year, year-month or full date is one year. A range written
+    `2019/2020` or `2019-12/2020-02` spans its two ends. Nothing else is read:
+    a value this does not recognise returns None and is counted as left out,
+    never guessed.
+    """
+    if raw is None:
+        return None
+    value = raw.strip()
+    if not value or value.upper() == "NULL" or value.casefold() in _MISSING_DATE_TOKENS:
+        return None
+    match = _COLLECTION_DATE_PATTERN.match(value)
+    if match is None:
+        return None
+    first = int(match.group(1))
+    last = int(match.group(2)) if match.group(2) is not None else first
+    if first > last or first < 1900 or last > 2100:
+        return None
+    return first, last
+
+
+def _year_verdict(
+    raw: str | None, year_min: int | None, year_max: int | None
+) -> Literal["in", "out", "unreadable"]:
+    """Whether a row's collection date lies inside the asked range.
+
+    "unreadable" covers a missing date, an unrecognised one and a range that
+    crosses a bound: none of them can be said to be inside or outside.
+    """
+    span = _collection_year_span(raw)
+    if span is None:
+        return "unreadable"
+    first, last = span
+    below = year_min is not None and last < year_min
+    above = year_max is not None and first > year_max
+    if below or above:
+        return "out"
+    inside_low = year_min is None or first >= year_min
+    inside_high = year_max is None or last <= year_max
+    return "in" if inside_low and inside_high else "unreadable"
+
+
+def _place_parts(geo_loc_name: str | None) -> tuple[str, frozenset[str]] | None:
+    """The country of a geo_loc_name cell as written, and the case-folded
+    names of its parts after the colon, or None when the cell holds no place.
+
+    `USA: Houston, Texas` is country `USA` with parts `houston` and `texas`.
+    A country name is kept whole (`Korea, South` has no colon, so it is one
+    country), never split on its comma.
+    """
+    if geo_loc_name is None:
+        return None
+    value = geo_loc_name.strip()
+    if not value or value.upper() == "NULL":
+        return None
+    head, _, tail = value.partition(":")
+    country = head.strip()
+    if not country:
+        return None
+    parts = frozenset(
+        piece.strip().casefold() for piece in re.split(r"[,:;]", tail) if piece.strip()
+    )
+    return country, parts
+
+
+def _bump(counter: Counter[str], key: str) -> None:
+    """Count `key`, refusing a NEW key once the counter is full."""
+    if key in counter or len(counter) < _MAX_TALLIED_PLACES:
+        counter[key] += 1
+
+
+@dataclass
+class _IsolateFilterTally:
+    """What the scan learned about the place and year filters on the way.
+
+    Filled by the row predicate. `gene_countries` counts, per country, every
+    row carrying the genes (the example places when a place is not found).
+    `fallback_*` follow the rows that would have been accepted WITHOUT the
+    place test, so a place the file does not hold can be dropped and the
+    list still be the right one.
+    """
+
+    gene_countries: Counter[str] = field(default_factory=Counter)
+    spelling_hits: Counter[str] = field(default_factory=Counter)
+    matched_countries: Counter[str] = field(default_factory=Counter)
+    place_rows: int = 0
+    left_out_no_year: int = 0
+    fallback_rows: list[dict[str, str]] = field(default_factory=list)
+    fallback_count: int = 0
+    fallback_left_out_no_year: int = 0
+
+
+def _isolate_search_predicate(
+    prefixes: Sequence[str],
+    *,
+    location_names: Sequence[str] | None,
+    year_min: int | None,
+    year_max: int | None,
+    tally: _IsolateFilterTally,
+    fallback_cap: int,
+) -> Callable[[dict[str, str]], bool]:
+    """The row predicate `isolate_search` hands to the transport: the gene
+    test every call makes, ANDed with a whole-name place test and a year range
+    when those are set, and filling `tally` as it goes.
+
+    With neither filter set it is exactly `_amr_prefix_predicate`: the tally
+    is never touched and nothing else runs.
+    """
+    gene_matches = _amr_prefix_predicate(prefixes)
+    if not location_names and year_min is None and year_max is None:
+        return gene_matches
+    spellings = tuple(dict.fromkeys(name.strip().casefold() for name in (location_names or ()) if name.strip()))
+    year_set = year_min is not None or year_max is not None
+
+    def _row_matches(row: dict[str, str]) -> bool:
+        if not gene_matches(row):
+            return False
+        parts = _place_parts(_first_present(row, _GEO_COLUMN_CANDIDATES))
+        place_ok = True
+        if spellings:
+            hits: list[str] = []
+            if parts is not None:
+                _bump(tally.gene_countries, parts[0])
+                country_folded = parts[0].casefold()
+                hits = [s for s in spellings if s == country_folded or s in parts[1]]
+            place_ok = bool(hits)
+            if place_ok and parts is not None:
+                for spelling in hits:
+                    tally.spelling_hits[spelling] += 1
+                tally.place_rows += 1
+                _bump(tally.matched_countries, parts[0])
+        verdict = (
+            _year_verdict(
+                _first_present(row, _COLLECTION_DATE_COLUMN_CANDIDATES), year_min, year_max
+            )
+            if year_set
+            else "in"
+        )
+        if spellings:
+            if verdict == "in":
+                tally.fallback_count += 1
+                if len(tally.fallback_rows) < fallback_cap:
+                    tally.fallback_rows.append(row)
+            elif verdict == "unreadable":
+                tally.fallback_left_out_no_year += 1
+        if place_ok and verdict == "unreadable":
+            tally.left_out_no_year += 1
+        return place_ok and verdict == "in"
+
+    return _row_matches
 
 
 def _build_isolate(
@@ -1206,14 +1388,69 @@ def _isolate_search_timeout_output(
         scan_complete=False,
         error=_cap(
             f"pathogen_detection's {_TOTAL_BUDGET_S:.0f}s shared wall-clock budget ran "
-            f"out while scanning {taxon}'s isolate metadata, after reading "
-            f"{rows_scanned} row(s), and no isolate carrying one of the named genes had "
+            f"out while scanning {taxon}'s isolate metadata{_filters_applied_clause(action)}, "
+            f"after reading {rows_scanned} row(s), and no isolate carrying one of the named genes had "
             "been found in the portion scanned. This does NOT mean none exists: the "
             "scan never reached the end of the file. A shorter gene list would not "
             "help, since the cost is the file's size rather than the query's "
             "specificity; retrying may land on a faster network path.",
             _MAX_ERROR_CHARS,
         ),
+    )
+
+
+def _filters_applied_clause(action: PathogenIsolateSearchInput) -> str:
+    """" (filtered to place X, collected 2020 or later)", or "" with no filter.
+
+    Names what the scan was testing so the tool's own messages never imply an
+    unfiltered search.
+    """
+    parts: list[str] = []
+    if action.location_names:
+        parts.append("place " + " or ".join(repr(name) for name in action.location_names))
+    low, high = action.collection_year_min, action.collection_year_max
+    if low is not None and high is not None:
+        parts.append(f"collected {low}" if low == high else f"collected {low} to {high}")
+    elif low is not None:
+        parts.append(f"collected {low} or later")
+    elif high is not None:
+        parts.append(f"collected {high} or earlier")
+    if not parts:
+        return ""
+    return " (filtered to " + ", ".join(parts) + ")"
+
+
+def _filter_report(
+    action: PathogenIsolateSearchInput,
+    tally: _IsolateFilterTally,
+    *,
+    place_applied: bool | None,
+    left_out_no_year: int,
+) -> IsolateFilterReport | None:
+    """The report of what the filters did, or None when none was asked for."""
+    if not action.location_names and action.collection_year_min is None and action.collection_year_max is None:
+        return None
+    matched_countries: list[str] = []
+    file_places: list[str] = []
+    spellings_matched: list[str] = []
+    if action.location_names:
+        asked = {name.strip().casefold(): name.strip() for name in action.location_names}
+        spellings_matched = [asked[k] for k, _ in tally.spelling_hits.most_common() if k in asked]
+        if place_applied and len(tally.matched_countries) > 1:
+            matched_countries = [
+                f"{country}: {count}" for country, count in tally.matched_countries.most_common(5)
+            ]
+        if place_applied is False:
+            file_places = [country for country, _ in tally.gene_countries.most_common(5)]
+    return IsolateFilterReport(
+        place_requested=[name.strip() for name in action.location_names or []],
+        place_applied=place_applied,
+        place_spellings_matched=spellings_matched,
+        place_countries=matched_countries,
+        file_places_example=file_places,
+        year_min=action.collection_year_min,
+        year_max=action.collection_year_max,
+        left_out_no_year=left_out_no_year,
     )
 
 
@@ -1248,10 +1485,18 @@ async def _isolate_search(
     if _remaining(deadline) <= 0:
         return _isolate_search_timeout_output(action, taxon, snapshot=snapshot, rows_scanned=0)
 
+    tally = _IsolateFilterTally()
     try:
         scan = await pathogen_ftp_transport.stream_predicate_tsv_rows(
             _metadata_url(taxon, snapshot),
-            predicate=_amr_prefix_predicate(action.amr_gene_prefixes),
+            predicate=_isolate_search_predicate(
+                action.amr_gene_prefixes,
+                location_names=action.location_names,
+                year_min=action.collection_year_min,
+                year_max=action.collection_year_max,
+                tally=tally,
+                fallback_cap=min(action.max_isolates, _MAX_ISOLATES),
+            ),
             deadline=deadline,
             client=client,
             max_rows=min(action.max_isolates, _MAX_ISOLATES),
@@ -1263,9 +1508,29 @@ async def _isolate_search(
             action.mode, "isolate_search metadata scan", exc, snapshot=snapshot
         )
 
+    # Card 20: a place the file does not hold. Only a scan that reached the
+    # end of the file can say so (a cut scan may simply not have got there).
+    # Then the place is NOT applied: the list is the one the genes (and year
+    # range) give with no place test, and the report says so.
+    place_applied: bool | None = None
+    match_count = scan.match_count
+    kept_rows = scan.rows
+    left_out_no_year = tally.left_out_no_year
+    if action.location_names:
+        if tally.place_rows > 0:
+            place_applied = True
+        elif scan.reached_end:
+            place_applied = False
+            match_count = tally.fallback_count
+            kept_rows = tally.fallback_rows
+            left_out_no_year = tally.fallback_left_out_no_year
+    report = _filter_report(
+        action, tally, place_applied=place_applied, left_out_no_year=left_out_no_year
+    )
+
     isolates: list[PathogenIsolate] = []
     withheld_all: list[str] = []
-    for row in scan.rows[: action.max_isolates]:
+    for row in kept_rows[: action.max_isolates]:
         isolate, withheld = _build_isolate(row, cluster_id_override=None, snp_distance=None)
         withheld_all.extend(withheld)
         if isolate is not None:
@@ -1276,7 +1541,7 @@ async def _isolate_search(
     # cut the scan, and `scan_complete` is what says so. The `max` guards
     # the impossible case of keeping more rows than were counted rather
     # than shipping a total smaller than the sample sitting beside it.
-    total_available = max(scan.match_count, len(isolates))
+    total_available = max(match_count, len(isolates))
     truncated = len(isolates) < total_available or not scan.reached_end
     fields_withheld = _cap_fields_withheld(withheld_all) if withheld_all else None
 
@@ -1291,16 +1556,18 @@ async def _isolate_search(
             truncated=truncated,
             rows_scanned=scan.total_rows_scanned,
             scan_complete=scan.reached_end,
+            filter_report=report,
             fields_withheld=fields_withheld,
         )
 
-    if scan.match_count == 0 and not scan.reached_end:
+    if match_count == 0 and not scan.reached_end:
         return _isolate_search_timeout_output(
             action, taxon, snapshot=snapshot, rows_scanned=scan.total_rows_scanned
         )
 
-    if scan.match_count == 0:
+    if match_count == 0:
         gene_list = ", ".join(action.amr_gene_prefixes)
+        filters_clause = _filters_applied_clause(action)
         return PathogenDetectionOutput(
             status="empty",
             mode=action.mode,
@@ -1312,10 +1579,12 @@ async def _isolate_search(
             scan_complete=True,
             error=_cap(
                 f"None of the {scan.total_rows_scanned} {taxon} isolates in this "
-                f"snapshot carries a gene named {gene_list}. The whole file was read, "
-                "so this is an exact answer rather than a scan that ran out of time.",
+                f"snapshot{filters_clause} carries a gene named {gene_list}. The whole "
+                "file was read, so this is an exact answer rather than a scan that ran "
+                "out of time.",
                 _MAX_ERROR_CHARS,
             ),
+            filter_report=report,
             fields_withheld=fields_withheld,
         )
 
@@ -1333,6 +1602,7 @@ async def _isolate_search(
         truncated=True,
         rows_scanned=scan.total_rows_scanned,
         scan_complete=scan.reached_end,
+        filter_report=report,
         error=_cap(
             f"{total_available} {taxon} isolate(s) carry one of the named genes, but "
             "none of the rows read could be shown: each was missing the BioSample "

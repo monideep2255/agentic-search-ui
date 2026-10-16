@@ -142,7 +142,7 @@ from __future__ import annotations
 import re
 from typing import Annotated, Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field, RootModel, model_validator
 
 # Design decision 2: ASCII letters, digits, underscore, hyphen only, no
 # path separators, no leading digit-only ambiguity avoided by requiring an
@@ -158,6 +158,13 @@ PATHOGEN_TAXON_PATTERN: Final = r"^[A-Za-z][A-Za-z0-9_-]{0,49}$"
 # Section 6.6 line ~1339 (the output schema's `isolates[].source_url`
 # property), copied verbatim.
 PATHOGEN_SOURCE_URL_PATTERN: Final = r"^https://(www\.)?ncbi\.nlm\.nih\.gov/pathogens/"
+
+# The shape of a place name on the `isolate_search` branch (card 20, design
+# decision 6): letters, digits, spaces and the punctuation a real INSDC
+# `geo_loc_name` place uses (`Cote d'Ivoire`, `Korea, South`). Compared to the
+# file's own text with a plain case-folded whole-name check, never compiled as
+# a regular expression.
+PATHOGEN_LOCATION_PATTERN: Final = r"^[A-Za-z][A-Za-z0-9 ,'.\-]*$"
 
 # The shape of one AMR gene-name prefix on the `isolate_search` branch
 # (design decision 5). ASCII letters, digits, underscore, parentheses,
@@ -275,6 +282,46 @@ class PathogenIsolateSearchInput(BaseModel):
         Field(min_length=1, max_length=10),
     ]
     max_isolates: Annotated[int, Field(ge=1, le=100)] = 20
+    # Design decision 6 (card 20, 2026-10-16). All optional and None by
+    # default, so every construction site that predates them validates
+    # unchanged. The tool matches a place on WHOLE names only: a spelling
+    # equals the cell's country (the text before the first colon) or one of
+    # its parts after the colon, case-folded, so `Guinea` never matches
+    # `Guinea-Bissau`. A row with no readable collection year never matches a
+    # year filter and is COUNTED as left out (`IsolateFilterReport`).
+    location_names: Annotated[
+        list[
+            Annotated[
+                str,
+                Field(min_length=1, max_length=100, pattern=PATHOGEN_LOCATION_PATTERN),
+            ]
+        ]
+        | None,
+        Field(
+            default=None,
+            min_length=1,
+            max_length=3,
+            description=(
+                "Spellings of ONE place, each matched on whole names against the "
+                "geo_loc_name cell. The file's own spelling is checked, never a synonym."
+            ),
+        ),
+    ] = None
+    collection_year_min: Annotated[int | None, Field(default=None, ge=1900, le=2100)] = None
+    collection_year_max: Annotated[int | None, Field(default=None, ge=1900, le=2100)] = None
+
+    @model_validator(mode="after")
+    def _year_range_is_sane(self) -> PathogenIsolateSearchInput:
+        if (
+            self.collection_year_min is not None
+            and self.collection_year_max is not None
+            and self.collection_year_min > self.collection_year_max
+        ):
+            raise ValueError(
+                f"collection_year_min ({self.collection_year_min}) must not exceed "
+                f"collection_year_max ({self.collection_year_max})"
+            )
+        return self
 
 
 _PathogenActionUnion = (
@@ -349,6 +396,50 @@ class PathogenIsolate(BaseModel):
         str | None,
         Field(default=None, max_length=300, pattern=PATHOGEN_SOURCE_URL_PATTERN),
     ] = None
+
+
+class IsolateFilterReport(BaseModel):
+    """What an `isolate_search` with a place and/or a year range actually did
+    (card 20). Present only when a filter was asked for.
+
+    Every number is counted over the rows the scan read, so each is exact
+    when `scan_complete` is True and a lower bound otherwise.
+
+    - `place_applied`: the place matched at least one isolate carrying the
+      genes, so the narrowed list is what was returned. False: no row's
+      location holds the place, the place was NOT applied and the list is the
+      one without it (the year range, if any, still applies).
+    - `place_spellings_matched`: the spellings, as the file holds them, that
+      matched at least one row.
+    - `place_countries`: "Country: count" for the countries the matched rows
+      belong to, set only when they span more than one (a place name that is
+      also a region elsewhere, such as Georgia).
+    - `file_places_example`: the most common countries among the isolates
+      with these genes, set only when the place was not applied, so the
+      answer can say what to type instead.
+    - `left_out_no_year`: isolates that satisfy the gene and place tests and
+      were left out of the year filter because their collection date is
+      missing, unreadable, or a range crossing the cutoff.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    place_requested: Annotated[
+        list[Annotated[str, Field(max_length=100)]], Field(default_factory=list, max_length=3)
+    ] = Field(default_factory=list)
+    place_applied: bool | None = None
+    place_spellings_matched: Annotated[
+        list[Annotated[str, Field(max_length=100)]], Field(default_factory=list, max_length=3)
+    ] = Field(default_factory=list)
+    place_countries: Annotated[
+        list[Annotated[str, Field(max_length=120)]], Field(default_factory=list, max_length=5)
+    ] = Field(default_factory=list)
+    file_places_example: Annotated[
+        list[Annotated[str, Field(max_length=100)]], Field(default_factory=list, max_length=5)
+    ] = Field(default_factory=list)
+    year_min: Annotated[int | None, Field(default=None, ge=1900, le=2100)] = None
+    year_max: Annotated[int | None, Field(default=None, ge=1900, le=2100)] = None
+    left_out_no_year: Annotated[int, Field(ge=0)] = 0
 
 
 class PathogenDetectionOutput(BaseModel):
@@ -428,6 +519,7 @@ class PathogenDetectionOutput(BaseModel):
         ),
     ] = None
     error: Annotated[str | None, Field(default=None, max_length=500)] = None
+    filter_report: IsolateFilterReport | None = None
     fields_withheld: Annotated[
         list[Annotated[str, Field(max_length=150)]] | None,
         Field(
@@ -567,6 +659,15 @@ for _sample in _AMR_PREFIX_REJECT_SAMPLES:
         f"PATHOGEN_AMR_PREFIX_PATTERN wrongly accepts an unsafe prefix: {_sample!r}"
     )
 del _sample
+
+for _sample in ("USA", "United Kingdom", "Korea, South", "Cote d'Ivoire", "Guinea-Bissau"):
+    assert re.fullmatch(PATHOGEN_LOCATION_PATTERN, _sample) is not None, (
+        f"PATHOGEN_LOCATION_PATTERN wrongly rejects a real place name: {_sample!r}"
+    )
+for _sample in ("USA*", "USA;x", "USA/../etc", "1USA", "USA\n", ""):
+    assert re.fullmatch(PATHOGEN_LOCATION_PATTERN, _sample) is None, (
+        f"PATHOGEN_LOCATION_PATTERN wrongly accepts an unsafe place value: {_sample!r}"
+    )
 
 for _sample in _SOURCE_URL_ACCEPT_SAMPLES:
     assert re.match(PATHOGEN_SOURCE_URL_PATTERN, _sample) is not None, (
