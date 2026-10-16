@@ -602,6 +602,22 @@ What you should see:
 - Known: when the question is understood as a plain lookup, a PubMed search for the words of the question can still replace the two records (the same happens today for `What is PMID 11237011?`). This card does not change that.
 - Why it matters: a person who types two paper ids wants those two papers, not a graph query a model wrote that finishes about nine times in ten.
 
+### 116. Whether a paper mentions a gene is checked in the graph (card 15)
+
+Queries to try:
+
+- `Does PMID 10026184 discuss BRCA1?`
+- `Does PMID 11237011 discuss BRCA1?`
+
+What you should see:
+
+- For the first, the paper is the first record in the answer, cited to its PubMed page, because the graph links BRCA1 to it.
+- For the second, the graph holds no link between BRCA1 and that paper, so no paper record is shown for it, and the answer never says the paper does not discuss BRCA1. The graph can only say it holds no link, and the answer does not claim more.
+- The second answer carries the note that it does not address PMID 11237011, and then BRCA1 records from other databases, as before this card.
+- Both answers come back the same way every time. Before this card, the search for the second question was written by a model and one run in five ended in an error.
+- Known: the second answer does not yet say in one plain sentence that the graph shows no link between the paper and the gene.
+- Why it matters: a yes backed by a cited paper is useful, and a no that sounds sure when it only means "not in the graph" would be a confident wrong answer.
+
 ## 4. Chromosome windows and accessions
 
 ### 26. A copy number variant window, before the coordinate range feature
@@ -2065,6 +2081,7 @@ Every feature accounted for, in three tables:
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
 | card 15, papers named | Two papers named by PubMed id are shown as two cited records from a checked graph search | Query 115 |
+| card 15, gene in a paper | A question asking whether one paper discusses one gene shows the paper when the graph links them, and never says the paper does not discuss the gene when it does not | Query 116 |
 | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
 | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
 | card 35 | An off-topic follow-up that contains a word such as "cell" or "study" is checked for topic like any other question | Query 111 |

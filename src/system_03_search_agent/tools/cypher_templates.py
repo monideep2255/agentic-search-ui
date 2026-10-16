@@ -767,6 +767,13 @@ def _article_links_template(article_param: str) -> CypherTemplate:
 # --------------------------------------------------------------------------
 
 SHAPE_PAPERS_NAMED: Final[str] = "papers_named"
+SHAPE_GENE_IN_PAPER: Final[str] = "gene_in_paper"
+
+# `mentioned_in`, Gene to Article, anchored inline at BOTH ends. Walked from
+# the gene end only (a gene with thousands of papers takes about 3.5 s);
+# the Article end timed out at 30 s for a paper (see `_article_links_template`).
+_GENE_ARTICLE_EDGE: Final[str] = "mentioned_in"
+_assert_hop_documented(_GENE_ARTICLE_EDGE, "Gene", "Article")
 
 # The most identifiers of one kind a shape accepts; a longer list is a
 # different question (a set the person did not type one by one).
@@ -789,6 +796,22 @@ def _params_by_label(entity_bindings: dict[str, str]) -> dict[str, list[str]] | 
     return grouped
 
 
+def _gene_article_link_template(gene_param: str, article_param: str) -> CypherTemplate:
+    """Whether the graph links one named gene to one named paper: one Article
+    row, or none. None is the graph's "no such link", never a statement
+    about what the paper discusses."""
+    return CypherTemplate(
+        name="gene_article_link",
+        cypher=(
+            f"MATCH ({_ANCHOR_VAR}:Gene {{id: ${gene_param}}})"
+            f"-[:{_GENE_ARTICLE_EDGE}]->"
+            f"({_OTHER_VAR}:Article {{id: ${article_param}}}) "
+            f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
+        ),
+        edge_label=_GENE_ARTICLE_EDGE,
+    )
+
+
 def possible_graph_shapes(entity_bindings: dict[str, str]) -> list[str]:
     """The checked shapes the bound identifiers make structurally possible,
     from their prefixes and counts alone. Empty for most questions."""
@@ -799,6 +822,8 @@ def possible_graph_shapes(entity_bindings: dict[str, str]) -> list[str]:
     articles = grouped.get("Article", [])
     if set(grouped) == {"Article"} and 2 <= len(articles) <= MAX_SHAPE_IDENTIFIERS:
         shapes.append(SHAPE_PAPERS_NAMED)
+    if set(grouped) == {"Gene", "Article"} and len(grouped["Gene"]) == 1 and len(articles) == 1:
+        shapes.append(SHAPE_GENE_IN_PAPER)
     return shapes
 
 
@@ -813,6 +838,8 @@ def graph_shape_template(
     grouped = _params_by_label(entity_bindings) or {}
     if shape == SHAPE_PAPERS_NAMED:
         return _record_template("Article", grouped["Article"])
+    if shape == SHAPE_GENE_IN_PAPER:
+        return _gene_article_link_template(grouped["Gene"][0], grouped["Article"][0])
     return None
 
 
@@ -958,6 +985,7 @@ def all_template_examples() -> list[CypherTemplate]:
         examples.append(_hop_template(shape, hop, anchor, many, count=False))
         examples.append(_hop_template(shape, hop, anchor, one, count=True))
     examples.append(_article_links_template("e_one"))
+    examples.append(_gene_article_link_template("e_one", "e_two"))
     for anchor in _SHAPES_BY_ANCHOR:
         examples.append(_record_template(anchor, one))
         examples.append(_record_template(anchor, many))

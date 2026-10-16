@@ -9,6 +9,8 @@ Mutations each arm was shown to fail under (restored after each):
 
 - Papers named: making `possible_graph_shapes` accept one paper turned the
   count arm red.
+- Gene in a paper: swapping the template's edge direction turned the
+  template-text arm red.
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ from system_03_search_agent.tools.cypher_query import (
 )
 from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
 from system_03_search_agent.tools.cypher_templates import (
+    SHAPE_GENE_IN_PAPER,
     SHAPE_PAPERS_NAMED,
     graph_shape_template,
     possible_graph_shapes,
@@ -163,3 +166,100 @@ async def test_a_forced_papers_template_returns_each_paper_cited_and_writes_no_q
     assert [row.curie for row in output.rows] == [PMID_A, PMID_B]
     assert all(row.source_url.startswith("https://pubmed.ncbi.nlm.nih.gov/") for row in output.rows)
     assert executed[0][1] == bindings
+
+
+# ---------------------------------------------------------------------------
+# Gene in a paper
+# ---------------------------------------------------------------------------
+
+LINKED_PAPER = "PMID:10026184"
+
+
+@pytest.mark.parametrize(
+    ("curies", "expected"),
+    [
+        ([BRCA1, PMID_A], [SHAPE_GENE_IN_PAPER]),
+        ([PMID_A, BRCA1], [SHAPE_GENE_IN_PAPER]),
+        ([BRCA1, "NCBIGene:675", PMID_A], []),
+        ([BRCA1, PMID_A, PMID_B], []),
+        ([BRCA1], []),
+        ([BRCA1, PMID_A, "MedGen:C0346153"], []),
+    ],
+)
+def test_gene_in_paper_is_possible_only_for_one_gene_and_one_paper_and_nothing_else(
+    curies: list[str], expected: list[str]
+) -> None:
+    assert possible_graph_shapes(_bindings(*curies)) == expected
+
+
+def test_the_gene_in_paper_template_anchors_both_ends_inline_from_the_gene_end() -> None:
+    bindings = _bindings(BRCA1, PMID_A)
+    template = graph_shape_template(SHAPE_GENE_IN_PAPER, bindings)
+    assert template is not None
+    assert template.name == "gene_article_link"
+    assert template.edge_label == "mentioned_in"
+    assert template.cypher == (
+        "MATCH (a:Gene {id: $e_NCBIGene_672})-[:mentioned_in]->"
+        "(x:Article {id: $e_PMID_11237011}) RETURN x ORDER BY x.id"
+    )
+    _assert_checked(template.cypher, bindings)
+
+
+def test_develop_has_no_template_for_a_gene_and_a_paper() -> None:
+    intent = CypherQueryInput(
+        query_intent="Does PMID 11237011 discuss BRCA1?",
+        query_class="single_hop",
+        target_entities=[BRCA1, PMID_A],
+    )
+    assert select_template(intent, _bindings(BRCA1, PMID_A)) is None
+
+
+@pytest.mark.asyncio
+async def test_an_unlinked_gene_and_paper_return_no_row_and_no_claim_about_the_paper(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The graph can say it holds no link. It cannot say what the paper discusses."""
+    monkeypatch.setattr(
+        cypher_query_module, "execute_cypher", lambda *a, **k: ([], 0)
+    )
+    bindings = _bindings(BRCA1, PMID_A)
+    output = await cypher_query(
+        _RefusingHarness(),
+        CypherQueryInput(
+            query_intent="Does PMID 11237011 discuss BRCA1?",
+            query_class="single_hop",
+            target_entities=[BRCA1, PMID_A],
+        ),
+        template=graph_shape_template(SHAPE_GENE_IN_PAPER, bindings),
+    )
+    assert output.template == "gene_article_link"
+    assert output.status == "empty"
+    assert output.rows == []
+    assert output.error is None
+
+
+@pytest.mark.asyncio
+async def test_a_linked_gene_and_paper_return_the_paper_cited(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        cypher_query_module,
+        "execute_cypher",
+        lambda *a, **k: (
+            [{"c0": _vertex("Article", LINKED_PAPER, "Mapping BRCA1 domains", "https://pubmed.ncbi.nlm.nih.gov/10026184/")}],
+            1,
+        ),
+    )
+    bindings = _bindings(BRCA1, LINKED_PAPER)
+    output = await cypher_query(
+        _RefusingHarness(),
+        CypherQueryInput(
+            query_intent="Does PMID 10026184 discuss BRCA1?",
+            query_class="single_hop",
+            target_entities=[BRCA1, LINKED_PAPER],
+        ),
+        template=graph_shape_template(SHAPE_GENE_IN_PAPER, bindings),
+    )
+    assert [row.curie for row in output.rows] == [LINKED_PAPER]
+    assert output.rows[0].source_url == "https://pubmed.ncbi.nlm.nih.gov/10026184/"
+    assert {row.traversed_edge_type for row in output.rows} == {"mentioned_in"}

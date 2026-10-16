@@ -224,3 +224,50 @@ async def test_without_a_pick_the_literature_search_is_planned_as_it_is_on_devel
     _stub_decisions(monkeypatch, "none_of_these", literature="wants_literature")
     result = await graph_module.plan_node(_state(TWO_PAPERS, [PMID_A, PMID_B]))
     assert _has_literature_search(result)
+
+
+# ---------------------------------------------------------------------------
+# Gene in a paper
+# ---------------------------------------------------------------------------
+
+GENE_IN_PAPER = "Does PMID 11237011 discuss BRCA1?"
+
+
+@pytest.mark.asyncio
+async def test_a_gene_and_a_paper_ask_the_decision_with_only_their_shape(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked = _stub_decisions(monkeypatch, "gene_in_paper")
+    await graph_module.plan_node(_state(GENE_IN_PAPER, [PMID_A, BRCA1]))
+    assert [a["options"] for a in asked] == [("gene_in_paper", "none_of_these")]
+
+
+@pytest.mark.asyncio
+async def test_a_gene_in_paper_pick_forces_the_checked_link_template(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _stub_decisions(monkeypatch, "gene_in_paper")
+    call = _graph_call(await graph_module.plan_node(_state(GENE_IN_PAPER, [PMID_A, BRCA1])))
+    assert call.template is not None and call.template.name == "gene_article_link"
+    assert call.context_only is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pick", ["none_of_these", None])
+async def test_gene_and_paper_none_of_these_leaves_develops_call_unchanged(
+    monkeypatch: pytest.MonkeyPatch, pick: str | None
+) -> None:
+    develop = await _develop_call(monkeypatch, GENE_IN_PAPER, [PMID_A, BRCA1])
+    asked = _stub_decisions(monkeypatch, pick)
+    call = _graph_call(await graph_module.plan_node(_state(GENE_IN_PAPER, [PMID_A, BRCA1])))
+    assert asked
+    assert call.template is None
+    _same_call_as_develop(call, develop)
+
+
+@pytest.mark.asyncio
+async def test_two_genes_and_a_paper_ask_no_decision(monkeypatch: pytest.MonkeyPatch) -> None:
+    asked = _stub_decisions(monkeypatch, "gene_in_paper")
+    brca2 = EventResolvedEntity(text="BRCA2", curie="NCBIGene:675", confidence=1.0)
+    await graph_module.plan_node(_state(GENE_IN_PAPER, [PMID_A, BRCA1, brca2]))
+    assert asked == []
