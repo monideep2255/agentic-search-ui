@@ -51,6 +51,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from system_03_search_agent.contracts.events import source_page_key
 from system_03_search_agent.synthesis.findings import SynthFinding, render_finding_body
 
 _MARKER = re.compile(r"\[(\d{1,3})\]")
@@ -1471,23 +1472,12 @@ def run_grounding_pass(
     licensed_question = _licensed_question_content(question)
     # Items 12.9 and 12.10: each record's own title and name, keyed by page,
     # so a synthesis may name its subject the way the cited paper names it.
-    labels_by_url: dict[str, str] = {}
-    for labelled in synth_findings:
-        url = (labelled.source_url or "").strip()
-        if url and labelled.field in LABEL_FIELDS:
-            labels_by_url[url] = f"{labels_by_url.get(url, '')} {labelled.field_value}".strip()
+    labels_by_url = record_labels_by_page(synth_findings)
     # Card 88 (2026-10-05): the short forms each record defines in its own
     # retrieved text, keyed by page, so a sentence may name a record by its
     # own abbreviation (`defined_short_forms`). Used by the switch rule only,
     # never to license words in `synthesis_is_supported_by`.
-    text_by_url: dict[str, list[str]] = {}
-    for finding in synth_findings:
-        url = (finding.source_url or "").strip()
-        if url:
-            text_by_url.setdefault(url, []).append(finding.field_value)
-    short_forms_by_url = {
-        url: defined_short_forms(" ".join(values)) for url, values in text_by_url.items()
-    }
+    short_forms_by_url = short_forms_by_page(synth_findings)
 
     surviving_sentences: list[str] = []
     surviving_origins: list[int] = []
@@ -2087,6 +2077,80 @@ def defined_short_forms(text: str) -> dict[str, str]:
     return forms
 
 
+def record_labels_by_page(synth_findings: list[SynthFinding]) -> dict[str, str]:
+    """Each record's own title and name, keyed by page link.
+
+    Items 12.9 and 12.10. One place builds this map, so the switch rule and
+    the card 17 lead-in read the same labels.
+    """
+    labels_by_url: dict[str, str] = {}
+    for labelled in synth_findings:
+        url = (labelled.source_url or "").strip()
+        if url and labelled.field in LABEL_FIELDS:
+            labels_by_url[url] = f"{labels_by_url.get(url, '')} {labelled.field_value}".strip()
+    return labels_by_url
+
+
+def short_forms_by_page(synth_findings: list[SynthFinding]) -> dict[str, dict[str, str]]:
+    """The short forms each record defines in its own text, keyed by page link."""
+    text_by_url: dict[str, list[str]] = {}
+    for finding in synth_findings:
+        url = (finding.source_url or "").strip()
+        if url:
+            text_by_url.setdefault(url, []).append(finding.field_value)
+    return {url: defined_short_forms(" ".join(values)) for url, values in text_by_url.items()}
+
+
+def title_words_shared(sentence: str, labels: str) -> set[str]:
+    """The stemmed content words a sentence shares with a record's title."""
+    if not labels.strip():
+        return set()
+    return _stemmed(content_tokens(sentence)) & _stemmed(content_tokens(labels))
+
+
+def short_form_definers(
+    short_forms_by_url: dict[str, dict[str, str]],
+) -> dict[str, int]:
+    """How many different pages define each short form in their own text.
+
+    Card 17 fix round (J-17-12). A short form that several pages define, such
+    as the name of a disease that five papers are about, does not tell a
+    reader which of those pages a sentence comes from.
+    """
+    pages_by_short: dict[str, set[str]] = {}
+    for url, forms in short_forms_by_url.items():
+        page = source_page_key(url) or url
+        for short in forms:
+            pages_by_short.setdefault(short, set()).add(page)
+    return {short: len(pages) for short, pages in pages_by_short.items()}
+
+
+def names_by_short_form(
+    sentence: str,
+    labels: str,
+    short_forms: dict[str, str] | None = None,
+    definers: dict[str, int] | None = None,
+) -> bool:
+    """Whether a sentence writes a short form its record's own text defines.
+
+    With `definers` (card 17), a short form defined by more than one page
+    does not count: it names no paper alone. Without it, as the switch rule
+    calls it, every defined short form counts.
+    """
+    if not labels.strip():
+        return False
+    title = _stemmed(content_tokens(labels))
+    for short, long_form in (short_forms or {}).items():
+        if definers is not None and definers.get(short, 0) > 1:
+            continue
+        long_stems = _stemmed(content_tokens(long_form))
+        if not long_stems & title:
+            continue
+        if re.search(rf"(?<![A-Za-z0-9]){re.escape(short)}(?![A-Za-z0-9])", sentence):
+            return True
+    return False
+
+
 def _names_its_record(
     sentence: str, labels: str, short_forms: dict[str, str] | None = None
 ) -> bool:
@@ -2113,17 +2177,9 @@ def _names_its_record(
     """
     if not labels.strip():
         return False
-    title = _stemmed(content_tokens(labels))
-    said = _stemmed(content_tokens(sentence))
-    if said & title:
-        return True
-    for short, long_form in (short_forms or {}).items():
-        long_stems = _stemmed(content_tokens(long_form))
-        if not long_stems & title:
-            continue
-        if re.search(rf"(?<![A-Za-z0-9]){re.escape(short)}(?![A-Za-z0-9])", sentence):
-            return True
-    return False
+    return bool(title_words_shared(sentence, labels)) or names_by_short_form(
+        sentence, labels, short_forms
+    )
 
 
 def _capitalise_opening(sentence: str) -> str:

@@ -63,11 +63,13 @@ Writes:
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
 from system_03_search_agent.contracts.events import source_page_key
 from system_03_search_agent.core.next_step import entity_type_noun
+from system_03_search_agent.synthesis import grounding as grounding_module
 from system_03_search_agent.synthesis.disease_names import (
     is_placeholder_condition_title,
     readable_disease_name,
@@ -85,6 +87,11 @@ from system_03_search_agent.synthesis.grounding import (
     _split_sentences,
     content_tokens,
     display_index_by_citation_id,
+    names_by_short_form,
+    record_labels_by_page,
+    short_form_definers,
+    short_forms_by_page,
+    title_words_shared,
 )
 
 BlockKind = Literal["heading", "paragraph"]
@@ -1130,6 +1137,302 @@ def drop_record_restatements(
             sentence_origins=tuple(origin for _, origin, _ in kept),
         ),
         dropped,
+    )
+
+
+#: Card 17 (2026-10-15). The longest title a lead-in quotes whole; a longer
+#: one is cut at a word boundary and ends in the cut mark, so a cut shows.
+LEAD_IN_MAX_TITLE_CHARS = 160
+
+#: The longest text one prose token carries. It mirrors the cut in
+#: `core.graph._answer_parts.sentence_token` (`[:1000]`), which keeps the
+#: first 1000 characters of the sentence with its closing space. A lead-in is
+#: never allowed to push the end of a sentence past it (fix round, J-17-08b).
+SENTENCE_TOKEN_LIMIT = 1000
+
+#: The lead-in for a sentence whose page has no usable title (J-17-01).
+LEAD_IN_NO_TITLE = "From another record: "
+
+#: The words of a lead-in. `{who}` is "the paper", "another paper titled" or
+#: "other papers titled"; `{titles}` the quoted titles. The sentence follows
+#: after the colon, unchanged to its first letter.
+LEAD_IN_FRAME = "From {who} {titles}: "
+
+_LEAD_IN_QUOTES = str.maketrans({"“": "'", "”": "'", '"': "'"})
+
+#: What a lead-in calls a record, singular and plural, keyed by the entity
+#: type with case, spaces and punctuation removed ("PubMed", "pubmed" and
+#: "Pub Med" are one key). A type missing here reads "the record".
+_LEAD_IN_NOUNS: dict[str, tuple[str, str]] = {
+    "pubmed": ("paper", "papers"),
+    "pmc": ("paper", "papers"),
+    "publication": ("paper", "papers"),
+    "article": ("paper", "papers"),
+    "clinicaltrial": ("trial", "trials"),
+    "clinicaltrials": ("trial", "trials"),
+    "disease": ("condition record", "condition records"),
+    "medgen": ("condition record", "condition records"),
+    "gene": ("gene record", "gene records"),
+    "sequencevariant": ("variant record", "variant records"),
+    "variantrecord": ("variant record", "variant records"),
+    "literaturevariant": ("variant record", "variant records"),
+    "variant": ("variant record", "variant records"),
+    "clinvar": ("variant record", "variant records"),
+    "dbvar": ("variant record", "variant records"),
+    "literatureentity": ("literature record", "literature records"),
+    "pathogendetectionisolate": ("pathogen sample record", "pathogen sample records"),
+    "organismtaxon": ("organism record", "organism records"),
+    "taxonomy": ("organism record", "organism records"),
+    "biologicalprocess": ("biological process record", "biological process records"),
+    "molecularactivity": ("molecular activity record", "molecular activity records"),
+    "cellularcomponent": ("cell component record", "cell component records"),
+    "ontologyclass": ("medical topic record", "medical topic records"),
+    "mesh": ("medical topic record", "medical topic records"),
+    "omim": ("OMIM record", "OMIM records"),
+    "gtr": ("genetic test record", "genetic test records"),
+    "gds": ("dataset record", "dataset records"),
+    "bioproject": ("project record", "project records"),
+    "biosample": ("sample record", "sample records"),
+    "sra": ("sequencing dataset record", "sequencing dataset records"),
+    "assembly": ("genome assembly record", "genome assembly records"),
+    "protein": ("protein record", "protein records"),
+    "chemicalentity": ("chemical record", "chemical records"),
+}
+_LEAD_IN_NOUN_FALLBACK = ("record", "records")
+
+#: Finding fields that carry the year a record was published. The year is
+#: read with `_YEAR` above, a four digit run, so a month or an id never passes.
+_PUBLISHED_YEAR_FIELDS = frozenset({"pdat", "pubdate", "epubdate", "publicationdate"})
+
+
+def lead_in_title(label: str, limit: int = LEAD_IN_MAX_TITLE_CHARS) -> str:
+    """A record's title made safe to quote, by mechanical steps only.
+
+    Whitespace collapsed, square brackets removed (a marker is `[N]` and a
+    title must never carry one), one trailing full stop removed (a question
+    mark stays), double quotes turned to single quotes, then cut at a word
+    boundary past `limit`. A title with no letter or digit in it ("", "[.]")
+    comes back as "". Code never chooses which part of a title carries its
+    meaning.
+    """
+    text = " ".join(label.replace("[", " ").replace("]", " ").split())
+    text = text.removesuffix(".").rstrip()
+    text = text.translate(_LEAD_IN_QUOTES)
+    if not any(char.isalnum() for char in text):
+        return ""
+    return clip_to_word(text, limit)
+
+
+def _lead_in_nouns(entity_type: str) -> tuple[str, str]:
+    key = re.sub(r"[^a-z0-9]", "", (entity_type or "").lower())
+    return _LEAD_IN_NOUNS.get(key, _LEAD_IN_NOUN_FALLBACK)
+
+
+@dataclass(frozen=True)
+class LeadInPage:
+    """One page a lead-in names: its raw title, record type and, for a title
+    another listed page shares, whether it does and the year it carries."""
+
+    title: str
+    entity_type: str = ""
+    year: str = ""
+    shared: bool = False
+
+
+def lead_in_for(pages: list[LeadInPage], max_title: int = LEAD_IN_MAX_TITLE_CHARS) -> str:
+    """The lead-in for `pages`, in display order.
+
+    A page with a title is quoted. A title another listed page shares gets
+    its year in brackets when the record carries one, and otherwise the
+    frame reads "another paper titled", so the reader does not take it for
+    the paper above. A page with no usable title is "another record".
+    """
+    titled = [(page, lead_in_title(page.title, max_title)) for page in pages]
+    named = [(page, title) for page, title in titled if title]
+    untitled = len(pages) - len(named)
+    if not named:
+        return LEAD_IN_NO_TITLE
+    kinds = {_lead_in_nouns(page.entity_type) for page, _ in named}
+    many = len(named) > 1
+    noun = kinds.pop()[1 if many else 0] if len(kinds) == 1 else "records"
+    who = f"the {noun}"
+    quoted = []
+    for page, title in named:
+        text = f'"{title}"'
+        if page.shared and page.year:
+            text += f" ({page.year})"
+        quoted.append(text)
+    titles = quoted[0] if len(quoted) == 1 else ", ".join(quoted[:-1]) + " and " + quoted[-1]
+    if untitled:
+        titles += " and another record"
+    if any(page.shared and not page.year for page, _ in named):
+        who = f"another {noun} titled" if not many else f"other {noun} titled"
+    return LEAD_IN_FRAME.format(who=who, titles=titles)
+
+
+def _fitted_lead_in(pages: list[LeadInPage], sentence: str) -> str:
+    """The lead-in for `pages` if `lead-in + sentence` fits one prose token.
+
+    A title too long for the room is cut shorter; if even that does not fit,
+    the title-less lead-in; if that does not fit either, "" (the sentence is
+    left bare rather than lose its end).
+    """
+    text = sentence if sentence.endswith(" ") else sentence + " "
+    room = SENTENCE_TOKEN_LIMIT - len(text)
+    cap = LEAD_IN_MAX_TITLE_CHARS
+    while cap >= 24:
+        lead = lead_in_for(pages, cap)
+        if len(lead) <= room:
+            return lead
+        cap -= max(1, -(-(len(lead) - room) // max(1, len(pages))))
+    return LEAD_IN_NO_TITLE if len(LEAD_IN_NO_TITLE) <= room else ""
+
+
+def _page_year(findings: list[SynthFinding]) -> str:
+    """The publication year a page's own findings carry, or ""."""
+    for finding in findings:
+        if finding.field.lower() in _PUBLISHED_YEAR_FIELDS:
+            match = _YEAR.search(finding.field_value or "")
+            if match:
+                return match.group(1)
+    return ""
+
+
+def name_switched_records(
+    grounding: GroundingResult,
+    synth_findings: list[SynthFinding],
+    reading_order: Sequence[int] | None = None,
+) -> tuple[GroundingResult, int]:
+    """Prefix a lead-in naming its paper to a sentence that switched on one word.
+
+    Card 17 (2026-10-15, option E). A reworded sentence that moves to a page
+    the sentence above did not cite, and shares one title word with it at
+    most, is kept by the switch rule on that one word, and a pointing word
+    ("these variants") then reads as the page above. Nothing is dropped and
+    no word of any sentence changes: the lead-in is added in front, built
+    from the record's own title. Fires only when all hold: a sentence was
+    shown before it; it is reworded; its cited pages are disjoint from the
+    previous shown sentence's pages; no cited page shares two title words or
+    a short form that one page alone defines while one shares exactly one.
+
+    `reading_order` is the positions of `grounding.sentences` in the order the
+    reader sees them: the sentence the lead pick moved to the top first, and
+    the sentences card 111 leaves out of the prose left out. The sentence
+    above a sentence is the one before it in that order, and the sentence
+    that opens the answer never gets a lead-in. Without it, the order is the
+    pass's own.
+
+    Returns the result and the number of sentences given a lead-in. The
+    input is returned unchanged, and 0, when sentence structure is unknown
+    or the claim cursor does not close, as `drop_record_restatements` does.
+    """
+    if not grounding.sentences or not grounding.claims:
+        return grounding, 0
+    labels_by_url = record_labels_by_page(synth_findings)
+    short_forms_by_url = short_forms_by_page(synth_findings)
+    definers = short_form_definers(short_forms_by_url)
+    # The title a lead-in quotes: the first label finding on each page with
+    # a usable title. A page whose labels are all blank has no title.
+    title_by_page: dict[str, str] = {}
+    kind_by_page: dict[str, str] = {}
+    findings_by_page: dict[str, list[SynthFinding]] = {}
+    for finding in synth_findings:
+        page = source_page_key(finding.source_url)
+        if not page:
+            continue
+        findings_by_page.setdefault(page, []).append(finding)
+        if (
+            finding.field in grounding_module.LABEL_FIELDS
+            and page not in title_by_page
+            and lead_in_title(finding.field_value)
+        ):
+            title_by_page[page] = finding.field_value
+            kind_by_page[page] = finding.entity_type
+    pages_by_title: dict[str, set[str]] = {}
+    for page, title in title_by_page.items():
+        key = " ".join(re.findall(r"[a-z0-9]+", lead_in_title(title).lower()))
+        pages_by_title.setdefault(key, set()).add(page)
+    shared_pages = {page for group in pages_by_title.values() if len(group) > 1 for page in group}
+
+    claims = list(grounding.claims)
+    cursor = 0
+    info: list[tuple[list[str], bool]] = []
+    for sentence in grounding.sentences:
+        marker_count = len(_MARKER.findall(sentence))
+        if cursor + marker_count > len(claims):
+            return grounding, 0
+        own = claims[cursor : cursor + marker_count]
+        cursor += marker_count
+        pages: list[str] = []
+        urls_by_page: dict[str, set[str]] = {}
+        for claim in own:
+            url = (claim.finding.source_url or "").strip()
+            page = source_page_key(url)
+            if page and page not in urls_by_page:
+                pages.append(page)
+            if page:
+                urls_by_page.setdefault(page, set()).add(url)
+        text = _MARKER.sub(" ", sentence)
+        shared_counts: list[int] = []
+        by_short_form = False
+        for page in pages:
+            label = " ".join(labels_by_url.get(url, "") for url in sorted(urls_by_page[page]))
+            shared_counts.append(len(title_words_shared(text, label)))
+            by_short_form = by_short_form or any(
+                names_by_short_form(
+                    text, labels_by_url.get(url, ""), short_forms_by_url.get(url), definers
+                )
+                for url in urls_by_page[page]
+            )
+        fires = (
+            bool(own)
+            and any(claim.evidence_quote for claim in own)
+            and all(count <= 1 for count in shared_counts)
+            and any(count == 1 for count in shared_counts)
+            and not by_short_form
+        )
+        info.append((pages, fires))
+    if cursor != len(claims):
+        return grounding, 0
+
+    count = len(grounding.sentences)
+    order = list(range(count)) if reading_order is None else list(dict.fromkeys(reading_order))
+    sentences = list(grounding.sentences)
+    named = 0
+    previous_pages: set[str] | None = None
+    for position in order:
+        if not 0 <= position < count:
+            continue
+        pages, fires = info[position]
+        if previous_pages is not None and fires and not (set(pages) & previous_pages):
+            lead = _fitted_lead_in(
+                [
+                    LeadInPage(
+                        title=title_by_page.get(page, ""),
+                        entity_type=kind_by_page.get(page, ""),
+                        year=_page_year(findings_by_page.get(page, [])),
+                        shared=page in shared_pages,
+                    )
+                    for page in pages
+                ],
+                sentences[position],
+            )
+            if lead:
+                sentences[position] = lead + sentences[position]
+                named += 1
+        previous_pages = set(pages)
+    if not named:
+        return grounding, 0
+    return (
+        GroundingResult(
+            narrative=" ".join(sentences).strip(),
+            claims=list(grounding.claims),
+            stripped_count=grounding.stripped_count,
+            refused=grounding.refused,
+            sentences=tuple(sentences),
+            sentence_origins=grounding.sentence_origins,
+        ),
+        named,
     )
 
 

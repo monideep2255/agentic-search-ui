@@ -43,6 +43,13 @@ WHAT IT PROVES, ONE NAMED RULE EACH
                       for retest, or done; and the develop commit it states,
                       if any, is an ancestor of HEAD
                       (`git merge-base --is-ancestor`).
+  live-in-retest-file Every row of "Done features at a glance"
+                      (`testing/UI_fixes_done.md`) whose Status cell says
+                      "awaiting your retest" has its card(s) in "Waiting for
+                      your retest" (`testing/Retest_product_owner.md`). A
+                      ", part" marker on either side is the same card. An
+                      Item cell that names no card ("12.3") is matched by
+                      its exact text against the retest Item cells.
   registry-paths      Every path in backticks in the Document column of
                       `tracker/Living_documents.md` exists.
 
@@ -150,6 +157,7 @@ FACTORY_CARD_HEADING_RE = re.compile(rf"^##\s+Card\s+({CARD})\b")
 FACTORY_NAMED_RE = re.compile(r"\bFactory\b")
 FACTORY_NOT_RE = re.compile(r"out of Factory's lane|not Factory's|not yours", re.IGNORECASE)
 HANDOFF_DEVELOP_RE = re.compile(r"\b[Dd]evelop\b[^`\n]{0,20}?`([0-9a-f]{7,40})`")
+AWAITING_RETEST_RE = re.compile(r"\bawaiting\s+your\s+retest\b", re.IGNORECASE)
 BACKTICK_RE = re.compile(r"`([^`]+)`")
 ROW_RE = re.compile(r"^\|(.*)\|\s*$")
 
@@ -585,6 +593,47 @@ def rule_handoff_agrees(docs: Docs, loc: Located, is_ancestor: GitAncestor) -> l
     return findings
 
 
+def rule_live_in_retest_file(docs: Docs) -> list[Finding]:
+    """A done row that says the card is live and awaiting the owner's retest
+    must have a row in the retest file. The status phrase is the only match
+    key. An Item with no card number is matched by its exact text."""
+    retest_table = waiting_table(docs)
+    item_col = retest_table.column("Item")
+    retest_cards: set[str] = set()
+    retest_items: set[str] = set()
+    for _, cells in retest_table.rows:
+        cell = cells[item_col] if item_col is not None and item_col < len(cells) else ""
+        retest_items.add(cell.strip())
+        retest_cards.update(ref.card for ref in card_refs(cell))
+    done = docs.get(DONE)
+    start, end = section_lines(done, DONE_HEADINGS[0])
+    tables = [t for t in tables_in(done, start, end)
+              if t.column("Item") is not None and t.column("Status") is not None]
+    if not tables:
+        raise CannotRun(f"{DONE}: no table with Item and Status columns under {DONE_HEADINGS[0]!r}")
+    findings: list[Finding] = []
+    for table in tables:
+        icol, scol = table.column("Item"), table.column("Status")
+        for line, cells in table.rows:
+            if icol is None or scol is None or scol >= len(cells) or icol >= len(cells):
+                continue
+            if not AWAITING_RETEST_RE.search(cells[scol]):
+                continue
+            item = cells[icol].strip()
+            refs = card_refs(item)
+            missing = [r.card for r in refs if r.card not in retest_cards]
+            if not refs and item not in retest_items:
+                missing = [item]
+            if missing:
+                findings.append(Finding(
+                    DONE, line, "live-in-retest-file",
+                    f"{', '.join(missing)} is live and awaiting your retest here but has no row in "
+                    f"\"Waiting for your retest\" ({RETEST}). Add the row to {RETEST}, or change "
+                    "this status if the owner already gave a verdict",
+                ))
+    return findings
+
+
 def rule_registry_paths(docs: Docs, exists: Callable[[str], bool]) -> list[Finding]:
     findings: list[Finding] = []
     lines = docs.get(REGISTRY)
@@ -620,6 +669,7 @@ def run_rules(docs: Docs, is_ancestor: GitAncestor, exists: Callable[[str], bool
     findings += rule_card_exists(docs, loc)
     findings += rule_factory_lane(docs, loc)
     findings += rule_handoff_agrees(docs, loc, is_ancestor)
+    findings += rule_live_in_retest_file(docs)
     findings += rule_registry_paths(docs, exists)
     return findings
 
@@ -721,6 +771,9 @@ Moved to `testing/UI_fixes_done.md`.
 |---|---|---|---|
 | 1.1 | Remove the guest limit | Approved | 1 |
 | card 62 | Install works first time | Approved | 3 |
+| cards 43 and 43b | A long name wraps | Live, awaiting your retest | 1 |
+| card 94, part | Isolates show genes | Live, awaiting your retest | 2 to 3 |
+| 12.3 | A one-word question is asked back | Live, awaiting your retest | 3 |
 
 ## What is done, in summary
 
@@ -842,6 +895,10 @@ def _mutations() -> list[tuple[str, dict[str, str], str]]:
          _mutate(HANDOFF, "`abc1234`", "`def5678`"), "handoff-agrees"),
         ("the handoff's develop commit is unknown",
          _mutate(HANDOFF, "`abc1234`", "`0000000`"), "handoff-agrees"),
+        ("a done row awaiting retest has no retest row",
+         _mutate(RETEST, "card 94, part (#158)", "card 95, part (#158)"), "live-in-retest-file"),
+        ("a done row awaiting retest, an item with no card, has no retest row",
+         _mutate(RETEST, "| 12.3 |", "| 12.4 |"), "live-in-retest-file"),
         ("a registered path is not on disk",
          _mutate(REGISTRY, "`AGENTS.md`", "`AGENT.md`"), "registry-paths"),
     ]
