@@ -2,7 +2,7 @@
 
 The live ledger of the night: where each card stands, which agent holds it, and the next step. The lead rewrites a row the moment a card moves, so a session that stops at a usage limit resumes from this file, not from memory. The plan and the owner's rules: `plan.md` beside this file.
 
-Last updated: 2026-10-16 04:25.
+Last updated: 2026-10-16 04:35.
 
 ## Table of contents
 
@@ -25,13 +25,13 @@ Last updated: 2026-10-16 04:25.
 | 29 | none (removed) | Closed: verifier HOLD (3 of 24 sentences mislead); #243 closed, card back in To do; tag phase-8.8 deleted | none | A stricter pick, later |
 | 75 | none (removed) | Closed: verifier HOLD (worse after a one-off 502 or lost connection); #239 closed, card back in To do | none | The owner's call in the morning |
 | 115 | none (merged) | Merged #240 (0fadfdf9) after verifier PASS; in the retest file | none | Product check at the close |
-| 94 | card94t, fix/card94-timeout-no-crash, #246 (lookup #244 closed) | Timeout fix built; judge and adversary running | judge-94t, adversary-94t | Fresh verifier, merge |
+| 94 | card94t, fix/card94-timeout-no-crash, #246 (lookup #244 closed) | Adversary PASS; judge running | judge-94t | Fresh verifier, merge |
 | 17 | card17, fix/card17-name-the-paper, #241 | Fix round done; fresh verifier running (Fable) | verifier-17 | Merge on PASS; close on HOLD |
-| 110 | card110, fix/card110-first-sentence-redesign, #242 | Judge FIX FIRST, adversary FAIL; fix round running | fix-110 | Fresh verifier (Opus), merge; then delete the parked cards 110/111 branch |
+| 110 | card110, fix/card110-first-sentence-redesign, #242 | Fix round done; fresh verifier running | verifier-110 | Merge on PASS; then delete the parked cards 110/111 branch |
 | 101 | card101, fix/card101-record-sentence-end | Builder running (five slices) | builder-101 | Commit per slice, pull request, judge and adversary |
 | 15 | card15, fix/card15-checked-templates | Builder running (four shapes, one slice each) | builder-15 | Commit per slice, pull request, judge and adversary |
 | 84 and 72 | none (removed) | Design on develop; not built: needs the owner's yes on the guardrail rule | none | The owner's answer in the morning |
-| 24 | card24, fix/card24-answer-depth-switch, #245 | Judge and adversary running | judge-24, adversary-24 | One fix round if needed, fresh verifier, merge; then delete tag phase-8.4 |
+| 24 | card24, fix/card24-answer-depth-switch, #245 | Judge FIX FIRST, adversary FAIL; fix round running | fix-24 | Fresh verifier, merge; then delete tag phase-8.4 |
 | 20 | card20, fix/card20-isolate-filters | Builder running (separate extraction call) | builder-20 | Commit, pull request, judge and adversary |
 | Parked branch | fix/cards110-111-summary-opening | Kept until card 110 merges or closes | none | Delete with card 110 |
 | Local tags | parked/phase-8.4, phase-8.8-snippets, card101, card15 (card84-72 deleted) | Each deleted when its card merges or closes | none | Delete with its card |
