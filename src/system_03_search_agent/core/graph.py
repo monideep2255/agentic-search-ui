@@ -646,9 +646,13 @@ from system_03_search_agent.tools.cypher_schemas import (
     CypherQueryRow,
 )
 from system_03_search_agent.tools.cypher_templates import (
+    SHAPE_PAPERS_NAMED,
     CypherTemplate,
     gene_go_terms_template,
+    graph_shape_template,
     matched_shapes,
+    possible_graph_shapes,
+    select_template,
 )
 from system_03_search_agent.tools.graph_schema_constants import (
     CURIE_PREFIXES,
@@ -1161,6 +1165,49 @@ _PAPER_LINKS: Final = _DecisionSpec(
         ),
     },
 )
+
+#: Card 15 (2026-10-15). Asked only when develop's own template selection
+#: returns None for the planned graph call AND the bound identifiers make at
+#: least one checked shape structurally possible (`possible_graph_shapes`).
+#: A pick forces that shape's checked template, so the search is the checked
+#: one and not one a model writes. "none_of_these", or no usable pick, leaves
+#: the planned call exactly as it was. A classifier decides, never a word
+#: list. The options a question is offered are only the shapes its
+#: identifiers allow, so `_graph_shape_spec` narrows this one.
+_GRAPH_SHAPE_NONE: Final = "none_of_these"
+_GRAPH_SHAPE: Final = _DecisionSpec(
+    point="plan.graph_shape",
+    options=(SHAPE_PAPERS_NAMED, _GRAPH_SHAPE_NONE),
+    fail_open=_GRAPH_SHAPE_NONE,
+    instructions=(
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine. It names specific records by identifier. Decide whether it asks for "
+        "one of the listed kinds of answer from the knowledge graph."
+    ),
+    criteria={
+        SHAPE_PAPERS_NAMED: (
+            "It asks about, for a summary of, or to compare the named papers "
+            "themselves."
+        ),
+        _GRAPH_SHAPE_NONE: (
+            "Anything else. It asks for a number or a count, for something linked to "
+            "the named records other than what another option names, what a named "
+            "record is, or for something the graph does not hold such as prevalence, "
+            "treatment or trials."
+        ),
+    },
+)
+
+
+def _graph_shape_spec(possible: list[str]) -> _DecisionSpec:
+    """`_GRAPH_SHAPE` narrowed to the shapes these identifiers allow."""
+    keep = [shape for shape in _GRAPH_SHAPE.options if shape in possible]
+    return dataclasses.replace(
+        _GRAPH_SHAPE,
+        options=(*keep, _GRAPH_SHAPE_NONE),
+        criteria={name: _GRAPH_SHAPE.criteria[name] for name in (*keep, _GRAPH_SHAPE_NONE)},
+    )
+
 
 #: The guardrail's injection verdict with Jev switched on (build phase 8.6,
 #: T-8.6-04; rewired in the fix round for F-8.6-A05, A06, A10, J04, A12).
@@ -6770,6 +6817,44 @@ async def _paper_link_plan(
     return _PaperLinkPlan(pmid=pmid, targets=targets) if targets else None
 
 
+async def _checked_graph_shape(
+    harness: Harness,
+    trace_id: str,
+    text: str,
+    planned: _PlannedToolCall,
+    deadline: float,
+) -> _PlannedToolCall:
+    """Card 15: the planned graph call, with a checked template forced onto it
+    when the classifier picks a shape, and the call unchanged in every other case.
+
+    Unchanged, with no decision asked, when the call already carries a template
+    or develop's own `select_template` finds one, and when the bound identifiers
+    make no checked shape possible. Unchanged too on "none_of_these" and on no
+    usable pick. A pick builds the template from the bound parameter names only.
+    """
+    if planned.template is not None:
+        return planned
+    target_entities = list(planned.cypher_input.target_entities)
+    bindings = entity_param_bindings(target_entities)
+    if select_template(planned.cypher_input, bindings) is not None:
+        return planned
+    possible = possible_graph_shapes(bindings)
+    if not possible:
+        return planned
+    spec = _graph_shape_spec(possible)
+    task = asyncio.create_task(_decide_point(harness, trace_id, spec, text))
+    record = await _await_within_step(
+        task, deadline, None, point=spec.point, trace_id=trace_id
+    )
+    choice = _usable_choice(record)
+    if choice is None or choice == _GRAPH_SHAPE_NONE:
+        return planned
+    template = graph_shape_template(choice, bindings)
+    if template is None:
+        return planned
+    return dataclasses.replace(planned, template=template, context_only=False)
+
+
 async def plan_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
@@ -6930,6 +7015,10 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     ) else await _select_planned_tool_call(
         query.text, query_class, target_curies, unresolved_symbols, _memory_curies(state)
     )
+    if isinstance(planned, _PlannedToolCall) and state.get("coordinate_window") is None:
+        # Card 15: a checked graph search for a question shape develop has no
+        # template for, chosen by `plan.graph_shape`; otherwise `planned` as is.
+        planned = await _checked_graph_shape(harness, trace_id, query.text, planned, step_deadline)
     # Fix-plan item 12.7 (2026-09-23): the question named nothing the
     # product could resolve, so there is no CURIE to bind and the graph has
     # nothing to answer with. A LITERATURE QUESTION NEEDS NO ENTITY: the
@@ -6975,7 +7064,14 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     # stop a new question about papers reaching the papers.
     topic_term: str | None = None
     disease_lookup_failed = False
-    if isinstance(planned, _PlannedToolCall) and state.get("coordinate_window") is None:
+    # Card 15: a call that carries a checked shape's template is the answer the
+    # classifier picked for these named records, so the topic search never
+    # replaces it. Every call develop plans here has no template.
+    if (
+        isinstance(planned, _PlannedToolCall)
+        and planned.template is None
+        and state.get("coordinate_window") is None
+    ):
         gene_resolved = _first_gene_curie(target_curies) is not None
         asks_for_literature = False
         if not gene_resolved:

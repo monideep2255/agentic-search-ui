@@ -586,6 +586,22 @@ What you should see:
 - Known: the arachnodactyly answer can name only Haim-Munk syndrome, from a paper's title, and not Marfan syndrome (F-8.6-V08, an answer-quality note for the product owner).
 - Why it matters: a sentence about a record the person never asked about reads as part of the answer. In the phase 8.1 product review's words: "It told me twice that a nurse visit has no clinical features, and never told me how many genes."
 
+### 115. Two papers named by their PubMed ids are both shown (card 15)
+
+Queries to try:
+
+- `Compare PMID 11237011 and PMID 11237012`
+
+What you should see:
+
+- Both papers are listed, each with a citation that opens its own PubMed page, and the SOURCES list holds exactly those two.
+- No other paper appears. A search of the literature for the words "compare" and "PMID" would show unrelated papers, and that is the wrong answer.
+- The same two papers come back every time you ask.
+- A question that wants something other than the papers themselves, such as `How many papers cite PMID 11237011 and PMID 11237012?`, is not answered with the two records.
+- Known: the records are listed by PubMed id, not by title. Open a source card for the paper's title.
+- Known: when the question is understood as a plain lookup, a PubMed search for the words of the question can still replace the two records (the same happens today for `What is PMID 11237011?`). This card does not change that.
+- Why it matters: a person who types two paper ids wants those two papers, not a graph query a model wrote that finishes about nine times in ten.
+
 ## 4. Chromosome windows and accessions
 
 ### 26. A copy number variant window, before the coordinate range feature
@@ -2048,6 +2064,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 15, papers named | Two papers named by PubMed id are shown as two cited records from a checked graph search | Query 115 |
 | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
 | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
 | card 35 | An off-topic follow-up that contains a word such as "cell" or "study" is checked for topic like any other question | Query 111 |

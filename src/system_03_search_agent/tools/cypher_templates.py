@@ -757,6 +757,65 @@ def _article_links_template(article_param: str) -> CypherTemplate:
     )
 
 
+# --------------------------------------------------------------------------
+# Card 15 (2026-10-15): checked searches for question shapes `select_template`
+# has no template for. Nothing here reads question text. A shape is chosen
+# by the classifier decision `plan.graph_shape` in `core.graph`, and only when
+# `possible_graph_shapes` finds the bound identifiers make it structurally
+# possible. `select_template` is unchanged: a question it already templates
+# never reaches this code.
+# --------------------------------------------------------------------------
+
+SHAPE_PAPERS_NAMED: Final[str] = "papers_named"
+
+# The most identifiers of one kind a shape accepts; a longer list is a
+# different question (a set the person did not type one by one).
+MAX_SHAPE_IDENTIFIERS: Final[int] = 10
+
+
+def _params_by_label(entity_bindings: dict[str, str]) -> dict[str, list[str]] | None:
+    """Bound parameter names grouped by the vertex label their CURIE prefix
+    belongs to, each group in parameter-name order. None when a prefix
+    belongs to no label this module knows."""
+    grouped: dict[str, list[str]] = {}
+    for name in sorted(entity_bindings):
+        prefix = entity_bindings[name].partition(":")[0]
+        label = next(
+            (lab for lab, prefixes in LABEL_CURIE_PREFIXES.items() if prefix in prefixes), None
+        )
+        if label is None:
+            return None
+        grouped.setdefault(label, []).append(name)
+    return grouped
+
+
+def possible_graph_shapes(entity_bindings: dict[str, str]) -> list[str]:
+    """The checked shapes the bound identifiers make structurally possible,
+    from their prefixes and counts alone. Empty for most questions."""
+    grouped = _params_by_label(entity_bindings)
+    if grouped is None:
+        return []
+    shapes: list[str] = []
+    articles = grouped.get("Article", [])
+    if set(grouped) == {"Article"} and 2 <= len(articles) <= MAX_SHAPE_IDENTIFIERS:
+        shapes.append(SHAPE_PAPERS_NAMED)
+    return shapes
+
+
+def graph_shape_template(
+    shape: str, entity_bindings: dict[str, str]
+) -> CypherTemplate | None:
+    """The checked template for `shape` over `entity_bindings`, or None when
+    the shape is unknown or the identifiers no longer make it possible (the
+    caller then runs what `select_template` would, unchanged)."""
+    if shape not in possible_graph_shapes(entity_bindings):
+        return None
+    grouped = _params_by_label(entity_bindings) or {}
+    if shape == SHAPE_PAPERS_NAMED:
+        return _record_template("Article", grouped["Article"])
+    return None
+
+
 def select_template(
     tool_input: CypherQueryInput, entity_bindings: dict[str, str]
 ) -> CypherTemplate | None:
