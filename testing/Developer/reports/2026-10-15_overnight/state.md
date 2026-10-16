@@ -2,7 +2,7 @@
 
 The live ledger of the night: where each card stands, which agent holds it, and the next step. The lead rewrites a row the moment a card moves, so a session that stops at a usage limit resumes from this file, not from memory. The plan and the owner's rules: `plan.md` beside this file.
 
-Last updated: 2026-10-16 05:30.
+Last updated: 2026-10-16 05:35.
 
 ## Table of contents
 
@@ -25,7 +25,7 @@ Last updated: 2026-10-16 05:30.
 | 29 | none (removed) | Closed: verifier HOLD (3 of 24 sentences mislead); #243 closed, card back in To do; tag phase-8.8 deleted | none | A stricter pick, later |
 | 75 | none (removed) | Closed: verifier HOLD (worse after a one-off 502 or lost connection); #239 closed, card back in To do | none | The owner's call in the morning |
 | 115 | none (merged) | Merged #240 (0fadfdf9) after verifier PASS; in the retest file | none | Product check at the close |
-| 94 | card94t, fix/card94-timeout-no-crash, #246 (lookup #244 closed) | Adversary PASS; judge running | judge-94t | Fresh verifier, merge |
+| 94 | none (timeout fix merged #246; lookup #244 closed) | Merged; in the retest file | none | Product check at the close |
 | 17 | none (merged #241, 2903ce43) | Merged; in the retest file | none | Product check at the close |
 | 110 | card110, fix/card110-first-sentence-redesign, #242 | Fix round done; fresh verifier running | verifier-110 | Merge on PASS; then delete the parked cards 110/111 branch |
 | 101 | card101, fix/card101-record-sentence-end | Builder running (five slices) | builder-101 | Commit per slice, pull request, judge and adversary |
@@ -45,6 +45,7 @@ Last updated: 2026-10-16 05:30.
 | #238 | `/ship` retest rule | Tooling |
 | #240 | 115, the read-only reply for a graph-change follow-up | Product check at the close |
 | #241 | 17, the paper named when a sentence moves to another | Product check at the close |
+| #246 | 94 part, a timed-out isolate search keeps the answer | Product check at the close |
 
 ## Spend
 
