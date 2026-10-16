@@ -402,8 +402,8 @@ export interface HistoryItem {
    * carry a stored answer by product-owner decision, so this is false or
    * absent for every guest row, and absent altogether from a backend built
    * before this field existed, which `withValidatedOptionalFields` below
-   * treats as "no saved answer" rather than an error: the honest default
-   * for a caller that cannot yet say either way.
+   * treats as absent rather than an error. Absent keeps the row's source
+   * count; only an explicit `false` makes the row say "No answer saved".
    */
   has_saved_answer?: boolean;
 }
@@ -454,11 +454,11 @@ function withValidatedOptionalFields(item: HistoryItem): HistoryItem {
   if (typeof source.citation_count === "number" && Number.isFinite(source.citation_count)) {
     validated.citation_count = source.citation_count;
   }
-  // Strict `=== true`, never a truthy coercion: a malformed value (a string
-  // "true", a 1) is dropped to the honest default of "no saved answer"
-  // rather than trusted to mean yes, the same "wrong type is worse than
-  // absent" reasoning the three fields above already apply.
-  if (source.has_saved_answer === true) validated.has_saved_answer = true;
+  // Kept for true AND false: `false` is the server saying "no answer was
+  // saved" and the history row says so (card 109). Only a real boolean
+  // passes; a string "true", a 1 or a null is dropped to absent, the same
+  // "wrong type is worse than absent" reasoning the fields above apply.
+  if (typeof source.has_saved_answer === "boolean") validated.has_saved_answer = source.has_saved_answer;
   return validated;
 }
 

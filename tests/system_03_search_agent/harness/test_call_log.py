@@ -35,7 +35,7 @@ import litellm
 import pytest
 
 from system_03_search_agent.core import graph as graph_module
-from system_03_search_agent.harness import cost_control
+from system_03_search_agent.harness import call_log, cost_control
 from system_03_search_agent.harness import decide as decide_module
 from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.harness.decide import decide
@@ -343,7 +343,9 @@ async def test_guardrail_unusable_replies_log_unusable_reply(
 
     out = await _run_guardrail("Which diseases are associated with BRCA1?")
 
-    assert out["step_error"]["error_class"] == "recoverable"
+    # "transient" since the guardrail design's fix round (A-GR-10): two
+    # unreadable replies are the check not finishing, like two timeouts.
+    assert out["step_error"]["error_class"] == "transient"
     lines = [entry for entry in _lines(caplog) if entry["point"] == "guardrail.classify"]
     assert [(entry["attempt"], entry["outcome"]) for entry in lines] == [
         ("1", "unusable_reply"),
@@ -432,5 +434,129 @@ def test_provider_of_only_believes_a_plain_string() -> None:
     assert call_log.provider_of(SimpleNamespace(provider="  Together ")) == "Together"
     assert call_log.provider_of(SimpleNamespace(provider=["x"])) is None
     assert call_log.provider_of(SimpleNamespace()) is None
-    assert call_log.provider_of(SimpleNamespace(provider="x" * 500)) == "x" * 64
+    longest = "host-" * 12 + "host"
+    assert len(longest) == 64
+    assert call_log.provider_of(SimpleNamespace(provider=longest)) == longest
+    assert call_log.provider_of(SimpleNamespace(provider=longest + "s")) is None
     assert json.dumps(call_log.provider_of(SimpleNamespace(provider="a")))
+
+
+@pytest.mark.parametrize(
+    ("raw", "logged"),
+    [
+        ("DeepInfra", "DeepInfra"),
+        ("api.together.xyz", "api.together.xyz"),
+        ("Fireworks-2", "Fireworks-2"),
+        ("Atlas_Cloud", "Atlas_Cloud"),
+        ("Google AI Studio", "Google AI Studio"),
+        ("Google  AI", None),
+        (" " + "s" + "k" + "-or-v1-abc def", None),
+        ("Deep\nInfra\x1b[31m", None),
+        ("Deep\rInfra\tX", None),
+        ("name=evil; cat /etc/passwd", None),
+        ("caf\u00e9 \u2028host", None),
+        ("\n\x1b[;\t!", None),
+        ("%s %d {}", None),
+        ("", None),
+    ],
+    ids=[
+        "a plain host",
+        "a host with dots",
+        "a host with a hyphen and a digit",
+        "a host with an underscore",
+        "a name with single spaces",
+        "a double space",
+        "a key-shaped word among words",
+        "a line break and an escape sequence",
+        "a carriage return and a tab",
+        "punctuation and slashes",
+        "letters outside ASCII and a line separator",
+        "nothing a host name needs",
+        "format characters",
+        "empty",
+    ],
+)
+def test_provider_of_keeps_only_a_host_name_shaped_provider(raw: str, logged: str | None) -> None:
+    """Step 3c of the guardrail design (F-84-J07), fix round A-GRS-01 and
+    J-GRS-10: the upstream's own name field is untrusted text, so it is
+    logged only when the whole of it is shaped like a host name, ASCII
+    letters, digits, dots, hyphens and underscores; anything else is
+    "unknown", never a repaired copy.
+
+    MUTATION PROOF: dropping the other characters and keeping the rest
+    again (the branch before this fix) turns every None arm but "empty" and
+    "nothing a host name needs" red."""
+    assert call_log.provider_of(SimpleNamespace(provider=raw)) == logged
+
+
+def _key_shaped() -> list[str]:
+    """Key- and token-shaped values, assembled at run time so no scanner
+    reads one as a real secret."""
+    hex64 = "".join("0123456789abcdef"[(i * 7) % 16] for i in range(64))
+    b64 = "".join("AbCdEfGhIjKlMnOpQrStUvWxYz"[(i * 5) % 26] for i in range(40))
+    return [
+        "sk" + "-or-v1-" + hex64,  # a router key, over 64 characters
+        "sk" + "-or-v1-" + hex64[:40],  # a router key cut under 64
+        "sk" + "-" + hex64[:20],  # a short key with a key's opening
+        "Bear" + "er-" + hex64[:30],
+        "ey" + "J" + b64[:20] + "." + "ey" + "J" + b64[:20] + "." + b64[:20],  # a JWT's shape
+        hex64[:40],  # a bare 40-digit hex token
+        "api.example.com." + hex64[:24],  # a host carrying a token label
+        b64,  # 40 letters, longer than any host label
+        "gh" + "p_" + b64[:30],
+        "Google AI " + "s" + "k" + "-or-v1-" + hex64[:20],  # a key among words
+    ]
+
+
+@pytest.mark.parametrize("raw", _key_shaped(), ids=[f"key shape {i}" for i in range(len(_key_shaped()))])
+def test_a_key_or_token_shaped_provider_logs_as_unknown(caplog: pytest.LogCaptureFixture, raw: str) -> None:
+    """A-GRS-01, J-GRS-10: if the router ever echoed a credential in its
+    `provider` field, no part of it reaches the log line.
+
+    MUTATION PROOF: removing `_looks_like_a_credential` from `provider_of`
+    turns every arm under 65 characters red."""
+    assert call_log.provider_of(SimpleNamespace(provider=raw)) is None
+    with caplog.at_level(logging.WARNING, logger=call_log.__name__):
+        call_log.log_model_call(
+            point="guardrail.classify",
+            trace_id="t-1",
+            kind="guard",
+            started=0.0,
+            outcome="ok",
+            provider=call_log.provider_of(SimpleNamespace(provider=raw)),
+        )
+    message = caplog.records[-1].getMessage()
+    assert message.endswith("provider=unknown"), message
+    assert raw[:12] not in message
+
+
+def test_a_5000_character_value_keeps_the_line_bounded(caplog: pytest.LogCaptureFixture) -> None:
+    """A-GRS-07: whatever any field carries, the line stays one bounded line.
+
+    MUTATION PROOF: logging the fields uncut again turns this red."""
+    huge = "a" * 5000
+    assert call_log.provider_of(SimpleNamespace(provider=huge)) is None
+    with caplog.at_level(logging.WARNING, logger=call_log.__name__):
+        call_log.log_model_call(
+            point=huge, trace_id=huge, kind=huge, started=0.0, outcome=huge, attempt=1, provider=huge
+        )
+    message = caplog.records[-1].getMessage()
+    assert len(message) <= call_log.LINE_MAX_CHARS, len(message)
+    assert message.startswith("model call point=")
+
+
+def test_provider_of_never_writes_a_line_break_into_the_log(caplog: pytest.LogCaptureFixture) -> None:
+    provider = call_log.provider_of(SimpleNamespace(provider="Host\nmodel call point=forged outcome=ok"))
+    with caplog.at_level(logging.WARNING, logger=call_log.__name__):
+        call_log.log_model_call(
+            point="guardrail.classify", trace_id="t-1", kind="guard", started=0.0, outcome="ok", provider=provider
+        )
+    assert len(caplog.records) == 1
+    assert "\n" not in caplog.records[0].getMessage()
+
+
+def test_the_line_stays_at_warning_until_host_routing_is_decided(caplog: pytest.LogCaptureFixture) -> None:
+    """Step 3c: the drop to INFO waits on step 2's ranking (F-84-A08)."""
+    with caplog.at_level(logging.DEBUG, logger=call_log.__name__):
+        call_log.log_model_call(point="p", trace_id="t", kind="guard", started=0.0, outcome="ok")
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]

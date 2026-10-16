@@ -1,0 +1,419 @@
+{
+  "tool": "verify capture",
+  "format": 1,
+  "date": "2026-10-16",
+  "topic": "2026-10-15_product_check",
+  "target": {
+    "name": "develop",
+    "web": "https://search-agent-web-develop-2aeb.up.railway.app",
+    "api": "https://search-agent-api-develop-43b3.up.railway.app",
+    "health": {
+      "status": 200,
+      "app_env": "develop"
+    }
+  },
+  "checkout_head": "f3950564",
+  "deployed_commit": "f3950564",
+  "widths": [
+    {
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "widths_complete": true,
+  "seven_day_close": "eligible if every check passes",
+  "context": {
+    "reduced_motion": "reduce",
+    "axe_tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21a",
+      "wcag21aa"
+    ],
+    "settle_ms": 1500,
+    "browser": "chromium 151.0.7922.34"
+  },
+  "screens": [
+    {
+      "name": "q66_plain",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-10-15_product_check/run1/q66_plain_1280.png",
+          "reached": true,
+          "seconds_to_ready": 10.8,
+          "first_screen": "testing/Developer/reports/2026-10-15_product_check/run1/q66_plain_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-15_product_check/run1/q66_plain_1280.txt",
+          "prototype_screenshot": null
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "screenshot": "testing/Developer/reports/2026-10-15_product_check/run1/q66_plain_390.png",
+          "reached": true,
+          "seconds_to_ready": 13.5,
+          "first_screen": "testing/Developer/reports/2026-10-15_product_check/run1/q66_plain_390_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 390,
+          "client_width": 390,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-15_product_check/run1/q66_plain_390.txt",
+          "prototype_screenshot": null
+        }
+      ]
+    },
+    {
+      "name": "brca1_plain",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-10-15_product_check/run1/brca1_plain_1280.png",
+          "reached": true,
+          "seconds_to_ready": 12.5,
+          "first_screen": "testing/Developer/reports/2026-10-15_product_check/run1/brca1_plain_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-15_product_check/run1/brca1_plain_1280.txt",
+          "prototype_screenshot": null
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "screenshot": "testing/Developer/reports/2026-10-15_product_check/run1/brca1_plain_390.png",
+          "reached": true,
+          "seconds_to_ready": 12,
+          "first_screen": "testing/Developer/reports/2026-10-15_product_check/run1/brca1_plain_390_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 390,
+          "client_width": 390,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-15_product_check/run1/brca1_plain_390.txt",
+          "prototype_screenshot": null
+        }
+      ]
+    },
+    {
+      "name": "q111_offtopic_followup",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-10-15_product_check/run1/q111_offtopic_followup_1280.png",
+          "reached": true,
+          "seconds_to_ready": 11.7,
+          "first_screen": "testing/Developer/reports/2026-10-15_product_check/run1/q111_offtopic_followup_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-15_product_check/run1/q111_offtopic_followup_1280.txt",
+          "prototype_screenshot": null
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "screenshot": "testing/Developer/reports/2026-10-15_product_check/run1/q111_offtopic_followup_390.png",
+          "reached": true,
+          "seconds_to_ready": 14.3,
+          "first_screen": "testing/Developer/reports/2026-10-15_product_check/run1/q111_offtopic_followup_390_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 390,
+          "client_width": 390,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-15_product_check/run1/q111_offtopic_followup_390.txt",
+          "prototype_screenshot": null
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "result": "pass",
+      "screen": "q66_plain",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "10.8 s",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/q66_plain_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "q66_plain",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q66_plain",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q66_plain",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q66_plain",
+      "width": 390,
+      "check": "screen reached",
+      "value": "13.5 s",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/q66_plain_390.png"
+    },
+    {
+      "result": "pass",
+      "screen": "q66_plain",
+      "width": 390,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q66_plain",
+      "width": 390,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q66_plain",
+      "width": 390,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_plain",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "12.5 s",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/brca1_plain_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_plain",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_plain",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_plain",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_plain",
+      "width": 390,
+      "check": "screen reached",
+      "value": "12 s",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/brca1_plain_390.png"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_plain",
+      "width": 390,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_plain",
+      "width": 390,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_plain",
+      "width": 390,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q111_offtopic_followup",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "11.7 s",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/q111_offtopic_followup_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "q111_offtopic_followup",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q111_offtopic_followup",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q111_offtopic_followup",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q111_offtopic_followup",
+      "width": 390,
+      "check": "screen reached",
+      "value": "14.3 s",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/q111_offtopic_followup_390.png"
+    },
+    {
+      "result": "pass",
+      "screen": "q111_offtopic_followup",
+      "width": 390,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q111_offtopic_followup",
+      "width": 390,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q111_offtopic_followup",
+      "width": 390,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-15_product_check/run1/results.json"
+    }
+  ],
+  "awaiting_judgement": [
+    {
+      "screen": "q66_plain",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-10-15_product_check/run1/q66_plain_1280.png",
+      "prototype": null,
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "q66_plain",
+      "width": 390,
+      "app": "testing/Developer/reports/2026-10-15_product_check/run1/q66_plain_390.png",
+      "prototype": null,
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "brca1_plain",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-10-15_product_check/run1/brca1_plain_1280.png",
+      "prototype": null,
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "brca1_plain",
+      "width": 390,
+      "app": "testing/Developer/reports/2026-10-15_product_check/run1/brca1_plain_390.png",
+      "prototype": null,
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "q111_offtopic_followup",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-10-15_product_check/run1/q111_offtopic_followup_1280.png",
+      "prototype": null,
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "q111_offtopic_followup",
+      "width": 390,
+      "app": "testing/Developer/reports/2026-10-15_product_check/run1/q111_offtopic_followup_390.png",
+      "prototype": null,
+      "design": "docs/build/design/design-system/screens/answer.html"
+    }
+  ],
+  "summary": {
+    "pass": 24,
+    "fail": 0
+  }
+}

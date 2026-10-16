@@ -1,0 +1,290 @@
+{
+ "mode": "390",
+ "steps": [
+  {
+   "t": "2026-10-09T11:16:55.334Z",
+   "k": "signed in, email visible unmasked",
+   "v": false
+  },
+  {
+   "t": "2026-10-09T11:16:55.337Z",
+   "k": "bundle",
+   "v": [
+    "index-Dp5DL01h.js"
+   ]
+  },
+  {
+   "t": "2026-10-09T11:16:56.850Z",
+   "k": "overflow 390 landing",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 390
+   }
+  },
+  {
+   "t": "2026-10-09T11:16:56.860Z",
+   "k": "rail visible on arrival at 390",
+   "v": true
+  },
+  {
+   "t": "2026-10-09T11:16:56.916Z",
+   "k": "screenshot",
+   "v": "390_0_landing.png"
+  },
+  {
+   "t": "2026-10-09T11:16:56.919Z",
+   "k": "rail at 390",
+   "v": {
+    "present": true,
+    "railBox": {
+     "x": 1,
+     "w": 248,
+     "right": 249
+    },
+    "rows": [
+     {
+      "question": null,
+      "meta": null,
+      "all": "+ New search",
+      "x": 13,
+      "w": 181,
+      "rightEdge": 194,
+      "metaScrollW": null,
+      "metaClientW": null,
+      "current": null,
+      "cls": "MuiBox-root css-1eugj7w"
+     },
+     {
+      "question": null,
+      "meta": null,
+      "all": "",
+      "x": 202,
+      "w": 34,
+      "rightEdge": 236,
+      "metaScrollW": null,
+      "metaClientW": null,
+      "current": null,
+      "cls": "MuiBox-root css-1jz44bp"
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "No answer saved · Oct 9",
+      "all": "Which diseases are associated with BRCA1?No answer saved · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?21 sources cited · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?21 sources cited · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?21 sources cited · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "No answer saved · Oct 9",
+      "all": "Which diseases are associated with BRCA1?No answer saved · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+      "meta": "55 sources cited · Oct 9",
+      "all": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?55 sources cited · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "No answer saved · Oct 9",
+      "all": "Which diseases are associated with BRCA1?No answer saved · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "No answer saved · Oct 9",
+      "all": "Which diseases are associated with BRCA1?No answer saved · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "Any trials for GERD?",
+      "meta": "12 sources cited · Oct 9",
+      "all": "Any trials for GERD?12 sources cited · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "What phenotypic features are associated with Marfan syndrome?",
+      "meta": "12 sources cited · Oct 9",
+      "all": "What phenotypic features are associated with Marfan syndrome?12 sources cited · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 9",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 8",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 8",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     },
+     {
+      "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+      "meta": "55 sources cited · Oct 8",
+      "all": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?55 sources cited · Oct 8",
+      "x": 13,
+      "w": 223,
+      "rightEdge": 236,
+      "metaScrollW": 203,
+      "metaClientW": 203,
+      "current": null,
+      "cls": "MuiBox-root css-1s9wqtc"
+     }
+    ]
+   }
+  },
+  {
+   "t": "2026-10-09T11:16:56.920Z",
+   "k": "overflow 390 with rail open",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 390
+   }
+  },
+  {
+   "t": "2026-10-09T11:16:56.920Z",
+   "k": "email visible unmasked",
+   "v": false
+  },
+  {
+   "t": "2026-10-09T11:16:56.958Z",
+   "k": "screenshot",
+   "v": "390_1_rail_open.png"
+  },
+  {
+   "t": "2026-10-09T11:16:57.023Z",
+   "k": "screenshot",
+   "v": "390_1_rail_open_full.png"
+  }
+ ]
+}

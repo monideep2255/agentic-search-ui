@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-10-08.
+Last updated: 2026-10-09.
 
 Every entry has the same three parts:
 
@@ -113,6 +113,7 @@ What you should see:
 - During the search step, the scientist at the top says who they are handing off to, and three lines appear naming the graph, the live NCBI records and the literature and trials, each filling in a layer badge as its results arrive.
 - The answer builds on screen sentence by sentence, then settles into short paragraphs, each sentence with its numbered citation chip, plus source cards. Typically 20 to 40 seconds, never more than 90.
 - The answer never opens on a broken sentence.
+- Card 2 and F-8.7-A07: the summary opens with a sentence that answers the question when one of its first two cited sentences does, with the "Found N ... records" line after it; otherwise the "Found N" line opens it. Either way the written summary appears as soon as it is written: choosing its first sentence never holds it back by more than about a second.
 - Any note reads as a grey note after the answer, never first and never styled like a cited sentence.
 - Diseases are named in words that read naturally, such as "Familial breast-ovarian cancer susceptibility 1", never a bare code like `MedGen:C0346153` and never a garbled form like "susceptibility to, 1".
 - Clicking a citation or source link opens an ncbi.nlm.nih.gov page for that record.
@@ -734,7 +735,8 @@ Queries to try:
 What you should see:
 
 - The flagship isolate search question, the one the product is measured on.
-- A table headed "Isolates and their AMR genes" with 20 rows. Each row shows the isolate's BioSample accession, strain, and where and when it was collected, beside its gene list; every row carries a blaCTX-M gene, and each gene list is linked to that isolate's own Pathogen Detection page.
+- A table headed "Isolates and their AMR genes" with 20 rows. Each row shows the isolate's strain, its BioSample accession under "Identifier", its gene list, and under "Collected" when and where it was collected, such as "2013, USA: Minnesota"; every row carries a blaCTX-M gene, and each gene list is linked to that isolate's own Pathogen Detection page.
+- A row whose record holds no place reads "2013, place not recorded"; one with no date reads "USA: Minnesota, date not recorded"; one with neither reads "Not recorded" (card 94).
 - The line "Pathogen Detection lists 140,476 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown."
 - A note saying only the blaCTX-M family of genes was searched for "extended-spectrum beta-lactamase", and why: a plain blaTEM or blaSHV gene name cannot be told apart from a genuine ESBL by its name alone, so those families were left out rather than risk a wrong label.
 - E. coli named and linked to its NCBI Taxonomy record among the sources cited.
@@ -917,6 +919,22 @@ What you should see:
 - Never an invented answer.
 - Why it matters: a product that stays quiet about what it cannot do, rather than guessing, is one a person can trust when it does answer.
 
+### 111. An off-topic follow-up with a biomedical word in it (card 35)
+
+Queries to try:
+
+- Ask query 1 (`Which diseases are associated with BRCA1?`), then `Which cell phone is it best to buy this year?`
+- Then `Is it effective to invest in bitcoin right now?`
+- Controls, each after query 1: `and what about it in children?`, `what about its symptoms` and `tell me more about it`.
+
+What you should see:
+
+- The two off-topic follow-ups are refused with the "Outside biomedical research" label, and no search runs.
+- Each control is answered about BRCA1, as before this card.
+- A follow-up that points back at the conversation now gets one more quick topic check, run beside the safety check, so the person waits for the slower of the two, not both.
+- Known: a model makes the topic call, not a word list, so a borderline follow-up can go either way.
+- Why it matters: a person should not pay for, or trust, a biomedical answer to a question that is not biomedical because one word matched.
+
 ### 46. A question with no data (Product test 19)
 
 Queries to try:
@@ -990,6 +1008,22 @@ What you should see:
 - No citation chips.
 - Before phase 8.6's re-land, this request got the label "Not a research question", which says nothing about what the product can do (F-8.6-G01). The follow-up's golden run gave the read-only reply in 3 of 3 passes.
 - Why it matters: a person who asks to change a record should learn that the product only reads NCBI records, not be treated as someone attacking it.
+
+### 109. When the check on a question cannot finish, the message says so plainly (cards 84 and 72)
+
+Queries to try:
+
+- `Which diseases are associated with BRCA1?`, as a new search. The failure itself cannot be triggered on demand: it shows only when the check every question passes first cannot finish. That happens on a slow or busy spell at the model provider (no answer in time twice, a rate limit, a server error, a dropped connection), about 15 seconds after the question is sent, or when the check's two replies both come back unreadable.
+- Query 1 covers the ordinary answer to the same question.
+
+What you should see:
+
+- Only when that check could not finish: no answer, no citation chips, and the message "We could not finish checking your question, so nothing was searched. This was a problem on our side, not with your question. Try asking again."
+- For these failures it never reads "Try asking again in a moment" and never "rephrase the question".
+- Asking the same question again a little later answers it as query 1 does.
+- When the model provider refuses the question under its content policy, or rejects the request as malformed, or refuses our own key, the message still reads "This run could not be completed. Try asking again, or rephrase the question." The first two may be the question's fault and asking again cannot fix the third, so none of them says the problem was ours.
+- A search you stopped still reads "This run was stopped before it finished, so no answer was written."
+- Why it matters: before this, a check that ran out of time read "This run could not be completed. Try asking again in a moment", which said neither that nothing was searched nor whose problem it was, and a check whose two replies came back unreadable told a person whose question was fine to rephrase it. Saying the problem was ours, and that asking again is the fix, tells them what to do next.
 
 ## 7. Sign in, sessions and history
 
@@ -1142,6 +1176,8 @@ What you should see:
 - No answer appears from the stopped search.
 - Pressed while the search is still working, the button reads "Stopping…" for a moment, then "Search stopped"; after a reload the search is not listed as answered, and a follow-up such as "what about it?" does not refer to it.
 - Pressed after the search had already finished but while its answer is still appearing, the whole answer shows at once, with its sources and trust line, and history and the conversation keep that same answer (card 59).
+- Card 109: press Stop after the records have appeared, then open "Your searches": that row reads "No answer saved" with its date, while an answered row still reads its source count ("N sources cited").
+- Card 112: ask a question you asked before, press Stop after the records appear, and, before any reload, see every earlier row of that question still in "Your searches", with the stopped row on top reading "No answer saved" and its date.
 - Pressing Stop and asking a new question straight away answers the new question normally.
 - Why it matters: a person who changes their mind mid-search should not have to wait out a search they no longer want.
 
@@ -1158,6 +1194,7 @@ What you should see:
 - While the helpers hand back, and while the line says the answer is being written, Stop is not grey.
 - Pressed then, "Search stopped" appears with "No answer was produced. Run the same question again, or start a new one.", and the Run again and New search buttons, as query 56 describes.
 - No answer appears from the stopped search, even when the server had already finished writing it.
+- Type query 98's question, or any question that searches several sources, and watch the progress steps at 1280 and 390. The Write step lights only after the last running search shows a result, never while a search chip is still running, and never goes back from Write to Act. The case where some planned searches are skipped is checked by the frontend test, since no typed question reliably produces it (card 19).
 - Left alone, Stop turns grey once the first sentence of the answer is on screen, and it is gone once the answer settles.
 - Known: a search stopped after the server had already finished can come back as answered in your history after a reload, and a follow-up in the same conversation can remember it (card 59).
 - Why it matters: in the product owner's words, "a user should be able to stop the answer at any point of time until the answer pops out". On the slowest questions Stop went grey for up to 13 seconds while the screen had nothing to read yet.
@@ -1672,6 +1709,7 @@ What you should see:
 - Every marker in the answer has its line under "References:". No line starts `[unresolved: marker`.
 - No dollar amount appears anywhere.
 - With `--json`, the terminal shows one JSON object and nothing else: the answer, every citation with its source URL, the trust verdict, the trust line, the session id, and `"complete": true`.
+- Card 57 and F-8.7-A04: in the `--json` object, each citation appears once, one entry per number. A citation that a summary sentence cites carries, in its `claim_text`, the record words that sentence was checked against first, then the record's own row words. A record that only the list cites shows only its row words.
 - The capital of France prints "guard: this looks outside biomedical research. Try a gene, variant, pathogen, or paper question." and no answer and no references, the terminal's form of query 45.
 - Why it matters: a researcher who works in a terminal, or a script, should get the same evidence the web shows, cited the same way, without opening a browser.
 
@@ -2010,7 +2048,13 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
+| card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
+| card 35 | An off-topic follow-up that contains a word such as "cell" or "study" is checked for topic like any other question | Query 111 |
+| cards 84 and 72 | When the check every question passes first cannot finish, the message says nothing was searched, the problem was ours, and to ask again | Query 109 |
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
+| card 57, F-8.7-A04 | A citation under a summary sentence carries the record words that sentence was checked against, and each citation is listed once | Query 91 |
+| card 2, F-8.7-A07 | The written summary is never held more than about a second while the first sentence is chosen | Query 1 |
 | card 67 | A reopened answer written during an NCBI outage says the database was not answering when it was written, never "right now" | Query 100 |
 | card 104 | An answer lists one record once in its tables and Plain language list | Query 107 |
 | card 103 | No disease cell under the variant-to-disease table is blank without a reason | Query 79 |

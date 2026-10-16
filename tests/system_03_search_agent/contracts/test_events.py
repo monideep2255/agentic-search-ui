@@ -521,7 +521,7 @@ class TestTokenPayload:
         # gets no such key, so a client whose own contract forbids extra
         # keys reads the frame as before. The literal is the exact JSON
         # the pre-8.7 `TokenPayload` produced for this token. Mutation that
-        # turns this red: drop `_omit_absent_placement`, or default the
+        # turns this red: drop `_placement_is_absent`, or default the
         # field to "summary" again.
         payload = TokenPayload(text="Found 4 records.", marker_ids=["c_1"], kind="claim")
         assert payload.model_dump_json() == (
@@ -535,6 +535,31 @@ class TestTokenPayload:
         assert "placement" not in explicit_none.model_dump()
         placed = TokenPayload(text="ok", marker_ids=[], placement="listing")
         assert placed.model_dump()["placement"] == "listing"
+
+    def test_the_serialization_schema_describes_a_token(self) -> None:
+        # F-8.7-V01: the wrap serializer that left `placement` out returned
+        # `Any`, so the token's serialization schema read `{}` and the
+        # contract could not be exported for agents or the command line.
+        # Mutation that turns this red: put the wrap `model_serializer`
+        # returning `Any` back on `TokenPayload`.
+        schema = TokenPayload.model_json_schema(mode="serialization")
+        assert schema.get("type") == "object"
+        assert schema.get("additionalProperties") is False
+        assert schema.get("required") == ["text"]
+        properties = schema["properties"]
+        assert set(properties) == {
+            "text",
+            "marker_ids",
+            "kind",
+            "cells",
+            "emphasis",
+            "placement",
+        }
+        assert properties["text"]["maxLength"] == 1000
+        assert {"enum": ["listing", "summary"], "type": "string"} in (
+            properties["placement"]["anyOf"]
+        )
+        assert properties == TokenPayload.model_json_schema(mode="validation")["properties"]
 
     def test_both_placements_validate(self) -> None:
         for placement in ("listing", "summary"):

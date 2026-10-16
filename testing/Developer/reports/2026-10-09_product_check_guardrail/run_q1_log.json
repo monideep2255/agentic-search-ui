@@ -1,0 +1,189 @@
+{
+ "case": "q1",
+ "width": 1280,
+ "depth": "Researcher",
+ "question": "Which diseases are associated with BRCA1?",
+ "steps": [
+  {
+   "t": "2026-10-09T11:24:04.442Z",
+   "k": "email visible unmasked after sign-in",
+   "v": false
+  },
+  {
+   "t": "2026-10-09T11:24:04.448Z",
+   "k": "bundle",
+   "v": [
+    "index-BoAklQRF.js"
+   ]
+  },
+  {
+   "t": "2026-10-09T11:24:04.449Z",
+   "k": "overflow landing",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 1280
+   }
+  },
+  {
+   "t": "2026-10-09T11:24:04.491Z",
+   "k": "depth buttons",
+   "v": [
+    {
+     "text": "Plain language",
+     "pressed": "false"
+    },
+    {
+     "text": "Researcher",
+     "pressed": "true"
+    }
+   ]
+  },
+  {
+   "t": "2026-10-09T11:24:04.540Z",
+   "k": "screenshot",
+   "v": "q1_1280_0_before.png"
+  },
+  {
+   "t": "2026-10-09T11:24:04.588Z",
+   "k": "asked",
+   "v": "Which diseases are associated with BRCA1?"
+  },
+  {
+   "t": "2026-10-09T11:24:04.589Z",
+   "k": "step change",
+   "v": {
+    "t": 0.05,
+    "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending"
+   }
+  },
+  {
+   "t": "2026-10-09T11:24:06.639Z",
+   "k": "screenshot",
+   "v": "q1_1280_1_running.png"
+  },
+  {
+   "t": "2026-10-09T11:24:12.988Z",
+   "k": "step change",
+   "v": {
+    "t": 8.45,
+    "steps": "Guard=done Think=live Plan=pending Act=pending Write=pending"
+   }
+  },
+  {
+   "t": "2026-10-09T11:24:13.704Z",
+   "k": "step change",
+   "v": {
+    "t": 9.16,
+    "steps": "Guard=done Think=done Plan=live Act=pending Write=pending"
+   }
+  },
+  {
+   "t": "2026-10-09T11:24:14.417Z",
+   "k": "step change",
+   "v": {
+    "t": 9.88,
+    "steps": "Guard=done Think=done Plan=done Act=live Write=pending"
+   }
+  },
+  {
+   "t": "2026-10-09T11:24:16.360Z",
+   "k": "step change",
+   "v": {
+    "t": 11.82,
+    "steps": "Guard=done Think=done Plan=done Act=done Write=live"
+   }
+  },
+  {
+   "t": "2026-10-09T11:24:20.586Z",
+   "k": "step change",
+   "v": {
+    "t": 16.05,
+    "steps": ""
+   }
+  },
+  {
+   "t": "2026-10-09T11:24:20.587Z",
+   "k": "answer landed (meta shown)",
+   "v": {
+    "t": 16.05,
+    "meta": "? Answered15.8s · 13 tool calls · 21 sources cited from 2 layers"
+   }
+  },
+  {
+   "t": "2026-10-09T11:24:23.683Z",
+   "k": "max overflow during run",
+   "v": 0
+  },
+  {
+   "t": "2026-10-09T11:24:23.686Z",
+   "k": "final",
+   "v": {
+    "refusal": null,
+    "failure": null,
+    "meta": "? Answered15.8s · 13 tool calls · 21 sources cited from 2 layers",
+    "claims": "BRCA1 is associated with familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4 Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.⁠1–4\n\nBRCA1 encodes a 190 kD nuclear phosphoprotein that plays a role in maintaining genomic stability, and it also acts as a tumor suppressor.⁠23 Mutations in this gene are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers.⁠23\n\nThe protein plays a role in transcription, DNA repair of double-stranded breaks, and recombination.⁠23 The encoded protein combines with other tumor suppressors, DNA damage sensors, and signal transducers to form a large multi-subunit protein complex known as the BRCA1-associated genome surveillance complex (BASC).⁠23\n\nDISEASE RECORDS FOUND\nDISEASE\tIDENTIFIER\t\nFamilial cancer of breast\tMedGen:C0346153\t⁠1\nFamilial breast-ovarian cancer susceptibility 1\tMedGen:C2676676\t⁠2\nPancreatic cancer susceptibility 4\tMedGen:C3280442\t⁠3\nFanconi anemia complementation group S\tMedGen:C4554406\t⁠4\nGENE RECORDS FOUND\nGENE\tIDENTIFIER\t\nBRCA1\tNCBIGene:672\t⁠5, 9\nPUBMED RECORDS FOUND\nPAPER\tIDENTIFIER\t\nBRCA1: An Endocrine and Metabolic Regulator.\tPMID:35432218\t⁠6\nPreneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.\tPMID:36914836\t⁠11\nBRCA1 safeguards genome integrity by activating chromosome asynapsis checkpoint to eliminate recombination-defective oocytes.\tPMID:38696471\t⁠14\nMechanism of BRCA1-BARD1 function in DNA end resection and DNA protection.\tPMID:39261728\t⁠17\nTargeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors.\tPMID:39265497\t⁠20\nCLINVAR RECORDS FOUND\nVARIANT\tIDENTIFIER\t\nNM_007294.4(BRCA1):c.5243_5277+2788del\tVCV000267740\t⁠7\nNM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG\tVCV000267741\t⁠12\nNG_005905.2:g.(147057_150288)_(160933_166866)del\tVCV000373892\t⁠15\nGRCh37/hg19 17q21.31(chr17:41267743-41267796)x3\tVCV004823850\t⁠18\nNM_007294.4(BRCA1):c.2145C>G (p.Thr715=)\tVCV004848411\t⁠21\nOMIM RECORDS FOUND\nRECORD\tIDENTIFIER\t\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1\tomim 113705\t⁠8\nCLINICAL TRIAL RECORDS FOUND\nTRIAL\tIDENTIFIER\tSTATUS\t\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer\tNCT00590109\tCOMPLETED\t⁠10\nBRCA1 Haploinsuffici",
+    "chipCount": 0,
+    "bodyStart": "+ New search\n\nYOUR SEARCHES\n\nWhich diseases are associated with BRCA1?\n13 tool calls · 21 sources cited from 2 layers\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 9\nWhat phenotypic features are associated with Marfan syndrome?\n12 sources cited · Oct 9\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 9\nWhich diseases are associated with BRCA1?\nNo answer saved · Oct 9\nWhat Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?\n21 sources cited · Oct 9\nWhat Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?\n21 sources cited · Oct 9\nWhat Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?\n21 sources cited · Oct 9\nWhich diseases are associated with BRCA1?\nNo answer saved · Oct 9\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 9\nWhat is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?\n55 sources cited · Oct 9\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 9\nWhich diseases are associated with BRCA1?\nNo answer saved · Oct 9\nWhich diseases are associated with BRCA1?\nNo answer saved · Oct 9\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 9\nAny trials for GERD?\n12 sources cited · Oct 9\nWhat phenotypic features are associated with Marfan syndrome?\n12 sources cited · Oct 9\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 9\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 8\nWhat is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?\n55 sources cited · Oct 8\naccount hidden\nNo search limit in effect yet\nWhich diseases are associated with BRCA1?\nNew search\n\n? Answered15.8s · 13 tool calls · 21 sources cited from 2 layers\n\nShow work ▾\n\nBRCA1 is associated with familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4 Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.⁠1–4\n\nBRCA1 encodes a 190 kD nuclear phosphoprotein that plays a role in maintaining genomic stability, and it also acts as a tumor suppressor.⁠23 Mutations in this gene are responsible for approximately 40% of inherited breast cancers and more than 80% of in",
+    "overflow": 0
+   }
+  },
+  {
+   "t": "2026-10-09T11:24:24.547Z",
+   "k": "work panel",
+   "v": [
+    "0.0s\nGUARD\nIn scope. The question can be grounded in NCBI records.\n2.5s\nTHINK\nAsks for diseases associated with a single gene, answerable by one direct API call to a gene-to-disease mapping service.\n2.5s\nPLAN\nsearching 3 layers for NCBIGene:672. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search\n2.6s\nACT\npubtator_annotate — 1 result\n2.8s\nACT\nncbi_efetch — 1 result\n2.9s\nACT\nncbi_efetch — 5 results\n3.0s\nACT\ncypher_query — 4 results\n3.1s\nACT\nncbi_efetch — 10 results\n3.1s\nACT\nclinicaltrials_search — 5 results\n3.2s\nACT\ncypher_query — 40 results\n3.2s\nACT\nncbi_efetch — 10 results\n3.2s\nACT\nncbi_efetch — 1 result\n3.5s\nACT\npubtator_annotate — 5 results\n3.6s\nACT\nncbi_efetch — 5 results\n4.3s\nACT\nncbi_efetch — 1 result\n4.8s\nACT\nncbi_efetch — 10 results"
+   ]
+  },
+  {
+   "t": "2026-10-09T11:24:24.548Z",
+   "k": "overflow final",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 1280
+   }
+  },
+  {
+   "t": "2026-10-09T11:24:24.548Z",
+   "k": "email visible unmasked at end",
+   "v": false
+  },
+  {
+   "t": "2026-10-09T11:24:24.605Z",
+   "k": "screenshot",
+   "v": "q1_1280_2_result_viewport.png"
+  },
+  {
+   "t": "2026-10-09T11:24:24.732Z",
+   "k": "screenshot",
+   "v": "q1_1280_2_result_full.png"
+  }
+ ],
+ "stepTimes": [
+  {
+   "t": 0.05,
+   "steps": "Guard=live Think=pending Plan=pending Act=pending Write=pending"
+  },
+  {
+   "t": 8.45,
+   "steps": "Guard=done Think=live Plan=pending Act=pending Write=pending"
+  },
+  {
+   "t": 9.16,
+   "steps": "Guard=done Think=done Plan=live Act=pending Write=pending"
+  },
+  {
+   "t": 9.88,
+   "steps": "Guard=done Think=done Plan=done Act=live Write=pending"
+  },
+  {
+   "t": 11.82,
+   "steps": "Guard=done Think=done Plan=done Act=done Write=live"
+  },
+  {
+   "t": 16.05,
+   "steps": ""
+  }
+ ]
+}

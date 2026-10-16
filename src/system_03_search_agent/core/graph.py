@@ -488,6 +488,7 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import SessionMemorySummary
+from system_03_search_agent.contracts.token_order import updates_citation
 from system_03_search_agent.core import (
     accession,
     breadth_plan,
@@ -544,6 +545,7 @@ from system_03_search_agent.observability import audit
 from system_03_search_agent.synthesis.answer_layout import (
     IDENTIFIER_COLUMN_LABEL,
     ISOLATE_ENTITY_TYPE,
+    LABEL_FIELDS,
     MAX_HEADINGS,
     PLAIN_SOURCES_HEADING,
     TABLE_COLUMNS,
@@ -552,6 +554,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     GroundingInput,
     answer_summary_sentence,
     collected_placeholder,
+    collected_with_place,
     condition_ids_for_row,
     drop_record_restatements,
     emphasis_for,
@@ -560,6 +563,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     grounding_input,
     heading_is_supported,
     is_plain_language,
+    isolate_place,
     key_terms,
     parse_synth_layout,
     placeholder_link_count,
@@ -603,6 +607,7 @@ from system_03_search_agent.synthesis.grounding import (
     GroundedClaim,
     GroundingResult,
     SynthesisCandidate,
+    _clean_claim,
     display_index_by_citation_id,
     extract_evidence_quotes,
     run_grounding_pass,
@@ -1537,6 +1542,16 @@ _JEV_INJECTION_WAIT_S: Final[float] = JEV_TOTAL_TIMEOUT_S + 0.5
 #: own wait, so a longer wait there cannot quietly cut Jev's pick off here.
 _JEV_OWN_PICK_WINDOW_S: Final[float] = _JEV_INJECTION_WAIT_S + 0.25
 
+#: Card 35 fix round (J-35-03, A-35-01): how long after it began a topic
+#: decision asked ONLY because the card made a memory-bound follow-up the
+#: allowlist admits subject to it may be waited for. Jev answered that
+#: decision in about 0.3 s, 0.77 s at most, beside a guard classifier that
+#: takes 1.9 to 4.4 s, so a healthy decision is always read inside this. A
+#: decision still running past it reads as no pick, which admits the
+#: follow-up exactly as develop did, instead of holding it for the whole
+#: guardrail budget (15 s).
+_FOLLOW_UP_TOPIC_CHECK_BOUND_S: Final[float] = 1.5
+
 #: The share of the guardrail's remaining budget the guard classifier's
 #: FIRST attempt may use (re-land, R-01); a second attempt, after a timeout
 #: or a transient error, gets the rest. A share, not a figure: the budget
@@ -1724,11 +1739,13 @@ async def _jev_injection_pick(harness: Harness, trace_id: str, text: str) -> Jev
             timeout=_JEV_INJECTION_WAIT_S,
         )
     except JevCallError as exc:
-        # A reply that came back but could not be used was still billed:
-        # charge `billed_cost_usd`, exactly as `decide()`'s own Jev call does
-        # (fix round, F-8.6-J10). It is never above `MAX_JEV_COST_USD`: the
-        # stated amount when that is a usable one within the ceiling, the
-        # ceiling otherwise (F-8.6-V01, V03, RA01, RJ05).
+        # A reply that came back but could not be used, or an error status,
+        # was still billed: charge `billed_cost_usd`, exactly as `decide()`'s
+        # own Jev call does (fix round, F-8.6-J10). `jev_client.jev_charge_usd`
+        # fixed it by the owner's rule of 2026-09-29 as written: the stated
+        # cost when it is above $0 and at most the ceiling, otherwise the
+        # floor; nothing for a timeout (step 3a, F-84-J04, F-72-V03,
+        # V-GRS-09).
         if exc.billed_cost_usd:
             harness.track_cost(trace_id, "guard", exc.billed_cost_usd)
         _log_jev_injection_call(trace_id, started, call_log.jev_outcome(exc.reason))
@@ -1893,9 +1910,18 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     # question is judged by the classifier, started NOW so it runs alongside
     # the injection classifier below rather than after it: the person waits
     # for one model call, not two. Only its "off_topic" refuses, below.
+    #
+    # Card 35 (owner, 2026-10-09): "An off-topic follow-up that happens to
+    # contain a word such as 'cell' or 'study' is checked for topic like any
+    # other question." A follow-up that points back at a remembered entity
+    # is judged by the decision whatever the allowlist says, because the
+    # referring word alone would otherwise set aside the classifier's
+    # off-topic verdict with nothing left to check it.
     relevancy_task: asyncio.Task[DecisionRecord | None] | None = None
     relevancy_started: list[float] = []
-    if not prefilter.clears_biomedical_allowlist(query.text):
+    if not prefilter.clears_biomedical_allowlist(query.text) or _is_memory_bound_follow_up(
+        query.text, state
+    ):
         relevancy_task = asyncio.create_task(
             _relevancy_decision(
                 harness, trace_id, _relevancy_state(query.text, state), relevancy_started
@@ -2126,13 +2152,21 @@ async def _guardrail_after_prefilter(
         # the parse error's own text, "the guard tier did not return valid JSON",
         # which named an internal part and said nothing to do. The parse
         # error itself is in the log line of each unusable attempt above.
+        #
+        # Fix round of the guardrail design, A-GR-10: "transient", not
+        # "recoverable". Two unreadable replies are the guardrail's own
+        # check not finishing, like two timeouts, and asking again usually
+        # works (twelve of thirteen replies parsed). "recoverable" is the
+        # class of a failure the question itself caused, a provider's
+        # content-policy refusal or a 400, whose words tell the person to
+        # rephrase; the web app now tells the two apart by this class alone.
         _log_step_failed("guardrail", "recoverable", unusable_error)
         return {
             "step_error": {
                 "fatal": True,
                 "scope": "step",
                 "source": "guardrail",
-                "error_class": "recoverable",
+                "error_class": "transient",
                 "message": _GUARDRAIL_NO_USABLE_VERDICT_MESSAGE,
                 "retry_after_s": 0,
             }
@@ -2285,11 +2319,29 @@ async def _guardrail_after_prefilter(
     if relevancy_task is not None:
         if not relevancy_read:
             certain_refusal = jev_says_injection and classifier_verdict.admitted
+            # Card 35 fix round: the decision exists only for the card's new
+            # case when the allowlist cleared the question, so it gets its own
+            # short bound, counted from when it began.
+            follow_up_only = prefilter.clears_biomedical_allowlist(query.text)
+            follow_up_deadline = min(
+                step_deadline,
+                (relevancy_started[0] if relevancy_started else time.monotonic())
+                + _FOLLOW_UP_TOPIC_CHECK_BOUND_S,
+            )
             relevancy_record = await _await_within_step(
                 relevancy_task,
                 (
-                    _jev_own_pick_deadline(relevancy_started, step_deadline)
+                    (
+                        min(
+                            follow_up_deadline,
+                            _jev_own_pick_deadline(relevancy_started, step_deadline),
+                        )
+                        if follow_up_only
+                        else _jev_own_pick_deadline(relevancy_started, step_deadline)
+                    )
                     if certain_refusal
+                    else follow_up_deadline
+                    if follow_up_only
                     else step_deadline
                 ),
                 None,
@@ -2298,6 +2350,8 @@ async def _guardrail_after_prefilter(
                 why=(
                     "Jev's own pick could no longer arrive"
                     if certain_refusal
+                    else "the follow-up topic check's bound passed"
+                    if follow_up_only
                     else "its step's budget ran out"
                 ),
             )
@@ -2306,7 +2360,15 @@ async def _guardrail_after_prefilter(
             return _decline_for_guardrail(
                 state, sink, refused("off_topic", prefilter.OFF_TOPIC_REASON), charged=True
             )
-        if relevancy is None and classifier_off_topic_set_aside:
+        # Card 35 (2026-10-09): `guardrail_node` now also asks this decision
+        # for a memory-bound follow-up the allowlist admitted. There, as
+        # before the card, no usable pick admits the question; only a real
+        # "off_topic" pick, above, refuses it.
+        if (
+            relevancy is None
+            and classifier_off_topic_set_aside
+            and not prefilter.clears_biomedical_allowlist(query.text)
+        ):
             return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
 
     # Step 4, Section 10.5. Runs after classification clears, per 10.1.
@@ -11171,8 +11233,16 @@ def _citations_from_grounded_claims(
     findings: list[Finding],
     layer2_raw_outputs: dict[str, NcbiEfetchOutput] | None = None,
     layer3_raw_outputs: dict[str, Any] | None = None,
+    *,
+    row_claims: Sequence[GroundedClaim] = (),
 ) -> list[CitationPayload]:
     """Build one `CitationPayload` per surviving grounded claim.
+
+    `row_claims` (J-87F-03): the claims of a code-built listing merged into
+    `grounding`. They lead the merged claims so the listing keeps its
+    numbers, but a citation's checked words put every other claim's first,
+    the summary sentences' words before the record row's, as before build
+    phase 8.7, so a long row is the part left out, never the sentence's.
 
     This replaces build phase 2.1's `_citations_from_findings` on the live
     path, and the difference is the whole point of this phase: 2.1 emitted
@@ -11210,7 +11280,11 @@ def _citations_from_grounded_claims(
     }
     checked_words_by_citation_id: dict[str, list[str]] = {}
     finding_by_citation_id: dict[str, SynthFinding] = {}
-    for claim in grounding.claims:
+    row_claim_ids = {id(claim) for claim in row_claims}
+    words_order = [claim for claim in grounding.claims if id(claim) not in row_claim_ids] + [
+        claim for claim in grounding.claims if id(claim) in row_claim_ids
+    ]
+    for claim in words_order:
         citation_id = claim.finding.citation_id
         # Every claim with one citation_id carries the same finding, so the
         # first is as good as any here.
@@ -12612,23 +12686,36 @@ _LEAD_DECISION_MIN_BUDGET_S: Final[float] = 1.5
 #: The longest the answer waits for the lead decision. Jev answers in 0.3 to
 #: 0.8 s (answer speed report, 2026-09-26); a pick later than this is a
 #: late pick, and a late pick leaves the count line leading.
-_LEAD_DECISION_MAX_WAIT_S: Final[float] = 4.0
+#:
+#: F-8.7-A07 (2026-10-09): 4.0 s before, so a slow or failing classifier
+#: held the written summary up to 3.5 s and the count line led anyway. Now
+#: the same 1 s grace phase 8.6 gives every other decision read late
+#: (`_LATE_DECISION_GRACE_S`): Jev's own answer time with room, and no
+#: more. The guard tier stepping in for a failed Jev takes about 2 s, so
+#: its pick leads only when it is that quick; otherwise the count line
+#: leads, as it did before this decision existed.
+_LEAD_DECISION_MAX_WAIT_S: Final[float] = 1.0
 
 
-def _lead_candidates(model_grounding: GroundingResult | None) -> list[int]:
+def _lead_candidates(
+    model_grounding: GroundingResult | None,
+    skip: frozenset[int] = frozenset(),
+) -> list[int]:
     """Indexes into `model_grounding.sentences` of the first one or two
     sentences that carry a citation marker.
 
     Only sentences the grounding pass already accepted exist here: this
     reads the pass's own output and nothing else, so a sentence it stripped
-    can never be offered, let alone lead.
+    can never be offered, let alone lead. `skip` holds positions the prose
+    leaves out (card 111, `_label_only_positions`): a sentence the answer
+    drops is never offered, so it cannot open the answer either.
     """
     if model_grounding is None:
         return []
     return [
         index
         for index, sentence in enumerate(model_grounding.sentences)
-        if _MARKER_PATTERN.search(sentence)
+        if index not in skip and _MARKER_PATTERN.search(sentence)
     ][:MAX_LEAD_CANDIDATES]
 
 
@@ -12638,6 +12725,7 @@ async def _lead_sentence_choice(
     question: str,
     model_grounding: GroundingResult | None,
     budget_s: float,
+    skip: frozenset[int] = frozenset(),
 ) -> int | None:
     """The index of the model sentence that should open the answer, or None
     for the code-built count line (build phase 8.7, card 2, design C).
@@ -12655,7 +12743,7 @@ async def _lead_sentence_choice(
     is "neither". Code reads no word of the question: the question and the
     candidates are only the decision's bounded `state`.
     """
-    candidates = _lead_candidates(model_grounding)
+    candidates = _lead_candidates(model_grounding, skip)
     if (
         not candidates
         or model_grounding is None
@@ -12745,6 +12833,104 @@ def _answer_tokens(**kwargs: Any) -> list[TokenPayload]:
     return [*parts.summary, *parts.listing, *parts.notes]
 
 
+_ECHO_END_PUNCTUATION: Final[str] = " .,;:?!"
+
+
+def _is_label_only_sentence(
+    sentence: str,
+    label_by_display: dict[int, str],
+    listed_markers: frozenset[int],
+) -> bool:
+    """True when `sentence` only repeats one title or name, cited to two or
+    more different records, and the listing shown has every one of those
+    records (card 111: "Marfan syndrome and Marfan syndrome.").
+
+    Narrowed on purpose (fix round, 2026-10-15). A sentence is left out only
+    when all of these hold, so it never removes something a reader asked for:
+
+    - it repeats ONE name or title: a list of different names is an answer
+      to "which ...", and a single title can state a finding, so neither is
+      ever matched;
+    - that name is cited to two or more different records (two markers);
+    - every marker it carries is in `listed_markers`, the markers of the
+      listing shown, so the records are named there. With no listing the
+      set is empty and nothing matches.
+
+    Structure only. The sentence splits at its markers; each piece, once the
+    grounding pass's own glue rule (`_clean_claim`: a leading comma or
+    "and") is applied and end punctuation (including "?" and "!") is
+    dropped, must equal the label of the record that marker cites. Any other
+    word, any text after the last marker or a marker that cites no labelled
+    record makes this False. It reads no word of the question and no word
+    list of its own.
+
+    Args:
+        sentence: A grounded sentence with its `[n]` display markers.
+        label_by_display: Display number to the cited record's title or name.
+        listed_markers: Display numbers the listing shown cites.
+    """
+    pieces = _MARKER_PATTERN.split(sentence)
+    # split() alternates text, marker number, text, marker number, ..., text.
+    texts, numbers = pieces[0::2], pieces[1::2]
+    if len(set(numbers)) < 2 or texts[-1].strip(_ECHO_END_PUNCTUATION):
+        return False
+    if not all(int(number) in listed_markers for number in numbers):
+        return False
+    shown_label: str | None = None
+    seen = False
+    for text, number in zip(texts, numbers, strict=False):
+        label = label_by_display.get(int(number))
+        if not label:
+            return False
+        label_key = label.strip(_ECHO_END_PUNCTUATION).casefold()
+        if shown_label is None:
+            shown_label = label_key
+        elif label_key != shown_label:
+            return False
+        shown = _clean_claim(text).strip(_ECHO_END_PUNCTUATION).casefold()
+        if shown:
+            if shown != shown_label:
+                return False
+            seen = True
+        elif not seen:
+            return False
+    return True
+
+
+def _label_only_positions(
+    sentences: Sequence[str],
+    citations: Sequence[CitationPayload],
+    synth_findings: Sequence[SynthFinding],
+    listing_sentences: Sequence[str],
+) -> set[int]:
+    """Positions in `sentences` that card 111's rule would leave out of the
+    prose: see `_is_label_only_sentence`. One function for both readers, the
+    prose (`_answer_parts`) and the lead candidates (`_lead_candidates`), so a
+    sentence the prose drops can never open the answer.
+
+    The label fields are `answer_layout.LABEL_FIELDS`, the list that decides
+    what a listing row shows as its record's name."""
+    citation_by_display = {citation.display_index: citation for citation in citations}
+    finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
+    label_by_display: dict[int, str] = {}
+    for display_index, cited in citation_by_display.items():
+        cited_finding = finding_by_citation_id.get(cited.citation_id)
+        if (
+            cited_finding is not None
+            and cited_finding.field in LABEL_FIELDS
+            and cited_finding.field_value.strip()
+        ):
+            label_by_display[display_index] = cited_finding.field_value
+    listed_markers = frozenset(
+        int(number) for line in listing_sentences for number in _MARKER_PATTERN.findall(line)
+    )
+    return {
+        position
+        for position, candidate in enumerate(sentences)
+        if _is_label_only_sentence(candidate, label_by_display, listed_markers)
+    }
+
+
 def _answer_parts(
     *,
     audience_depth: str,
@@ -12762,6 +12948,7 @@ def _answer_parts(
     summary_sentence: str | None = None,
     condition_names: dict[str, str | None] | None = None,
     lead_index: int | None = None,
+    listing_sentences: tuple[str, ...] = (),
 ) -> _AnswerParts:
     """The answer as typed token chunks, in reading order, in three parts.
 
@@ -13218,6 +13405,16 @@ def _answer_parts(
                 for (_, finding), row_fields in zip(entries, row_fields_by_entry, strict=True)
             ]
             extra_label = next((extra[0] for extra in extras if extra is not None), None)
+            # Card 94 (2026-10-09): an isolate row shows where it was
+            # collected beside when, both read from its own record, in its
+            # "Collected" cell (`collected_with_place`). The column shows on
+            # every isolate table, even when no isolate holds a date.
+            places = [
+                isolate_place(entity_type, row_fields) if finding is not None else None
+                for (_, finding), row_fields in zip(entries, row_fields_by_entry, strict=True)
+            ]
+            if extra_label is None and any(place is not None for place in places):
+                extra_label = "Collected"
             has_identifier = any(identifiers)
             columns = [first_column_label(entity_type)]
             if has_identifier:
@@ -13240,8 +13437,14 @@ def _answer_parts(
             else:
                 heading(records_heading)
             listed_records: dict[tuple[str, str], list[ListedRow]] = {}
-            for (sentence, finding), row_fields, second, identifier, extra in zip(
-                entries, row_fields_by_entry, second_cells, identifiers, extras, strict=True
+            for (sentence, finding), row_fields, second, identifier, extra, place in zip(
+                entries,
+                row_fields_by_entry,
+                second_cells,
+                identifiers,
+                extras,
+                places,
+                strict=True,
             ):
                 if finding is None:
                     sentence_token(sentence)
@@ -13261,10 +13464,15 @@ def _answer_parts(
                             )
                         )
                     if extra_label is not None:
-                        cells.append(
+                        when = (
                             extra[1]
                             if extra is not None and extra[0] == extra_label
                             else collected_placeholder(extra_label, row_fields)
+                        )
+                        cells.append(
+                            when
+                            if place is None or extra_label != "Collected"
+                            else collected_with_place(when, place)
                         )
                 # One row per record: two claims about the same record (its
                 # title and its symbol) are one row, not two identical ones.
@@ -13339,10 +13547,24 @@ def _answer_parts(
     if not fallback_sentences and model_grounding is not None:
         headings_shown = 0
         last_paragraph: int | None = None
+        # Card 111 (narrowed, fix round 2026-10-15): a sentence that repeats
+        # one title or name, cited to two or more different records that the
+        # listing shown has, says nothing, so it is left out of the prose.
+        # When that would leave no model sentence in the summary at all and no
+        # lead was picked, every sentence stays: the summary then prints the
+        # repeat as the writer wrote it, after the count line, rather than
+        # print nothing from the writer.
+        echo_positions = _label_only_positions(
+            model_grounding.sentences, citations, synth_findings, listing_sentences
+        )
+        if lead_text is None and len(echo_positions) >= len(model_grounding.sentences):
+            echo_positions = set()
         for position, (sentence, origin) in enumerate(
             zip(model_grounding.sentences, model_grounding.sentence_origins, strict=False)
         ):
             if lead_text is not None and position == lead_index:
+                continue
+            if position in echo_positions:
                 continue
             paragraph = (
                 model_layout.sentence_paragraph[origin]
@@ -14373,6 +14595,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
 
     model_grounding: GroundingResult | None = None if structured_fallback_used else grounding
     tail_sentences: tuple[str, ...] = ()
+    # J-87F-03: the listing's claims when merged below, so each citation's
+    # checked words put the summary sentences' words before the row's.
+    listing_row_claims: tuple[GroundedClaim, ...] = ()
     tail_findings = synth_findings if tail_is_listing else omitted_findings
     if (
         tail_is_listing
@@ -14391,6 +14616,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         # never change. The prose, which arrives later, is renumbered into
         # that numbering, so a record it cites prints the listing's number.
         merged_claims = list(listing_grounding.claims) + list(grounding.claims)
+        listing_row_claims = tuple(listing_grounding.claims)
         merged_slots = display_index_by_citation_id(
             GroundingResult(narrative="", claims=merged_claims, stripped_count=0, refused=False)
         )
@@ -14463,16 +14689,34 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     else:
         claim_trusts = trust_for_claims(grounding.claims, synth_findings, row_types)
         citations = _citations_from_grounded_claims(
-            grounding, findings, layer2_raw_outputs, layer3_raw_outputs
+            grounding,
+            findings,
+            layer2_raw_outputs,
+            layer3_raw_outputs,
+            row_claims=listing_row_claims,
         )
         if listing_sent:
-            # Build phase 8.7, card 50: a citation already on screen is the
-            # one the answer keeps, exactly as it was sent. Its number
-            # cannot differ (the listing's claims lead the merged claims,
-            # see the listing merge above); the payload is kept too, so no
-            # surface is ever told two things about one chip.
+            # Build phase 8.7, card 50: a citation already on screen keeps
+            # its number, record and link exactly as they were sent. Its
+            # number cannot differ (the listing's claims lead the merged
+            # claims, see the listing merge above).
+            #
+            # F-8.7-A04, card 57: its `claim_text` may grow. A record the
+            # summary also cites carries the words each summary sentence was
+            # checked against, joined after the listing row's own words, so
+            # its chip shows what supports the sentence a reader is
+            # checking. That payload is sent again below with the same id;
+            # every surface keeps the later one in the earlier one's place
+            # (`contracts.token_order.one_per_citation_id`). Anything else
+            # that differs keeps the payload as sent, so no surface is ever
+            # told two things about one chip.
             sent_by_id = {citation.citation_id: citation for citation in listing_citations}
-            citations = [sent_by_id.get(c.citation_id, c) for c in citations]
+            citations = [
+                c
+                if c.citation_id not in sent_by_id or updates_citation(sent_by_id[c.citation_id], c)
+                else sent_by_id[c.citation_id]
+                for c in citations
+            ]
         # T-3.4-07, Section 7.2: floor a conflicted claim's outcome at
         # `flag` AFTER citations exist (it needs their `source_url` for
         # `ConflictResult`) and BEFORE the answer-level aggregate below, so
@@ -14875,6 +15119,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         # sentence of the model's prose answers the question and should
         # open the answer. Asked only when there is a count line it could
         # lead ahead of; every failure leaves the count line leading.
+        listing_shown = tail_sentences if tail_is_listing else ()
         lead_index = (
             await _lead_sentence_choice(
                 harness,
@@ -14882,6 +15127,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 query.text,
                 model_grounding,
                 write_budget_s - (time.monotonic() - write_started_at),
+                skip=frozenset(
+                    _label_only_positions(
+                        model_grounding.sentences, citations, synth_findings, listing_shown
+                    )
+                    if model_grounding is not None
+                    else ()
+                ),
             )
             if summary_sentence
             else None
@@ -14906,6 +15158,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             summary_sentence=summary_sentence,
             condition_names=condition_names,
             lead_index=lead_index,
+            listing_sentences=listing_shown,
         )
         summary_tokens = list(parts.summary)
         note_tokens = list(parts.notes)
@@ -14941,11 +15194,16 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         for token in note_tokens:
             sink.emit_live("token", _with_placement(token, _PLACEMENT_LISTING, reads_placement))
 
-        # The listing's citations went out with it; only the ones the prose
-        # added are new.
-        sent_ids = {citation.citation_id for citation in listing_citations} if listing_sent else set()
+        # The listing's citations went out with it. New here: the ones the
+        # prose added, and a listing citation whose checked words the
+        # summary added to (F-8.7-A04), sent again with its own id.
+        sent_by_id = (
+            {citation.citation_id: citation for citation in listing_citations}
+            if listing_sent
+            else {}
+        )
         for citation in citations:
-            if citation.citation_id in sent_ids:
+            if sent_by_id.get(citation.citation_id) == citation:
                 continue
             sink.emit_live("citation", citation)
 

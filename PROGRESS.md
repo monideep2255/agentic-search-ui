@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-10-08.
+Last updated: 2026-10-15.
 
 ## Table of contents
 
@@ -56,6 +56,27 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+### 15 October
+
+NEW ON 15 OCTOBER, on the practice site, each change read by fresh reviewers and then tried on the site itself at desktop and phone width:
+
+- Answers keep their written summary. The outside price list the system reads at start-up had quietly dropped the model that writes answers on the practice site, so the next update would have left every answer showing only a count of records. The system now keeps its own price for that model, and the checks every change must pass work again after two new security notices about a library it uses.
+- An off-topic follow-up such as "Which cell phone is it best to buy this year?", typed after a question about a gene, is now turned away instead of searched. Known and on the list: a follow-up asking to change the database can get the "outside biomedical research" reply instead of the clearer "the database is read-only" one.
+- An answer no longer ends on a sentence that just repeats one paper title twice, such as "Marfan syndrome and Marfan syndrome."
+- Taken back the same day: letting the answer open on its third or fourth sentence. Its reviewers found it could open a question about diseases on a paper title, which reads as an answer and is not one, so the product owner chose to rebuild it rather than ship it.
+
+### 9 October
+
+NEW ON 9 OCTOBER, on the practice site, each change read by three fresh reviewers, fixed once, checked again and then tried on the site itself:
+
+- The records for your question now appear within seconds, before the written answer, and the answer's first sentence answers the question instead of counting what was found. The written answer is never held more than about a second while the system picks that first sentence.
+- The progress steps above an answer say "writing the answer" only after the last search has come back.
+- In your list of past searches, a search you stopped reads "No answer saved" instead of a count of sources, and asking a question again no longer hides your earlier searches of the same question.
+- A table of bacterial isolates now says where and when each one was collected, for example "2011, France: Bordeaux", or that the record does not say.
+- When the safety check every question passes cannot finish, the message now says that nothing was searched and that the problem was ours, so asking again is the fix.
+- Two more changes are built and reviewed and wait for the product owner's call: catching off-topic follow-up questions more often, and asking which aspect you mean when you type only a broad subject such as "the tree of life".
+- A network outage of about five hours paused all the work in the middle of the night; every piece picked up again where it stopped.
 
 ### The night of 8 to 9 October
 
@@ -293,6 +314,17 @@ All six live-government-API connections the plan called for are now built. That 
 - Give it a stretch of chromosome coordinates with the genome build, and it names the genes under that stretch without being told them, then lists the structural and clinical variants recorded there, each with a link. Leave the build out and it asks which one, rather than guessing. On the practice site since the night of 22 September, waiting for the product owner to try it.
 
 ## What does not work yet
+
+### 15 October
+
+THE HONEST HEADLINE AS OF 15 OCTOBER, in one sentence:
+
+- an answer whose best sentence sits third or later still opens on a count of records, because the first attempt to fix it could open on a paper title instead, and the product owner chose to rebuild it rather than ship that.
+
+What the day found, in plain words:
+
+- A quiet change outside the project, a price list the system downloads at start-up, would have stripped the written summary from every answer on the practice site at its next update. Nobody had asked a question there for days, so nothing showed it; a failing check on an unrelated change gave it away.
+- The same day, two new security notices about a library the system uses made every change's checks fail at once, though neither notice reached the parts this system uses.
 
 ### The night of 8 to 9 October
 
@@ -618,6 +650,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| A day of owner decisions, a hidden price problem caught, and one change taken back | The product owner answered five waiting questions. Three changes went live: answers keep their written summary after the next update, off-topic follow-ups are turned away, and a repeated paper title no longer ends an answer. A fourth, a smarter choice of the answer's first sentence, was rebuilt after its reviewers found it could open on a paper title | 15 October |
 | A night of six fixes and the faster answer built | Six changes went live, each read by three reviewers: reopened answers keep their warning and trust words, rs334 lists only itself, a lost date range is named, the About page is corrected, and crashes are logged with their search. The faster answer, records within seconds and a first sentence that answers, was built in full and checked for $3.67, and waits for the owner because its last review found two small things worse. Three other pieces were held back after their reviews | 8 October |
 | A day and a night with a second builder, and answers that count honestly | Factory, the second development agent, returned with one written brief and built five screen and wording fixes, each checked before it went in. Overnight, every sources number on an answer was made to agree, the variant table's note was made truthful, saved answers got their sources back, and the planning documents were made easier to read. One fix, for sentences copied from part of a paper, was held back because its last check found a new way to drop a limit | 7 October |
 | A day of fixing what the owner's checks found, and a clean-up of the to-do board | Twenty-one changes merged. People now get a written GERD answer, a Mediterranean question that names the disease, isolate answers with their resistance genes, chromosome windows with structural variant records, and a paper's linked data. Notes now say what was searched and why something failed. The to-do board was cut down, with four dead items removed and ten moved to the future list. The day ended with nine of ten test questions passing; the coronavirus question still answers about the wrong thing. The stronger writer and the gatekeeper redesign are held, and a second development agent now works the screens and wording | 5 October |
@@ -1132,10 +1165,10 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. The product owner decides on the faster answer: put it on the practice site now and fix its two small problems after, or fix them first.
-2. The product owner retests what went live on 8 and 9 October, newest first.
-3. Then the small fixes that wait on the faster answer: a record split into several rows, the sentence about unclassified variants, missing species and titles, and the bacterial sample place column.
-4. Agree how to split the gatekeeper's fixes into a safe small part and a separate part for server pauses.
+1. The product owner retests what went live on 15 October, then 8 and 9 October, newest first.
+2. Looking up one named bacterial isolate, without the slow distance scan the product owner chose to drop, so it answers in about 2 seconds.
+3. The rebuilds the product owner chose on 15 October: asking which aspect a broad subject means, decided by the model rather than a list; reading a year and a place for isolate questions in a separate small step; and naming the paper when a reworded sentence moves to a different one.
+4. The answer's first sentence, redesigned so it can come from later in the answer without ever opening on a paper title or a sentence that needs the one before it.
 5. Finish the coronavirus question: the unusual spellings and the follow-up cases the first fix left open.
 6. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
 7. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting.
@@ -1258,6 +1291,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| The model that writes answers on the practice site was no longer on the outside price list, so its next update would have dropped every written summary | ~~Fixed on 15 October~~, on the practice site, waiting for the product owner's retest |
+| After an answer, a follow-up asking to change the database can be told the system answers biomedical questions instead of that the database is read-only | On the list of work to do, found on 15 October |
+| An answer can open on a count of records when a sentence that answers the question comes third or later | Rebuilt after its first version was taken back on 15 October |
 | Picking a date range limits only the live paper search; the papers the system already holds are not filtered, so old ones can lead the answer | On the list of work to do, found on 8 October |
 | On a phone, the "High-risk claim" warning on a reopened answer breaks across two lines | On the list of work to do, found on 8 October |
 | When the checker rejects a reworded part of a sentence, the start of that sentence can still show | On the list of work to do, found on 8 October |
