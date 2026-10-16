@@ -1,0 +1,1213 @@
+Commit 94b0ba41, parked on phase/8.4 (tag deleted 2026-10-16)
+Subject: feat(pathogen-detection): narrow isolate_search by location and collection year
+
+Card 28 (2026-09-25, DECISIONS.md): an isolate question can narrow by
+location and collection year, not only by resistance gene.
+
+Adds two optional, additive filters to the isolate_search branch:
+location (a boundary-aware, case-folded prefix match against
+geo_loc_name) and collection_year_min/collection_year_max (parsed off
+the mixed-precision collection_date cell, never counting a missing or
+unparseable date as a match). Both default to None so every existing
+construction site keeps working unchanged.
+
+core/isolate_search.py extracts a collection-year range from five
+date phrases (since/before/between/through/in), a closed grammatical
+class with no model call, the same discipline the existing gene-token
+regex uses. Location is deliberately not extracted from free text:
+mapping a person's words to the file's INSDC country spelling needs a
+real resolver, not a hardcoded word list (DECISIONS.md 2026-09-24),
+and the gap plus the exact change needed in core/graph.py are named
+in the builder report.
+
+Proof: 228 unit tests across the five touched files, ruff/isort
+clean, and one live run against the real FTP file (E. coli, blaKPC,
+USA, since 2020): 580 matches out of 584,992 rows scanned, 20 shown,
+exact count, 21.26s.
+
+
+diff --git a/src/system_03_search_agent/core/isolate_search.py b/src/system_03_search_agent/core/isolate_search.py
+index 810bce28..ffc04688 100644
+--- a/src/system_03_search_agent/core/isolate_search.py
++++ b/src/system_03_search_agent/core/isolate_search.py
+@@ -46,6 +46,41 @@ Every taxonomy id in `ORGANISMS` was verified live against NCBI Taxonomy on
+ FTP root listed the same day (probes.md, item A). Extend the table only from
+ both sources.
+ 
++## Card 28 (2026-09-25): narrowing by collection year, and the location gap
++
++Product-owner decision, 2026-09-25 (DECISIONS.md): "An isolate question can
++narrow by location and collection year, not only by resistance gene." Two
++different answers for the two filters, because one is a structural date
++phrase and the other is an open-ended name:
++
++Collection year IS parsed here, by `_find_collection_years`, the same way
++`_GENE_TOKEN` parses a gene spelling: a fixed rule over the question's own
++words, no model call, no vocabulary. "since 2020", "before 2015", "between
++2018 and 2020", "through 2021" and a bare "in 2021" are function-word
++patterns, a closed, finite class exactly like the grammar-word stopword list
++`core.graph`'s topic-search comment describes, not a growing pile of named
++entities. `plan_calls` threads the result into
++`PathogenDetectionInput`'s `collection_year_min`/`collection_year_max`.
++
++Location is NOT parsed here, on purpose. `pathogen_detection_schemas.py`'s
++own design decision 6 states why: a `geo_loc_name` cell is spelled in the
++INSDC controlled vocabulary ("USA", not "the United States"), and mapping a
++person's own words to that vocabulary needs a name lookup, either a live
++model classification or a verified reference table, not a hand-built list
++of country synonyms invented for this ticket (DECISIONS.md 2026-09-24, "no
++hardcoded decisions": the same trap `core.graph`'s own topic-search comment
++names, "the next question names a diet, a sport, an occupation or a
++country"). `IsolateQuestion.location` and `plan_calls`'s pass-through both
++exist so the plumbing is ready the moment a real resolver exists; nothing
++in this file guesses at filling it. THE EXACT CHANGE NEEDED ELSEWHERE: as of
++this ticket, `core/graph.py`'s `think_node` (around the call to
++`isolate_search.parse_isolate_question` near line 2233) has no location or
++country extraction of any kind for any tool, so there is no existing
++extractor to redirect here. Building one is a `core/graph.py` change, out
++of this ticket's file fence and out of scope per `v1-scope-boundary`'s
++spirit until a resolver design is chosen; it is not a two-line addition to
++this module.
++
+ Depends on:
+     - system_03_search_agent.core.breadth_plan (PlannedCall)
+     - system_03_search_agent.tools.ncbi_efetch_schemas (NcbiEfetchInput)
+@@ -237,6 +272,86 @@ GENE_QUESTION: Final[str] = (
+ _MAX_PREFIXES: Final[int] = 10
+ _MAX_PREFIX_CHARS: Final[int] = 40
+ 
++#: The calendar-year bound `pathogen_detection_schemas.py`'s
++#: `collection_year_min`/`collection_year_max` share (design decision 6).
++_MIN_YEAR: Final[int] = 1900
++_MAX_YEAR: Final[int] = 2100
++
++#: "between 2018 and 2020": both bounds in one phrase. Tried first, so a
++#: bare "in 2021" pattern below never fires twice on the same two numbers.
++_YEAR_BETWEEN: Final[re.Pattern[str]] = re.compile(
++    r"\bbetween\s+(\d{4})\s+and\s+(\d{4})\b", re.IGNORECASE
++)
++#: "since 2020", "from 2020 on(ward)": a floor with no ceiling.
++_YEAR_SINCE: Final[re.Pattern[str]] = re.compile(
++    r"\b(?:since|from)\s+(\d{4})\b", re.IGNORECASE
++)
++#: "before 2015": a ceiling that excludes the named year itself.
++_YEAR_BEFORE: Final[re.Pattern[str]] = re.compile(r"\bbefore\s+(\d{4})\b", re.IGNORECASE)
++#: "until 2021", "through 2021", "up to 2021": a ceiling that includes it.
++_YEAR_THROUGH: Final[re.Pattern[str]] = re.compile(
++    r"\b(?:until|through|up\s+to)\s+(\d{4})\b", re.IGNORECASE
++)
++#: A bare "in 2021": the same year for both bounds. Least specific, tried
++#: last, so it never shadows one of the four phrases above.
++_YEAR_IN: Final[re.Pattern[str]] = re.compile(r"\bin\s+(\d{4})\b", re.IGNORECASE)
++
++
++def _year_in_range(text: str) -> int | None:
++    """One 4-digit year, or None when it falls outside the plausible
++    calendar range this module and the tool schema share. Never raises on
++    an out-of-range year; the caller drops it instead, the same
++    fail-closed discipline `pathogen_detection.py`'s own
++    `_parse_collection_year` uses for a malformed cell.
++    """
++    year = int(text)
++    if _MIN_YEAR <= year <= _MAX_YEAR:
++        return year
++    return None
++
++
++def _find_collection_years(text: str) -> tuple[int | None, int | None]:
++    """The `(collection_year_min, collection_year_max)` a fixed date-phrase
++    rule reads from the question's own words, or `(None, None)` when none
++    of the five phrases below appears. See this module's own "Card 28"
++    docstring section for why this is a closed set of function-word
++    patterns, not an open-ended vocabulary, and therefore not the kind of
++    hardcoded word list DECISIONS.md 2026-09-24 forbids.
++    """
++    between = _YEAR_BETWEEN.search(text)
++    if between is not None:
++        low = _year_in_range(between.group(1))
++        high = _year_in_range(between.group(2))
++        if low is not None and high is not None and low > high:
++            low, high = high, low
++        return low, high
++
++    year_min: int | None = None
++    year_max: int | None = None
++
++    since = _YEAR_SINCE.search(text)
++    if since is not None:
++        year_min = _year_in_range(since.group(1))
++
++    before = _YEAR_BEFORE.search(text)
++    if before is not None:
++        year = _year_in_range(before.group(1))
++        if year is not None and year > _MIN_YEAR:
++            year_max = year - 1
++
++    through = _YEAR_THROUGH.search(text)
++    if through is not None:
++        year_max = _year_in_range(through.group(1))
++
++    if year_min is None and year_max is None:
++        bare = _YEAR_IN.search(text)
++        if bare is not None:
++            year = _year_in_range(bare.group(1))
++            year_min = year
++            year_max = year
++
++    return year_min, year_max
++
+ 
+ @dataclass(frozen=True)
+ class IsolateQuestion:
+@@ -246,12 +361,20 @@ class IsolateQuestion:
+     `prefixes` is empty when neither a family word nor a gene token was
+     found; `clarification` then carries the question to ask instead of
+     searching. `families` are the families named in words, `genes` the
+-    explicit gene tokens as the person typed them.
++    explicit gene tokens as the person typed them. `collection_year_min`/
++    `collection_year_max` (card 28) are the calendar-year bounds a date
++    phrase named, or both None when the question named no date range.
++    `location` (card 28) is always None today: see this module's own "Card
++    28" docstring section for why a location filter is not extracted from
++    free text here.
+     """
+ 
+     organism: Organism | None
+     families: tuple[GeneFamily, ...]
+     genes: tuple[str, ...]
++    collection_year_min: int | None = None
++    collection_year_max: int | None = None
++    location: str | None = None
+ 
+     @property
+     def prefixes(self) -> tuple[str, ...]:
+@@ -332,7 +455,14 @@ def parse_isolate_question(text: str) -> IsolateQuestion | None:
+         and _GENERIC_RESISTANCE.search(text) is None
+     ):
+         return None
+-    return IsolateQuestion(organism=organism, families=families, genes=genes)
++    year_min, year_max = _find_collection_years(text)
++    return IsolateQuestion(
++        organism=organism,
++        families=families,
++        genes=genes,
++        collection_year_min=year_min,
++        collection_year_max=year_max,
++    )
+ 
+ 
+ def plan_calls(question: IsolateQuestion) -> list[PlannedCall]:
+@@ -347,20 +477,28 @@ def plan_calls(question: IsolateQuestion) -> list[PlannedCall]:
+     if question.organism is None or not question.prefixes:
+         raise ValueError("an isolate question with a clarification pending plans no call")
+     organism = question.organism
++    tool_input: dict[str, object] = {
++        "mode": "isolate_search",
++        "taxon": organism.taxon_folder,
++        "amr_gene_prefixes": list(question.prefixes),
++        "max_isolates": ISOLATES_SHOWN,
++    }
++    # Card 28: additive filters, omitted entirely rather than sent as None,
++    # so a question naming no year range or location plans the exact same
++    # call it planned before this ticket.
++    if question.collection_year_min is not None:
++        tool_input["collection_year_min"] = question.collection_year_min
++    if question.collection_year_max is not None:
++        tool_input["collection_year_max"] = question.collection_year_max
++    if question.location is not None:
++        tool_input["location"] = question.location
+     return [
+         PlannedCall(
+             tool="pathogen_detection",
+             layer="layer_2_api",
+             prefix="pd",
+             purpose="isolate_search",
+-            tool_input=PathogenDetectionInput.model_validate(
+-                {
+-                    "mode": "isolate_search",
+-                    "taxon": organism.taxon_folder,
+-                    "amr_gene_prefixes": list(question.prefixes),
+-                    "max_isolates": ISOLATES_SHOWN,
+-                }
+-            ),
++            tool_input=PathogenDetectionInput.model_validate(tool_input),
+         ),
+         PlannedCall(
+             tool="ncbi_efetch",
+@@ -378,16 +516,34 @@ def disclosure(question: IsolateQuestion) -> str:
+     """The Think narrative's clause: what will be searched, and what will not.
+ 
+     "searching Escherichia coli isolates in Pathogen Detection for AMR
+-    genotypes starting blaCTX-M; blaTEM and blaSHV alleles were not
+-    searched: ..."
++    genotypes starting blaCTX-M, collected since 2020; blaTEM and blaSHV
++    alleles were not searched: ..."
++
++    Card 28: the collection-year range (when the question named one) is
++    stated in the same clause the gene search is, so the person reading the
++    answer sees every filter that was applied, not only the gene one.
++    `location` is not appended here: it is always None today (see this
++    module's own "Card 28" docstring section), and appending a filter that
++    was never actually applied would misstate what ran.
+     """
+     assert question.organism is not None
+-    parts = [
+-        (
+-            f"searching {question.organism.label} isolates in Pathogen Detection for AMR "
+-            f"genotypes starting {', '.join(question.prefixes)}"
+-        )
+-    ]
++    lead = (
++        f"searching {question.organism.label} isolates in Pathogen Detection for AMR "
++        f"genotypes starting {', '.join(question.prefixes)}"
++    )
++    if question.collection_year_min is not None and question.collection_year_max is not None:
++        if question.collection_year_min == question.collection_year_max:
++            lead += f", collected in {question.collection_year_min}"
++        else:
++            lead += (
++                f", collected {question.collection_year_min} to "
++                f"{question.collection_year_max}"
++            )
++    elif question.collection_year_min is not None:
++        lead += f", collected since {question.collection_year_min}"
++    elif question.collection_year_max is not None:
++        lead += f", collected through {question.collection_year_max}"
++    parts = [lead]
+     for family in question.families:
+         if family.omitted:
+             parts.append(family.omitted)
+diff --git a/src/system_03_search_agent/tools/pathogen_detection.py b/src/system_03_search_agent/tools/pathogen_detection.py
+index 32f53d50..034f6443 100644
+--- a/src/system_03_search_agent/tools/pathogen_detection.py
++++ b/src/system_03_search_agent/tools/pathogen_detection.py
+@@ -7,8 +7,13 @@ Pathogen Detection PDG snapshot tree (T-3.5-05).
+ - `cluster_snp_neighbors`: every isolate in a PDS cluster within a SNP
+   distance of another member.
+ - `isolate_search`: which isolates of a taxon carry an AMR gene in a named
+-  family. Added 2026-09-22 (G-035), additive to Section 6.6's two locked
+-  branches, and described in full below.
++  family, optionally narrowed by collection location and/or a
++  collection-year range. Added 2026-09-22 (G-035), additive to Section
++  6.6's two locked branches, and described in full below. The two
++  additional filters (card 28, product-owner decision 2026-09-25) were
++  added 2026-09-25: `_isolate_search_predicate` combines the gene test with
++  an optional location prefix match (`_location_matches`) and an optional
++  collection-year range (`_parse_collection_year`), all ANDed together.
+ 
+ ## isolate_search: a bounded sample with a real total behind it
+ 
+@@ -549,6 +554,117 @@ def _amr_prefix_predicate(prefixes: Sequence[str]) -> Callable[[dict[str, str]],
+     return _row_carries_a_named_gene
+ 
+ 
++# F-3.5-A-13's own values a "missing" collection_date can genuinely take in
++# the real file, per the INSDC/NCBI BioSample `collection_date` controlled
++# vocabulary for a value the submitter never supplied. Checked case-folded.
++# None of these, and no unparseable value, is ever treated as satisfying a
++# collection-year filter: a missing date is not evidence an isolate falls
++# inside any range asked about (`decide-from-the-users-chair`).
++_MISSING_DATE_TOKENS: Final[frozenset[str]] = frozenset(
++    {"missing", "not collected", "not applicable", "n/a", "na", "unknown"}
++)
++
++# A leading 4-digit year, optionally followed by `-MM` or `-MM-DD` (the
++# collection_date column's three real precisions: a bare year, a
++# year-month, or a full date). Anchored at the START only, never `$`: a
++# malformed suffix after a genuine leading year (rare, but not this
++# function's job to reject) still yields a real year rather than nothing.
++_COLLECTION_DATE_YEAR_PATTERN: Final[re.Pattern[str]] = re.compile(r"^(\d{4})(?:-\d{2}(?:-\d{2})?)?$")
++
++
++def _parse_collection_year(raw: str | None) -> int | None:
++    """The row's collection year, or None when the value is missing,
++    NULL-shaped, or not a recognizable year-leading date.
++
++    Design decision 6 (`pathogen_detection_schemas.py`): `collection_date`
++    is mixed precision in the real file, a bare year (`"2020"`), a
++    year-month (`"2020-05"`), or a full date (`"2020-05-14"`). This reads
++    the leading four digits off whichever precision is present. A bare
++    `NULL` (the same F-3.5-03 sentinel `_parse_pathogen_list_field` already
++    treats as absent), one of `_MISSING_DATE_TOKENS`, an empty/whitespace
++    value, or any string this function cannot parse a leading year from,
++    all return None, NEVER a fabricated year: a row with None here is
++    excluded from a collection-year filter rather than counted as a match,
++    the same withhold-not-guess discipline `_cap_or_withhold` uses for
++    every other free-text field in this module.
++    """
++    if raw is None:
++        return None
++    value = raw.strip()
++    if not value or value.upper() == "NULL" or value.casefold() in _MISSING_DATE_TOKENS:
++        return None
++    match = _COLLECTION_DATE_YEAR_PATTERN.match(value)
++    if match is None:
++        return None
++    year = int(match.group(1))
++    if year < 1900 or year > 2100:
++        # A 4-digit leading token that is not a plausible calendar year
++        # (e.g. a malformed cell) is not a year, matching this schema's own
++        # `ge=1900, le=2100` bound on the filter fields.
++        return None
++    return year
++
++
++def _location_matches(geo_loc_name: str | None, location_folded: str) -> bool:
++    """True when `geo_loc_name` names the requested location at its start,
++    boundary-aware the same way `_amr_item_matches_prefix` matches an AMR
++    gene prefix: `location_folded` must be the whole cell, or the character
++    immediately after it must not be a letter or digit. Real values are
++    shaped `"USA: California"` or `"USA:AZ"` (colon-delimited), so
++    `"USA"` matches both and `"US"` never matches `"USA: California"`
++    (the next character after `"US"` is `A`, alphanumeric).
++    """
++    if geo_loc_name is None:
++        return False
++    value = geo_loc_name.strip()
++    if not value or value.upper() == "NULL":
++        return False
++    value_folded = value.casefold()
++    if not value_folded.startswith(location_folded):
++        return False
++    if len(value_folded) == len(location_folded):
++        return True
++    return not value_folded[len(location_folded)].isalnum()
++
++
++def _isolate_search_predicate(
++    prefixes: Sequence[str],
++    *,
++    location: str | None,
++    collection_year_min: int | None,
++    collection_year_max: int | None,
++) -> Callable[[dict[str, str]], bool]:
++    """The row predicate `isolate_search` hands to the transport: the AMR
++    gene-prefix test every call makes (`_amr_prefix_predicate`), ANDed with
++    an optional location filter and an optional collection-year range
++    (card 28, design decision 6). Both filters are additive and default to
++    no-op (`location=None`, both year bounds `None`), so a call with
++    neither behaves exactly as `_amr_prefix_predicate` alone did before
++    this ticket.
++    """
++    gene_matches = _amr_prefix_predicate(prefixes)
++    location_folded = location.casefold() if location else None
++
++    def _row_matches(row: dict[str, str]) -> bool:
++        if not gene_matches(row):
++            return False
++        if location_folded is not None:
++            geo_loc_name = _first_present(row, _GEO_COLUMN_CANDIDATES)
++            if not _location_matches(geo_loc_name, location_folded):
++                return False
++        if collection_year_min is not None or collection_year_max is not None:
++            year = _parse_collection_year(_first_present(row, _COLLECTION_DATE_COLUMN_CANDIDATES))
++            if year is None:
++                return False
++            if collection_year_min is not None and year < collection_year_min:
++                return False
++            if collection_year_max is not None and year > collection_year_max:
++                return False
++        return True
++
++    return _row_matches
++
++
+ def _build_isolate(
+     row: dict[str, str],
+     *,
+@@ -1194,7 +1310,12 @@ def _isolate_search_timeout_output(
+     never reports the cutoff as an absence, which is the whole point of
+     `status: "timeout"` existing separately from `status: "empty"`
+     (F-3.5-A-09).
++
++    Card 28: `_filters_applied_clause` names location/collection-year
++    filters here too, since a caller reading this message should see every
++    condition the scan was testing for, not only the gene list.
+     """
++    filters_clause = _filters_applied_clause(action)
+     return PathogenDetectionOutput(
+         status="timeout",
+         mode=action.mode,
+@@ -1206,17 +1327,41 @@ def _isolate_search_timeout_output(
+         scan_complete=False,
+         error=_cap(
+             f"pathogen_detection's {_TOTAL_BUDGET_S:.0f}s shared wall-clock budget ran "
+-            f"out while scanning {taxon}'s isolate metadata, after reading "
+-            f"{rows_scanned} row(s), and no isolate carrying one of the named genes had "
+-            "been found in the portion scanned. This does NOT mean none exists: the "
+-            "scan never reached the end of the file. A shorter gene list would not "
+-            "help, since the cost is the file's size rather than the query's "
++            f"out while scanning {taxon}'s isolate metadata{filters_clause}, after "
++            f"reading {rows_scanned} row(s), and no isolate carrying one of the named "
++            "genes had been found in the portion scanned. This does NOT mean none "
++            "exists: the scan never reached the end of the file. A shorter gene list "
++            "would not help, since the cost is the file's size rather than the query's "
+             "specificity; retrying may land on a faster network path.",
+             _MAX_ERROR_CHARS,
+         ),
+     )
+ 
+ 
++def _filters_applied_clause(action: PathogenIsolateSearchInput) -> str:
++    """Card 28: the clause naming which of the two additive filters this
++    call applied, so the tool's own `error` messages (and any caller that
++    reuses this text) state what was searched rather than leaving location
++    and collection-year silently implied. Empty string when neither filter
++    was set, so the message this feeds into reads exactly as it did before
++    this ticket.
++    """
++    parts: list[str] = []
++    if action.location:
++        parts.append(f"location starting {action.location!r}")
++    if action.collection_year_min is not None and action.collection_year_max is not None:
++        parts.append(
++            f"collected {action.collection_year_min}-{action.collection_year_max}"
++        )
++    elif action.collection_year_min is not None:
++        parts.append(f"collected since {action.collection_year_min}")
++    elif action.collection_year_max is not None:
++        parts.append(f"collected through {action.collection_year_max}")
++    if not parts:
++        return ""
++    return " (filtered to " + ", ".join(parts) + ")"
++
++
+ async def _isolate_search(
+     action: PathogenIsolateSearchInput,
+     snapshot: str,
+@@ -1224,12 +1369,22 @@ async def _isolate_search(
+     deadline: float,
+     client: httpx.AsyncClient,
+ ) -> PathogenDetectionOutput:
+-    """Which isolates of this taxon carry an AMR gene in the named family.
++    """Which isolates of this taxon carry an AMR gene in the named family,
++    optionally narrowed by collection location and/or collection-year range
++    (card 28, `pathogen_detection_schemas.py` design decision 6).
+ 
+     One streamed scan of the taxon's Metadata TSV, keeping the first
+     `max_isolates` matching rows and counting every match to end of file or
+     the shared deadline. See the module docstring for the design and the
+-    live numbers behind it.
++    live numbers behind it. `location` and the two `collection_year_*`
++    bounds are additive AND conditions applied by the same predicate that
++    tests the AMR gene prefixes (`_isolate_search_predicate`): a row must
++    satisfy every filter set, not just the gene test, to be counted or
++    shown. Neither filter changes the exact-count/`scan_complete`
++    discipline the module docstring documents: the scan still counts every
++    accepted row to end of file or the deadline, whichever comes first, so
++    the count and the "at least" wording behave identically whether zero,
++    one, or both filters are set.
+ 
+     The four dispositions, and the one that matters most:
+ 
+@@ -1251,7 +1406,12 @@ async def _isolate_search(
+     try:
+         scan = await pathogen_ftp_transport.stream_predicate_tsv_rows(
+             _metadata_url(taxon, snapshot),
+-            predicate=_amr_prefix_predicate(action.amr_gene_prefixes),
++            predicate=_isolate_search_predicate(
++                action.amr_gene_prefixes,
++                location=action.location,
++                collection_year_min=action.collection_year_min,
++                collection_year_max=action.collection_year_max,
++            ),
+             deadline=deadline,
+             client=client,
+             max_rows=min(action.max_isolates, _MAX_ISOLATES),
+@@ -1301,6 +1461,7 @@ async def _isolate_search(
+ 
+     if scan.match_count == 0:
+         gene_list = ", ".join(action.amr_gene_prefixes)
++        filters_clause = _filters_applied_clause(action)
+         return PathogenDetectionOutput(
+             status="empty",
+             mode=action.mode,
+@@ -1312,8 +1473,9 @@ async def _isolate_search(
+             scan_complete=True,
+             error=_cap(
+                 f"None of the {scan.total_rows_scanned} {taxon} isolates in this "
+-                f"snapshot carries a gene named {gene_list}. The whole file was read, "
+-                "so this is an exact answer rather than a scan that ran out of time.",
++                f"snapshot{filters_clause} carries a gene named {gene_list}. The whole "
++                "file was read, so this is an exact answer rather than a scan that ran "
++                "out of time.",
+                 _MAX_ERROR_CHARS,
+             ),
+             fields_withheld=fields_withheld,
+diff --git a/src/system_03_search_agent/tools/pathogen_detection_schemas.py b/src/system_03_search_agent/tools/pathogen_detection_schemas.py
+index e9191ef8..54aec1bb 100644
+--- a/src/system_03_search_agent/tools/pathogen_detection_schemas.py
++++ b/src/system_03_search_agent/tools/pathogen_detection_schemas.py
+@@ -109,6 +109,47 @@ how much of the file was actually read. See
+ `pathogen_detection.py`'s module docstring for the scan design and the
+ live numbers behind it.
+ 
++Design decision 6, two additive `isolate_search` filters, `location` and
++`collection_year_min`/`collection_year_max` (card 28, product-owner
++decision 2026-09-25, DECISIONS.md): "An isolate question can narrow by
++location and collection year, not only by resistance gene." Both are
++optional, both default to `None`, so every existing `isolate_search`
++construction site keeps working unchanged, the same additive-within-v1
++discipline design decisions 4 and 5 already apply.
++
++`location` matches a country name at the START of the row's `geo_loc_name`
++cell, boundary-aware the same way an AMR gene prefix matches
++(`pathogen_detection.py`'s `_amr_item_matches_prefix`, reused): real
++`geo_loc_name` values are shaped `"USA: California"` or `"USA:AZ"`
++(`test_pathogen_detection.py`'s own `_amr_row` fixture), a colon-or-nothing
++delimited country name followed by an optional subregion, per the INSDC
++`geo_loc_name` controlled vocabulary NCBI's own BioSample attribute
++definitions use. This module does not, and per DECISIONS.md 2026-09-24
++("no hardcoded decisions") must not, ship a country-name alias table
++mapping a person's own words ("the United States") to that vocabulary's
++own spelling ("USA"). The `location` value a caller supplies here is
++compared to the file's own spelling directly; producing that value from a
++question's free text is Think's job, not this schema's, and
++`core/isolate_search.py`'s own module docstring (card 28) states exactly
++what is and is not wired for that today.
++
++`collection_year_min`/`collection_year_max` bound the `collection_date`
++cell's year component. `collection_date` is mixed precision in the real
++file, a bare year (`"2020"`), a year and month (`"2020-05"`), or a full
++date (`"2020-05-14"`); `pathogen_detection.py`'s `_parse_collection_year`
++reads the leading four-digit year off whichever precision is present, and
++a bare `NULL`, `"missing"`, `"not collected"`, `"not applicable"`, or an
++empty/unparseable value NEVER counts as a match when a year filter is
++active, since a missing collection date is not evidence the isolate falls
++inside any range asked about (`decide-from-the-users-chair`: a confident
++wrong record is worse than a missing one). `ge=1900, le=2100` bounds both
++fields to a plausible calendar year, a shape check with no live network
++call, matching every other numeric bound in this file
++(`max_snp_distance`'s `ge=1, le=50`). A `model_validator` below rejects a
++payload where `collection_year_min` exceeds `collection_year_max`, since
++that range can never match a row and is a caller error worth surfacing at
++construction time rather than as a silent empty result.
++
+ Depends on:
+     - Nothing repo-local. `PATHOGEN_TAXON_PATTERN` and
+       `PATHOGEN_SOURCE_URL_PATTERN` are defined here, not imported from
+@@ -142,7 +183,7 @@ from __future__ import annotations
+ import re
+ from typing import Annotated, Final, Literal
+ 
+-from pydantic import BaseModel, ConfigDict, Field, RootModel
++from pydantic import BaseModel, ConfigDict, Field, RootModel, model_validator
+ 
+ # Design decision 2: ASCII letters, digits, underscore, hyphen only, no
+ # path separators, no leading digit-only ambiguity avoided by requiring an
+@@ -159,6 +200,16 @@ PATHOGEN_TAXON_PATTERN: Final = r"^[A-Za-z][A-Za-z0-9_-]{0,49}$"
+ # property), copied verbatim.
+ PATHOGEN_SOURCE_URL_PATTERN: Final = r"^https://(www\.)?ncbi\.nlm\.nih\.gov/pathogens/"
+ 
++# The shape of a `location` filter value on the `isolate_search` branch
++# (design decision 6). A `geo_loc_name` country/subregion name: ASCII
++# letters, digits, spaces, and the punctuation a real INSDC country name
++# uses (`Cote d'Ivoire`, `Korea, South`, `Congo, the Democratic Republic
++# of the`). No `.`, `(`, `)` or regex metacharacters, since a location
++# filter has no `_amr_item_matches_prefix`-shaped need for them; this value
++# is compared to the file's own text with a plain, case-folded boundary
++# check, never compiled as a regex.
++PATHOGEN_LOCATION_PATTERN: Final = r"^[A-Za-z][A-Za-z0-9 ,'.\-]*$"
++
+ # The shape of one AMR gene-name prefix on the `isolate_search` branch
+ # (design decision 5). ASCII letters, digits, underscore, parentheses,
+ # dot, apostrophe and hyphen only, starting with a letter, which is the
+@@ -275,6 +326,55 @@ class PathogenIsolateSearchInput(BaseModel):
+         Field(min_length=1, max_length=10),
+     ]
+     max_isolates: Annotated[int, Field(ge=1, le=100)] = 20
++    # Design decision 6 (card 28). Both optional, both None by default, so
++    # every construction site that predates these filters still validates
++    # unchanged.
++    location: Annotated[
++        str | None,
++        Field(
++            default=None,
++            min_length=1,
++            max_length=100,
++            pattern=PATHOGEN_LOCATION_PATTERN,
++            description=(
++                "A geo_loc_name country name, matched at the start of the "
++                "cell (e.g. 'USA' matches 'USA: California'). Compared to "
++                "the file's own spelling directly; never a caller's free-text "
++                "synonym resolved here."
++            ),
++        ),
++    ] = None
++    collection_year_min: Annotated[
++        int | None,
++        Field(
++            default=None,
++            ge=1900,
++            le=2100,
++            description="Earliest collection year to include, inclusive.",
++        ),
++    ] = None
++    collection_year_max: Annotated[
++        int | None,
++        Field(
++            default=None,
++            ge=1900,
++            le=2100,
++            description="Latest collection year to include, inclusive.",
++        ),
++    ] = None
++
++    @model_validator(mode="after")
++    def _year_range_is_sane(self) -> PathogenIsolateSearchInput:
++        if (
++            self.collection_year_min is not None
++            and self.collection_year_max is not None
++            and self.collection_year_min > self.collection_year_max
++        ):
++            raise ValueError(
++                f"collection_year_min ({self.collection_year_min}) must not exceed "
++                f"collection_year_max ({self.collection_year_max})"
++            )
++        return self
+ 
+ 
+ _PathogenActionUnion = (
+@@ -568,6 +668,38 @@ for _sample in _AMR_PREFIX_REJECT_SAMPLES:
+     )
+ del _sample
+ 
++_LOCATION_ACCEPT_SAMPLES: Final[tuple[str, ...]] = (
++    "USA",
++    "United Kingdom",
++    "Korea, South",
++    "Cote d'Ivoire",
++    "U.S.A.",
++)
++_LOCATION_REJECT_SAMPLES: Final[tuple[str, ...]] = (
++    # Regex metacharacters and shell/path punctuation must never validate,
++    # the same discipline as the AMR prefix pattern above.
++    "USA*",
++    "USA;rm -rf",
++    "USA/../etc",
++    # A leading digit is rejected: the pattern's own first character class
++    # is a letter.
++    "1USA",
++    # Trailing newline must never validate, the same Python-`re`
++    # `$`-before-newline trap design decision 2 covers.
++    "USA\n",
++    "",
++)
++
++for _sample in _LOCATION_ACCEPT_SAMPLES:
++    assert re.fullmatch(PATHOGEN_LOCATION_PATTERN, _sample) is not None, (
++        f"PATHOGEN_LOCATION_PATTERN wrongly rejects a real country name: {_sample!r}"
++    )
++for _sample in _LOCATION_REJECT_SAMPLES:
++    assert re.fullmatch(PATHOGEN_LOCATION_PATTERN, _sample) is None, (
++        f"PATHOGEN_LOCATION_PATTERN wrongly accepts an unsafe location value: {_sample!r}"
++    )
++del _sample
++
+ for _sample in _SOURCE_URL_ACCEPT_SAMPLES:
+     assert re.match(PATHOGEN_SOURCE_URL_PATTERN, _sample) is not None, (
+         f"PATHOGEN_SOURCE_URL_PATTERN wrongly rejects a valid pathogens record URL: {_sample!r}"
+diff --git a/testing/Developer/reports/2026-09-25_phase_8.4/builder_H.md b/testing/Developer/reports/2026-09-25_phase_8.4/builder_H.md
+new file mode 100644
+index 00000000..70dbc049
+--- /dev/null
++++ b/testing/Developer/reports/2026-09-25_phase_8.4/builder_H.md
+@@ -0,0 +1,60 @@
++# Builder H, phase 8.4, card 28
++
++Card 28: an isolate question can narrow by location and collection year, not only by resistance gene.
++
++## What shipped
++
++Two optional, additive filters on `pathogen_detection`'s `isolate_search` mode, on top of the existing mandatory AMR gene prefix filter:
++
++- `location`: matches a country name at the start of the row's `geo_loc_name` cell (values are shaped `"USA: California"`), boundary-aware the same way an AMR gene prefix matches, case-folded. A missing or `NULL` `geo_loc_name` never counts as a match.
++- `collection_year_min` / `collection_year_max`: bound the year read out of the mixed-precision `collection_date` cell (a bare year, a year-month, or a full date). A missing, `NULL`, `"missing"`, `"not collected"`, `"not applicable"`, empty, or otherwise unparseable value never counts as a match against an active year filter, and is never fabricated as a match.
++
++Both filters default to `None` and are optional at every layer, so every construction site that predates this ticket keeps working unchanged. The tool's exact-count / "at least" discipline (`total_available`, `scan_complete`, `rows_scanned`) is untouched: the scan still counts every accepted row to end of file or the deadline, whichever comes first, whether zero, one, or both filters are set.
++
++### Files touched
++
++- `src/system_03_search_agent/tools/pathogen_detection_schemas.py`: added `location` (bounded string, its own shape pattern `PATHOGEN_LOCATION_PATTERN`, with accept/reject self-verification samples at import time) and `collection_year_min`/`collection_year_max` (`ge=1900, le=2100`) to `PathogenIsolateSearchInput`, plus a `model_validator` rejecting `collection_year_min > collection_year_max` at construction time. Design decision 6 documents the reasoning, including why this file does not ship a country-name alias table.
++- `src/system_03_search_agent/tools/pathogen_detection.py`: `_parse_collection_year` (mixed-precision parser, fails closed to `None`), `_location_matches` (boundary-aware prefix match, reusing the same rule `_amr_item_matches_prefix` uses for gene names), `_isolate_search_predicate` (ANDs the gene test with the two new filters), and `_filters_applied_clause` (names which filters ran, folded into both the `empty` and `timeout` error messages so a caller reading them sees every condition that was tested, not only the gene list).
++- `src/system_03_search_agent/core/isolate_search.py`: `IsolateQuestion` gained `collection_year_min`, `collection_year_max`, `location` fields. `_find_collection_years` reads five date phrases ("since Y", "before Y", "between Y and Y", "through Y"/"until Y"/"up to Y", a bare "in Y") deterministically, no model call, the same discipline the existing gene-token regex uses. `plan_calls` threads the parsed year bounds into the tool input (omitting them entirely, not as `None`, when absent) and passes `location` through unconditionally (always `None` today, see below). `disclosure` states the collection-year range in the same clause the gene search is, when one was named.
++
++### Proof
++
++Unit tests (`tests/system_03_search_agent/tools/test_pathogen_detection.py`, `tests/system_03_search_agent/core/test_isolate_search.py`): location alone, year-min alone, year-max alone, both year bounds, both filters together (with rows matching only one of the two correctly excluded), boundary-aware location matching (a longer country-shaped string must never match), case-insensitive location matching, all three `collection_date` precisions, every named "missing" shape never counting as a match, schema-level rejection of an inverted year range and of shell/regex-metacharacter location values, and the five date-phrase extraction arms in `isolate_search.py` including the "between... and..." phrase never double-firing against the bare "in Y" rule. 228 tests pass across the five touched test files (57 in `test_pathogen_detection.py`, 49 in `test_isolate_search.py`, plus the unmodified `test_pathogen_detection_schemas.py` and `test_isolate_search_wiring.py`). `ruff check` and `isort --check-only` are clean on every changed file.
++
++Live run against the real FTP file, the tool itself (not the full agent), `Escherichia_coli_Shigella` taxon, `blaKPC`, `location="USA"`, `collection_year_min=2020`:
++
++```
++status: ok
++elapsed_s: 21.26
++pdg_snapshot: PDG000000004.6320
++isolate_count: 20
++total_available: 580
++scan_complete: True
++rows_scanned: 584992
++truncated: True
++```
++
++580 matching isolates found out of 584,992 rows scanned, 20 shown, exact count (the scan reached end of file), 21.26 seconds elapsed, well inside the 60-second-or-more floor `.claude/rules/tool-call-budgets.md` sets for `pathogen_detection` and the module's own 120-second internal budget.
++
++## The gap this ticket does not close, reported as instructed
++
++The ticket's own wording: "How the question's words become these filter values: if Think or Plan already extracts structured fields for isolate questions, find where and report exactly what needs to change there (that file is not yours); do not build a word list to guess them."
++
++I checked `core/graph.py` (not in my file fence). There is no existing location or country extraction anywhere in Think or Plan for any tool; `think_node` calls `isolate_search.parse_isolate_question(query.text)` around line 2233 and nothing else touches location. So there is no existing extractor to redirect into this ticket's filters.
++
++Collection year IS extracted, in `isolate_search.py` (mine), via `_find_collection_years`: five function-word date phrases, a closed and finite grammatical class, the same kind of fixed rule `_GENE_TOKEN` already uses for gene spellings and `core/graph.py`'s own topic-search comment endorses ("built from the user's own typed words by a fixed rule with no model call"). This is not the kind of hardcoded word list DECISIONS.md 2026-09-24 forbids, since it is a syntactic pattern over numbers and function words, not a growing list of named entities.
++
++Location is NOT extracted from free text anywhere. A real `geo_loc_name` cell is spelled in NCBI's own INSDC controlled vocabulary ("USA", not "the United States"), so mapping a person's own words to that vocabulary needs either a live model classification or a verified reference table analogous to `ORGANISMS`, both real engineering decisions with tradeoffs, not a two-line addition. Building an ad hoc country-synonym list to bridge that gap is exactly the trap `core/graph.py`'s own topic-search comment names ("the next question names a diet, a sport, an occupation or a country") and exactly what DECISIONS.md 2026-09-24 forbids. `IsolateQuestion.location` and `plan_calls`'s pass-through exist so the plumbing is ready the moment a resolver is chosen; nothing in `isolate_search.py` guesses at filling it.
++
++The exact change needed elsewhere, if a location resolver is built: `core/graph.py`'s `think_node`, near its `isolate_search.parse_isolate_question(query.text)` call (line 2233), would need to resolve a location phrase from the question (by whatever mechanism the product owner picks) and either pass it into a new `parse_isolate_question` parameter or set `IsolateQuestion.location` after the fact before calling `plan_calls`. That file is outside my fence and this change is a new capability decision, not something I built.
++
++## Verification run
++
++```
++ruff check <changed files>          -> All checks passed!
++isort --check-only <changed files>  -> clean
++pytest (5 touched test files)       -> 228 passed
++live tool run (blaKPC, USA, since 2020) -> ok, 580 matches, 20 shown, 21.26s
++```
++
++Branch: `phase/8.1-good-questions-answer` (the worktree's pre-existing branch; no new branch created per this dispatch's instructions). Commit hash recorded in the handback message.
+diff --git a/tests/system_03_search_agent/core/test_isolate_search.py b/tests/system_03_search_agent/core/test_isolate_search.py
+index 06694f35..ae022f7a 100644
+--- a/tests/system_03_search_agent/core/test_isolate_search.py
++++ b/tests/system_03_search_agent/core/test_isolate_search.py
+@@ -258,3 +258,112 @@ def test_count_sentence_is_exact_when_the_scan_finished_and_at_least_when_it_did
+     shown: int, total: int, complete: bool, expected: str
+ ) -> None:
+     assert module.count_sentence("Escherichia coli", shown, total, complete) == expected
++
++
++# ---------------------------------------------------------------------------
++# Card 28 (2026-09-25): collection-year extraction, plan_calls wiring,
++# disclosure. `location` is deliberately not exercised as an extraction
++# arm: see this module's own "Card 28" docstring section for why no
++# free-text location parsing exists to test.
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.parametrize(
++    ("text", "expected"),
++    [
++        (
++            "E. coli isolates carrying blaKPC collected in the United States since 2020",
++            (2020, None),
++        ),
++        ("Klebsiella isolates with blaKPC before 2015", (None, 2014)),
++        ("Salmonella isolates with mcr-1 between 2018 and 2020", (2018, 2020)),
++        ("Salmonella isolates with mcr-1 between 2020 and 2018", (2018, 2020)),  # reversed order
++        ("E. coli isolates with blaCTX-M through 2021", (None, 2021)),
++        ("E. coli isolates with blaCTX-M up to 2021", (None, 2021)),
++        ("E. coli isolates with blaCTX-M collected in 2021", (2021, 2021)),
++        ("E. coli isolates with blaCTX-M", (None, None)),
++        # An implausible year (outside 1900-2100) is dropped, not fabricated.
++        ("E. coli isolates with blaCTX-M since 1500", (None, None)),
++    ],
++)
++def test_find_collection_years_reads_the_five_date_phrases(
++    text: str, expected: tuple[int | None, int | None]
++) -> None:
++    assert module._find_collection_years(text) == expected
++
++
++def test_between_phrase_is_tried_before_since_so_it_never_double_fires() -> None:
++    """A "between X and Y" phrase must not also trip the bare "in Y" rule,
++    which would silently overwrite the real range with a single year.
++    """
++    question = module.parse_isolate_question(
++        "Salmonella isolates with mcr-1 between 2018 and 2020"
++    )
++    assert question is not None
++    assert question.collection_year_min == 2018
++    assert question.collection_year_max == 2020
++
++
++def test_parse_isolate_question_populates_collection_year_bounds() -> None:
++    question = module.parse_isolate_question(
++        "E. coli isolates carrying blaKPC collected in the United States since 2020"
++    )
++    assert question is not None
++    assert question.collection_year_min == 2020
++    assert question.collection_year_max is None
++    # Card 28's stated gap: location is never populated from free text.
++    assert question.location is None
++
++
++def test_plan_calls_threads_collection_year_bounds_into_the_tool_input() -> None:
++    question = module.parse_isolate_question(
++        "Klebsiella isolates with blaKPC since 2020"
++    )
++    assert question is not None
++    calls = module.plan_calls(question)
++    search = calls[0].tool_input.root
++    assert search.collection_year_min == 2020
++    assert search.collection_year_max is None
++    assert search.location is None
++
++
++def test_plan_calls_omits_filters_entirely_when_the_question_named_none() -> None:
++    """A question with no date phrase plans the exact call it planned
++    before this ticket: the filter fields are absent, not present as None,
++    which this test proves by checking the constructed model's own
++    defaults rather than assuming the dict shape.
++    """
++    question = module.parse_isolate_question(GOLDEN)
++    assert question is not None
++    calls = module.plan_calls(question)
++    search = calls[0].tool_input.root
++    assert search.collection_year_min is None
++    assert search.collection_year_max is None
++    assert search.location is None
++
++
++def test_disclosure_states_the_collection_year_range_when_present() -> None:
++    question = module.parse_isolate_question(
++        "E. coli isolates carrying blaKPC collected in the United States since 2020"
++    )
++    assert question is not None
++    text = module.disclosure(question)
++    assert "collected since 2020" in text
++
++
++def test_disclosure_states_a_single_year_and_a_full_range_distinctly() -> None:
++    single = module.parse_isolate_question("Klebsiella isolates with blaKPC in 2019")
++    assert single is not None
++    assert "collected in 2019" in module.disclosure(single)
++
++    ranged = module.parse_isolate_question(
++        "Salmonella isolates with mcr-1 between 2018 and 2020"
++    )
++    assert ranged is not None
++    assert "collected 2018 to 2020" in module.disclosure(ranged)
++
++
++def test_disclosure_says_nothing_about_dates_when_none_were_named() -> None:
++    question = module.parse_isolate_question(GOLDEN)
++    assert question is not None
++    assert "collected" not in module.disclosure(question)
+diff --git a/tests/system_03_search_agent/tools/test_pathogen_detection.py b/tests/system_03_search_agent/tools/test_pathogen_detection.py
+index c28e89f2..e4b0cbdb 100644
+--- a/tests/system_03_search_agent/tools/test_pathogen_detection.py
++++ b/tests/system_03_search_agent/tools/test_pathogen_detection.py
+@@ -1058,13 +1058,46 @@ def _search_input(
+     taxon: str = "Escherichia_coli_Shigella",
+     prefixes: list[str] | None = None,
+     max_isolates: int = 20,
++    location: str | None = None,
++    collection_year_min: int | None = None,
++    collection_year_max: int | None = None,
+ ) -> PathogenDetectionInput:
+-    return PathogenDetectionInput(
+-        mode="isolate_search",
+-        taxon=taxon,
+-        amr_gene_prefixes=prefixes if prefixes is not None else ["blaCTX-M"],
+-        max_isolates=max_isolates,
+-    )
++    payload: dict[str, object] = {
++        "mode": "isolate_search",
++        "taxon": taxon,
++        "amr_gene_prefixes": prefixes if prefixes is not None else ["blaCTX-M"],
++        "max_isolates": max_isolates,
++    }
++    if location is not None:
++        payload["location"] = location
++    if collection_year_min is not None:
++        payload["collection_year_min"] = collection_year_min
++    if collection_year_max is not None:
++        payload["collection_year_max"] = collection_year_max
++    return PathogenDetectionInput(**payload)
++
++
++def _row(
++    biosample_acc: str,
++    amr_genotypes: str,
++    *,
++    geo_loc_name: str = "USA:AZ",
++    collection_date: str = "2013-03-05",
++) -> dict[str, str]:
++    """A Metadata row (card 28), the same shape `_amr_row` builds, with
++    `geo_loc_name`/`collection_date` overridable for the location and
++    collection-year filter tests below.
++    """
++    return {
++        "biosample_acc": biosample_acc,
++        "Run": f"SRR{biosample_acc[-6:]}",
++        "strain": f"strain-{biosample_acc}",
++        "serovar": "NULL",
++        "geo_loc_name": geo_loc_name,
++        "collection_date": collection_date,
++        "AMR_genotypes": f'"{amr_genotypes}"',
++        "AST_phenotypes": "NULL",
++    }
+ 
+ 
+ @pytest.mark.asyncio
+@@ -1464,3 +1497,263 @@ async def test_isolate_search_any_prefix_in_the_list_matches(
+     )
+ 
+     assert matched == ["SAMN00000001", "SAMN00000002"]
++
++
++# ---------------------------------------------------------------------------
++# Card 28 (2026-09-25): location and collection-year filters on isolate_search.
++#
++# Coverage statement: location alone, collection-year alone (min only, max
++# only, both), both filters together, boundary-aware location matching (a
++# short country code must never match a longer one), each of the three
++# collection_date precisions (bare year, year-month, full date), and every
++# named "missing" shape (NULL, "missing", "not collected", "not applicable",
++# empty) never counting as a match against an active year filter. Not
++# covered here (out of this file's scope, per its own stated gap above):
++# `pathogen_ftp_transport.py`'s own streaming and header parsing.
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_isolate_search_location_filters_by_country_prefix(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """A `location="USA"` filter keeps only rows whose geo_loc_name starts
++    with USA, boundary-aware: a `"USAX"`-shaped value (not real, but the
++    boundary rule must reject it) must never match.
++    """
++    _install_snapshot(monkeypatch)
++    table = [
++        _row("SAMN00000001", "blaKPC", geo_loc_name="USA: California"),
++        _row("SAMN00000002", "blaKPC", geo_loc_name="United Kingdom"),
++        _row("SAMN00000003", "blaKPC", geo_loc_name="USA:AZ"),
++        _row("SAMN00000004", "blaKPC", geo_loc_name="USAX: Nowhere"),  # boundary check
++    ]
++    _install_predicate_scan(monkeypatch, table)
++
++    output = await pathogen_detection(_search_input(prefixes=["blaKPC"], location="USA"))
++
++    assert output.status == "ok", output.error
++    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001", "SAMN00000003"]
++    assert output.total_available == 2
++
++
++@pytest.mark.asyncio
++async def test_isolate_search_location_is_case_insensitive(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _install_snapshot(monkeypatch)
++    table = [_row("SAMN00000001", "blaKPC", geo_loc_name="usa: texas")]
++    _install_predicate_scan(monkeypatch, table)
++
++    output = await pathogen_detection(_search_input(prefixes=["blaKPC"], location="USA"))
++
++    assert output.status == "ok", output.error
++    assert output.isolate_count == 1
++
++
++@pytest.mark.asyncio
++async def test_isolate_search_location_excludes_missing_geo_loc_name(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """A NULL geo_loc_name is not evidence the isolate is anywhere in
++    particular, so it must never count as a match, never be treated as an
++    absence disguised as a positive result.
++    """
++    _install_snapshot(monkeypatch)
++    table = [_row("SAMN00000001", "blaKPC", geo_loc_name="NULL")]
++    _install_predicate_scan(monkeypatch, table)
++
++    output = await pathogen_detection(_search_input(prefixes=["blaKPC"], location="USA"))
++
++    assert output.status == "empty", output.error
++    assert output.isolate_count == 0
++    assert output.total_available == 0
++
++
++@pytest.mark.asyncio
++async def test_isolate_search_collection_year_min_only(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _install_snapshot(monkeypatch)
++    table = [
++        _row("SAMN00000001", "blaKPC", collection_date="2019-06-01"),
++        _row("SAMN00000002", "blaKPC", collection_date="2020-01-01"),
++        _row("SAMN00000003", "blaKPC", collection_date="2022-07-04"),
++    ]
++    _install_predicate_scan(monkeypatch, table)
++
++    output = await pathogen_detection(
++        _search_input(prefixes=["blaKPC"], collection_year_min=2020)
++    )
++
++    assert output.status == "ok", output.error
++    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000002", "SAMN00000003"]
++
++
++@pytest.mark.asyncio
++async def test_isolate_search_collection_year_max_only(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _install_snapshot(monkeypatch)
++    table = [
++        _row("SAMN00000001", "blaKPC", collection_date="2019-06-01"),
++        _row("SAMN00000002", "blaKPC", collection_date="2020-01-01"),
++        _row("SAMN00000003", "blaKPC", collection_date="2022-07-04"),
++    ]
++    _install_predicate_scan(monkeypatch, table)
++
++    output = await pathogen_detection(
++        _search_input(prefixes=["blaKPC"], collection_year_max=2020)
++    )
++
++    assert output.status == "ok", output.error
++    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001", "SAMN00000002"]
++
++
++@pytest.mark.asyncio
++async def test_isolate_search_collection_year_range_both_bounds(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _install_snapshot(monkeypatch)
++    table = [
++        _row("SAMN00000001", "blaKPC", collection_date="2018-06-01"),
++        _row("SAMN00000002", "blaKPC", collection_date="2020-01-01"),
++        _row("SAMN00000003", "blaKPC", collection_date="2020-12-31"),
++        _row("SAMN00000004", "blaKPC", collection_date="2023-07-04"),
++    ]
++    _install_predicate_scan(monkeypatch, table)
++
++    output = await pathogen_detection(
++        _search_input(prefixes=["blaKPC"], collection_year_min=2019, collection_year_max=2021)
++    )
++
++    assert output.status == "ok", output.error
++    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000002", "SAMN00000003"]
++
++
++@pytest.mark.asyncio
++async def test_isolate_search_collection_date_mixed_precision(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """The three real precisions: a bare year, a year-month, a full date,
++    all correctly placed inside a 2020-only range.
++    """
++    _install_snapshot(monkeypatch)
++    table = [
++        _row("SAMN00000001", "blaKPC", collection_date="2020"),
++        _row("SAMN00000002", "blaKPC", collection_date="2020-05"),
++        _row("SAMN00000003", "blaKPC", collection_date="2020-05-14"),
++        _row("SAMN00000004", "blaKPC", collection_date="2021"),
++    ]
++    _install_predicate_scan(monkeypatch, table)
++
++    output = await pathogen_detection(
++        _search_input(prefixes=["blaKPC"], collection_year_min=2020, collection_year_max=2020)
++    )
++
++    assert output.status == "ok", output.error
++    assert [i.biosample_acc for i in output.isolates] == [
++        "SAMN00000001",
++        "SAMN00000002",
++        "SAMN00000003",
++    ]
++
++
++@pytest.mark.asyncio
++async def test_isolate_search_missing_collection_date_never_counts_as_a_match(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """Every named "missing" shape (NULL, "missing", "not collected", "not
++    applicable", empty), plus a genuinely unparseable value, must all be
++    excluded from a year-filtered search rather than silently counted.
++    """
++    _install_snapshot(monkeypatch)
++    table = [
++        _row("SAMN00000001", "blaKPC", collection_date="NULL"),
++        _row("SAMN00000002", "blaKPC", collection_date="missing"),
++        _row("SAMN00000003", "blaKPC", collection_date="Not Collected"),
++        _row("SAMN00000004", "blaKPC", collection_date="not applicable"),
++        _row("SAMN00000005", "blaKPC", collection_date=""),
++        _row("SAMN00000006", "blaKPC", collection_date="unspecified-format"),
++        _row("SAMN00000007", "blaKPC", collection_date="2020-05-14"),  # the one real match
++    ]
++    _install_predicate_scan(monkeypatch, table)
++
++    output = await pathogen_detection(
++        _search_input(prefixes=["blaKPC"], collection_year_min=2000, collection_year_max=2100)
++    )
++
++    assert output.status == "ok", output.error
++    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000007"]
++    assert output.total_available == 1
++
++
++@pytest.mark.asyncio
++async def test_isolate_search_location_and_collection_year_together(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """The headline case from the ticket: blaKPC, USA, since 2020. A row
++    matching only one of the two additive filters must still be excluded.
++    """
++    _install_snapshot(monkeypatch)
++    table = [
++        _row("SAMN00000001", "blaKPC", geo_loc_name="USA:AZ", collection_date="2021-01-01"),
++        _row(
++            "SAMN00000002", "blaKPC", geo_loc_name="United Kingdom", collection_date="2021-01-01"
++        ),  # right year, wrong location
++        _row("SAMN00000003", "blaKPC", geo_loc_name="USA:AZ", collection_date="2019-01-01"),
++        # right location, wrong year
++        _row("SAMN00000004", "blaEC", geo_loc_name="USA:AZ", collection_date="2021-01-01"),
++        # right location and year, wrong gene
++    ]
++    _install_predicate_scan(monkeypatch, table)
++
++    output = await pathogen_detection(
++        _search_input(prefixes=["blaKPC"], location="USA", collection_year_min=2020)
++    )
++
++    assert output.status == "ok", output.error
++    assert [i.biosample_acc for i in output.isolates] == ["SAMN00000001"]
++    assert output.total_available == 1
++
++
++def test_collection_year_range_min_over_max_is_rejected_at_construction() -> None:
++    from pydantic import ValidationError
++
++    with pytest.raises(ValidationError):
++        PathogenDetectionInput(
++            mode="isolate_search",
++            taxon="Escherichia_coli_Shigella",
++            amr_gene_prefixes=["blaKPC"],
++            collection_year_min=2021,
++            collection_year_max=2020,
++        )
++
++
++def test_location_field_rejects_shell_and_regex_metacharacters() -> None:
++    from pydantic import ValidationError
++
++    for bad in ("USA;pkill -9 all", "USA*", "USA/../etc", ""):
++        with pytest.raises(ValidationError):
++            PathogenDetectionInput(
++                mode="isolate_search",
++                taxon="Escherichia_coli_Shigella",
++                amr_gene_prefixes=["blaKPC"],
++                location=bad,
++            )
++
++
++def test_collection_year_bounds_are_enforced_at_the_schema_layer() -> None:
++    from pydantic import ValidationError
++
++    for bad_kwargs in (
++        {"collection_year_min": 1899},
++        {"collection_year_max": 2101},
++    ):
++        with pytest.raises(ValidationError):
++            PathogenDetectionInput(
++                mode="isolate_search",
++                taxon="Escherichia_coli_Shigella",
++                amr_gene_prefixes=["blaKPC"],
++                **bad_kwargs,
++            )

@@ -1,0 +1,90 @@
+Commit 4b64ac33, parked on phase/8.4 (tag deleted 2026-10-16)
+Subject: docs(tracker): builder G's phase 8.4 report, all three tickets
+
+
+
+diff --git a/testing/Developer/reports/2026-09-25_phase_8.4/builder_G.md b/testing/Developer/reports/2026-09-25_phase_8.4/builder_G.md
+new file mode 100644
+index 00000000..d39eb095
+--- /dev/null
++++ b/testing/Developer/reports/2026-09-25_phase_8.4/builder_G.md
+@@ -0,0 +1,79 @@
++# Builder G, phase 8.4: answers worth reading
++
++Screen-side work only, per the file fence. Three tickets, three commits, all frontend.
++
++## Table of contents
++
++- [Ticket 1: card 33, the depth toggle on the answer's status strip](#ticket-1-card-33-the-depth-toggle-on-the-answers-status-strip)
++- [Ticket 2: card 31, every count names what it counts](#ticket-2-card-31-every-count-names-what-it-counts)
++- [Ticket 3: card 30, a CLI example that works as printed](#ticket-3-card-30-a-cli-example-that-works-as-printed)
++- [Tests run](#tests-run)
++- [What I could not verify, and why](#what-i-could-not-verify-and-why)
++- [Commits](#commits)
++
++## Ticket 1: card 33, the depth toggle on the answer's status strip
++
++Decided from the reader's chair: someone reading an answer in Plain language who wants the researcher detail should not have to retype the question. The mockups the ticket pointed at, `testing/Developer/reports/2026-09-14_handover_inputs/design/Main.dc.html` and `Researcher.dc.html`, draw exactly this: a bare two-button pill beside "Show work" in the status strip, no repeated "Answer mode" label, no repeated info button (both belong to `DepthControl`'s pre-ask placement).
++
++What I built:
++
++- `frontend/src/components/controls/DepthControl.tsx`: a new exported `DepthStripToggle`, transcribing that pill from the mockup with the same tokens `DepthControl`'s own buttons already use (`layer1Wash`, `layer1`, `inkMuted`, `line`). It reuses the same `AUDIENCE_MODE_OPTIONS` list (renamed from a private `OPTIONS` and exported) so the two controls can never offer different choices. Clicking the already-selected option is a no-op, so a stray click never burns a run.
++- `frontend/src/components/screens/AnswerScreen.tsx`: `AnswerBody` and `AnswerScreen` both gained `onDepthChange`/`depthValue` props. The trailing status-strip group (previously just "Show work") now wraps the toggle and "Show work" together under one `margin-left: auto`, matching the mockup's own grouping. The toggle is wired into the ONE `AnswerBody` call that renders the live, landed turn, never the streaming preview and never a folded previous turn's `AnswerBody`, so it structurally cannot appear while a run is in flight or on a question the reader is no longer looking at. That is the whole enforcement of item 9.12's lock: there is no separate `locked` flag threaded from `App`, because the component that would need it never mounts during a run.
++- `frontend/src/App.tsx`: `onDepthChange={(next) => void ask(searchView.question, next, true)}`. Switching depth re-runs the SAME question through the SAME `ask` a typed follow-up uses, `continuesThread=true`, so the answer just read folds into the thread instead of vanishing, exactly as "the new answer is shown the way a new run is shown today" asks. It counts as one question against the daily cap because it is, mechanically, one more call to `ask`.
++
++## Ticket 2: card 31, every count names what it counts
++
++The TP53 finding (`testing/Developer/reports/2026-09-20_tp53_findings/findings.md`, D-2) showed a status strip's "78 sources from 3 layers", a lead sentence's "of 124 available", and a table pager's "Showing 1 to 10 of 59", three honest numbers about three different things with nothing telling a reader which was which. From the reader's chair: three different numbers under one answer, with no reader-visible label distinguishing them, reads as a system that does not know its own count, not as three legitimately different facts. Fixed the two frontend-rendered ones:
++
++- `frontend/src/hooks/useRunView.ts`: the status strip's meta line now says `"N sources cited from M layers"` rather than a bare `"N sources"`. The number is unchanged; only the word naming it changed.
++- `frontend/src/components/screens/AnswerScreen.tsx`: added `recordRowNoun` and `recordsCountLabel`, which read a records block's own `label` (set by `parseRecordLine` for a `record_line` block, e.g. "Disease name") and derive a plain noun ("disease") by stripping the trailing field word. The table/stacked-list pager's status line now reads `"Showing 1–10 of 59 disease rows, 10 per page"` where a noun is derivable, or `"...of 59 records, 10 per page"` when it is not (a `table_row`/`list_item` block carries no entity name to draw from). The page-size figure is now stated, not left implicit beside "Page 1 of 6".
++- The Sources disclosure's badge (the total distinct-record count) keeps its visible bare-number glyph, per the design system's own badge shape, but now carries an accessible name saying what it counts and, deliberately, naming why it can legitimately differ from the strip's own count: it is a count of distinct records after URL deduplication, while the strip counts citation MARKERS, and one record can answer for more than one marker.
++
++Backend text is another builder's, per the ticket, and unchanged here. What I found and what I'd recommend to whoever owns it:
++
++- `src/system_03_search_agent/core/graph.py`, `_build_truncated_answer_note` (around line 7431): the exact "not shown above" wording D-3 named is ALREADY fixed. It now says "were retrieved" or "were retrieved" versus "included in this answer" depending on `retrieval_limited`, and never says "shown above" next to a pager. Nothing to do here; noting it so nobody re-opens a closed item.
++- `src/system_03_search_agent/synthesis/answer_layout.py`, lines 1056 and 1080: the lead sentence's `", out of {total} available"` and `", of {total} available"` are still bare. I'd recommend `", of {total} records that matched this question"`, echoing the truncation note's own phrasing ("records that matched this question") so the SAME number is described the SAME way everywhere it appears in one answer, rather than "available" in one sentence and "matched" in another for what is the same underlying count.
++
++## Ticket 3: card 30, a CLI example that works as printed
++
++Measured: `s3 login` with no argument fails, because `main.py`'s `_parse_login_args` declares `email` a required positional with no default. From the reader's chair: someone who copies the printed example and pastes it into a terminal should not hit an error on the very first line.
++
++- `frontend/src/components/screens/InfoScreens.tsx`: `CLI_EXAMPLE` now reads:
++  ```
++  export S3_BASE_URL=<this deployment's origin>
++  s3 login you@example.org
++  s3 ask "diseases linked to BRCA1"
++  ```
++  The base-URL line matters as much as the email: `_run_login` falls back to `http://127.0.0.1:8000` when neither `--base-url` nor `S3_BASE_URL` is set, so the two-line original would have quietly pointed a reader's first login at their own laptop rather than this deployment. `s3 ask` needs no base URL of its own since it reads the one `s3 login` already stored.
++  `KGX_EXAMPLE` is unchanged, per the ticket: the command is correct as printed for someone who HAS the operator-granted graph credentials, and the fix is naming that requirement rather than removing the command. The card's `body` text now says the KGX command "needs its own read-only graph database credentials, which only the operator can grant" and "will not run for a public account", so nobody is led to a command that fails silently with no explanation.
++
++## Tests run
++
++```
++cd frontend && npx vitest run src/components/screens/IntegrationsScreen.test.tsx
++cd frontend && npx vitest run src/components/controls/DepthControl.test.tsx src/components/screens/AnswerScreen.depthToggle.test.tsx
++cd frontend && npx vitest run src/App.depthToggle.test.tsx
++cd frontend && npx vitest run src/components/screens/AnswerScreen src/hooks/useRunView src/answerPagination.test.tsx src/answerBold.test.tsx src/set9AnswerStructure.test.tsx
++cd frontend && npx vitest run src/answerCountLabels.test.tsx src/hooks/useRunView.metaCounts.test.tsx src/components/screens/AnswerScreen.countsNamedPlain.test.tsx
++cd frontend && npm run build
++```
++
++All green. `npm run build` (`tsc -b && vite build`) passed with no type errors, confirming the new props typecheck across `DepthControl.tsx`, `AnswerScreen.tsx` and `App.tsx`.
++
++I also ran the FULL suite once (`npx vitest run`, no path filter). It reported 3 failed test files, `App.depthToggle.test.tsx` (mine) and two files I never touched, `App.savedAnswer.test.tsx` and `App.test.tsx`, all three timing out at exactly the 15-second default and the run itself taking over 1000 seconds wall clock (worker-pool contention on this machine, evidenced by a fourth unrelated "failed to start forks worker" error in the same run). Re-running those exact three files together in isolation immediately afterward: 44 of 44 tests passed in 16.5 seconds. Recorded here rather than silently rerun-and-move-on, per this repository's own evidence standard: the full-suite run is not narrated as a clean pass, and the isolated re-run is the evidence that stands.
++
++## What I could not verify, and why
++
++Ticket 1 asks for a 390px overflow check, "scrollWidth minus clientWidth is zero at 390." That check needs real browser layout, which is what `frontend/e2e/*.spec.ts`'s existing `scrollWidth`/`clientWidth` arms already use (`journeys/narrow-viewports.spec.ts` and others); jsdom, which every vitest test in this repository runs under, does not implement layout at all, so a `scrollWidth` assertion inside a vitest test would read `0 - 0 = 0` regardless of whether the markup actually overflows, a check that cannot fail and therefore is not a check. My instructions were vitest only and explicitly not the Playwright suite, and `frontend/e2e/` sits outside my file fence.
++
++What I did instead, and what I'd ask a Playwright-capable runner (or the product owner, on a real phone-width window) to confirm: the trailing group (`DepthStripToggle` plus "Show work") sits inside a `Box` with `flexWrap: "wrap"`, and every button carries `whiteSpace: "nowrap"`. At 390px the group wraps onto its own line under the outcome/elapsed/meta text rather than forcing the row wider than its container, the same mechanism the existing "Show work" button and the record pager's own status row already rely on. I have not driven a real 390px viewport to confirm this, so I am reporting the structural argument rather than claiming a check I did not run.
++
++## Commits
++
++```
++22e0e2b fix(web-ui): print a CLI login example that works, and name KGX's graph access requirement
++df7d7a2 feat(web-ui): add the Plain language / Researcher toggle to the answer status strip
++2fd9959 fix(web-ui): make every frontend-rendered count name what it counts
++```
++
++Branch: `worktree-agent-a27e2f5ab7a2b754c` (this worktree's branch for phase 8.4).

@@ -1,0 +1,72 @@
+Commit 373adae7, parked on phase/8.4 (tag deleted 2026-10-16)
+Subject: test(web-ui): fixtures carry the calm trust wording the backend now sends
+
+
+
+diff --git a/frontend/src/answerLayout.test.tsx b/frontend/src/answerLayout.test.tsx
+index b1572e0c..12c0fc58 100644
+--- a/frontend/src/answerLayout.test.tsx
++++ b/frontend/src/answerLayout.test.tsx
+@@ -63,7 +63,7 @@ const DONE = envelope("done", {
+   total_tool_calls: 1,
+   elapsed_ms: 900,
+   trust_outcome: "answer",
+-  trust_line: "Based on 4 sources, not yet confirmed",
++  trust_line: "Based on 4 sources from one database",
+ });
+ 
+ function tailStream(typed: boolean): AgentEvent[] {
+diff --git a/frontend/src/answerPagination.test.tsx b/frontend/src/answerPagination.test.tsx
+index e4a5bfca..c7c23d64 100644
+--- a/frontend/src/answerPagination.test.tsx
++++ b/frontend/src/answerPagination.test.tsx
+@@ -55,7 +55,7 @@ const DONE = envelope("done", {
+   total_tool_calls: 1,
+   elapsed_ms: 900,
+   trust_outcome: "answer",
+-  trust_line: "Based on sources, not yet confirmed",
++  trust_line: "Based on 3 sources from one database",
+ });
+ 
+ /** One table's worth of events: a header, `rows` table_row tokens, and a citation per row. */
+diff --git a/frontend/src/lib/events.ts b/frontend/src/lib/events.ts
+index 359508d1..1f19cbce 100644
+--- a/frontend/src/lib/events.ts
++++ b/frontend/src/lib/events.ts
+@@ -253,7 +253,7 @@ export interface DonePayload {
+   trust_outcome: TrustOutcome;
+   /**
+    * UI fix set 9, item 9.9. The one plain trust line for the answer ("Based
+-   * on 1 source, not yet confirmed"), built in code by the backend. Optional
++   * on 1 source from one database"), built in code by the backend. Optional
+    * and nullable; null on a refusal, absent from an older backend.
+    */
+   trust_line?: string | null;
+diff --git a/frontend/src/set9AnswerStructure.test.tsx b/frontend/src/set9AnswerStructure.test.tsx
+index f67e91ab..c8ef94f3 100644
+--- a/frontend/src/set9AnswerStructure.test.tsx
++++ b/frontend/src/set9AnswerStructure.test.tsx
+@@ -113,7 +113,7 @@ function researcherStream(extraDone: Record<string, unknown> = {}): AgentEvent[]
+       total_tool_calls: 1,
+       elapsed_ms: 1200,
+       trust_outcome: "ask",
+-      trust_line: "Based on 1 source, not yet confirmed",
++      trust_line: "Based on 1 source from one database",
+       ...extraDone,
+     } as Extract<AgentEvent, { type: "done" }>["payload"]),
+   ];
+@@ -221,12 +221,12 @@ describe("set 9: structure travels on the wire and reaches the screen", () => {
+   it("replaces the pills with one plain trust line, keeping high risk visible (9.9)", () => {
+     const { result } = renderHook(() => useRunView(researcherStream()));
+     expect(result.current.trust).toEqual([
+-      { kind: "plain", label: "Based on 1 source, not yet confirmed" },
++      { kind: "plain", label: "Based on 1 source from one database" },
+       { kind: "risk", label: "High-risk claim" },
+     ]);
+     renderView(result.current);
+     const line = screen.getByTestId("trust-line");
+-    expect(line).toHaveTextContent("Based on 1 source, not yet confirmed");
++    expect(line).toHaveTextContent("Based on 1 source from one database");
+     expect(line).not.toHaveTextContent(/every claim cited/i);
+     expect(within(line).getByRole("button", { name: /about trust signals/i })).toBeInTheDocument();
+   });
