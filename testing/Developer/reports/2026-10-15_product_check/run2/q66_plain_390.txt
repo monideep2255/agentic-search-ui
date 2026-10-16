@@ -1,0 +1,56 @@
+What phenotypic features are associated with Marfan syndrome?
+New search
+
+✓ Answered16.3s · 8 tool calls · 13 sources cited from 2 layers
+
+Show work ▾
+
+MedGen lists these clinical features: Aortic regurgitation, Arachnodactyly, Astigmatism, Ectopia lentis, Esotropia, Exotropia, Pes planus, Glaucoma, Congestive heart failure and Hypertropia.⁠4–13 I found 1 condition related to Marfan syndrome.⁠1
+
+WHERE THIS ANSWER COMES FROM
+Marfan syndrome⁠1
+Marfan syndrome.⁠2
+Marfan syndrome⁠3
+Marfan Syndrome⁠74
+Studies of Heritable Disorders of Connective Tissue⁠75
+[Latest advances in the diagnosis and treatment of Marfan syndrome].⁠76
+Comparison of Two Medications Aimed at Slowing Aortic Root Enlargement in Individuals With Marfan Syndrome⁠77
+What Is Marfan Syndrome?⁠78
+Angiotensin Converting Enzyme Inhibitors in Marfan Syndrome⁠79
+Marfan syndrome.⁠80
+Showing 1–10 of 13
+‹ Previous
+Page 1 of 2
+Next ›
+CLINICAL FEATURES MEDGEN LISTS FOR MARFAN SYNDROME
+Aortic regurgitation⁠4
+Arachnodactyly⁠5
+Astigmatism⁠6
+Ectopia lentis⁠7
+Esotropia⁠8
+Exotropia⁠9
+Pes planus⁠10
+Glaucoma⁠11
+Congestive heart failure⁠12
+Hypertropia⁠13
+Showing 1–10 of 70
+‹ Previous
+Page 1 of 7
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+13
+Based on 13 sources cited
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

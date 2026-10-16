@@ -20,7 +20,7 @@ Nothing here requires a document to carry today's date:
 - Build harness review item D2 removed the column and the gate, delegated by the product owner on 2026-09-25 (DECISIONS.md, the lead implements both harness reviews' takeaways).
 - Now `HANDOFF.md` is rewritten at every session end, and every other document is edited when its fact changes.
 
-Last updated: 2026-10-09.
+Last updated: 2026-10-15.
 
 ## Table of contents
 
@@ -67,7 +67,7 @@ Last updated: 2026-10-09.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-10-09 that begins "Card 48's pull request #230 stays open for the owner", the last row at the overnight checkpoint of 2026-10-09. Of the 15 rows read at this checkpoint, none changes a registered document's shape or job: they record the owner's answers, the lead's merges, splits, parks and holds of single cards, and one dependency floor.
+Guarded through the DECISIONS.md row dated 2026-10-15 that begins "Card 111's pull request #234 merges on its fresh verifier's PASS", the last row at the checkpoint of 2026-10-15. Of the 14 rows read at this checkpoint, none changes a registered document's shape or job: they record the owner's answers on five parked cards and two holds, the lead's fix-round designs, merges and a re-split, and one dependency move.
 
 ## Why the registry lives here
 

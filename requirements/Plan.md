@@ -1050,6 +1050,16 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-15. THE UI FIX LOOP, 2026-10-15: CARDS 114, 35 AND 111 MERGED; CARD 110 TAKEN BACK BY THE OWNER'S CALL. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
+
+- What landed, by what a person notices, each behind green CI and its reviews, then checked on deployed develop at 1280 and 390 (`testing/Developer/reports/2026-10-15_product_check/`):
+  - Develop's answers keep their written summary after a deploy: litellm's downloaded price map had dropped develop's writer, z-ai/glm-5.2, so its next deploy would have lost every summary; the price table carries it again, a zero price from litellm no longer counts Opus as free, and strawberry-graphql moved to 0.327.7 for two advisories that had turned every pull request's checks red (card 114, #233, found in this session).
+  - An off-topic follow-up with a biomedical word in it is refused (card 35, #228, the owner's one-line change; merged with V2-35-02 open as card 115).
+  - A summary never ends on a sentence that only repeats one paper title (card 111, #234, re-split alone).
+- What was taken back: card 110, the first-sentence pick offered four sentences with a check that each can open alone, opened a "which diseases" BRCA1 answer on a paper title; the owner chose revert and re-split over merging it open. Its branch is parked for a redesign.
+- The owner's calls on parked work: card 48 redesigned around the classifier judging whether a message names a record, card 20 a separate extraction call, card 94's lookup without the SNP-distance scan, card 17 option E. None started.
+- Decisions: `DECISIONS.md`, rows dated 2026-10-15. What broke: `LEARNINGS.md`, rows dated 2026-10-15.
+
 2026-10-09. THE UI FIX LOOP, THE NIGHT OF 2026-10-09: PHASE 8.7 AND ITS FOLLOW-UPS, THE GUARDRAIL'S SAFE PART AND FOUR CARDS MERGED; CARDS 35 AND 48 WAIT FOR THE OWNER. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
 
 - What landed, by what a person notices, each behind green CI, a judge, an adversary, one fix round and a fresh verifier, then checked on deployed develop at 1280 and 390:
