@@ -38,6 +38,7 @@ import litellm
 import pytest
 
 from system_03_search_agent.harness import decide as decide_module
+from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.harness import jev_client as jev_client_module
 from system_03_search_agent.harness.cost_control import QueryCapExceededError
 from system_03_search_agent.harness.decide import decide
@@ -800,6 +801,9 @@ def _free_guard(monkeypatch: pytest.MonkeyPatch, *, reply: str = "relevant") -> 
     monkeypatch.setattr(
         litellm, "get_model_info", lambda model: {"input_cost_per_token": 0.0, "output_cost_per_token": 0.0}
     )
+    # A model litellm maps at zero but the local table names is charged the
+    # table's price; empty the table so this guard is free, as the name says.
+    monkeypatch.setattr(harness_module, "_FALLBACK_PRICES_USD_PER_TOKEN", {})
     return mock_acompletion
 
 

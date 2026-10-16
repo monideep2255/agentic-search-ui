@@ -12,7 +12,7 @@ valid GUEST token, never reaches a resolver and never causes a run to be
 created: `get_context` raises `fastapi.HTTPException` directly, which
 FastAPI's own exception handling turns into a response before `GraphQL
 Router.run(...)` is ever called (verified against the installed
-`strawberry-graphql==0.324.0` router source: `context_getter` is wired as
+`strawberry-graphql==0.327.7` router source (re-verified 2026-10-15): `context_getter` is wired as
 a `Depends(...)` sub-dependency of the POST/GET route functions, resolved
 strictly before their bodies run).
 
