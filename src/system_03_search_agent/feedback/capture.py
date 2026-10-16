@@ -39,7 +39,7 @@ from system_03_search_agent.contracts.events import (
     TokenPayload,
 )
 from system_03_search_agent.contracts.query import Query
-from system_03_search_agent.contracts.token_order import in_reading_order
+from system_03_search_agent.contracts.token_order import in_reading_order, one_per_citation_id
 from system_03_search_agent.core.session_memory import _account_uuid, session_row_key
 from system_03_search_agent.feedback.contracts import (
     MAX_CITATIONS_PER_ANSWER,
@@ -471,9 +471,13 @@ def assemble_interaction(query: Query, events: list[Event]) -> InteractionRow | 
 
     think_event = _last_of_type(events, "think")
     plan_events = [event for event in events if event.type == "plan"]
-    citations = [event.payload for event in events if event.type == "citation"][
-        :_MAX_CITATIONS
-    ]
+    # F-8.7-A04, card 57: one row per citation id. A citation the listing
+    # sent early is sent again once the summary is checked, its checked
+    # words grown; the saved answer keeps that one in the earlier one's
+    # place, so it never lists one source twice.
+    citations = one_per_citation_id(
+        event.payload for event in events if event.type == "citation"
+    )[:_MAX_CITATIONS]
 
     query_class = _query_class_from(think_event)
     route = _route_from(plan_events, events)

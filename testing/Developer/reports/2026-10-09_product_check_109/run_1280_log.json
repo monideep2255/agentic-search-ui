@@ -1,0 +1,499 @@
+{
+ "mode": "1280",
+ "steps": [
+  {
+   "t": "2026-10-09T05:34:43.393Z",
+   "k": "signed in, email visible unmasked",
+   "v": false
+  },
+  {
+   "t": "2026-10-09T05:34:43.398Z",
+   "k": "bundle",
+   "v": [
+    "index-NJO4wipr.js"
+   ]
+  },
+  {
+   "t": "2026-10-09T05:34:43.401Z",
+   "k": "rail before asking",
+   "v": {
+    "present": true,
+    "railBox": {
+     "x": 0,
+     "w": 248,
+     "right": 248
+    },
+    "rows": [
+     {
+      "question": null,
+      "meta": null,
+      "all": "+ New search",
+      "x": 12,
+      "w": 181,
+      "rightEdge": 193,
+      "metaScrollW": null,
+      "metaClientW": null
+     },
+     {
+      "question": null,
+      "meta": null,
+      "all": "",
+      "x": 201,
+      "w": 34,
+      "rightEdge": 235,
+      "metaScrollW": null,
+      "metaClientW": null
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+      "meta": "55 sources cited · Oct 9",
+      "all": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?55 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "No answer saved · Oct 9",
+      "all": "Which diseases are associated with BRCA1?No answer saved · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "No answer saved · Oct 9",
+      "all": "Which diseases are associated with BRCA1?No answer saved · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Any trials for GERD?",
+      "meta": "12 sources cited · Oct 9",
+      "all": "Any trials for GERD?12 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "What phenotypic features are associated with Marfan syndrome?",
+      "meta": "12 sources cited · Oct 9",
+      "all": "What phenotypic features are associated with Marfan syndrome?12 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 8",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 8",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+      "meta": "55 sources cited · Oct 8",
+      "all": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?55 sources cited · Oct 8",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     }
+    ]
+   }
+  },
+  {
+   "t": "2026-10-09T05:34:43.458Z",
+   "k": "screenshot",
+   "v": "1280_0_rail_before.png"
+  },
+  {
+   "t": "2026-10-09T05:34:43.501Z",
+   "k": "depth pressed",
+   "v": "true"
+  },
+  {
+   "t": "2026-10-09T05:34:43.538Z",
+   "k": "asked",
+   "v": "Which diseases are associated with BRCA1?"
+  },
+  {
+   "t": "2026-10-09T05:34:52.209Z",
+   "k": "first record row on screen",
+   "v": {
+    "t": 8.7,
+    "rows": 4,
+    "metaYet": null
+   }
+  },
+  {
+   "t": "2026-10-09T05:34:52.231Z",
+   "k": "stop button",
+   "v": {
+    "text": "Stop",
+    "aria": null,
+    "disabled": false,
+    "cx": 1125,
+    "cy": 208.953125,
+    "topmostIsButton": true,
+    "topmost": "BUTTON Stop"
+   }
+  },
+  {
+   "t": "2026-10-09T05:34:52.255Z",
+   "k": "stop clicked",
+   "v": {
+    "t": 8.75,
+    "rowsAtStop": 21
+   }
+  },
+  {
+   "t": "2026-10-09T05:34:52.711Z",
+   "k": "screenshot",
+   "v": "1280_1_just_stopped.png"
+  },
+  {
+   "t": "2026-10-09T05:34:56.715Z",
+   "k": "4.4 s after Stop",
+   "v": {
+    "stopped": true,
+    "stoppedText": "Search stopped\n\nNo summary was written. The records found before you stopped are below. Run the same question again, or start a new one.\n\nRun again",
+    "listing": 21,
+    "firstRow": "Familial cancer of breastMedGen:C0346153⁠1",
+    "meta": null,
+    "bodyHasSearchStopped": true
+   }
+  },
+  {
+   "t": "2026-10-09T05:34:56.717Z",
+   "k": "rail after stop, before reload",
+   "v": {
+    "present": true,
+    "railBox": {
+     "x": 0,
+     "w": 248,
+     "right": 248
+    },
+    "rows": [
+     {
+      "question": null,
+      "meta": null,
+      "all": "+ New search",
+      "x": 12,
+      "w": 181,
+      "rightEdge": 193,
+      "metaScrollW": null,
+      "metaClientW": null
+     },
+     {
+      "question": null,
+      "meta": null,
+      "all": "",
+      "x": 201,
+      "w": 34,
+      "rightEdge": 235,
+      "metaScrollW": null,
+      "metaClientW": null
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": null,
+      "all": "Which diseases are associated with BRCA1?",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": null,
+      "metaClientW": null
+     },
+     {
+      "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+      "meta": "55 sources cited · Oct 9",
+      "all": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?55 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Any trials for GERD?",
+      "meta": "12 sources cited · Oct 9",
+      "all": "Any trials for GERD?12 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "What phenotypic features are associated with Marfan syndrome?",
+      "meta": "12 sources cited · Oct 9",
+      "all": "What phenotypic features are associated with Marfan syndrome?12 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+      "meta": "55 sources cited · Oct 8",
+      "all": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?55 sources cited · Oct 8",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     }
+    ]
+   }
+  },
+  {
+   "t": "2026-10-09T05:34:56.718Z",
+   "k": "overflow 1280 after stop",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 1280
+   }
+  },
+  {
+   "t": "2026-10-09T05:34:56.847Z",
+   "k": "screenshot",
+   "v": "1280_2_stopped_full.png"
+  },
+  {
+   "t": "2026-10-09T05:35:02.101Z",
+   "k": "signed in after reload, email visible unmasked",
+   "v": false
+  },
+  {
+   "t": "2026-10-09T05:35:02.106Z",
+   "k": "rail after reload",
+   "v": {
+    "present": true,
+    "railBox": {
+     "x": 0,
+     "w": 248,
+     "right": 248
+    },
+    "rows": [
+     {
+      "question": null,
+      "meta": null,
+      "all": "+ New search",
+      "x": 12,
+      "w": 181,
+      "rightEdge": 193,
+      "metaScrollW": null,
+      "metaClientW": null
+     },
+     {
+      "question": null,
+      "meta": null,
+      "all": "",
+      "x": 201,
+      "w": 34,
+      "rightEdge": 235,
+      "metaScrollW": null,
+      "metaClientW": null
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "No answer saved · Oct 9",
+      "all": "Which diseases are associated with BRCA1?No answer saved · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+      "meta": "55 sources cited · Oct 9",
+      "all": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?55 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "No answer saved · Oct 9",
+      "all": "Which diseases are associated with BRCA1?No answer saved · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "No answer saved · Oct 9",
+      "all": "Which diseases are associated with BRCA1?No answer saved · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Any trials for GERD?",
+      "meta": "12 sources cited · Oct 9",
+      "all": "Any trials for GERD?12 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "What phenotypic features are associated with Marfan syndrome?",
+      "meta": "12 sources cited · Oct 9",
+      "all": "What phenotypic features are associated with Marfan syndrome?12 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 9",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 9",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "Which diseases are associated with BRCA1?",
+      "meta": "21 sources cited · Oct 8",
+      "all": "Which diseases are associated with BRCA1?21 sources cited · Oct 8",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     },
+     {
+      "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+      "meta": "55 sources cited · Oct 8",
+      "all": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?55 sources cited · Oct 8",
+      "x": 12,
+      "w": 223,
+      "rightEdge": 235,
+      "metaScrollW": 203,
+      "metaClientW": 203
+     }
+    ]
+   }
+  },
+  {
+   "t": "2026-10-09T05:35:02.108Z",
+   "k": "overflow 1280 after reload",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 1280
+   }
+  },
+  {
+   "t": "2026-10-09T05:35:02.175Z",
+   "k": "screenshot",
+   "v": "1280_3_rail_after_reload.png"
+  },
+  {
+   "t": "2026-10-09T05:35:02.239Z",
+   "k": "screenshot",
+   "v": "1280_3_rail_after_reload_full.png"
+  }
+ ]
+}

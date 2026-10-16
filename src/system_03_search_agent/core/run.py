@@ -605,11 +605,16 @@ async def _remember_turn(query: Query, events: list[Event]) -> None:
         CompressedFinding,
         ResolvedEntity,
     )
+    from system_03_search_agent.contracts.token_order import one_per_citation_id
     from system_03_search_agent.core.session_memory import (
         remember_turn_for_caller,
     )
 
-    citations = [e.payload for e in events if e.type == "citation"]
+    # A-87F-01: one finding per citation id. A listing citation the summary
+    # also cites is sent again with its checked words grown, and the later
+    # payload takes the earlier one's place, so memory holds the record once,
+    # with the words each summary sentence was checked against.
+    citations = one_per_citation_id(e.payload for e in events if e.type == "citation")
     # Read from the typed field `plan_node` now publishes (T-4.5-06), never
     # by parsing the narrative for a CURIE-shaped substring. An earlier
     # version reached into `tool_calls[].target_entities`, which does not

@@ -28,7 +28,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AgentEvent, TokenPayload } from "../lib/events";
 import { summarySentencesShown } from "../components/screens/AnswerScreen";
-import { FINDINGS_TAIL_NOTE_PREFIX, useRunView } from "./useRunView";
+import { FINDINGS_TAIL_NOTE_PREFIX, updatesCitation, useRunView } from "./useRunView";
 
 let seq = 0;
 function ev(type: string, payload: Record<string, unknown>): AgentEvent {
@@ -205,5 +205,42 @@ describe("useRunView: the record listing and the summary (build phase 8.7)", () 
     expect(withoutPlacement.claims.every((claim) => !("placement" in claim))).toBe(true);
     expect(withoutPlacement.claims).toEqual(view(today.map(asSummary)).claims);
     expect(summarySentencesShown(withoutPlacement.claims)).toBe(withoutPlacement.claims.length);
+  });
+});
+
+describe("useRunView: a citation sent again once the summary is checked (F-8.7-A04, card 57)", () => {
+  const resent = (n: number, extra: Record<string, unknown> = {}): AgentEvent => {
+    const first = citation(n) as unknown as { payload: Record<string, unknown> };
+    return ev("citation", { ...first.payload, claim_text: `Disease ${n} BRCA1 is linked to it`, ...extra });
+  };
+
+  it("keeps one source per citation and every chip on its number when the summary's citations come again", () => {
+    const events = [...search, ...listingTokens, ...summaryTokens, resent(1), resent(3), ...landing];
+    const now = view(events);
+    expect(now.sources.map((source) => source.n)).toEqual([1, 2, 3]);
+    expect(now.claims.map((claim) => claim.citations)).toEqual([[1, 2, 3], [1], [2], [3], [1], [3]]);
+    // Same sources as a stream that never sent them again.
+    expect(now.sources).toEqual(view([...search, ...listingTokens, ...summaryTokens, ...landing]).sources);
+  });
+
+  it("ignores a repeat of an id with another number or record: the chip and its source stay as first shown", () => {
+    // Mutation that turns this red: let a later citation for an id replace
+    // the first whatever differs (drop the `updatesCitation` check), which
+    // moves the [1] chips to 7 and adds a seventh source card.
+    const renumbered = resent(1, { display_index: 7 });
+    const otherRecord = resent(3, { source_url: "https://www.ncbi.nlm.nih.gov/medgen/C009" });
+    const now = view([...search, ...listingTokens, ...summaryTokens, renumbered, otherRecord, ...landing]);
+    expect(now.sources.map((source) => source.n)).toEqual([1, 2, 3]);
+    expect(now.sources.map((source) => source.url)).toEqual([1, 2, 3].map((n) => `https://www.ncbi.nlm.nih.gov/medgen/C00${n}`));
+    expect(now.claims.map((claim) => claim.citations)).toEqual([[1, 2, 3], [1], [2], [3], [1], [3]]);
+  });
+
+  it("reads a citation as sent again only when nothing but its checked words changed", () => {
+    const early = (citation(1) as unknown as { payload: Parameters<typeof updatesCitation>[0] }).payload;
+    const grown = { ...early, claim_text: "Disease 1 BRCA1 is linked to it" };
+    expect(updatesCitation(early, grown)).toBe(true);
+    expect(updatesCitation(early, { ...grown, display_index: 2 })).toBe(false);
+    expect(updatesCitation(early, { ...grown, source_url: "https://www.ncbi.nlm.nih.gov/medgen/C009" })).toBe(false);
+    expect(updatesCitation(early, { ...grown, citation_id: "k9" })).toBe(false);
   });
 });

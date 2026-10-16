@@ -1,0 +1,535 @@
+{
+ "mode": "1280",
+ "depth": "Researcher",
+ "steps": [
+  {
+   "t": "2026-10-09T10:57:55.323Z",
+   "k": "login opened via",
+   "v": "button"
+  },
+  {
+   "t": "2026-10-09T10:57:59.412Z",
+   "k": "signed in, email visible unmasked",
+   "v": false
+  },
+  {
+   "t": "2026-10-09T10:57:59.414Z",
+   "k": "bundle",
+   "v": [
+    "index-NJO4wipr.js"
+   ]
+  },
+  {
+   "t": "2026-10-09T10:57:59.508Z",
+   "k": "health",
+   "v": {
+    "status": "ok",
+    "app_env": "develop"
+   }
+  },
+  {
+   "t": "2026-10-09T10:57:59.509Z",
+   "k": "overflow landing",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 1280
+   }
+  },
+  {
+   "t": "2026-10-09T10:57:59.538Z",
+   "k": "depth pressed",
+   "v": {
+    "depth": "Researcher",
+    "pressed": "true"
+   }
+  },
+  {
+   "t": "2026-10-09T10:57:59.586Z",
+   "k": "asked",
+   "v": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?"
+  },
+  {
+   "t": "2026-10-09T10:58:18.913Z",
+   "k": "first table row on screen",
+   "v": {
+    "t": 19.37,
+    "rows": 13
+   }
+  },
+  {
+   "t": "2026-10-09T10:58:26.917Z",
+   "k": "answer landed",
+   "v": {
+    "t": 27.37,
+    "table": 13,
+    "meta": "✓ Answered27.0s · 2 tool calls · 21 sources cited from 1 layer",
+    "refusal": false,
+    "streaming": false,
+    "err": false
+   }
+  },
+  {
+   "t": "2026-10-09T10:58:29.926Z",
+   "k": "answer text length",
+   "v": 2561
+  },
+  {
+   "t": "2026-10-09T10:58:29.926Z",
+   "k": "tables",
+   "v": [
+    {
+     "head": [
+      "Isolate",
+      "Identifier",
+      "AMR genes",
+      "Collected",
+      ""
+     ],
+     "rows": 10,
+     "box": {
+      "w": 786,
+      "left": 371,
+      "right": 1157,
+      "scrollW": 786,
+      "clientW": 786,
+      "overflowX": "auto"
+     },
+     "tableW": 786
+    },
+    {
+     "head": [
+      "Record",
+      "Identifier",
+      ""
+     ],
+     "rows": 1,
+     "box": {
+      "w": 786,
+      "left": 371,
+      "right": 1157,
+      "scrollW": 786,
+      "clientW": 786,
+      "overflowX": "auto"
+     },
+     "tableW": 786
+    }
+   ]
+  },
+  {
+   "t": "2026-10-09T10:58:29.927Z",
+   "k": "overflow after answer",
+   "v": {
+    "doc": 0,
+    "body": 0,
+    "vw": 1280
+   }
+  },
+  {
+   "t": "2026-10-09T10:58:29.928Z",
+   "k": "email visible unmasked",
+   "v": false
+  },
+  {
+   "t": "2026-10-09T10:58:29.990Z",
+   "k": "screenshot",
+   "v": "1280_answer_viewport.png"
+  },
+  {
+   "t": "2026-10-09T10:58:30.570Z",
+   "k": "screenshot",
+   "v": "1280_table_viewport.png"
+  },
+  {
+   "t": "2026-10-09T10:58:30.660Z",
+   "k": "screenshot",
+   "v": "1280_answer_full.png"
+  }
+ ],
+ "answer": {
+  "text": "✓ Answered27.0s · 2 tool calls · 21 sources cited from 1 layer\n\nShow work ▾\n\nThe query identified the following isolates: C236-11, 11-3677, 11-4404, 11-4522, 11-4623, 11-4632 C1, 11-4632 C2, 11-4632 C3, 11-4632 C4, 11-4632 C5, C227-11, Ec11-4988, Ec11-5603, Ec11-6006, 11-02030, 11-02033-1, 11-02092, 11-02093, 2011C-3493, and NA114.⁠1–20 Found 20 pathogen detection isolate records and 1 taxonomy record for Escherichia coli.⁠1–20\n\nISOLATES AND THEIR AMR GENES\nISOLATE\tIDENTIFIER\tAMR GENES\tCOLLECTED\t\nC236-11\tSAMN00715300\tacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\tNot recorded\t⁠1\n11-3677\tSAMN00715303\tacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\tNot recorded\t⁠2\n11-4404\tSAMN00715305\tacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\tNot recorded\t⁠3\n11-4522\tSAMN00715306\tacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\tNot recorded\t⁠4\n11-4623\tSAMN00715307\tacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\tNot recorded\t⁠5\n11-4632 C1\tSAMN00715308\tacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\tNot recorded\t⁠6\n11-4632 C2\tSAMN00715309\tacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\tNot recorded\t⁠7\n11-4632 C3\tSAMN00715310\tacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\tNot recorded\t⁠8\n11-4632 C4\tSAMN00715311\tacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\tNot recorded\t⁠9\n11-4632 C5\tSAMN00715312\tacrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)\tNot recorded\t⁠10\nShowing 1–10 of 20\n‹ Previous\nPage 1 of 2\nNext ›\nTAXONOMY RECORDS FOUND\nRECORD\tIDENTIFIER\t\nEscherichia coli\tNCBITaxon:562\t⁠21\nNOTES\nPathogen Detection lists 141,360 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown.\nSearching Escherichia coli isolates in Pathogen Detection for AMR genotypes starting blaCTX-M; blaTEM and blaSHV alleles were not searched: most are not ESBLs and the name alone cannot tell an ESBL allele from a narrow-spectrum one, so listing them would show isolates that do not carry an ESBL.\n▶\nSOURCES\n21\nBased on 21 sources cited",
+  "tables": [
+   {
+    "head": [
+     "Isolate",
+     "Identifier",
+     "AMR genes",
+     "Collected",
+     ""
+    ],
+    "rows": [
+     [
+      {
+       "text": "C236-11",
+       "links": [],
+       "scrollW": 86,
+       "clientW": 86
+      },
+      {
+       "text": "SAMN00715300",
+       "links": [],
+       "scrollW": 112,
+       "clientW": 112
+      },
+      {
+       "text": "acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)",
+       "links": [],
+       "scrollW": 448,
+       "clientW": 448
+      },
+      {
+       "text": "Not recorded",
+       "links": [],
+       "scrollW": 101,
+       "clientW": 101
+      },
+      {
+       "text": "⁠1",
+       "links": [],
+       "scrollW": 37,
+       "clientW": 37
+      }
+     ],
+     [
+      {
+       "text": "11-3677",
+       "links": [],
+       "scrollW": 86,
+       "clientW": 86
+      },
+      {
+       "text": "SAMN00715303",
+       "links": [],
+       "scrollW": 112,
+       "clientW": 112
+      },
+      {
+       "text": "acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)",
+       "links": [],
+       "scrollW": 448,
+       "clientW": 448
+      },
+      {
+       "text": "Not recorded",
+       "links": [],
+       "scrollW": 101,
+       "clientW": 101
+      },
+      {
+       "text": "⁠2",
+       "links": [],
+       "scrollW": 37,
+       "clientW": 37
+      }
+     ],
+     [
+      {
+       "text": "11-4404",
+       "links": [],
+       "scrollW": 86,
+       "clientW": 86
+      },
+      {
+       "text": "SAMN00715305",
+       "links": [],
+       "scrollW": 112,
+       "clientW": 112
+      },
+      {
+       "text": "acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)",
+       "links": [],
+       "scrollW": 448,
+       "clientW": 448
+      },
+      {
+       "text": "Not recorded",
+       "links": [],
+       "scrollW": 101,
+       "clientW": 101
+      },
+      {
+       "text": "⁠3",
+       "links": [],
+       "scrollW": 37,
+       "clientW": 37
+      }
+     ],
+     [
+      {
+       "text": "11-4522",
+       "links": [],
+       "scrollW": 86,
+       "clientW": 86
+      },
+      {
+       "text": "SAMN00715306",
+       "links": [],
+       "scrollW": 112,
+       "clientW": 112
+      },
+      {
+       "text": "acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)",
+       "links": [],
+       "scrollW": 448,
+       "clientW": 448
+      },
+      {
+       "text": "Not recorded",
+       "links": [],
+       "scrollW": 101,
+       "clientW": 101
+      },
+      {
+       "text": "⁠4",
+       "links": [],
+       "scrollW": 37,
+       "clientW": 37
+      }
+     ],
+     [
+      {
+       "text": "11-4623",
+       "links": [],
+       "scrollW": 86,
+       "clientW": 86
+      },
+      {
+       "text": "SAMN00715307",
+       "links": [],
+       "scrollW": 112,
+       "clientW": 112
+      },
+      {
+       "text": "acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)",
+       "links": [],
+       "scrollW": 448,
+       "clientW": 448
+      },
+      {
+       "text": "Not recorded",
+       "links": [],
+       "scrollW": 101,
+       "clientW": 101
+      },
+      {
+       "text": "⁠5",
+       "links": [],
+       "scrollW": 37,
+       "clientW": 37
+      }
+     ],
+     [
+      {
+       "text": "11-4632 C1",
+       "links": [],
+       "scrollW": 86,
+       "clientW": 86
+      },
+      {
+       "text": "SAMN00715308",
+       "links": [],
+       "scrollW": 112,
+       "clientW": 112
+      },
+      {
+       "text": "acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)",
+       "links": [],
+       "scrollW": 448,
+       "clientW": 448
+      },
+      {
+       "text": "Not recorded",
+       "links": [],
+       "scrollW": 101,
+       "clientW": 101
+      },
+      {
+       "text": "⁠6",
+       "links": [],
+       "scrollW": 37,
+       "clientW": 37
+      }
+     ],
+     [
+      {
+       "text": "11-4632 C2",
+       "links": [],
+       "scrollW": 86,
+       "clientW": 86
+      },
+      {
+       "text": "SAMN00715309",
+       "links": [],
+       "scrollW": 112,
+       "clientW": 112
+      },
+      {
+       "text": "acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)",
+       "links": [],
+       "scrollW": 448,
+       "clientW": 448
+      },
+      {
+       "text": "Not recorded",
+       "links": [],
+       "scrollW": 101,
+       "clientW": 101
+      },
+      {
+       "text": "⁠7",
+       "links": [],
+       "scrollW": 37,
+       "clientW": 37
+      }
+     ],
+     [
+      {
+       "text": "11-4632 C3",
+       "links": [],
+       "scrollW": 86,
+       "clientW": 86
+      },
+      {
+       "text": "SAMN00715310",
+       "links": [],
+       "scrollW": 112,
+       "clientW": 112
+      },
+      {
+       "text": "acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)",
+       "links": [],
+       "scrollW": 448,
+       "clientW": 448
+      },
+      {
+       "text": "Not recorded",
+       "links": [],
+       "scrollW": 101,
+       "clientW": 101
+      },
+      {
+       "text": "⁠8",
+       "links": [],
+       "scrollW": 37,
+       "clientW": 37
+      }
+     ],
+     [
+      {
+       "text": "11-4632 C4",
+       "links": [],
+       "scrollW": 86,
+       "clientW": 86
+      },
+      {
+       "text": "SAMN00715311",
+       "links": [],
+       "scrollW": 112,
+       "clientW": 112
+      },
+      {
+       "text": "acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)",
+       "links": [],
+       "scrollW": 448,
+       "clientW": 448
+      },
+      {
+       "text": "Not recorded",
+       "links": [],
+       "scrollW": 101,
+       "clientW": 101
+      },
+      {
+       "text": "⁠9",
+       "links": [],
+       "scrollW": 37,
+       "clientW": 37
+      }
+     ],
+     [
+      {
+       "text": "11-4632 C5",
+       "links": [],
+       "scrollW": 86,
+       "clientW": 86
+      },
+      {
+       "text": "SAMN00715312",
+       "links": [],
+       "scrollW": 112,
+       "clientW": 112
+      },
+      {
+       "text": "acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)",
+       "links": [],
+       "scrollW": 448,
+       "clientW": 448
+      },
+      {
+       "text": "Not recorded",
+       "links": [],
+       "scrollW": 101,
+       "clientW": 101
+      },
+      {
+       "text": "⁠10",
+       "links": [],
+       "scrollW": 37,
+       "clientW": 37
+      }
+     ]
+    ],
+    "tableW": 786,
+    "tableRight": 1157,
+    "box": {
+     "w": 786,
+     "left": 371,
+     "right": 1157,
+     "scrollW": 786,
+     "clientW": 786,
+     "overflowX": "auto"
+    }
+   },
+   {
+    "head": [
+     "Record",
+     "Identifier",
+     ""
+    ],
+    "rows": [
+     [
+      {
+       "text": "Escherichia coli",
+       "links": [],
+       "scrollW": 374,
+       "clientW": 374
+      },
+      {
+       "text": "NCBITaxon:562",
+       "links": [],
+       "scrollW": 373,
+       "clientW": 373
+      },
+      {
+       "text": "⁠21",
+       "links": [],
+       "scrollW": 37,
+       "clientW": 37
+      }
+     ]
+    ],
+    "tableW": 786,
+    "tableRight": 1157,
+    "box": {
+     "w": 786,
+     "left": 371,
+     "right": 1157,
+     "scrollW": 786,
+     "clientW": 786,
+     "overflowX": "auto"
+    }
+   }
+  ],
+  "meta": "✓ Answered27.0s · 2 tool calls · 21 sources cited from 1 layer"
+ }
+}

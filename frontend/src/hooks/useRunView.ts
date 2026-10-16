@@ -25,7 +25,7 @@
 
 import { useMemo } from "react";
 
-import type { AgentEvent, GuardPayload } from "../lib/events";
+import type { AgentEvent, CitationPayload, GuardPayload } from "../lib/events";
 import { layerNumber } from "../lib/events";
 import { riskTagLabel } from "../lib/riskTag";
 import { deriveStopEnabled } from "../components/chat/StopButton";
@@ -107,6 +107,24 @@ const isSystemNote = (text: string) =>
 import type { ReasoningStep, StepName, ToolCall } from "../components/screens/RunScreen";
 import type { Claim, Source, TrustSignal } from "../components/screens/AnswerScreen";
 import { citedSourceCounts } from "../components/screens/AnswerScreen";
+
+/**
+ * Whether `later` is `earlier` sent again (F-8.7-A04, card 57): the same
+ * citation id and every field equal except `claim_text`, the record words the
+ * citation was checked against, which grow once the summary is checked. The
+ * server's rule, `contracts.token_order.updates_citation`.
+ */
+export function updatesCitation(earlier: CitationPayload, later: CitationPayload): boolean {
+  if (!earlier.citation_id || earlier.citation_id !== later.citation_id) return false;
+  const before = earlier as unknown as Record<string, unknown>;
+  const after = later as unknown as Record<string, unknown>;
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  keys.delete("claim_text");
+  for (const key of keys) {
+    if ((before[key] ?? null) !== (after[key] ?? null)) return false;
+  }
+  return true;
+}
 
 /**
  * How a source reads on a citation chip and a source card.
@@ -432,9 +450,13 @@ export function useRunView(events: AgentEvent[]): RunView {
      * that whole gap and "is writing the answer" never appeared once.
      *
      * So Write is entered as soon as the run's own events say Act is over:
-     *   - every tool call the run opened (by `tool_start`, or by the plan's
-     *     own `tool_calls`) has a matching `tool_result`, and at least one
-     *     result arrived; or
+     *   - every tool call that has STARTED (a `tool_start`) has a matching
+     *     `tool_result`, and at least one result arrived. A planned call
+     *     that never started, because act_node skipped it, does not hold Act
+     *     open. This rests on the backend writing every `tool_start` of a
+     *     run before any `tool_result`, pinned by
+     *     test_every_tool_start_comes_before_the_first_tool_result in
+     *     tests/system_03_search_agent/core/test_breadth_wiring.py; or
      *   - the plan selected no tool and none started (a no-data refusal
      *     path, where Write follows Plan directly).
      * A later `tool_start` reopens Act, which is the honest reading.
@@ -445,7 +467,6 @@ export function useRunView(events: AgentEvent[]): RunView {
       planEvent && planEvent.type === "plan" && Array.isArray(planEvent.payload.tool_calls)
         ? planEvent.payload.tool_calls
         : [];
-    const plannedIds = plannedCalls.map((call) => call.call_id);
     const openedIds = new Set<string>();
     const closedIds = new Set<string>();
     for (const event of events) {
@@ -456,10 +477,11 @@ export function useRunView(events: AgentEvent[]): RunView {
       }
     }
     const startedAnyTool = openedIds.size > 0;
-    // Planned ids count only once any of them has appeared on a tool frame:
-    // a plan whose ids never reach the wire must not hold Write back forever.
-    const plannedOnWire = plannedIds.some((id) => openedIds.has(id));
-    const idsToClose = new Set([...openedIds, ...(plannedOnWire ? plannedIds : [])]);
+    // 2026-10-09, card 19: Act is over when every call that STARTED has a result.
+    // A planned call that never started (skipped at the 20-call limit or the cost
+    // cap) has no start frame and never will: `act_node` writes every start before
+    // any call runs, so waiting on it would hold Act through the whole writing wait.
+    const idsToClose = openedIds;
     const actComplete =
       startedAnyTool && closedIds.size > 0 && [...idsToClose].every((id) => closedIds.has(id));
     const planSelectedNoTool =
@@ -547,12 +569,27 @@ export function useRunView(events: AgentEvent[]): RunView {
     //
     // One index map, built once, used by both. A citation that cannot be
     // numbered is not usable as a citation anywhere.
+    //
+    // F-8.7-A04, card 57: one citation per id, and the same citation sent
+    // again takes the first one's place. The server sends the listing's
+    // citations before the summary is written, then sends again each one the
+    // summary also cites, with the same id, number and record and the words
+    // each summary sentence was checked against joined into `claim_text`
+    // (`updatesCitation`). Any other repeat of an id is ignored: the first
+    // stays, since its number may already be on screen.
     const usableIndexes = new Set<number>();
     const citationById = new Map<string, (typeof events)[number]>();
     for (const event of events) {
       if (event.type !== "citation") continue;
       const index = event.payload.display_index;
       if (!Number.isInteger(index) || index < 1) continue;
+      const earlier = citationById.get(event.payload.citation_id);
+      if (earlier !== undefined) {
+        if (earlier.type === "citation" && updatesCitation(earlier.payload, event.payload)) {
+          citationById.set(event.payload.citation_id, event);
+        }
+        continue;
+      }
       if (usableIndexes.has(index)) continue;
       usableIndexes.add(index);
       citationById.set(event.payload.citation_id, event);
@@ -560,13 +597,14 @@ export function useRunView(events: AgentEvent[]): RunView {
 
     const emitted = new Set<number>();
     const sources: Source[] = [];
-    for (const event of events) {
+    // The kept citations, in the order their ids first arrived (a Map keeps
+    // a key's first position when its value is replaced).
+    for (const event of citationById.values()) {
       if (event.type !== "citation") continue;
       const payload = event.payload;
       const index = payload.display_index;
-      // Same rule as the chips above, and deliberately the same set membership:
-      // a citation is either usable everywhere or nowhere.
-      if (!citationById.has(payload.citation_id)) continue;
+      // Same rule as the chips above, and deliberately the same map: a
+      // citation is either usable everywhere or nowhere.
       if (emitted.has(index)) continue;
       emitted.add(index);
       sources.push({
@@ -1269,9 +1307,52 @@ export function useRunView(events: AgentEvent[]): RunView {
       recoverable: "This run could not be completed. Try asking again, or rephrase the question.",
       unexpected: "This run could not be completed. Try asking again, or rephrase the question.",
     };
+    /*
+     * Guardrail failures get their own words (cards 84 and 72, step 1 of the
+     * guardrail design, accepted by the owner on 2026-10-08). When the check
+     * every question passes first could not finish, nothing was searched and
+     * nothing was wrong with the question, so "rephrase the question" and "in
+     * a moment" were both wrong.
+     *
+     * Decided by category, from `source` and `error_class` alone (fix round,
+     * A-GR-10): only a fatal error whose `source` is the guardrail AND whose
+     * class is "transient", the check not finishing on our side, reads these
+     * words. The backend sends a double timeout and two unreadable guard
+     * replies as "transient". A "recoverable" guardrail failure is one the
+     * question caused, a provider's content-policy refusal or a 400, and keeps
+     * "rephrase the question"; an "unexpected" one, a 401 among them, is not
+     * fixed by asking again, and keeps its own line; a stopped run keeps its
+     * own line. Every other failure keeps `FATAL_COPY`. `source`,
+     * `error_class` and `retry_after_s` are a fixed step name, a closed enum
+     * and a number on the wire, never free text, so the backend's `message`
+     * is still never rendered (F-4.8-A-15).
+     *
+     * A wait the provider named arrives in `retry_after_s`: seconds up to two
+     * minutes, whole minutes past that (F-84-A02, F-72-V05). A wait of 0, one
+     * that has passed or none named, reads the plain "Try asking again.", so a
+     * person is never told to wait when no wait is known (F-84-A01, A09).
+     */
+    const GUARDRAIL_FAILURE =
+      "We could not finish checking your question, so nothing was searched. " +
+      "This was a problem on our side, not with your question.";
+    const guardrailFailure = (retryAfterS: number): string => {
+      const seconds =
+        Number.isFinite(retryAfterS) && retryAfterS > 0 ? Math.ceil(retryAfterS) : 0;
+      if (seconds === 0) return `${GUARDRAIL_FAILURE} Try asking again.`;
+      if (seconds <= 120) {
+        return (
+          `${GUARDRAIL_FAILURE} Try asking again in about ${seconds} ` +
+          `${seconds === 1 ? "second" : "seconds"}.`
+        );
+      }
+      return `${GUARDRAIL_FAILURE} Try asking again in about ${Math.ceil(seconds / 60)} minutes.`;
+    };
     const failure =
       fatalError && fatalError.type === "error"
-        ? (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
+        ? fatalError.payload.source === "guardrail" &&
+          fatalError.payload.error_class === "transient"
+          ? guardrailFailure(fatalError.payload.retry_after_s)
+          : (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
         : null;
 
     const failedGuard = events.find(

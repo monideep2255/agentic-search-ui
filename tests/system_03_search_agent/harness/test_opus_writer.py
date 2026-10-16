@@ -27,8 +27,8 @@ What each group below pins, and the one-line mutation that turns it red:
 
 No network call is made: `litellm.acompletion` is faked wherever a call is
 placed, and `litellm.get_model_info` is faked wherever the price must not
-depend on the installed litellm's map. The rollback arm and the cheaper
-models' arm read the installed map on purpose.
+depend on the installed litellm's map. No arm here reads the installed
+map.
 """
 
 from __future__ import annotations
@@ -218,13 +218,86 @@ def test_the_harness_reports_the_price_of_the_model_a_question_resolved(
     assert harness.price_per_token("synth") == (_OPUS_INPUT_PRICE, _OPUS_OUTPUT_PRICE)
 
 
-def test_the_rollback_writer_glm_5_2_is_still_priced_by_the_installed_map() -> None:
-    """Setting `SYNTH_MODEL=z-ai/glm-5.2` is the one-setting rollback. Its
-    fallback entry left the table together with its place in
-    `_DEFAULT_MODELS` (the repository-wide model-id scan allows no other),
-    so this arm holds that the installed litellm map still prices it."""
+def test_the_rollback_writer_glm_5_2_is_priced_when_litellm_has_no_entry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Setting `SYNTH_MODEL=z-ai/glm-5.2` is the one-setting rollback, and
+    develop's current writer. The price map litellm holds at run time (the
+    one it fetches at process start) carries no entry for it, so the
+    fallback table must price it, never raise."""
+    _litellm_map_lacks_everything(monkeypatch)
     input_price, output_price = harness_module._price_per_token("z-ai/glm-5.2")
-    assert input_price > 0 and output_price > 0
+    # OpenRouter's catalogue, read 2026-10-15.
+    assert (input_price, output_price) == (0.000000037, 0.000007)
+
+
+def test_a_model_litellm_maps_at_zero_gets_the_tables_price(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """litellm maps Opus 5.5 at zero. A zero there is a gap, so the table's
+    price counts against the per-question cost cap."""
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 0.0, "output_cost_per_token": 0.0},
+    )
+    assert harness_module._price_per_token(_OPUS) == (_OPUS_INPUT_PRICE, _OPUS_OUTPUT_PRICE)
+
+
+def _litellm_maps(monkeypatch: pytest.MonkeyPatch, input_price: Any, output_price: Any) -> None:
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": input_price, "output_cost_per_token": output_price},
+    )
+
+
+def test_a_real_non_zero_litellm_price_beats_the_table(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The table is a stand-in for a bad or missing litellm price. When
+    litellm gives a real price for a model the table names, litellm's price
+    is the one used, on both sides."""
+    _litellm_maps(monkeypatch, 1.5e-06, 3.5e-06)
+    assert harness_module._price_per_token(_OPUS) == (1.5e-06, 3.5e-06)
+
+
+@pytest.mark.parametrize("zero_side", ["input", "output"])
+def test_a_one_sided_zero_from_litellm_takes_the_tables_price_for_both_sides(
+    zero_side: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A zero on either side is a gap. The table's price replaces BOTH
+    sides, so Opus's output is never counted as free."""
+    if zero_side == "input":
+        _litellm_maps(monkeypatch, 0.0, 9e-06)
+    else:
+        _litellm_maps(monkeypatch, 9e-06, 0.0)
+    assert harness_module._price_per_token(_OPUS) == (_OPUS_INPUT_PRICE, _OPUS_OUTPUT_PRICE)
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [float("nan"), float("inf"), -1e-06, "n/a"],
+    ids=["nan", "infinite", "negative", "not-a-number"],
+)
+def test_a_price_that_is_not_a_real_number_takes_the_tables_price(
+    bad: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """NaN would switch the per-question cap off, because every comparison
+    against it is false. NaN, infinite, negative and non-numeric prices are
+    gaps like zero."""
+    _litellm_maps(monkeypatch, bad, 9e-06)
+    assert harness_module._price_per_token(_OPUS) == (_OPUS_INPUT_PRICE, _OPUS_OUTPUT_PRICE)
+    _litellm_maps(monkeypatch, 9e-06, bad)
+    assert harness_module._price_per_token(_OPUS) == (_OPUS_INPUT_PRICE, _OPUS_OUTPUT_PRICE)
+
+
+def test_a_model_the_table_does_not_name_keeps_litellms_figure_even_at_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A ":free" model litellm maps at zero stays free and does not raise."""
+    _litellm_maps(monkeypatch, 0.0, 0.0)
+    assert harness_module._price_per_token("test-provider/test-model:free") == (0.0, 0.0)
 
 
 # ---------------------------------------------------------------------------

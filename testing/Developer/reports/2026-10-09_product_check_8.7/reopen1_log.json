@@ -1,0 +1,71 @@
+{
+ "mode": "reopen",
+ "steps": [
+  {
+   "k": "signed in, email visible unmasked",
+   "v": false
+  },
+  {
+   "k": "bundle",
+   "v": [
+    "index-BUMzWQlH.js"
+   ]
+  },
+  {
+   "k": "rail BRCA1 items",
+   "v": [
+    {
+     "i": 2,
+     "tag": "BUTTON",
+     "text": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 9"
+    },
+    {
+     "i": 3,
+     "tag": "BUTTON",
+     "text": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 9"
+    },
+    {
+     "i": 4,
+     "tag": "BUTTON",
+     "text": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 9"
+    },
+    {
+     "i": 7,
+     "tag": "BUTTON",
+     "text": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 9"
+    },
+    {
+     "i": 8,
+     "tag": "BUTTON",
+     "text": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 8"
+    }
+   ]
+  },
+  {
+   "k": "screenshot",
+   "v": "reopen_1280_0_rail.png"
+  },
+  {
+   "k": "target text",
+   "v": "Which diseases are associated with BRCA1?\n21 sources cited · Oct 9"
+  },
+  {
+   "k": "no saved-answer-screen",
+   "v": true
+  },
+  {
+   "k": "saved answer",
+   "v": {
+    "ms": 22556,
+    "screen": false,
+    "body": null,
+    "blocks": [],
+    "running": false
+   }
+  },
+  {
+   "k": "screenshot",
+   "v": "reopen_1280_1_saved.png"
+  }
+ ]
+}

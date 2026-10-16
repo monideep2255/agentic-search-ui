@@ -1,0 +1,28 @@
+target: web=https://search-agent-web-develop-2aeb.up.railway.app api=https://search-agent-api-develop-43b3.up.railway.app app_env=develop
+- PASS | q66_plain at 1280 | screen reached | 10.8 s | testing/Developer/reports/2026-10-15_product_check/run1/q66_plain_1280.png
+- PASS | q66_plain at 1280 | horizontal overflow | 0 px | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | q66_plain at 1280 | console errors | 0 | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | q66_plain at 1280 | accessibility, serious or critical | 0 | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | q66_plain at 390 | screen reached | 13.5 s | testing/Developer/reports/2026-10-15_product_check/run1/q66_plain_390.png
+- PASS | q66_plain at 390 | horizontal overflow | 0 px | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | q66_plain at 390 | console errors | 0 | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | q66_plain at 390 | accessibility, serious or critical | 0 | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | brca1_plain at 1280 | screen reached | 12.5 s | testing/Developer/reports/2026-10-15_product_check/run1/brca1_plain_1280.png
+- PASS | brca1_plain at 1280 | horizontal overflow | 0 px | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | brca1_plain at 1280 | console errors | 0 | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | brca1_plain at 1280 | accessibility, serious or critical | 0 | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | brca1_plain at 390 | screen reached | 12 s | testing/Developer/reports/2026-10-15_product_check/run1/brca1_plain_390.png
+- PASS | brca1_plain at 390 | horizontal overflow | 0 px | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | brca1_plain at 390 | console errors | 0 | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | brca1_plain at 390 | accessibility, serious or critical | 0 | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | q111_offtopic_followup at 1280 | screen reached | 11.7 s | testing/Developer/reports/2026-10-15_product_check/run1/q111_offtopic_followup_1280.png
+- PASS | q111_offtopic_followup at 1280 | horizontal overflow | 0 px | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | q111_offtopic_followup at 1280 | console errors | 0 | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | q111_offtopic_followup at 1280 | accessibility, serious or critical | 0 | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | q111_offtopic_followup at 390 | screen reached | 14.3 s | testing/Developer/reports/2026-10-15_product_check/run1/q111_offtopic_followup_390.png
+- PASS | q111_offtopic_followup at 390 | horizontal overflow | 0 px | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | q111_offtopic_followup at 390 | console errors | 0 | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+- PASS | q111_offtopic_followup at 390 | accessibility, serious or critical | 0 | testing/Developer/reports/2026-10-15_product_check/run1/results.json
+awaiting judgement: 6 screenshot pairs
+scripted checks: 24 pass, 0 fail
+results: testing/Developer/reports/2026-10-15_product_check/run1/results.json
