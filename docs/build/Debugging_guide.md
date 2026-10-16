@@ -416,6 +416,7 @@ The FastAPI application object and every REST and SSE route a client calls. Star
 |---|---|---|
 | `src/system_03_search_agent/adapters/web_sse/__init__.py` | Package marker. States the package holds the FastAPI application and routes. | Confirming this is the web/SSE adapter package |
 | `src/system_03_search_agent/adapters/web_sse/app.py` | FastAPI application entry point for the web/SSE adapter: the app object, lifespan startup, and every route. | A request 404s, 401s, times out, or never reaches the agent loop |
+| `src/system_03_search_agent/adapters/web_sse/loop_stall.py` | Count event loop lag, one WARNING log line each (cards 84 and 72, step 3b). | You need to know whether the API process ran its timers late: grep the logs for `event loop lag`, and turn the watcher off with `LOOP_STALL_WATCH=0` |
 | `src/system_03_search_agent/adapters/web_sse/proxy_scheme.py` | Pure ASGI middleware, `ProxySchemeMiddleware`, that sets `scope["scheme"]` from `x-forwarded-proto` and touches nothing else, deliberately never `scope["client"]`, so the redirect Starlette's `/mcp` mount builds behind Railway's edge proxy is `https`, not a plaintext downgrade. | A redirect's `Location` header names `http://` for a request that arrived over `https`, or a rate limit keyed on client address seems to have moved |
 
 Route table for `src/system_03_search_agent/adapters/web_sse/app.py`. The `@app` routes are in file order. The two mounted routers are listed last for readability, though both are registered ahead of the first `@app` route in the file:

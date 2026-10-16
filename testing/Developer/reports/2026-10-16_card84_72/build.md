@@ -1,5 +1,7 @@
 # Cards 84 and 72, step 3b: count first, build report
 
+Superseded in part by the fix round, `fix_round.md` beside this file: the line is now logged at WARNING as `event loop lag: <s> s (timers ran late), began <UTC time>`, and the test file holds ten tests. Where this report says INFO, "loop stall:" or five tests, the fix round's record is current.
+
 Owner's choice (2026-10-16): ship only a log line that counts real freezes, then decide with a week of data.
 
 - New module `src/system_03_search_agent/adapters/web_sse/loop_stall.py`: one task per API process, looks of 50 ms, a look late by 0.25 s or more writes one INFO line.

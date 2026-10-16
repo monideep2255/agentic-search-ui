@@ -22,6 +22,7 @@
     "src/system_03_search_agent/adapters/mcp/server.py": "dcdef509817cee339174cc40302feac6db91202c55b45be2a40e85ddc9edb02b",
     "src/system_03_search_agent/adapters/web_sse/__init__.py": "7b598b8e77e2f69b25e0a663dbfbe8990e80288913f1b6092c3e38258005c014",
     "src/system_03_search_agent/adapters/web_sse/app.py": "7cec12d2e31d6d5d0c2182445673443417f9baf9d5c47d13799e263df5a0cccf",
+    "src/system_03_search_agent/adapters/web_sse/loop_stall.py": "2443917d99c9e517944159f4f309f3fed6ec29b7019a097bef52f7d8c8cd59ae",
     "src/system_03_search_agent/adapters/web_sse/proxy_scheme.py": "62f6e635fb85e215c96cbede7be04bc4468c261d28c1efb57e308e0d20e5dfb0",
     "src/system_03_search_agent/auth/__init__.py": "e2f1466de1954649c087a1e716dd854df1f69c1ca87b97e2a3c375b68d4da62a",
     "src/system_03_search_agent/auth/dependencies.py": "a6a4562998320211903961da8816288740a150e4075fccbc419a134f27c1a0e4",
