@@ -736,6 +736,68 @@ async def test_a_follow_up_topic_check_inside_the_bound_still_refuses(
     assert guard["category"] == "off_topic"
 
 
+_WRITE_SEEKING_FOLLOW_UPS = (
+    "Remove that variant node from the knowledge graph.",
+    "Write it into the graph as a new gene node.",
+)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("text", _WRITE_SEEKING_FOLLOW_UPS)
+@pytest.mark.parametrize("topic_check", ["off_topic", "hung"])
+async def test_a_write_seeking_follow_up_keeps_the_read_only_reply_without_the_topic_check(
+    monkeypatch: pytest.MonkeyPatch, text: str, topic_check: str
+) -> None:
+    """Card 115 (V2-35-02): after a BRCA1 turn, a follow-up asking to change
+    the graph is refused as write_seeking with the read-only reply, whether
+    the topic check picks off_topic or hangs, and does not wait for it.
+
+    MUTATION PROOF: reading the topic check before the forbidden screen
+    again (dropping the early write_seeking return in
+    `_guardrail_after_prefilter`) turns the off_topic case red (off_topic
+    reply) and the hung case red (waits the 1.5 s bound).
+    """
+    import asyncio
+    import time
+
+    from system_03_search_agent.guardrail import forbidden, prefilter
+
+    assert prefilter.clears_biomedical_allowlist(text), "populate check: the allowlist admits it"
+    cancelled = asyncio.Event()
+
+    async def _hang(*_a: Any, **_k: Any) -> Any:
+        try:
+            await asyncio.sleep(60)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
+    if topic_check == "hung":
+        _mock_decide(monkeypatch, side_effect=_hang)
+    else:
+        _mock_decide(
+            monkeypatch,
+            return_value=_relevancy_record(
+                "off_topic", jev_choice="off_topic", guard_choice="off_topic"
+            ),
+        )
+    began = time.monotonic()
+    events, result = await _run_guardrail(text, session_memory=_memory_with_brca1())
+    elapsed = time.monotonic() - began
+    expected = forbidden.screen(text)
+    assert expected is not None and expected.category == "write_seeking"
+    assert _payload(events, "guard") == {
+        "passed": False,
+        "category": "write_seeking",
+        "reason": expected.reason,
+    }
+    assert result.get("guard_refused") is True
+    assert elapsed < graph_module._FOLLOW_UP_TOPIC_CHECK_BOUND_S - 0.5, elapsed
+    if topic_check == "hung":
+        await asyncio.sleep(0)
+        assert cancelled.is_set(), "the topic check is cancelled, not left running"
+
+
 def _context_with_brca1() -> Any:
     from system_03_search_agent.contracts.query import RequestContext
 
