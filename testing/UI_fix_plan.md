@@ -413,6 +413,8 @@ as the answer to a failure the harness has not been worked on yet.
 | What | Cards | Where |
 |---|---|---|
 | Two reviews of the harness, since "I do not think our harness works well right now": the product's, which turns a question into an answer, and the build's, which is how the product gets built; each ends in ranked changes and questions for you | the product owner, 2026-09-25 | `testing/Developer/reports/2026-09-25_harness_review/product_harness.md` and `build_harness.md` |
+| Count real server freezes: one log line each time the server stalls for 0.25 s or more, so step 2's logs show whether the guardrail's freeze fix is worth building. Nothing a person sees changes | 84 and 72, step 3b, your call 2026-10-16: count first | Branch `fix/card84-72-freeze-count`; design `testing/Developer/reports/2026-10-15_card84_72/design.md` |
+| A sign-in renewal whose outcome is truly unknown asks for `s3 login` once; a clear server or proxy error retries quietly as today; nobody is signed out of the web app by a resent renewal | 75, your call 2026-10-16 | Branch `fix/card75-unknown-renewal`; last attempt `testing/Developer/reports/2026-10-15_card75/` |
 
 ## Retest
 
