@@ -2084,6 +2084,12 @@ async def _run_pipeline(
     # non-empty path. Using it closes the direction the row count cannot
     # see on its own.
     hit_cap = len(rows) >= effective_limit or returned_total > len(rows)
+    # Card 15: a template that bounds each UNION branch (`branch_row_cap`) hides
+    # rows inside a branch the overall limit never sees, so a result as large as
+    # one branch's cap may be capped. Reported as capped, total unknown.
+    branch_cap = active_template.branch_row_cap if active_template is not None else None
+    if branch_cap is not None and len(rows) >= branch_cap:
+        hit_cap = True
 
     # Finding F-2.1-B04c's fix: to_output_rows can emit more than one
     # output row per raw graph row, one per RETURN column that decodes to

@@ -11,6 +11,8 @@ Mutations each arm was shown to fail under (restored after each):
   count arm red.
 - Gene in a paper: swapping the template's edge direction turned the
   template-text arm red.
+- Genes' variants: dropping the template's `branch_row_cap` turned the
+  capped-result arm red.
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ from system_03_search_agent.tools.cypher_query import (
 from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
 from system_03_search_agent.tools.cypher_templates import (
     SHAPE_GENE_IN_PAPER,
+    SHAPE_GENES_VARIANTS_FOR_CONDITION,
     SHAPE_PAPERS_NAMED,
     graph_shape_template,
     possible_graph_shapes,
@@ -263,3 +266,160 @@ async def test_a_linked_gene_and_paper_return_the_paper_cited(
     assert [row.curie for row in output.rows] == [LINKED_PAPER]
     assert output.rows[0].source_url == "https://pubmed.ncbi.nlm.nih.gov/10026184/"
     assert {row.traversed_edge_type for row in output.rows} == {"mentioned_in"}
+
+
+# ---------------------------------------------------------------------------
+# Several genes' variants for a condition
+# ---------------------------------------------------------------------------
+
+MLH1 = "NCBIGene:4292"
+MSH2 = "NCBIGene:4436"
+MSH6 = "NCBIGene:2956"
+LYNCH = "MedGen:C1333990"
+LYNCH_2 = "MedGen:C4552100"
+
+
+@pytest.mark.parametrize(
+    ("curies", "expected"),
+    [
+        ([MLH1, MSH2, LYNCH], [SHAPE_GENES_VARIANTS_FOR_CONDITION]),
+        ([MLH1, MSH2, LYNCH, LYNCH_2], [SHAPE_GENES_VARIANTS_FOR_CONDITION]),
+        ([MLH1, MSH2, MSH6, "MONDO:0005835"], [SHAPE_GENES_VARIANTS_FOR_CONDITION]),
+        ([MLH1, LYNCH], []),
+        ([MLH1, MSH2], []),
+        ([LYNCH, LYNCH_2], []),
+        ([MLH1, MSH2, LYNCH, PMID_A], []),
+        ([f"NCBIGene:{n}" for n in range(1, 12)] + [LYNCH], []),
+    ],
+)
+def test_genes_variants_is_possible_only_for_several_genes_and_a_condition_and_nothing_else(
+    curies: list[str], expected: list[str]
+) -> None:
+    assert possible_graph_shapes(_bindings(*curies)) == expected
+
+
+def test_the_several_genes_template_gives_each_gene_an_equal_share_before_its_return() -> None:
+    bindings = _bindings(MSH2, MLH1, LYNCH)
+    template = graph_shape_template(SHAPE_GENES_VARIANTS_FOR_CONDITION, bindings)
+    assert template is not None
+    assert template.name == "gene_variant_disease_link_many"
+    branches = template.cypher.split(" UNION ALL ")
+    assert len(branches) == 2
+    gene_names = sorted(n for n, c in bindings.items() if c.startswith("NCBIGene"))
+    disease_name = next(n for n, c in bindings.items() if c.startswith("MedGen"))
+    for branch, gene in zip(branches, gene_names, strict=True):
+        assert branch == (
+            f"MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(a:Gene {{id: ${gene}}}) "
+            f"MATCH (v)-[:has_phenotype]->(x:Disease {{id: ${disease_name}}}) "
+            "WITH v, collect(DISTINCT x) AS xs ORDER BY v.id LIMIT 50 "
+            "RETURN v, xs ORDER BY v.id"
+        )
+    assert template.branch_row_cap == 50
+    assert template.fold == ("v", "xs", "clinvar_condition_ids")
+    _assert_checked(template.cypher, bindings)
+
+
+def test_the_share_is_the_budget_divided_by_the_genes() -> None:
+    three = graph_shape_template(SHAPE_GENES_VARIANTS_FOR_CONDITION, _bindings(MLH1, MSH2, MSH6, LYNCH))
+    assert three is not None
+    assert three.cypher.count("LIMIT 33 ") == 3 and three.branch_row_cap == 33
+
+
+def test_several_conditions_use_the_in_clause_the_one_gene_template_uses() -> None:
+    bindings = _bindings(MLH1, MSH2, LYNCH, LYNCH_2)
+    template = graph_shape_template(SHAPE_GENES_VARIANTS_FOR_CONDITION, bindings)
+    assert template is not None
+    assert template.cypher.count("WHERE x.id IN [") == 2
+    _assert_checked(template.cypher, bindings)
+
+
+def test_develop_leaves_several_genes_and_a_condition_to_a_written_search_only_with_a_variants_word() -> None:
+    bindings = _bindings(MLH1, MSH2, LYNCH)
+    entities = [MLH1, MSH2, LYNCH]
+    variants = CypherQueryInput(
+        query_intent="Variants in MLH1 and MSH2 causing Lynch syndrome",
+        query_class="single_hop",
+        target_entities=entities,
+    )
+    assert select_template(variants, bindings) is None
+    no_word = CypherQueryInput(
+        query_intent="MLH1 and MSH2 in Lynch syndrome", query_class="single_hop", target_entities=entities
+    )
+    kept = select_template(no_word, bindings)
+    assert kept is not None and kept.name == "gene_diseases_many"
+
+
+def _variant(curie: str, gene: str, internal: int) -> str:
+    local = curie.split(":")[1]
+    return _vertex(
+        "SequenceVariant", curie, f"NM_000249.4({gene}):c.{local}G>A",
+        f"https://www.ncbi.nlm.nih.gov/clinvar/variation/{local}",
+    ).replace("844424930131969", str(internal))
+
+
+def _disease(curie: str) -> str:
+    return _vertex("Disease", curie, "Lynch syndrome", f"https://www.ncbi.nlm.nih.gov/medgen/{curie[7:]}")
+
+
+def _variant_rows(count: int) -> list[dict[str, str]]:
+    return [
+        {"c0": _variant(f"ClinVar:{1000 + i}", "MLH1" if i % 2 else "MSH2", 100 + i), "c1": "[" + _disease(LYNCH) + "]"}
+        for i in range(count)
+    ]
+
+
+def _many_input() -> CypherQueryInput:
+    return CypherQueryInput(
+        query_intent="Variants in MLH1 and MSH2 causing Lynch syndrome",
+        query_class="single_hop",
+        target_entities=[MLH1, MSH2, LYNCH],
+    )
+
+
+async def _run_many(monkeypatch: pytest.MonkeyPatch, rows: list[dict[str, str]]) -> tuple[Any, list[str]]:
+    executed: list[str] = []
+
+    def _fake(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
+        executed.append(cypher)
+        return rows, len(rows)
+
+    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake)
+    template = graph_shape_template(
+        SHAPE_GENES_VARIANTS_FOR_CONDITION, _bindings(MLH1, MSH2, LYNCH)
+    )
+    output = await cypher_query(_RefusingHarness(), _many_input(), template=template)
+    return output, executed
+
+
+@pytest.mark.asyncio
+async def test_each_variant_row_carries_the_conditions_its_clinvar_record_names(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output, executed = await _run_many(monkeypatch, _variant_rows(6))
+    variants = [r for r in output.rows if r.node_or_edge_type == "SequenceVariant"]
+    assert len(variants) == 6
+    assert all(r.fields["clinvar_condition_ids"] == [LYNCH] for r in variants)
+    assert all(r.source_url and "clinvar" in r.source_url for r in variants)
+    assert output.truncated is False
+    assert len(executed) == 1
+
+
+@pytest.mark.asyncio
+async def test_a_result_as_large_as_one_genes_share_reports_capped_with_the_total_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """One gene with hundreds of variants fills its share of 50 and the other has
+    30, so 80 rows come back, under the overall limit of 100. The answer must still
+    say there are more, and no count query may run (a UNION cannot be counted)."""
+    output, executed = await _run_many(monkeypatch, _variant_rows(80))
+    assert output.truncated is True
+    assert output.total_available is None
+    assert len(executed) == 1, "a count query ran for a UNION"
+
+
+@pytest.mark.asyncio
+async def test_a_result_smaller_than_one_share_is_not_reported_capped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output, _ = await _run_many(monkeypatch, _variant_rows(49))
+    assert output.truncated is False

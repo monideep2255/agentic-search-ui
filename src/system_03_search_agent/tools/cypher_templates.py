@@ -163,6 +163,13 @@ class CypherTemplate:
     #: on every other template, so no GO vertex reached any other way is
     #: ever attributed.
     go_attribution_param: str | None = None
+    #: Card 15: the most rows ONE UNION branch of this template can return, set
+    #: only on a template that bounds each branch before its `RETURN`. A branch
+    #: that hits its cap hides rows nothing else counts, and the validator's
+    #: overall `LIMIT` does not see it. `cypher_query` therefore reports a
+    #: result of at least this many rows as capped (total unknown), which can
+    #: claim less than is true and never more.
+    branch_row_cap: int | None = None
 
 
 # --------------------------------------------------------------------------
@@ -768,6 +775,12 @@ def _article_links_template(article_param: str) -> CypherTemplate:
 
 SHAPE_PAPERS_NAMED: Final[str] = "papers_named"
 SHAPE_GENE_IN_PAPER: Final[str] = "gene_in_paper"
+SHAPE_GENES_VARIANTS_FOR_CONDITION: Final[str] = "genes_variants_for_condition"
+
+# The rows the several-genes variants shape returns in all, shared equally
+# between the genes' branches (`100 // genes`), so the first gene's rows can
+# never fill the plan's cap and leave the second gene showing nothing.
+SHAPE_ROW_BUDGET: Final[int] = 100
 
 # `mentioned_in`, Gene to Article, anchored inline at BOTH ends. Walked from
 # the gene end only (a gene with thousands of papers takes about 3.5 s);
@@ -812,6 +825,43 @@ def _gene_article_link_template(gene_param: str, article_param: str) -> CypherTe
     )
 
 
+def _gene_variant_disease_link_many_template(
+    gene_params: list[str], disease_params: list[str]
+) -> CypherTemplate:
+    """Several genes' variants whose ClinVar record asserts one of the bound
+    diseases: one branch per gene, in parameter-name order, joined by UNION ALL.
+
+    Each branch is `_gene_variant_disease_link_template`'s pattern with an equal
+    share of `SHAPE_ROW_BUDGET` taken in variant-id order BEFORE the fold's
+    result is returned (the scoping `LIMIT` after `ORDER BY` in the `WITH`),
+    so each gene shows its own variants. The share is a code constant derived
+    from the number of genes, never caller text. A UNION keeps the count
+    rewrite off, so a capped result reports "more than shown, total unknown".
+    Measured live 2026-10-15: two genes, 4.6 s for 200 matches.
+    """
+    share = SHAPE_ROW_BUDGET // len(gene_params)
+    inline, where = _id_clause(sorted(disease_params), _OTHER_VAR)
+    branches = [
+        (
+            f"MATCH ({_VARIANT_VAR}:SequenceVariant)-[:{_VARIANT_GENE_EDGE}]->"
+            f"({_ANCHOR_VAR}:Gene {{id: ${gene}}}) "
+            f"MATCH ({_VARIANT_VAR})-[:{_VARIANT_DISEASE_EDGE}]->({_OTHER_VAR}:Disease{inline})"
+            f"{where} "
+            f"WITH {_VARIANT_VAR}, collect(DISTINCT {_OTHER_VAR}) AS {_FOLD_ALIAS} "
+            f"ORDER BY {_VARIANT_VAR}.id LIMIT {share} "
+            f"RETURN {_VARIANT_VAR}, {_FOLD_ALIAS} ORDER BY {_VARIANT_VAR}.id"
+        )
+        for gene in sorted(gene_params)
+    ]
+    return CypherTemplate(
+        name="gene_variant_disease_link_many",
+        cypher=" UNION ALL ".join(branches),
+        edge_label=_VARIANT_DISEASE_EDGE,
+        fold=(_VARIANT_VAR, _FOLD_ALIAS, FOLD_FIELD_VARIANT_CONDITIONS),
+        branch_row_cap=share,
+    )
+
+
 def possible_graph_shapes(entity_bindings: dict[str, str]) -> list[str]:
     """The checked shapes the bound identifiers make structurally possible,
     from their prefixes and counts alone. Empty for most questions."""
@@ -824,6 +874,14 @@ def possible_graph_shapes(entity_bindings: dict[str, str]) -> list[str]:
         shapes.append(SHAPE_PAPERS_NAMED)
     if set(grouped) == {"Gene", "Article"} and len(grouped["Gene"]) == 1 and len(articles) == 1:
         shapes.append(SHAPE_GENE_IN_PAPER)
+    genes = grouped.get("Gene", [])
+    diseases = grouped.get("Disease", [])
+    if (
+        set(grouped) == {"Gene", "Disease"}
+        and 2 <= len(genes) <= MAX_SHAPE_IDENTIFIERS
+        and 1 <= len(diseases) <= MAX_SHAPE_IDENTIFIERS
+    ):
+        shapes.append(SHAPE_GENES_VARIANTS_FOR_CONDITION)
     return shapes
 
 
@@ -840,6 +898,8 @@ def graph_shape_template(
         return _record_template("Article", grouped["Article"])
     if shape == SHAPE_GENE_IN_PAPER:
         return _gene_article_link_template(grouped["Gene"][0], grouped["Article"][0])
+    if shape == SHAPE_GENES_VARIANTS_FOR_CONDITION:
+        return _gene_variant_disease_link_many_template(grouped["Gene"], grouped["Disease"])
     return None
 
 
@@ -986,6 +1046,7 @@ def all_template_examples() -> list[CypherTemplate]:
         examples.append(_hop_template(shape, hop, anchor, one, count=True))
     examples.append(_article_links_template("e_one"))
     examples.append(_gene_article_link_template("e_one", "e_two"))
+    examples.append(_gene_variant_disease_link_many_template(["e_one", "e_two"], ["e_three"]))
     for anchor in _SHAPES_BY_ANCHOR:
         examples.append(_record_template(anchor, one))
         examples.append(_record_template(anchor, many))

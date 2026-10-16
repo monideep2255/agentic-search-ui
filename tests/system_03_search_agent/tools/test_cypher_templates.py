@@ -482,6 +482,10 @@ def test_every_template_passes_the_validator_and_binds_only_its_names() -> None:
         assert normalized.rstrip().endswith("LIMIT 100"), template.name
 
 
+#: Templates that take a bounded share per branch (card 15).
+_BOUNDED_TEMPLATES = {"gene_variant_disease_link_many"}
+
+
 def test_every_record_template_orders_by_the_record_id_before_its_limit() -> None:
     for template in all_template_examples():
         if template.name.endswith("_count") or template.name.endswith("_record_one"):
@@ -491,6 +495,14 @@ def test_every_record_template_orders_by_the_record_id_before_its_limit() -> Non
         normalized = validate_cypher(template.cypher, 25).normalized_cypher or ""
         order = re.search(r"ORDER BY ((?:[axv]\.id(?:, )?)+) LIMIT 25$", normalized)
         assert order is not None, f"{template.name}: {normalized}"
+        if template.name in _BOUNDED_TEMPLATES:
+            # Card 15: a template that bounds each branch carries its scoping
+            # `LIMIT <share>` INSIDE the query, after its `ORDER BY` and before
+            # its `RETURN`, and none at the end, where the validator's goes.
+            assert template.cypher.rstrip().endswith("ORDER BY v.id"), template.name
+            branches = template.cypher.split(" UNION ALL ")
+            assert all(re.search(r"ORDER BY v\.id LIMIT \d+ RETURN ", b) for b in branches), template.name
+            continue
         assert "LIMIT" not in template.cypher, template.name
 
 

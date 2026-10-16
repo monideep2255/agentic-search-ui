@@ -271,3 +271,56 @@ async def test_two_genes_and_a_paper_ask_no_decision(monkeypatch: pytest.MonkeyP
     brca2 = EventResolvedEntity(text="BRCA2", curie="NCBIGene:675", confidence=1.0)
     await graph_module.plan_node(_state(GENE_IN_PAPER, [PMID_A, BRCA1, brca2]))
     assert asked == []
+
+
+# ---------------------------------------------------------------------------
+# Several genes' variants for a condition
+# ---------------------------------------------------------------------------
+
+MLH1 = EventResolvedEntity(text="MLH1", curie="NCBIGene:4292", confidence=1.0)
+MSH2 = EventResolvedEntity(text="MSH2", curie="NCBIGene:4436", confidence=1.0)
+LYNCH = EventResolvedEntity(text="Lynch syndrome", curie="MedGen:C1333990", confidence=1.0)
+LYNCH_VARIANTS = "Variants in MLH1 and MSH2 causing Lynch syndrome"
+
+
+@pytest.mark.asyncio
+async def test_genes_and_a_condition_ask_the_decision_with_only_their_shape(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked = _stub_decisions(monkeypatch, "genes_variants_for_condition")
+    await graph_module.plan_node(_state(LYNCH_VARIANTS, [MLH1, MSH2, LYNCH]))
+    assert [a["options"] for a in asked] == [("genes_variants_for_condition", "none_of_these")]
+
+
+@pytest.mark.asyncio
+async def test_a_genes_variants_pick_forces_the_checked_union_template(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _stub_decisions(monkeypatch, "genes_variants_for_condition")
+    call = _graph_call(await graph_module.plan_node(_state(LYNCH_VARIANTS, [MLH1, MSH2, LYNCH])))
+    assert call.template is not None and call.template.name == "gene_variant_disease_link_many"
+    assert call.template.branch_row_cap == 50
+    assert call.context_only is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pick", ["none_of_these", None])
+async def test_genes_and_a_condition_none_of_these_leaves_develops_call_unchanged(
+    monkeypatch: pytest.MonkeyPatch, pick: str | None
+) -> None:
+    develop = await _develop_call(monkeypatch, LYNCH_VARIANTS, [MLH1, MSH2, LYNCH])
+    asked = _stub_decisions(monkeypatch, pick)
+    call = _graph_call(await graph_module.plan_node(_state(LYNCH_VARIANTS, [MLH1, MSH2, LYNCH])))
+    assert asked
+    assert call.template is None
+    _same_call_as_develop(call, develop)
+
+
+@pytest.mark.asyncio
+async def test_two_genes_and_a_condition_develop_already_templates_never_ask(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With no variants word, develop's own `gene_diseases_many` runs."""
+    asked = _stub_decisions(monkeypatch, "genes_variants_for_condition")
+    await graph_module.plan_node(_state("MLH1 and MSH2 in Lynch syndrome", [MLH1, MSH2, LYNCH]))
+    assert asked == []

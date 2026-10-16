@@ -614,9 +614,25 @@ What you should see:
 - For the first, the paper is the first record in the answer, cited to its PubMed page, because the graph links BRCA1 to it.
 - For the second, the graph holds no link between BRCA1 and that paper, so no paper record is shown for it, and the answer never says the paper does not discuss BRCA1. The graph can only say it holds no link, and the answer does not claim more.
 - The second answer carries the note that it does not address PMID 11237011, and then BRCA1 records from other databases, as before this card.
-- Both answers come back the same way every time. Before this card, the search for the second question was written by a model and one run in five ended in an error.
+- Both answers come back the same way every time. Before this card, a model wrote the search for the second question, and a written search can fail.
 - Known: the second answer does not yet say in one plain sentence that the graph shows no link between the paper and the gene.
 - Why it matters: a yes backed by a cited paper is useful, and a no that sounds sure when it only means "not in the graph" would be a confident wrong answer.
+
+### 117. Variants in several genes for one condition, each gene shown (card 15)
+
+Queries to try:
+
+- `Variants in MLH1 and MSH2 causing Lynch syndrome`
+
+What you should see:
+
+- Variants of both genes appear, MLH1 and MSH2, each a ClinVar record with its own citation, and Lynch syndrome appears as a disease record with its MedGen citation.
+- Each variant is listed with the condition its ClinVar record names.
+- The answer says the list was cut short and the exact total is not known. The graph search takes up to 50 variants from each gene, so the second gene is never crowded out by the first.
+- The same variants come back every time you ask, and the answer arrives in about 10 to 15 seconds. Before this card the search was written by a model and took 15 to 40 seconds, and the variants it found changed from run to run.
+- A question that wants something else of the same genes, such as how many variants there are, is not answered with this list.
+- Known: the answer shows only part of the 100 variants it holds, and a note can say the answer does not address MSH2 although MSH2 variants are in the list.
+- Why it matters: someone comparing two genes wants to see each gene's variants side by side, not one gene's variants and nothing of the other.
 
 ## 4. Chromosome windows and accessions
 
@@ -2082,6 +2098,7 @@ Every feature accounted for, in three tables:
 |---|---|---|
 | card 15, papers named | Two papers named by PubMed id are shown as two cited records from a checked graph search | Query 115 |
 | card 15, gene in a paper | A question asking whether one paper discusses one gene shows the paper when the graph links them, and never says the paper does not discuss the gene when it does not | Query 116 |
+| card 15, genes' variants | A question asking which variants in two or more genes are linked to a condition shows each gene's variants side by side with the conditions their records name, from a checked graph search | Query 117 |
 | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
 | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
 | card 35 | An off-topic follow-up that contains a word such as "cell" or "study" is checked for topic like any other question | Query 111 |

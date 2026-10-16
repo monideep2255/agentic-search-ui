@@ -647,6 +647,7 @@ from system_03_search_agent.tools.cypher_schemas import (
 )
 from system_03_search_agent.tools.cypher_templates import (
     SHAPE_GENE_IN_PAPER,
+    SHAPE_GENES_VARIANTS_FOR_CONDITION,
     SHAPE_PAPERS_NAMED,
     CypherTemplate,
     gene_go_terms_template,
@@ -1178,7 +1179,12 @@ _PAPER_LINKS: Final = _DecisionSpec(
 _GRAPH_SHAPE_NONE: Final = "none_of_these"
 _GRAPH_SHAPE: Final = _DecisionSpec(
     point="plan.graph_shape",
-    options=(SHAPE_PAPERS_NAMED, SHAPE_GENE_IN_PAPER, _GRAPH_SHAPE_NONE),
+    options=(
+        SHAPE_PAPERS_NAMED,
+        SHAPE_GENE_IN_PAPER,
+        SHAPE_GENES_VARIANTS_FOR_CONDITION,
+        _GRAPH_SHAPE_NONE,
+    ),
     fail_open=_GRAPH_SHAPE_NONE,
     instructions=(
         "The state is a question a person typed into a biomedical evidence search "
@@ -1193,6 +1199,12 @@ _GRAPH_SHAPE: Final = _DecisionSpec(
         SHAPE_GENE_IN_PAPER: (
             "It asks whether, or how, the named paper discusses, mentions, studies "
             "or reports on the named gene."
+        ),
+        SHAPE_GENES_VARIANTS_FOR_CONDITION: (
+            "It asks which variants, mutations or alleles in the named genes are "
+            "linked to, cause, or are reported for the named condition, where the "
+            "condition is named as a condition and not as a sample type or a "
+            "passing word."
         ),
         _GRAPH_SHAPE_NONE: (
             "Anything else. It asks for a number or a count, for something linked to "
