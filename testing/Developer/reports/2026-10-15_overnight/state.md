@@ -2,7 +2,7 @@
 
 The live ledger of the night: where each card stands, which agent holds it, and the next step. The lead rewrites a row the moment a card moves, so a session that stops at a usage limit resumes from this file, not from memory. The plan and the owner's rules: `plan.md` beside this file.
 
-Last updated: 2026-10-16 05:50.
+Last updated: 2026-10-16 05:40. A usage limit stopped six agents at about 01:08; all six were resumed at 05:10 with a deadline before the 07:00 close.
 
 ## Table of contents
 
@@ -28,11 +28,11 @@ Last updated: 2026-10-16 05:50.
 | 94 | none (timeout fix merged #246; lookup #244 closed) | Merged; in the retest file | none | Product check at the close |
 | 17 | none (merged #241, 2903ce43) | Merged; in the retest file | none | Product check at the close |
 | 110 | none (removed) | Closed: verifier HOLD (titles joined by other words still open); #242 closed; parked 110/111 branch deleted | none | A filter that reads any joining words, later |
-| 101 | card101, fix/card101-record-sentence-end | Builder running (five slices) | builder-101 | Commit per slice, pull request, judge and adversary |
-| 15 | card15, fix/card15-checked-templates | Builder running (four shapes, one slice each) | builder-15 | Commit per slice, pull request, judge and adversary |
+| 101 | none (removed) | Closed: judge FIX FIRST and adversary FAIL (sentences develop shows are dropped); #248 closed, branch and tag deleted, reports on the docs branch | none | Pair quote marks by the record, later |
+| 15 | card15, fix/card15-checked-templates, #249 | Built, four slices committed, queries renumbered 115 to 118; judge and adversary running since 05:30 | judge-15, adversary-15 | One fix round if needed, verifier, merge before 07:00 |
 | 84 and 72 | none (removed) | Design on develop; not built: needs the owner's yes on the guardrail rule | none | The owner's answer in the morning |
-| 24 | card24, fix/card24-answer-depth-switch, #245 | Fix round done; fresh verifier running | verifier-24 | Merge on PASS; then delete tag phase-8.4 |
-| 20 | card20, fix/card20-isolate-filters, #247 | Judge and adversary running | judge-20, adversary-20 | One fix round if needed, verifier, merge (tight before 07:00) |
+| 24 | card24, fix/card24-answer-depth-switch, #245 | Fix round done; fresh verifier resumed 05:10 | verifier-24 | Merge on PASS; then delete tag phase-8.4 |
+| 20 | card20, fix/card20-isolate-filters, #247 | Judge and adversary resumed 05:10 | judge-20, adversary-20 | One fix round if needed, verifier, merge (tight before 07:00) |
 | Parked branch | none | Deleted with card 110 | none | Done |
 | Local tags | parked/phase-8.4, phase-8.8-snippets, card101, card15 (card84-72 deleted) | Each deleted when its card merges or closes | none | Delete with its card |
 
