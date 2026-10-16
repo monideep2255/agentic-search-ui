@@ -1,0 +1,15 @@
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Disease records found\n\n", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "table_header", "text": "", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Disease name: Ashkenazi Jewish disorders [1]. ", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Medgen records found\n\n", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "table_header", "text": "", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Medgen title: BETA-THALASSEMIA, ASHKENAZI JEWISH TYPE [2]. ", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "claim", "text": "Found 1 disease record for Ashkenazi Jewish: Ashkenazi Jewish disorders [1]. ", "placement": "summary"}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "note", "text": "Note: no written summary could be checked against the records, so the records found are listed below with their sources", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "note", "text": "Note: this answer does not address the following entities named in the question: BETA-THALASSEMIA, ASHKENAZI JEWISH TYPE. Ask about them individually for a complete answer.", "placement": "listing"}}
+{"tag": "DONE", "data": {"trust_outcome": "ask", "elapsed_ms": 11295, "total_cost_usd": 0.005346333, "message": null}}
+{"tag": "ELAPSED_S", "data": 11.4}

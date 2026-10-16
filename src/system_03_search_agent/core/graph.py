@@ -565,6 +565,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     is_plain_language,
     isolate_place,
     key_terms,
+    name_switched_records,
     parse_synth_layout,
     placeholder_link_count,
     placeholder_links_note,
@@ -12942,6 +12943,53 @@ def _label_only_positions(
     }
 
 
+def _prose_echo_positions(
+    model_grounding: GroundingResult,
+    lead_index: int | None,
+    citations: Sequence[CitationPayload],
+    synth_findings: Sequence[SynthFinding],
+    listing_sentences: Sequence[str],
+) -> set[int]:
+    """Positions card 111 leaves out of the prose, as `_answer_parts` shows it.
+
+    When that would leave no model sentence in the summary at all and no lead
+    was picked, every sentence stays: the summary then prints the repeat as
+    the writer wrote it, after the count line, rather than print nothing from
+    the writer. One function for the prose and for the card 17 lead-in pass,
+    so the order the pass reads is the order the reader sees.
+    """
+    echo_positions = _label_only_positions(
+        model_grounding.sentences, citations, synth_findings, listing_sentences
+    )
+    lead_shown = lead_index is not None and 0 <= lead_index < len(model_grounding.sentences)
+    if not lead_shown and len(echo_positions) >= len(model_grounding.sentences):
+        return set()
+    return echo_positions
+
+
+def _prose_reading_order(
+    model_grounding: GroundingResult,
+    lead_index: int | None,
+    citations: Sequence[CitationPayload],
+    synth_findings: Sequence[SynthFinding],
+    listing_sentences: Sequence[str],
+) -> list[int]:
+    """The positions of `model_grounding.sentences` in the order the reader
+    sees them: the lead sentence first when one was picked, then the rest in
+    order, without the ones card 111 leaves out (card 17 fix round)."""
+    echo = _prose_echo_positions(
+        model_grounding, lead_index, citations, synth_findings, listing_sentences
+    )
+    lead_shown = lead_index is not None and 0 <= lead_index < len(model_grounding.sentences)
+    order = [lead_index] if lead_shown and lead_index is not None else []
+    order.extend(
+        position
+        for position in range(len(model_grounding.sentences))
+        if position != lead_index and position not in echo
+    )
+    return order
+
+
 def _answer_parts(
     *,
     audience_depth: str,
@@ -13565,11 +13613,9 @@ def _answer_parts(
         # lead was picked, every sentence stays: the summary then prints the
         # repeat as the writer wrote it, after the count line, rather than
         # print nothing from the writer.
-        echo_positions = _label_only_positions(
-            model_grounding.sentences, citations, synth_findings, listing_sentences
+        echo_positions = _prose_echo_positions(
+            model_grounding, lead_index, citations, synth_findings, listing_sentences
         )
-        if lead_text is None and len(echo_positions) >= len(model_grounding.sentences):
-            echo_positions = set()
         for position, (sentence, origin) in enumerate(
             zip(model_grounding.sentences, model_grounding.sentence_origins, strict=False)
         ):
@@ -15149,6 +15195,21 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             if summary_sentence
             else None
         )
+        # Card 17 (2026-10-15, fix round 2026-10-16): a reworded sentence that
+        # switched papers on one shared title word names its paper. It runs
+        # here, on the order the reader sees: after the lead pick (which saw the
+        # bare sentences) and after card 111's removals, and never on the
+        # sentence that opens the answer. Adds a prefix, drops nothing.
+        if model_grounding is not None and tool_outcome == "ok" and model_grounding.claims:
+            model_grounding, switches_named = name_switched_records(
+                model_grounding,
+                synth_findings,
+                _prose_reading_order(
+                    model_grounding, lead_index, citations, synth_findings, listing_shown
+                ),
+            )
+            if switches_named:
+                logger.info("card 17: %d switched sentence(s) given a lead-in", switches_named)
         parts = _answer_parts(
             audience_depth=query.audience_depth,
             question=query.text,
