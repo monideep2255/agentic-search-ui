@@ -16,7 +16,7 @@ WHAT IT PROVES, ONE NAMED RULE EACH
 
   card-in-one-place   A card in the board's To do or Build in progress
                       (`testing/UI_fix_plan.md`) is not also in "Waiting for
-                      your retest" (`testing/UI_fixes_done.md`), and the
+                      your retest" (`testing/Retest_product_owner.md`), and the
                       reverse. Exception: a retest row that marks the card
                       ", part" ("card 94, part"), the board's convention for
                       a card whose first part is live and the rest still to
@@ -115,12 +115,13 @@ REPO_ROOT = ROOT.parent
 
 BOARD = "testing/UI_fix_plan.md"
 DONE = "testing/UI_fixes_done.md"
+RETEST = "testing/Retest_product_owner.md"
 QUERIES = "testing/Test_queries_and_workflows.md"
 BOARD_PLAN = "testing/Board_plan.md"
 FACTORY = "docs/build/Factory_onboarding.md"
 HANDOFF = "HANDOFF.md"
 REGISTRY = "tracker/Living_documents.md"
-DOCUMENTS = (BOARD, DONE, QUERIES, BOARD_PLAN, FACTORY, HANDOFF, REGISTRY)
+DOCUMENTS = (BOARD, DONE, RETEST, QUERIES, BOARD_PLAN, FACTORY, HANDOFF, REGISTRY)
 
 TODO_HEADING = "## To do"
 IN_PROGRESS_HEADING = "## Build in progress"
@@ -371,12 +372,12 @@ def locate_cards(docs: Docs) -> Located:
 
 
 def waiting_table(docs: Docs) -> Table:
-    done = docs.get(DONE)
-    start, end = section_lines(done, WAITING_HEADING)
-    for table in tables_in(done, start, end):
+    retest = docs.get(RETEST)
+    start, end = section_lines(retest, WAITING_HEADING)
+    for table in tables_in(retest, start, end):
         if table.column("Item") is not None and table.column("Queries") is not None:
             return table
-    raise CannotRun(f"{DONE}: no table with Item and Queries columns under {WAITING_HEADING!r}")
+    raise CannotRun(f"{RETEST}: no table with Item and Queries columns under {WAITING_HEADING!r}")
 
 
 def waiting_rows_cards(docs: Docs) -> list[tuple[int, CardRef]]:
@@ -424,7 +425,7 @@ def rule_card_in_one_place(docs: Docs, loc: Located) -> list[Finding]:
                 findings.append(Finding(
                     BOARD, line, "card-in-one-place",
                     f"card {card} is in {where} and also in \"Waiting for your retest\" "
-                    f"({DONE}:{hit[0]}). Take it off the board if it is live, or out of the "
+                    f"({RETEST}:{hit[0]}). Take it off the board if it is live, or out of the "
                     "retest list if it is still being built; mark the retest row \"card "
                     f"{card}, part\" if only part of it is live",
                 ))
@@ -442,13 +443,13 @@ def rule_retest_names_query(docs: Docs) -> list[Finding]:
         missing = sorted({n for n in numbers if n not in existing})
         if missing:
             findings.append(Finding(
-                DONE, line, "retest-names-query",
+                RETEST, line, "retest-names-query",
                 f"query {', '.join(map(str, missing))} has no \"### N.\" heading in {QUERIES}. "
                 "Correct the number, or add the query to the test queries document",
             ))
         elif not numbers and not says_none:
             findings.append(Finding(
-                DONE, line, "retest-names-query",
+                RETEST, line, "retest-names-query",
                 f"the Queries cell names no query number and does not say there is none "
                 f"({cell[:60]!r}). Name the query from {QUERIES}, add one, or write \"none\"",
             ))
@@ -488,7 +489,7 @@ def rule_card_exists(docs: Docs, loc: Located) -> list[Finding]:
         findings.append(Finding(
             file, line, "card-exists",
             f"card {card} is on no list: not in the board's To do or Build in progress, "
-            f"not in \"Waiting for your retest\", not in a done table of {DONE}. Correct the "
+            f"not in \"Waiting for your retest\" ({RETEST}), not in a done table of {DONE}. Correct the "
             "number, or put the card on the board",
         ))
     return findings
@@ -503,7 +504,7 @@ def rule_factory_lane(docs: Docs, loc: Located) -> list[Finding]:
             findings.append(Finding(
                 FACTORY, line, "factory-lane",
                 f"card {card} is still one of Factory's cards here, but it is built and "
-                f"waiting for retest ({DONE}:{hit[0]}). Take its section out of Factory's "
+                f"waiting for retest ({RETEST}:{hit[0]}). Take its section out of Factory's "
                 "card list and update the order line",
             ))
         elif card in loc.done and not hit:
@@ -701,7 +702,7 @@ GOLDEN: dict[str, str] = {
 
 Moved to `testing/UI_fixes_done.md`.
 """,
-    DONE: """# UI fixes done
+    RETEST: """# Retest, product owner
 
 ## Waiting for your retest
 
@@ -711,6 +712,8 @@ Moved to `testing/UI_fixes_done.md`.
 | 2 | Isolates show genes | card 94, part (#158) | 2 to 3 | Waiting for your verdict |
 | 3 | The design file | card 47 (#188) | none, a design file | Waiting for your verdict |
 | 4 | A one-word question is asked back | 12.3 | 3 | Waiting for your verdict |
+""",
+    DONE: """# UI fixes done
 
 ## Done features at a glance
 
@@ -812,15 +815,15 @@ def _mutations() -> list[tuple[str, dict[str, str], str]]:
     """(name, mutated documents, the rule that must report it)."""
     return [
         ("a To do card also waiting for retest",
-         _mutate(DONE, "| card 47 (#188) |", "| cards 47 and 56 (#188) |"), "card-in-one-place"),
+         _mutate(RETEST, "| card 47 (#188) |", "| cards 47 and 56 (#188) |"), "card-in-one-place"),
         ("a Build in progress card also waiting for retest",
-         _mutate(DONE, "| card 47 (#188) |", "| cards 47 and 50 (#188) |"), "card-in-one-place"),
+         _mutate(RETEST, "| card 47 (#188) |", "| cards 47 and 50 (#188) |"), "card-in-one-place"),
         ("a part card loses its part marker",
-         _mutate(DONE, "card 94, part (#158)", "card 94 (#158)"), "card-in-one-place"),
+         _mutate(RETEST, "card 94, part (#158)", "card 94 (#158)"), "card-in-one-place"),
         ("a retest row names a query with no heading",
-         _mutate(DONE, "| 2 to 3 |", "| 2 to 4 |"), "retest-names-query"),
+         _mutate(RETEST, "| 2 to 3 |", "| 2 to 4 |"), "retest-names-query"),
         ("a retest row names no query and not none",
-         _mutate(DONE, "| none, a design file |", "| the design file |"), "retest-names-query"),
+         _mutate(RETEST, "| none, a design file |", "| the design file |"), "retest-names-query"),
         ("a wave names a card on no list",
          _mutate(BOARD_PLAN, "| 47, 43b, the hidden note |", "| 47, 43b, 61 |"), "card-exists"),
         ("a wave sentence names a card on no list",
@@ -846,7 +849,7 @@ def _mutations() -> list[tuple[str, dict[str, str], str]]:
 
 def _cannot_run_cases() -> list[tuple[str, dict[str, str]]]:
     return [
-        ("the retest section is missing", _mutate(DONE, WAITING_HEADING, "## Somewhere else")),
+        ("the retest section is missing", _mutate(RETEST, WAITING_HEADING, "## Somewhere else")),
         ("the To do section is missing", _mutate(BOARD, TODO_HEADING, "## Not started")),
         ("the Waves section is missing", _mutate(BOARD_PLAN, WAVES_HEADING, "## Order")),
     ]
@@ -914,7 +917,7 @@ def main(argv: list[str]) -> int:
     if findings:
         print(f"error: {len(findings)} finding(s): the documents disagree")
         return 1
-    print("ok: the board, the done file, the test queries, the board plan, the Factory brief, "
+    print("ok: the board, the done file, the retest file, the test queries, the board plan, the Factory brief, "
           "the handoff and the registry agree")
     return 0
 

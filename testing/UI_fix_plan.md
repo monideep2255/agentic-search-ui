@@ -2,7 +2,7 @@
 
 The board for the UI fix loop. An item starts in To do and moves to Build in
 progress when someone starts it. Once it is live on develop it moves to
-"Waiting for your retest" in `testing/UI_fixes_done.md`, and your verdict
+`testing/Retest_product_owner.md`, and your verdict
 closes it.
 
 This board is the source of truth for what gets worked on: an item is written
@@ -417,4 +417,4 @@ as the answer to a failure the harness has not been worked on yet.
 
 ## Retest
 
-Moved on 2026-10-06, at the product owner's request, to `testing/UI_fixes_done.md`, section "Waiting for your retest". A card that is built and live waits there for your verdict; it is not work to do and is not counted here.
+Moved on 2026-10-15, at the product owner's request, to `testing/Retest_product_owner.md` (before that, from 2026-10-06, a section of `testing/UI_fixes_done.md`). A card that is built and live waits there for your verdict; it is not work to do and is not counted here.

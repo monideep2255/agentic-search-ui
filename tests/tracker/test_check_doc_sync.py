@@ -74,17 +74,17 @@ def test_the_golden_documents_agree():
 
 def test_a_part_card_may_stay_in_to_do_but_a_whole_one_may_not():
     assert "card-in-one-place" not in _rules(dict(sync.GOLDEN))
-    whole = sync._mutate(sync.DONE, "card 94, part (#158)", "card 94 (#158)")
+    whole = sync._mutate(sync.RETEST, "card 94, part (#158)", "card 94 (#158)")
     assert _rules(whole) == ["card-in-one-place"]
 
 
 def test_a_quoted_question_is_not_a_query_number():
-    texts = sync._mutate(sync.DONE, "| none, a design file |", '| the answer to "What does BRCA1 do?" |')
+    texts = sync._mutate(sync.RETEST, "| none, a design file |", '| the answer to "What does BRCA1 do?" |')
     assert _rules(texts) == ["retest-names-query"]
 
 
 def test_none_says_there_is_no_query():
-    texts = sync._mutate(sync.DONE, "| none, a design file |", "| no query, a design file |")
+    texts = sync._mutate(sync.RETEST, "| none, a design file |", "| no query, a design file |")
     assert _rules(texts) == []
 
 
@@ -112,7 +112,7 @@ def test_a_missing_document_exits_2(tmp_path, monkeypatch, capsys):
 
 
 def test_a_missing_section_exits_2(tmp_path, monkeypatch, capsys):
-    texts = sync._mutate(sync.DONE, sync.WAITING_HEADING, "## Somewhere else")
+    texts = sync._mutate(sync.RETEST, sync.WAITING_HEADING, "## Somewhere else")
     for rel, text in texts.items():
         (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / rel).write_text(text, encoding="utf-8")
