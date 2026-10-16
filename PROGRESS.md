@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-10-15.
+Last updated: 2026-10-16.
 
 ## Table of contents
 
@@ -56,6 +56,16 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+### 16 October
+
+NEW OVERNIGHT, 15 TO 16 OCTOBER, on the practice site, each change read by three fresh reviewers before it went in, and tried on the site itself at desktop and phone width:
+
+- A follow-up asking to change the database, such as "Remove that variant node from the knowledge graph.", now gets "This system only reads from NCBI records" in under a second, instead of being told it is off topic.
+- When the answer moves from one paper to another on a reworded sentence, it now names the paper first, so a reader can tell which paper a claim rests on.
+- A question about bacterial isolates whose database search runs out of time keeps the rest of its answer, with a note saying the search took too long. Before, the whole answer was lost.
+- A Plain language and Researcher switch now sits beside every answer. Clicking the other mode first says it will run the question again as one new search, and nothing runs until you press Ask again.
+- Eight other changes were built and reviewed overnight and then taken back, because a reviewer found each could show something wrong that the site does not show today. They wait for new designs, listed below.
 
 ### 15 October
 
@@ -314,6 +324,20 @@ All six live-government-API connections the plan called for are now built. That 
 - Give it a stretch of chromosome coordinates with the genome build, and it names the genes under that stretch without being told them, then lists the structural and clinical variants recorded there, each with a link. Leave the build out and it asks which one, rather than guessing. On the practice site since the night of 22 September, waiting for the product owner to try it.
 
 ## What does not work yet
+
+### 16 October
+
+THE HONEST HEADLINE AS OF 16 OCTOBER, in one sentence:
+
+- most of the night's work was taken back, because the reviewers found that each change could give a confident wrong answer, and a wrong answer that looks right is worse than no answer.
+
+What the night found, in plain words:
+
+- Asking for bacterial isolates from Georgia counted every isolate from the United States, because the system matched the country's second spelling without checking it, and missed the many records that write a state as two letters.
+- After a question about one disease, a new question about another could be answered with a list of genetic variants for the first one.
+- A curly apostrophe in a paper's text could make the answer drop sentences the site shows today.
+- Looking up one named bacterial isolate reached only about one in six of them.
+- Twice the night's helpers stopped at the account's usage limit, the second time for four hours, which is why two of the changes ran out of time for a second try.
 
 ### 15 October
 
@@ -650,6 +674,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| A night of building every parked piece, four changes in and eight taken back | Every piece of half-finished work was finished or taken back, so nothing is left waiting on a side branch. Four changes went live: the read-only reply, the paper named when an answer moves between papers, isolate answers that survive a slow search, and the Plain language and Researcher switch. Eight were taken back because a reviewer found each could show something wrong | 16 October |
 | A day of owner decisions, a hidden price problem caught, and one change taken back | The product owner answered five waiting questions. Three changes went live: answers keep their written summary after the next update, off-topic follow-ups are turned away, and a repeated paper title no longer ends an answer. A fourth, a smarter choice of the answer's first sentence, was rebuilt after its reviewers found it could open on a paper title | 15 October |
 | A night of six fixes and the faster answer built | Six changes went live, each read by three reviewers: reopened answers keep their warning and trust words, rs334 lists only itself, a lost date range is named, the About page is corrected, and crashes are logged with their search. The faster answer, records within seconds and a first sentence that answers, was built in full and checked for $3.67, and waits for the owner because its last review found two small things worse. Three other pieces were held back after their reviews | 8 October |
 | A day and a night with a second builder, and answers that count honestly | Factory, the second development agent, returned with one written brief and built five screen and wording fixes, each checked before it went in. Overnight, every sources number on an answer was made to agree, the variant table's note was made truthful, saved answers got their sources back, and the planning documents were made easier to read. One fix, for sentences copied from part of a paper, was held back because its last check found a new way to drop a limit | 7 October |
@@ -1165,10 +1190,10 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. The product owner retests what went live on 15 October, then 8 and 9 October, newest first.
-2. Looking up one named bacterial isolate, without the slow distance scan the product owner chose to drop, so it answers in about 2 seconds.
-3. The rebuilds the product owner chose on 15 October: asking which aspect a broad subject means, decided by the model rather than a list; reading a year and a place for isolate questions in a separate small step; and naming the paper when a reworded sentence moves to a different one.
-4. The answer's first sentence, redesigned so it can come from later in the answer without ever opening on a paper title or a sentence that needs the one before it.
+1. The product owner retests what went live overnight on 16 October, then 15 October, then 8 and 9 October, newest first.
+2. The product owner's answers on two rules: whether a question asked after a long server pause is checked like any other, and what happens when a sign-in renewal cannot be read.
+3. New designs for the changes taken back: reading a year and a place for isolate questions in a way that matches how the records write places; looking up one named isolate; the checked database searches; where a quoted record sentence ends; the answer's first sentence; the one-sentence paper quotes; and asking which aspect a broad subject means.
+4. Two small marks on the new mode switch: an old saved mode shown by its raw name, and a little blank space above the answer.
 5. Finish the coronavirus question: the unusual spellings and the follow-up cases the first fix left open.
 6. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
 7. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting.
@@ -1291,8 +1316,11 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| Asking for isolates from one place can count the wrong place, and miss records that write a state as two letters | Taken back on 16 October before it went live; waits for a new design |
+| After a question about one disease, a new question could get the first disease's variants | Taken back on 16 October before it went live; waits for a new design |
+| On the new mode switch, an answer last asked from a terminal can show the raw name "clinical_brief", and there is a little blank space above the answer | On the list of work to do, found on 16 October |
 | The model that writes answers on the practice site was no longer on the outside price list, so its next update would have dropped every written summary | ~~Fixed on 15 October~~, on the practice site, waiting for the product owner's retest |
-| After an answer, a follow-up asking to change the database can be told the system answers biomedical questions instead of that the database is read-only | On the list of work to do, found on 15 October |
+| ~~After an answer, a follow-up asking to change the database can be told the system answers biomedical questions instead of that the database is read-only~~ | Fixed overnight on 16 October; on the practice site, waiting for the product owner's retest |
 | An answer can open on a count of records when a sentence that answers the question comes third or later | Rebuilt after its first version was taken back on 15 October |
 | Picking a date range limits only the live paper search; the papers the system already holds are not filtered, so old ones can lead the answer | On the list of work to do, found on 8 October |
 | On a phone, the "High-risk claim" warning on a reopened answer breaks across two lines | On the list of work to do, found on 8 October |

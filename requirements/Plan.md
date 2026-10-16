@@ -1050,6 +1050,18 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-16. THE UI FIX LOOP, OVERNIGHT OF 2026-10-15 TO 16: CARDS 115, 17, 94'S TIMEOUT FIX AND 24 MERGED; EIGHT CARDS CLOSED BY THE OWNER'S RULE; NOTHING LEFT PARKED. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history. The night's plan and ledger: `testing/Developer/reports/2026-10-15_overnight/`.
+
+- What landed, by what a person notices, each behind green CI, a judge, an adversary and a fresh verifier, under the owner's overnight rule (merge when nothing is worse than develop):
+  - A follow-up asking to change the graph gets the read-only reply at once, never the off-topic reply (card 115, #240).
+  - A reworded sentence that moves to a different paper names that paper (card 17, #241, the owner's option E).
+  - An isolate answer whose Pathogen Detection search runs out of time keeps the rest of the answer (card 94, part, #246).
+  - A Plain language and Researcher switch beside each answer, which says it runs one new search before spending one (card 24, #245, built by the lead while Factory was paused); two minor marks open as card 117.
+  - The first three passed the product check on deployed develop at 1280 and 390 (`testing/Developer/reports/2026-10-16_product_check/`).
+- What was closed, each back in To do with its reviews and final diff on develop, because a check found something worse than develop: cards 48, 75, 29, 94's single-isolate lookup, 110, 101, 20 and 15. The common thread is a confident wrong or missing piece of an answer (a wrong place counted, a remembered condition's variants for a new subject, sentences develop shows dropped), which the owner's rule never lets merge.
+- Every parked branch and tag was finished, by the owner's rule that parked work is worked on, not stored: locally only `develop`, on GitHub only `develop` and `production`.
+- Two usage limits stopped the night's agents, the second for four hours; every agent resumed from its transcript (`LEARNINGS.md`, 2026-10-15 and 16). Decisions taken under the owner's rules: `DECISIONS.md`, rows dated 2026-10-15 and 16. Production is unchanged on `v0.2.0`.
+
 2026-10-15. THE UI FIX LOOP, 2026-10-15: CARDS 114, 35 AND 111 MERGED; CARD 110 TAKEN BACK BY THE OWNER'S CALL. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
 
 - What landed, by what a person notices, each behind green CI and its reviews, then checked on deployed develop at 1280 and 390 (`testing/Developer/reports/2026-10-15_product_check/`):

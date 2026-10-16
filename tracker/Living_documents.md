@@ -68,7 +68,7 @@ Last updated: 2026-10-16.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-10-16 that begins "Card 24's pull request #245 merges (de53c6aa) on its fresh verifier's PASS", the last row at the checkpoint of 2026-10-16. Of the 35 rows read at this checkpoint, one changes a registered document's job: the owner's of 2026-10-15 that every retest lives in `testing/Retest_product_owner.md`, already registered above with its own row. The rest record the owner's rules for the overnight of 2026-10-15 to 16, the cards' designs and fix rounds, and the night's merges and closes.
+Guarded through the DECISIONS.md row dated 2026-10-16 that begins "Card 115's pull request #240 (0fadfdf9) and card 94's timeout fix", the last row at the checkpoint of 2026-10-16. Of the 36 rows read at this checkpoint, one changes a registered document's job: the owner's of 2026-10-15 that every retest lives in `testing/Retest_product_owner.md`, already registered above with its own row. The rest record the owner's rules for the overnight of 2026-10-15 to 16, the cards' designs and fix rounds, and the night's merges and closes.
 
 ## Why the registry lives here
 
