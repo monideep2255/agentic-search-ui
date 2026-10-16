@@ -646,6 +646,7 @@ from system_03_search_agent.tools.cypher_schemas import (
     CypherQueryRow,
 )
 from system_03_search_agent.tools.cypher_templates import (
+    SHAPE_DISEASE_VARIANTS,
     SHAPE_GENE_IN_PAPER,
     SHAPE_GENES_VARIANTS_FOR_CONDITION,
     SHAPE_PAPERS_NAMED,
@@ -1183,6 +1184,7 @@ _GRAPH_SHAPE: Final = _DecisionSpec(
         SHAPE_PAPERS_NAMED,
         SHAPE_GENE_IN_PAPER,
         SHAPE_GENES_VARIANTS_FOR_CONDITION,
+        SHAPE_DISEASE_VARIANTS,
         _GRAPH_SHAPE_NONE,
     ),
     fail_open=_GRAPH_SHAPE_NONE,
@@ -1205,6 +1207,10 @@ _GRAPH_SHAPE: Final = _DecisionSpec(
             "linked to, cause, or are reported for the named condition, where the "
             "condition is named as a condition and not as a sample type or a "
             "passing word."
+        ),
+        SHAPE_DISEASE_VARIANTS: (
+            "It asks which variants, mutations or alleles are linked to, cause, or "
+            "are reported for the named condition, and names no gene."
         ),
         _GRAPH_SHAPE_NONE: (
             "Anything else. It asks for a number or a count, for something linked to "

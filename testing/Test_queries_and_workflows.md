@@ -634,6 +634,21 @@ What you should see:
 - Known: the answer shows only part of the 100 variants it holds, and a note can say the answer does not address MSH2 although MSH2 variants are in the list.
 - Why it matters: someone comparing two genes wants to see each gene's variants side by side, not one gene's variants and nothing of the other.
 
+### 118. The variants of one condition, from a checked graph search (card 15)
+
+Queries to try:
+
+- `What variants cause cystic fibrosis?`, five times.
+
+What you should see:
+
+- When the question is read as a connected question about the condition, the answer lists ClinVar variants, each cited to its own ClinVar page, with the disease record, and says the list is cut short and gives the true total (5,831 in the 2026-10-15 run).
+- When the question is read as an open question, the answer opens on the cystic fibrosis record and live PubMed and MedGen records, as it did before this card. That reading came up in most of the 2026-10-15 runs, so expect to see this often.
+- The variants, when shown, come in ClinVar id order, so the first hundred are the same every time.
+- A question that wants something else of the condition, such as how many variants there are or which genes carry them, is not answered with this list.
+- Known: the open reading still shows the condition and no variants. Whether to send that reading to the same search is the owner's call, because it changes what a plain "tell me about this condition" question shows.
+- Why it matters: someone asking what variants cause a condition wants variants, not the condition's own record.
+
 ## 4. Chromosome windows and accessions
 
 ### 26. A copy number variant window, before the coordinate range feature
@@ -2099,6 +2114,7 @@ Every feature accounted for, in three tables:
 | card 15, papers named | Two papers named by PubMed id are shown as two cited records from a checked graph search | Query 115 |
 | card 15, gene in a paper | A question asking whether one paper discusses one gene shows the paper when the graph links them, and never says the paper does not discuss the gene when it does not | Query 116 |
 | card 15, genes' variants | A question asking which variants in two or more genes are linked to a condition shows each gene's variants side by side with the conditions their records name, from a checked graph search | Query 117 |
+| card 15, a condition's variants | A question asking which variants cause one condition lists its ClinVar variants with the true total, from a checked graph search, when the question is read as a connected one | Query 118 |
 | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
 | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
 | card 35 | An off-topic follow-up that contains a word such as "cell" or "study" is checked for topic like any other question | Query 111 |

@@ -776,6 +776,7 @@ def _article_links_template(article_param: str) -> CypherTemplate:
 SHAPE_PAPERS_NAMED: Final[str] = "papers_named"
 SHAPE_GENE_IN_PAPER: Final[str] = "gene_in_paper"
 SHAPE_GENES_VARIANTS_FOR_CONDITION: Final[str] = "genes_variants_for_condition"
+SHAPE_DISEASE_VARIANTS: Final[str] = "disease_variants"
 
 # The rows the several-genes variants shape returns in all, shared equally
 # between the genes' branches (`100 // genes`), so the first gene's rows can
@@ -862,6 +863,24 @@ def _gene_variant_disease_link_many_template(
     )
 
 
+def _disease_variants_template(disease_param: str) -> CypherTemplate:
+    """The variants whose ClinVar record names one bound condition, walked
+    from the condition end, in variant-id order. One match, no gene, so the
+    count rewrite applies and a capped result reports its true total.
+
+    Measured live 2026-10-15: 0.7 s and 0.9 s for 100 rows on two common
+    conditions, their counts 0.6 s and 1.0 s."""
+    return CypherTemplate(
+        name="disease_variants_one",
+        cypher=(
+            f"MATCH ({_OTHER_VAR}:SequenceVariant)-[:{_VARIANT_DISEASE_EDGE}]->"
+            f"({_ANCHOR_VAR}:Disease {{id: ${disease_param}}}) "
+            f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
+        ),
+        edge_label=_VARIANT_DISEASE_EDGE,
+    )
+
+
 def possible_graph_shapes(entity_bindings: dict[str, str]) -> list[str]:
     """The checked shapes the bound identifiers make structurally possible,
     from their prefixes and counts alone. Empty for most questions."""
@@ -876,6 +895,8 @@ def possible_graph_shapes(entity_bindings: dict[str, str]) -> list[str]:
         shapes.append(SHAPE_GENE_IN_PAPER)
     genes = grouped.get("Gene", [])
     diseases = grouped.get("Disease", [])
+    if set(grouped) == {"Disease"} and len(diseases) == 1:
+        shapes.append(SHAPE_DISEASE_VARIANTS)
     if (
         set(grouped) == {"Gene", "Disease"}
         and 2 <= len(genes) <= MAX_SHAPE_IDENTIFIERS
@@ -900,6 +921,8 @@ def graph_shape_template(
         return _gene_article_link_template(grouped["Gene"][0], grouped["Article"][0])
     if shape == SHAPE_GENES_VARIANTS_FOR_CONDITION:
         return _gene_variant_disease_link_many_template(grouped["Gene"], grouped["Disease"])
+    if shape == SHAPE_DISEASE_VARIANTS:
+        return _disease_variants_template(grouped["Disease"][0])
     return None
 
 
@@ -1047,6 +1070,7 @@ def all_template_examples() -> list[CypherTemplate]:
     examples.append(_article_links_template("e_one"))
     examples.append(_gene_article_link_template("e_one", "e_two"))
     examples.append(_gene_variant_disease_link_many_template(["e_one", "e_two"], ["e_three"]))
+    examples.append(_disease_variants_template("e_one"))
     for anchor in _SHAPES_BY_ANCHOR:
         examples.append(_record_template(anchor, one))
         examples.append(_record_template(anchor, many))

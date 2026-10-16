@@ -11,6 +11,8 @@ Mutations each arm was shown to fail under (restored after each):
   count arm red.
 - Gene in a paper: swapping the template's edge direction turned the
   template-text arm red.
+- Disease's variants: reversing the template's edge direction turned the
+  template-text arm red.
 - Genes' variants: dropping the template's `branch_row_cap` turned the
   capped-result arm red.
 """
@@ -32,6 +34,7 @@ from system_03_search_agent.tools.cypher_query import (
 )
 from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
 from system_03_search_agent.tools.cypher_templates import (
+    SHAPE_DISEASE_VARIANTS,
     SHAPE_GENE_IN_PAPER,
     SHAPE_GENES_VARIANTS_FOR_CONDITION,
     SHAPE_PAPERS_NAMED,
@@ -423,3 +426,95 @@ async def test_a_result_smaller_than_one_share_is_not_reported_capped(
 ) -> None:
     output, _ = await _run_many(monkeypatch, _variant_rows(49))
     assert output.truncated is False
+
+
+# ---------------------------------------------------------------------------
+# A disease's variants, walked from the disease end
+# ---------------------------------------------------------------------------
+
+CYSTIC_FIBROSIS = "MedGen:C0010674"
+
+
+@pytest.mark.parametrize(
+    ("curies", "expected"),
+    [
+        ([CYSTIC_FIBROSIS], [SHAPE_DISEASE_VARIANTS]),
+        (["MONDO:0009061"], [SHAPE_DISEASE_VARIANTS]),
+        ([CYSTIC_FIBROSIS, LYNCH], []),
+        ([CYSTIC_FIBROSIS, BRCA1], []),
+        ([BRCA1], []),
+        ([CYSTIC_FIBROSIS, PMID_A], []),
+    ],
+)
+def test_disease_variants_is_possible_only_for_exactly_one_condition_and_nothing_else(
+    curies: list[str], expected: list[str]
+) -> None:
+    assert possible_graph_shapes(_bindings(*curies)) == expected
+
+
+def test_the_disease_variants_template_walks_from_the_disease_end_with_one_inline_match() -> None:
+    bindings = _bindings(CYSTIC_FIBROSIS)
+    template = graph_shape_template(SHAPE_DISEASE_VARIANTS, bindings)
+    assert template is not None
+    assert template.name == "disease_variants_one"
+    assert template.edge_label == "has_phenotype"
+    assert template.cypher == (
+        "MATCH (x:SequenceVariant)-[:has_phenotype]->(a:Disease {id: $e_MedGen_C0010674}) "
+        "RETURN x ORDER BY x.id"
+    )
+    assert template.branch_row_cap is None
+    _assert_checked(template.cypher, bindings)
+
+
+@pytest.mark.parametrize(
+    ("intent", "query_class"),
+    [
+        ("How many variants cause cystic fibrosis?", "aggregate"),
+        ("What variants cause cystic fibrosis?", "single_hop"),
+        ("What variants cause cystic fibrosis?", "multi_hop"),
+    ],
+)
+def test_develop_has_no_template_for_one_condition_on_these_classes(
+    intent: str, query_class: str
+) -> None:
+    """The precondition: these are the questions develop leaves to a written search."""
+    entities = [CYSTIC_FIBROSIS]
+    chosen = select_template(
+        CypherQueryInput(query_intent=intent, query_class=query_class, target_entities=entities),
+        _bindings(*entities),
+    )
+    assert chosen is None
+
+
+@pytest.mark.asyncio
+async def test_a_capped_disease_variants_result_reports_its_true_total(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    executed: list[str] = []
+
+    def _fake(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
+        executed.append(cypher)
+        if "count(" in cypher:
+            return [{"total_count": "5230"}], 1
+        return [
+            {"c0": _vertex("SequenceVariant", f"ClinVar:{i}", f"NM_000492.4(CFTR):c.{i}G>A",
+                           f"https://www.ncbi.nlm.nih.gov/clinvar/variation/{i}")}
+            for i in range(100)
+        ], 100
+
+    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake)
+    template = graph_shape_template(SHAPE_DISEASE_VARIANTS, _bindings(CYSTIC_FIBROSIS))
+    output = await cypher_query(
+        _RefusingHarness(),
+        CypherQueryInput(
+            query_intent="What variants cause cystic fibrosis?",
+            query_class="single_hop",
+            target_entities=[CYSTIC_FIBROSIS],
+        ),
+        template=template,
+    )
+    assert output.template == "disease_variants_one"
+    assert output.truncated is True and output.total_available == 5230
+    assert len(output.rows) == 100
+    assert all(row.source_url and "clinvar" in row.source_url for row in output.rows)
+    assert len(executed) == 2

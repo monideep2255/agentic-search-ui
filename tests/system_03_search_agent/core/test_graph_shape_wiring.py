@@ -324,3 +324,54 @@ async def test_two_genes_and_a_condition_develop_already_templates_never_ask(
     asked = _stub_decisions(monkeypatch, "genes_variants_for_condition")
     await graph_module.plan_node(_state("MLH1 and MSH2 in Lynch syndrome", [MLH1, MSH2, LYNCH]))
     assert asked == []
+
+
+# ---------------------------------------------------------------------------
+# A disease's variants, walked from the disease end
+# ---------------------------------------------------------------------------
+
+CF = EventResolvedEntity(text="cystic fibrosis", curie="MedGen:C0010674", confidence=1.0)
+CF_VARIANTS = "What variants cause cystic fibrosis?"
+
+
+@pytest.mark.asyncio
+async def test_one_condition_asks_the_decision_with_only_its_shape(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked = _stub_decisions(monkeypatch, "disease_variants")
+    await graph_module.plan_node(_state(CF_VARIANTS, [CF]))
+    assert [a["options"] for a in asked] == [("disease_variants", "none_of_these")]
+
+
+@pytest.mark.asyncio
+async def test_a_disease_variants_pick_forces_the_checked_template(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _stub_decisions(monkeypatch, "disease_variants")
+    call = _graph_call(await graph_module.plan_node(_state(CF_VARIANTS, [CF])))
+    assert call.template is not None and call.template.name == "disease_variants_one"
+    assert call.context_only is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pick", ["none_of_these", None])
+async def test_one_condition_none_of_these_leaves_develops_call_unchanged(
+    monkeypatch: pytest.MonkeyPatch, pick: str | None
+) -> None:
+    develop = await _develop_call(monkeypatch, CF_VARIANTS, [CF])
+    asked = _stub_decisions(monkeypatch, pick)
+    call = _graph_call(await graph_module.plan_node(_state(CF_VARIANTS, [CF])))
+    assert asked
+    assert call.template is None
+    _same_call_as_develop(call, develop)
+
+
+@pytest.mark.asyncio
+async def test_a_condition_lookup_develop_already_templates_never_asks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A lookup about one condition takes develop's own record template."""
+    asked = _stub_decisions(monkeypatch, "disease_variants")
+    result = await graph_module.plan_node(_state("What is cystic fibrosis?", [CF], query_class="lookup"))
+    assert asked == []
+    assert _graph_call(result).template is None
