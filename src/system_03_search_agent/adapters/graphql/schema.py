@@ -425,7 +425,7 @@ schema = strawberry.Schema(
 # which is the single most expensive failure available on this surface. A
 # name mismatch is therefore an import-time crash, not a runtime surprise.
 # `get_field_for_type` is Strawberry's own public lookup (verified present on
-# strawberry.Schema in the installed 0.324.0), used here rather than reaching
+# strawberry.Schema in the installed 0.327.7, re-verified 2026-10-15), used here rather than reaching
 # into the schema converter's internal type map, so this check cannot itself
 # break on a library internal.
 if schema.get_field_for_type(security.RUN_CREATING_FIELD_NAME, "Mutation") is None:
