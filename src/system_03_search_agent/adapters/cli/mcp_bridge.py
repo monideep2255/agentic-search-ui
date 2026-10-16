@@ -152,6 +152,11 @@ _UNKNOWN_RENEWAL = (
     "out), so this request was not sent. The server may have renewed it. "
     f"{_SIGN_IN_NOW}"
 )
+_SIGN_IN_FILE_BUSY = (
+    "Another s3 command is using the sign-in file, so this request was not "
+    "sent. Wait for that command to finish, then try again. If you have not "
+    "run s3 login yet, run it once in a terminal after that."
+)
 _SIGN_IN_SPENT = (
     "Your System 3 sign-in could not be renewed earlier in this MCP server, "
     f"so this request was not sent. {_SIGN_IN_NOW}"
@@ -890,7 +895,7 @@ class McpBridge:
                     # renewed: the outcome is unknown, not an expiry.
                     self.log(
                         "could not confirm the sign-in renewal: POST /auth/refresh returned "
-                        f"504, so the outcome is unknown; {_SIGN_IN_NOW}"
+                        f"504, so the outcome is unknown. {_SIGN_IN_NOW}"
                     )
                     raise BridgeError(SIGN_IN_NEEDED, _UNKNOWN_RENEWAL) from exc
                 # The module's text never holds a token, but it can quote a
@@ -961,20 +966,22 @@ class McpBridge:
             return
         if outcome == "other_server":
             raise BridgeError(SIGN_IN_NEEDED, _OTHER_SERVER)
+        if outcome == "busy":
+            raise BridgeError(SIGN_IN_NEEDED, _SIGN_IN_FILE_BUSY)
         raise BridgeError(SIGN_IN_NEEDED, _SIGN_IN_SPENT)
 
     async def _resume_from_file(self) -> str | None:
         """"resumed", "other_server" (a new sign-in for another server
-        address), or None (nothing new to use)."""
+        address), "busy" (another s3 command holds the sign-in file), or None (nothing new to use)."""
         try:
             async with credentials_module._CredentialFileLock(credentials_module._lock_path()):
                 current = credentials_module.load()
         except credentials_module.RefreshLockTimeoutError:
             self.log(
-                "could not check for a new sign-in: another s3 command was holding "
-                "the sign-in file"
+                "could not check for a new sign-in: another s3 command is using the "
+                "sign-in file. Wait for that command to finish and try again."
             )
-            return None
+            return "busy"
         except (credentials_module.CredentialsError, OSError):
             return None
         if current.refresh_token in self._wired:
@@ -1023,8 +1030,9 @@ class _RenewalClient:
     before, and it records every token it sends. Outcomes known not to have
     rotated the token take it back and mark the renewal `quiet`: a request
     that was not fully sent, and an answer the app cannot give after
-    renewing (an empty 200, a 200 that is not the auth service's JSON, and
-    every status except 200, 401 and 504). The app's refresh route answers
+    renewing (an empty 200, a 200 that is not the auth service's JSON, a 2xx other
+    than 200 with an empty or non-JSON body, and every status from 300 to
+    599 except 401 and 504). The app's refresh route answers
     only 200, 401, 422 or a 5xx, so a 3xx or 4xx comes from a proxy in front
     of it, and a 500, 502 or 503 is a definite failure. What stays counted
     as sent is a truly unknown outcome: a 504 (a gateway stopped waiting for
@@ -1064,13 +1072,29 @@ class _RenewalClient:
             elif not response.content:
                 self.empty = True
                 self.quiet = True
-        elif status not in (401, 504):
-            # Every other status, a 2xx that is not 200 included: the app
-            # never answers one after renewing.
+        elif 200 <= status < 300:
+            # A 2xx other than 200 is not something the app answers. With no
+            # body, or a body that is not JSON, it is a bare acknowledgement
+            # or a proxy page: nothing was renewed. A JSON body may carry a
+            # renewal the app saved, so the token stays counted as sent.
+            if not response.content.strip() or not _is_json(response.content):
+                self.quiet = True
+        elif status not in (401, 504) and status < 600:
+            # A 3xx, a 4xx or a 5xx other than 504: a proxy or a definite
+            # failure. A status of 600 or more is not a real answer and
+            # stays counted as sent.
             self.quiet = True
         if self.quiet:
             wired.discard(sent)  # type: ignore[arg-type]
         return response
+
+
+def _is_json(content: bytes) -> bool:
+    try:
+        json.loads(content)
+    except ValueError:
+        return False
+    return True
 
 
 # A sentinel for "this message expects no reply", distinct from a JSON null

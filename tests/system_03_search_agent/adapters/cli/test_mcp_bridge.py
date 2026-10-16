@@ -600,6 +600,7 @@ class RotatingRefresh:
         ("unreadable", delay)       rotates, waits, then answers an unreadable 200
         ("lose", exception, delay)  rotates, waits, then the reply is lost
         ("status", status)          rotates, then answers this status
+                                    (an optional third item: Response kwargs)
         ("html",)                   a proxy answers 200 text/html; no rotation
         ("emptyjson",)              a proxy answers 200 application/json with no body
         ("raise", exception)        the request fails before the app sees it
@@ -621,7 +622,7 @@ class RotatingRefresh:
         token = json.loads(request.content)["refresh_token"]
         self.sent.append(token)
         if action[0] == "proxy":
-            return httpx.Response(action[1])
+            return httpx.Response(action[1], **(action[2] if len(action) > 2 else {}))
         if action[0] == "html":
             return httpx.Response(
                 200, content=b"<html>maintenance</html>", headers={"content-type": "text/html"}
@@ -653,7 +654,7 @@ class RotatingRefresh:
         if action[0] == "lose":
             await asyncio.sleep(action[2])
             raise action[1]("reply lost", request=request)
-        return httpx.Response(action[1])
+        return httpx.Response(action[1], **(action[2] if len(action) > 2 else {}))
 
 
 def _cancel(request_id: int) -> bytes:
@@ -1130,6 +1131,7 @@ class TestRenewalOutcomes:
         harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
         replies = await harness.send(CALL(11), CALL(12))
 
+        assert replies[0]["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED  # J-118-03
         assert "s3 login" in replies[0]["error"]["message"]
         assert replies[1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
         assert server.sent == ["refresh-1"]
@@ -1137,12 +1139,17 @@ class TestRenewalOutcomes:
         _assert_no_tokens(harness, expired)
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "extra",
+        [{}, {"content": b"<html>gateway</html>", "headers": {"content-type": "text/html"}}],
+        ids=["empty", "not-json"],
+    )
     @pytest.mark.parametrize("status", [201, 202, 204])
-    async def test_a_2xx_other_than_200_retries_quietly(self, signed_in, status) -> None:
+    async def test_a_2xx_other_than_200_retries_quietly(self, signed_in, status, extra) -> None:
         # V-75B-01. Mutation: quiet only for 300 <= status < 600 -> latches.
         expired = jwt(-5, f"c{status}x")
         stand_in = StandIn(valid_tokens=set())
-        server = RotatingRefresh(stand_in, [("proxy", status)])
+        server = RotatingRefresh(stand_in, [("proxy", status, extra)])
         harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
         replies = await harness.send(CALL(11), CALL(12))
 
@@ -1152,6 +1159,43 @@ class TestRenewalOutcomes:
         assert replies[1]["result"]["isError"] is False
         assert server.sent == ["refresh-1", "refresh-1"]
         assert server.family_revoked == 0
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("status", [201, 202, 206, 299])
+    async def test_a_2xx_with_a_json_body_after_a_saved_renewal_asks_for_s3_login(
+        self, signed_in, status
+    ) -> None:
+        # A-118-01, J-118-02. The body may carry a renewal the app saved, so
+        # the spent token is never resent. Mutation: quiet for every 2xx ->
+        # the second request resends refresh-1 and the family is revoked.
+        expired = jwt(-5, f"j{status}x")
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in, [("status", status, {"json": {"ok": True}})])
+        harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
+        replies = await harness.send(CALL(11), CALL(12))
+
+        assert replies[0]["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED
+        assert "s3 login" in replies[0]["error"]["message"]
+        assert replies[1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        assert server.sent == ["refresh-1"]
+        assert server.spent_sends == 0 and server.family_revoked == 0
+        _assert_no_tokens(harness, expired)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("status", [600, 650, 999])
+    async def test_a_status_of_600_or_more_asks_for_s3_login(self, signed_in, status) -> None:
+        # A-118-02. Mutation: drop the `status < 600` bound -> quiet retry,
+        # the second request resends refresh-1 and the family is revoked.
+        expired = jwt(-5, f"h{status}x")
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in, [("status", status)])
+        harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
+        replies = await harness.send(CALL(11), CALL(12))
+
+        assert replies[0]["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED
+        assert replies[1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        assert server.sent == ["refresh-1"]
+        assert server.spent_sends == 0 and server.family_revoked == 0
 
     @pytest.mark.asyncio
     async def test_a_504_says_the_outcome_is_unknown_not_expired(self, signed_in) -> None:
@@ -1167,6 +1211,8 @@ class TestRenewalOutcomes:
         assert "expired" not in message and "signed out" not in message
         log = harness.stderr.getvalue()
         assert "unknown" in log and "504" in log
+        # A-118-03: one clean sentence, no capital after a semicolon.
+        assert "unknown. In a terminal, run: s3 login." in log and "; In a" not in log
         assert "expired" not in log and "revoked" not in log
 
     # -- an empty 200 versus an unreadable one (A-75B-02) -------------------
@@ -1313,9 +1359,16 @@ class TestRenewalOutcomes:
         monkeypatch.setattr(credentials, "_CredentialFileLock", Busy)
         second = await harness.send(CALL(12))
 
-        assert second[-1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        # J-118-01, A-118-04. Mutation: return None from the clause -> the
+        # reply tells a person who already ran s3 login to run it again.
+        message = second[-1]["error"]["message"]
+        assert message == mcp_bridge._SIGN_IN_FILE_BUSY
+        assert "Wait for that command to finish" in message and "try again" in message
+        assert "If you have not run s3 login yet" in message
+        assert "could not be renewed earlier" not in message
         log = harness.stderr.getvalue()
-        assert "another s3 command was holding the sign-in file" in log
+        assert "another s3 command is using the sign-in file" in log
+        assert "Wait for that command to finish and try again" in log
         assert "/secret/path" not in log
 
     @pytest.mark.asyncio
