@@ -51,6 +51,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from system_03_search_agent.contracts.events import source_page_key
 from system_03_search_agent.synthesis.findings import SynthFinding, render_finding_body
 
 _MARKER = re.compile(r"\[(\d{1,3})\]")
@@ -2107,14 +2108,41 @@ def title_words_shared(sentence: str, labels: str) -> set[str]:
     return _stemmed(content_tokens(sentence)) & _stemmed(content_tokens(labels))
 
 
+def short_form_definers(
+    short_forms_by_url: dict[str, dict[str, str]],
+) -> dict[str, int]:
+    """How many different pages define each short form in their own text.
+
+    Card 17 fix round (J-17-12). A short form that several pages define, such
+    as the name of a disease that five papers are about, does not tell a
+    reader which of those pages a sentence comes from.
+    """
+    pages_by_short: dict[str, set[str]] = {}
+    for url, forms in short_forms_by_url.items():
+        page = source_page_key(url) or url
+        for short in forms:
+            pages_by_short.setdefault(short, set()).add(page)
+    return {short: len(pages) for short, pages in pages_by_short.items()}
+
+
 def names_by_short_form(
-    sentence: str, labels: str, short_forms: dict[str, str] | None = None
+    sentence: str,
+    labels: str,
+    short_forms: dict[str, str] | None = None,
+    definers: dict[str, int] | None = None,
 ) -> bool:
-    """Whether a sentence writes a short form its record's own text defines."""
+    """Whether a sentence writes a short form its record's own text defines.
+
+    With `definers` (card 17), a short form defined by more than one page
+    does not count: it names no paper alone. Without it, as the switch rule
+    calls it, every defined short form counts.
+    """
     if not labels.strip():
         return False
     title = _stemmed(content_tokens(labels))
     for short, long_form in (short_forms or {}).items():
+        if definers is not None and definers.get(short, 0) > 1:
+            continue
         long_stems = _stemmed(content_tokens(long_form))
         if not long_stems & title:
             continue

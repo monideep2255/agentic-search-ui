@@ -35,7 +35,7 @@ Built 2026-10-15 on branch `fix/card17-name-the-paper`, from `develop` at `7626f
 | Pass count disagreeing with sentences changed | 0 | 0 |
 | GERD runs with two or more written sentences, live | unchanged by construction | 12 of 13 (the pass changes no count) |
 
-The "expected" side of the replay is a separate walk written in the script, not the pass itself, so the two agree by test and not by sharing code. The 12 of 13 GERD figure is the shipped draft of the saved runs and is identical before and after the pass.
+The "expected" side of the replay was not independent in this first round: it called the four helpers the change added (`record_labels_by_page`, `short_forms_by_page`, `title_words_shared`, `names_by_short_form`) and repeated the pass's condition list (judge finding J-17-07). Fix round, 2026-10-16: the walk in `raw/replay_option_e.py` no longer calls any helper the change added; it shares only `content_tokens`, `_stemmed` and `defined_short_forms`, which the change did not touch. See `fix_round.md` for the counts. The 12 of 13 GERD figure is the shipped draft of the saved runs and is identical before and after the pass.
 
 ## Mutation proofs
 

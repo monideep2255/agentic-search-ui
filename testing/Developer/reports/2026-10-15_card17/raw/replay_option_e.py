@@ -10,9 +10,21 @@ writer draft and approval mode (live, all) it builds:
 
 Then checks, and prints as counts: no sentence dropped, no body changed (the
 after sentence with its lead-in removed equals the before sentence), the
-lead-in on exactly the sentences meeting the five conditions (computed here
-by a separate walk), no lead-in elsewhere, and every quoted title being the
-mechanically trimmed label of a page the sentence cites.
+lead-in on exactly the sentences meeting the conditions (computed here by a
+separate walk that calls none of the helpers the change added), no lead-in
+elsewhere, and every quoted title being the mechanically trimmed label of a
+page the sentence cites.
+
+Fix round 2026-10-16: the pass takes the order the reader sees. The saved
+traces carry no lead pick and no card 111 listing, so the replay runs two
+orders: the writer's own order, and the order with sentence 1 lifted to the
+top (the lead pick's shape). In the second, the opener must never carry a
+lead-in. Findings carry the record type their tool produces.
+
+The expected walk shares only code that the change did not touch:
+`gr.content_tokens`, `gr._stemmed` and `gr.defined_short_forms`. Those three
+are exercised against develop by the judge's 39,888-call comparison; this
+script does not make them independent of themselves.
 """
 
 from __future__ import annotations
@@ -31,7 +43,15 @@ from system_03_search_agent.synthesis import answer_layout as al
 from system_03_search_agent.synthesis import grounding as gr
 from system_03_search_agent.synthesis.findings import SynthFinding
 
-LEAD = re.compile(r'^From (?:the [a-z ]+?) ((?:"[^"]*"(?:, | and )?)+): ')
+LEAD = re.compile(
+    r'^From (?:another record|(?:the|another|other) [A-Za-z ]+? (?:titled )?'
+    r'((?:"[^"]*"(?: \(\d{4}\))?(?:, | and )?)+)(?: and another record)?): '
+)
+ENTITY_BY_TOOL = {
+    "ncbi_efetch": "PubMed",
+    "clinicaltrials_search": "ClinicalTrial",
+    "pubtator_annotate": "Literature entity",
+}
 
 
 def plain(sentence: str) -> str:
@@ -65,6 +85,7 @@ def findings_of(data: list[dict]) -> list[SynthFinding]:
             field=f["field"],
             field_value=f.get("text") or "",
             source_url=f.get("url") or "",
+            entity_type=ENTITY_BY_TOOL.get(f.get("tool", ""), ""),
         )
         for f in data
     ]
@@ -118,18 +139,34 @@ def grounded(narrative, fs, quotes, approve):
     return gr.run_grounding_pass(narrative, fs, True, "", quotes, keys)
 
 
-def expected_fires(result, fs):
-    """Which sentence indexes meet the five conditions, by a separate walk."""
-    labels = gr.record_labels_by_page(fs)
-    shorts = gr.short_forms_by_page(fs)
-    labelled_pages = {
-        source_page_key(f.source_url) for f in fs if f.field in gr.LABEL_FIELDS and f.source_url
-    }
+def _stems(text):
+    return gr._stemmed(gr.content_tokens(text))
+
+
+def expected_fires(result, fs, order=None):
+    """Which sentence indexes meet the conditions, by a separate walk.
+
+    Written without `record_labels_by_page`, `short_forms_by_page`,
+    `title_words_shared`, `names_by_short_form` or `short_form_definers`.
+    """
+    labels: dict[str, str] = {}
+    texts: dict[str, list[str]] = {}
+    for f in fs:
+        url = (f.source_url or "").strip()
+        if not url:
+            continue
+        texts.setdefault(url, []).append(f.field_value)
+        if f.field in gr.LABEL_FIELDS:
+            labels[url] = f"{labels.get(url, '')} {f.field_value}".strip()
+    shorts = {u: gr.defined_short_forms(" ".join(v)) for u, v in texts.items()}
+    pages_defining: dict[str, set[str]] = {}
+    for u, forms in shorts.items():
+        for short in forms:
+            pages_defining.setdefault(short, set()).add(source_page_key(u) or u)
     claims = list(result.claims)
     cursor = 0
-    prev: set[str] | None = None
-    fired = []
-    for index, sentence in enumerate(result.sentences):
+    per_sentence = []
+    for sentence in result.sentences:
         n = len(gr._MARKER.findall(sentence))
         own = claims[cursor : cursor + n]
         cursor += n
@@ -137,26 +174,37 @@ def expected_fires(result, fs):
         for claim in own:
             url = (claim.finding.source_url or "").strip()
             by_page.setdefault(source_page_key(url), set()).add(url)
-        pages = set(by_page)
         text = gr._MARKER.sub(" ", sentence)
         counts = []
         short_hit = False
         for urls in by_page.values():
             label = " ".join(labels.get(u, "") for u in sorted(urls))
-            counts.append(len(gr.title_words_shared(text, label)))
-            short_hit = short_hit or any(
-                gr.names_by_short_form(text, labels.get(u, ""), shorts.get(u)) for u in urls
+            counts.append(len(_stems(text) & _stems(label)) if label.strip() else 0)
+            for u in urls:
+                title = _stems(labels.get(u, ""))
+                for short, long_form in shorts.get(u, {}).items():
+                    if len(pages_defining.get(short, ())) > 1 or not labels.get(u, "").strip():
+                        continue
+                    if _stems(long_form) & title and re.search(
+                        rf"(?<![A-Za-z0-9]){re.escape(short)}(?![A-Za-z0-9])", sentence
+                    ):
+                        short_hit = True
+        per_sentence.append(
+            (
+                set(by_page),
+                bool(own)
+                and any(c.evidence_quote for c in own)
+                and bool(counts)
+                and max(counts) <= 1
+                and 1 in counts
+                and not short_hit,
             )
-        if (
-            prev is not None
-            and any(c.evidence_quote for c in own)
-            and not (pages & prev)
-            and counts
-            and max(counts) <= 1
-            and 1 in counts
-            and not short_hit
-            and pages & labelled_pages
-        ):
+        )
+    fired = []
+    prev = None
+    for index in order if order is not None else range(len(result.sentences)):
+        pages, ok = per_sentence[index]
+        if prev is not None and ok and not (pages & prev):
             fired.append(index)
         prev = pages
     return fired
@@ -184,6 +232,7 @@ tally = {
     "drafts": 0, "runs": 0, "shown": 0, "lead_in": {"live": 0, "all": 0},
     "expected": {"live": 0, "all": 0}, "dropped": 0, "changed": 0, "length_diff": 0,
     "unexpected_lead_in": 0, "missing_lead_in": 0, "title_mismatch": 0, "count_mismatch": 0,
+    "lifted_runs": 0, "lifted_lead_in": 0, "lifted_opener_led": 0, "lifted_disagree": 0,
 }
 written = []
 added: list[str] = []
@@ -210,6 +259,24 @@ for folder in FOLDERS:
                 first = grounded(draft["narrative"], fs, quotes, approve)
                 before, _ = al.drop_record_restatements(first, fs)
                 after, named = al.name_switched_records(before, fs)
+                if len(before.sentences) > 1:
+                    # The lead pick's shape: sentence 1 opens the answer.
+                    lifted = [1, 0, *range(2, len(before.sentences))]
+                    lifted_after, lifted_named = al.name_switched_records(before, fs, lifted)
+                    lifted_got = {
+                        i
+                        for i, (b, a) in enumerate(
+                            zip(before.sentences, lifted_after.sentences, strict=True)
+                        )
+                        if a != b
+                    }
+                    tally["lifted_runs"] += 1
+                    tally["lifted_lead_in"] += len(lifted_got)
+                    tally["lifted_opener_led"] += int(1 in lifted_got)
+                    tally["lifted_disagree"] += int(
+                        lifted_got != set(expected_fires(before, fs, lifted))
+                        or lifted_named != len(lifted_got)
+                    )
                 tally["shown"] += len(before.sentences)
                 if len(before.sentences) != len(after.sentences):
                     tally["length_diff"] += 1
@@ -265,6 +332,10 @@ lines.append(f"Sentences meeting the conditions with no lead-in: {tally['missing
 lines.append(f"Lead-ins on sentences not meeting the conditions: {tally['unexpected_lead_in']}")
 lines.append(f"Quoted titles that are not the label of a cited page: {tally['title_mismatch']}")
 lines.append(f"Pass count disagreeing with sentences changed: {tally['count_mismatch']}")
+lines.append(
+    f"Lead pick order (sentence 1 first): {tally['lifted_runs']} cases, {tally['lifted_lead_in']} lead-ins, "
+    f"opener led in {tally['lifted_opener_led']}, disagreeing with the separate walk {tally['lifted_disagree']}"
+)
 lines.append("")
 lines.append("Per run, last checked draft: written sentences shown (live; all). Unchanged by the pass.")
 for label, res in per_run:
@@ -275,4 +346,4 @@ lines.append("")
 lines.append("Every lead-in added (run, draft, mode, sentence index: lead-in | start of the sentence):")
 lines.extend(f"  {a}" for a in added)
 Path(OUT).write_text("\n".join(lines) + "\n")
-print("\n".join(lines[:12]))
+print("\n".join(lines[:13]))

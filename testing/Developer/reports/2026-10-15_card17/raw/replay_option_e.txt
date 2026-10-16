@@ -1,14 +1,15 @@
 Card 17 option E replay (replay_option_e.py), no model call.
 
 Runs 35, writer drafts 67, shown sentences (both modes) 465.
-Lead-ins added, live: 20 (expected by the five conditions: 20)
-Lead-ins added, all approved: 45 (expected: 45)
+Lead-ins added, live: 26 (expected by the five conditions: 26)
+Lead-ins added, all approved: 71 (expected: 71)
 Sentence count changed (dropped): 0
 Bodies, claims or counts changed: 0
 Sentences meeting the conditions with no lead-in: 0
 Lead-ins on sentences not meeting the conditions: 0
 Quoted titles that are not the label of a cited page: 0
 Pass count disagreeing with sentences changed: 0
+Lead pick order (sentence 1 first): 106 cases, 96 lead-ins, opener led in 0, disagreeing with the separate walk 0
 
 Per run, last checked draft: written sentences shown (live; all). Unchanged by the pass.
   sentence_check_raw/gp1: 2; 5
@@ -49,68 +50,100 @@ Per run, last checked draft: written sentences shown (live; all). Unchanged by t
 GERD runs with two or more written sentences live: 12 of 13
 
 Every lead-in added (run, draft, mode, sentence index: lead-in | start of the sentence):
-  sentence_check_raw/gp1 draft1 all sent3: From the record "Gastroesophageal reflux disease in children: What's new right now?": | Risk factors in children include defects in the esophagus's protective lining, problems wi
-  sentence_check_raw/gp1 draft1 all sent4: From the record "Gastroesophageal Reflux Disease": | Long-term use of the most common treatment, proton-pump inhibitors, carries risks includin
-  sentence_check_raw/gp2 draft0 all sent4: From the record "Gastroesophageal Reflux Disease": | The most effective treatment is a class of drugs called proton-pump inhibitors, but long-t
-  sentence_check_raw/gp2 draft1 live sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In children, the symptoms can be varied and nonspecific, requiring careful evaluation.
-  sentence_check_raw/gp2 draft1 all sent3: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In children, the symptoms can be varied and nonspecific, requiring careful evaluation.
-  sentence_check_raw/gp3 draft1 all sent4: From the record "Gastroesophageal Reflux Disease": | Long-term use of the most common treatment, proton-pump inhibitors, is itself linked to bo
-  sentence_check_raw/gp4 draft1 live sent1: From the record "Gastroesophageal Reflux Disease": | Reflux symptoms are among the most common reasons people visit their primary care doctor.
-  sentence_check_raw/gp4 draft1 all sent5: From the record "Gastroesophageal Reflux Disease": | Reflux symptoms are among the most common reasons people visit their primary care doctor.
-  sentence_check_raw/gp4 draft1 all sent7: From the record "Gastroesophageal Reflux Disease": | In adults, reflux symptoms are typically evaluated with proton pump inhibitor trials, and 
-  sentence_check_raw/gp5 draft0 live sent4: From the record "Gastroesophageal Reflux Disease": | While the most effective treatment is proton-pump inhibitors, long-term use carries risks 
-  sentence_check_raw/gp5 draft0 all sent5: From the record "Gastroesophageal Reflux Disease": | While the most effective treatment is proton-pump inhibitors, long-term use carries risks 
-  sentence_check_raw/gr1 draft0 live sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | Beyond abnormal transient relaxations of the lower esophageal sphincter, contributing fact
-  sentence_check_raw/gr1 draft1 live sent2: From the record "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment, is associated with 
-  sentence_check_raw/gr1 draft1 all sent2: From the record "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment, is associated with 
-  sentence_check_raw/gr2 draft0 live sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, clinical manifestations are varied and nonspecific, necessitating caref
-  sentence_check_raw/gr2 draft0 all sent3: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, clinical manifestations are varied and nonspecific, necessitating caref
-  sentence_check_raw/gr2 draft1 all sent3: From the record "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment, is itself associate
-  sentence_check_raw/gr3 draft0 live sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
-  sentence_check_raw/gr3 draft0 all sent3: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
-  sentence_check_raw/gr3 draft0 all sent6: From the record "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective pharmacologic treatment, is it
-  sentence_check_raw/gr4 draft0 live sent1: From the record "Gastroesophageal reflux disease in children: What's new right now?": | Pathogenic factors include abnormal transient relaxations of the lower esophageal sphincte
-  sentence_check_raw/gr4 draft0 live sent2: From the record "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment, is associated with 
-  sentence_check_raw/gr4 draft0 all sent1: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, requiring 
-  sentence_check_raw/gr4 draft0 all sent3: From the record "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment, is associated with 
-  sentence_check_raw/gr4 draft1 live sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, clinical manifestations are varied and nonspecific, necessitating caref
-  sentence_check_raw/gr4 draft1 all sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, clinical manifestations are varied and nonspecific, necessitating caref
-  sentence_check_raw/gr5 draft0 live sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
-  sentence_check_raw/gr5 draft0 live sent4: From the record "Gastroesophageal Reflux Disease": | While proton-pump inhibitors are the most effective treatment, long-term use is associated
-  sentence_check_raw/gr5 draft0 all sent3: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
-  sentence_check_raw/gr5 draft0 all sent5: From the record "Gastroesophageal Reflux Disease": | While proton-pump inhibitors are the most effective treatment, long-term use is associated
-  sentence_check_raw/gr5 draft1 all sent4: From the record "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment, is associated with 
-  sentence_check_raw/md3 draft0 all sent2: From the record "Diagnosis and management of G6PD deficiency": | In this condition, different gene mutations cause different levels of enzyme deficiency, a
-  sentence_check_raw/md4 draft0 live sent1: From the record "Diagnosis and management of G6PD deficiency": | Another condition discussed is glucose-6-phosphate dehydrogenase deficiency, described as 
-  sentence_check_raw/md4 draft0 live sent3: From the record "Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas": | Hemoglobin disorders are also described as common single-gene disorders, with ancestry and
-  sentence_check_raw/md4 draft0 all sent1: From the record "Diagnosis and management of G6PD deficiency": | Another condition discussed is glucose-6-phosphate dehydrogenase deficiency, described as 
-  sentence_check_raw/md4 draft0 all sent3: From the record "Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas": | Hemoglobin disorders are also described as common single-gene disorders, with ancestry and
-  develop_control/cm1 draft0 all sent2: From the record "Diagnosis and management of G6PD deficiency": | Different gene mutations cause different levels of enzyme deficiency, and acute episodes c
-  develop_control/cm2 draft0 all sent2: From the record "Molecular analyses of MEFV gene mutation variants in Turkish population": | Large studies in Turkey have mapped which specific gene changes are most frequent, with on
-  develop_control/cm2 draft0 all sent3: From the record "Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas": | Hemoglobin disorders, which affect the oxygen-carrying protein in blood, are also frequent
-  develop_control/cm5 draft0 live sent1: From the record "Molecular analyses of MEFV gene mutation variants in Turkish population": | Other frequent variants include M694V at about 25% and E148Q at about 11.5%.
-  develop_control/cm5 draft1 all sent4: From the record "Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas": | Hemoglobin disorders, which affect the oxygen-carrying protein in blood, are also reported
-  develop_control/cp1 draft1 all sent3: From the record "Gastroesophageal Reflux Disease": | Long-term use of proton pump inhibitors, the most effective treatment, carries risks inclu
-  develop_control/cp3 draft1 all sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In children, the signs can be varied and hard to pin down, and the condition involves invo
-  develop_control/cp3 draft1 all sent4: From the record "Gastroesophageal Reflux Disease": | Long-term use of the most common treatment, proton-pump inhibitors, carries its own risks 
-  develop_control/cp4 draft0 all sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In children, the symptoms are varied and nonspecific, making diagnosis more challenging.
-  develop_control/cp4 draft1 live sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | Children's symptoms are varied and nonspecific, requiring careful diagnostic evaluation.
-  develop_control/cp5 draft0 live sent1: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In children, symptoms can be varied and nonspecific, making careful diagnosis important.
-  develop_control/cp5 draft0 all sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In children, symptoms can be varied and nonspecific, making careful diagnosis important.
-  develop_control/cr3 draft0 all sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
-  develop_control/cr3 draft1 all sent1: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In children, clinical manifestations are varied and nonspecific, requiring careful diagnos
-  develop_control/cr3 draft1 all sent3: From the record "Gastroesophageal Reflux Disease": | The condition is most effectively treated with proton-pump inhibitors, though long-term us
-  develop_control/cr4 draft0 live sent1: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, requiring 
-  develop_control/cr4 draft0 all sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, requiring 
-  develop_control/cr5 draft0 live sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
-  develop_control/cr5 draft0 all sent3: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
-  develop_control/cr5 draft0 all sent6: From the record "Gastroesophageal Reflux Disease": | While proton-pump inhibitors are the most effective treatment, their long-term use carries
-  raw/gerd1 draft0 all sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, the clinical manifestations are varied and nonspecific, requir
-  raw/gerd1 draft1 all sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In children, clinical manifestations are varied and nonspecific, requiring careful diagnos
-  raw/gerd2 draft0 all sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, which nece
-  raw/gerd3 draft0 live sent1: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, requiring 
-  raw/gerd3 draft0 all sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, requiring 
-  raw/gerd3 draft1 all sent2: From the record "Gastroesophageal reflux disease in children: What's new right now?": | In children, clinical manifestations are varied and nonspecific, necessitating careful dia
-  raw/gerd3 draft1 all sent5: From the record "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors is associated with bone fractures, chronic renal d
-  raw/med2 draft0 all sent3: From the record "Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas": | Hemoglobin disorders are also reported as common among Mediterranean populations, with anc
-  raw/med3 draft0 all sent4: From the record "Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas": | Hemoglobin disorders, which affect the oxygen-carrying part of the blood, are also reporte
+  sentence_check_raw/gp1 draft1 all sent3: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | Risk factors in children include defects in the esophagus's protective lining, problems wi
+  sentence_check_raw/gp1 draft1 all sent4: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of the most common treatment, proton-pump inhibitors, carries risks includin
+  sentence_check_raw/gp2 draft0 all sent4: From another paper titled "Gastroesophageal Reflux Disease": | The most effective treatment is a class of drugs called proton-pump inhibitors, but long-t
+  sentence_check_raw/gp2 draft1 live sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, the symptoms can be varied and nonspecific, requiring careful evaluation.
+  sentence_check_raw/gp2 draft1 all sent3: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, the symptoms can be varied and nonspecific, requiring careful evaluation.
+  sentence_check_raw/gp3 draft0 all sent3: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, GERD is a less common pathological process that causes troublesome symptoms a
+  sentence_check_raw/gp3 draft1 live sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, GERD shows varied and nonspecific signs, making careful diagnosis important.
+  sentence_check_raw/gp3 draft1 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, GERD shows varied and nonspecific signs, making careful diagnosis important.
+  sentence_check_raw/gp3 draft1 all sent4: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of the most common treatment, proton-pump inhibitors, is itself linked to bo
+  sentence_check_raw/gp4 draft1 live sent1: From another paper titled "Gastroesophageal Reflux Disease": | Reflux symptoms are among the most common reasons people visit their primary care doctor.
+  sentence_check_raw/gp4 draft1 all sent5: From another paper titled "Gastroesophageal Reflux Disease": | Reflux symptoms are among the most common reasons people visit their primary care doctor.
+  sentence_check_raw/gp4 draft1 all sent6: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of the main medications used to treat GERD, called proton-pump inhibitors, c
+  sentence_check_raw/gp4 draft1 all sent7: From another paper titled "Gastroesophageal Reflux Disease": | In adults, reflux symptoms are typically evaluated with proton pump inhibitor trials, and 
+  sentence_check_raw/gp5 draft0 live sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, GERD has varied and nonspecific signs that require careful evaluation.
+  sentence_check_raw/gp5 draft0 live sent4: From another paper titled "Gastroesophageal Reflux Disease": | While the most effective treatment is proton-pump inhibitors, long-term use carries risks 
+  sentence_check_raw/gp5 draft0 all sent3: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, GERD has varied and nonspecific signs that require careful evaluation.
+  sentence_check_raw/gp5 draft0 all sent5: From another paper titled "Gastroesophageal Reflux Disease": | While the most effective treatment is proton-pump inhibitors, long-term use carries risks 
+  sentence_check_raw/gr1 draft0 live sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | Beyond abnormal transient relaxations of the lower esophageal sphincter, contributing fact
+  sentence_check_raw/gr1 draft0 all sent5: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment for GERD, is itself 
+  sentence_check_raw/gr1 draft1 live sent1: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | Several factors contribute to GERD pathogenesis, including abnormal transient relaxations 
+  sentence_check_raw/gr1 draft1 live sent2: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment, is associated with 
+  sentence_check_raw/gr1 draft1 live sent3: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | GER in children is very common and often physiological, managed conservatively, whereas GE
+  sentence_check_raw/gr1 draft1 all sent1: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | Several factors contribute to GERD pathogenesis, including abnormal transient relaxations 
+  sentence_check_raw/gr1 draft1 all sent2: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment, is associated with 
+  sentence_check_raw/gr1 draft1 all sent3: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | GER in children is very common and often physiological, managed conservatively, whereas GE
+  sentence_check_raw/gr2 draft0 live sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, clinical manifestations are varied and nonspecific, necessitating caref
+  sentence_check_raw/gr2 draft0 all sent3: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, clinical manifestations are varied and nonspecific, necessitating caref
+  sentence_check_raw/gr2 draft0 all sent5: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective GERD treatment, is associated 
+  sentence_check_raw/gr2 draft1 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | Several factors contribute to GERD pathogenesis, including abnormal transient relaxations 
+  sentence_check_raw/gr2 draft1 all sent3: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment, is itself associate
+  sentence_check_raw/gr3 draft0 live sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
+  sentence_check_raw/gr3 draft0 all sent3: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
+  sentence_check_raw/gr3 draft0 all sent6: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective pharmacologic treatment, is it
+  sentence_check_raw/gr4 draft0 live sent1: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | Pathogenic factors include abnormal transient relaxations of the lower esophageal sphincte
+  sentence_check_raw/gr4 draft0 live sent2: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment, is associated with 
+  sentence_check_raw/gr4 draft0 all sent1: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, requiring 
+  sentence_check_raw/gr4 draft0 all sent3: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment, is associated with 
+  sentence_check_raw/gr4 draft0 all sent4: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | Management of GERD in children should be targeted to the underlying aetiopathogenesis and 
+  sentence_check_raw/gr4 draft1 live sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, clinical manifestations are varied and nonspecific, necessitating caref
+  sentence_check_raw/gr4 draft1 live sent3: From another paper titled "Gastroesophageal Reflux Disease": | GERD is most effectively treated with proton-pump inhibitors, though long-term PPI use is 
+  sentence_check_raw/gr4 draft1 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, clinical manifestations are varied and nonspecific, necessitating caref
+  sentence_check_raw/gr4 draft1 all sent4: From another paper titled "Gastroesophageal Reflux Disease": | GERD is most effectively treated with proton-pump inhibitors, though long-term PPI use is 
+  sentence_check_raw/gr5 draft0 live sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
+  sentence_check_raw/gr5 draft0 live sent4: From another paper titled "Gastroesophageal Reflux Disease": | While proton-pump inhibitors are the most effective treatment, long-term use is associated
+  sentence_check_raw/gr5 draft0 all sent3: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
+  sentence_check_raw/gr5 draft0 all sent5: From another paper titled "Gastroesophageal Reflux Disease": | While proton-pump inhibitors are the most effective treatment, long-term use is associated
+  sentence_check_raw/gr5 draft1 all sent4: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment, is associated with 
+  sentence_check_raw/md3 draft0 all sent2: From the paper "Diagnosis and management of G6PD deficiency": | In this condition, different gene mutations cause different levels of enzyme deficiency, a
+  sentence_check_raw/md4 draft0 live sent1: From the paper "Diagnosis and management of G6PD deficiency": | Another condition discussed is glucose-6-phosphate dehydrogenase deficiency, described as 
+  sentence_check_raw/md4 draft0 live sent3: From the paper "Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas": | Hemoglobin disorders are also described as common single-gene disorders, with ancestry and
+  sentence_check_raw/md4 draft0 all sent1: From the paper "Diagnosis and management of G6PD deficiency": | Another condition discussed is glucose-6-phosphate dehydrogenase deficiency, described as 
+  sentence_check_raw/md4 draft0 all sent3: From the paper "Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas": | Hemoglobin disorders are also described as common single-gene disorders, with ancestry and
+  develop_control/cm1 draft0 all sent2: From the paper "Diagnosis and management of G6PD deficiency": | Different gene mutations cause different levels of enzyme deficiency, and acute episodes c
+  develop_control/cm2 draft0 all sent2: From the paper "Molecular analyses of MEFV gene mutation variants in Turkish population": | Large studies in Turkey have mapped which specific gene changes are most frequent, with on
+  develop_control/cm2 draft0 all sent3: From the paper "Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas": | Hemoglobin disorders, which affect the oxygen-carrying protein in blood, are also frequent
+  develop_control/cm5 draft0 live sent1: From the paper "Molecular analyses of MEFV gene mutation variants in Turkish population": | Other frequent variants include M694V at about 25% and E148Q at about 11.5%.
+  develop_control/cm5 draft1 all sent4: From the paper "Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas": | Hemoglobin disorders, which affect the oxygen-carrying protein in blood, are also reported
+  develop_control/cp1 draft0 all sent4: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, GERD can have varied and nonspecific symptoms, and factors that contribute to
+  develop_control/cp1 draft1 all sent3: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton pump inhibitors, the most effective treatment, carries risks inclu
+  develop_control/cp2 draft1 live sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, the signs of GERD can be varied and unclear, so careful evaluation is n
+  develop_control/cp2 draft1 all sent3: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | Risk factors for GERD in children include a hiatal hernia, weak esophageal lining, and pro
+  develop_control/cp2 draft1 all sent5: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of the most common GERD medications, called proton-pump inhibitors, carries 
+  develop_control/cp3 draft1 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, the signs can be varied and hard to pin down, and the condition involves invo
+  develop_control/cp3 draft1 all sent4: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of the most common treatment, proton-pump inhibitors, carries its own risks 
+  develop_control/cp4 draft0 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, the symptoms are varied and nonspecific, making diagnosis more challenging.
+  develop_control/cp4 draft1 live sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | Children's symptoms are varied and nonspecific, requiring careful diagnostic evaluation.
+  develop_control/cp4 draft1 all sent4: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, GERD can be caused by a weak lower esophageal sphincter, poor mucosal defense
+  develop_control/cp5 draft0 live sent1: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, symptoms can be varied and nonspecific, making careful diagnosis important.
+  develop_control/cp5 draft0 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, symptoms can be varied and nonspecific, making careful diagnosis important.
+  develop_control/cp5 draft0 all sent4: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the main treatment for GERD, is associated with b
+  develop_control/cp5 draft1 all sent3: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of the most common GERD medications, called proton-pump inhibitors, carries 
+  develop_control/cr1 draft1 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, GERD is a pathologic process involving abnormal transient relaxations of the 
+  develop_control/cr3 draft0 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
+  develop_control/cr3 draft0 all sent4: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | Pathogenetic factors that predispose to GERD include abnormal transient relaxations of the
+  develop_control/cr3 draft0 all sent5: From another paper titled "Gastroesophageal Reflux Disease": | GERD is most effectively treated with proton-pump inhibitors, though long-term PPI use car
+  develop_control/cr3 draft1 all sent1: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, clinical manifestations are varied and nonspecific, requiring careful diagnos
+  develop_control/cr3 draft1 all sent3: From another paper titled "Gastroesophageal Reflux Disease": | The condition is most effectively treated with proton-pump inhibitors, though long-term us
+  develop_control/cr4 draft0 live sent1: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, requiring 
+  develop_control/cr4 draft0 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, requiring 
+  develop_control/cr5 draft0 live sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
+  develop_control/cr5 draft0 all sent3: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, necessitat
+  develop_control/cr5 draft0 all sent6: From another paper titled "Gastroesophageal Reflux Disease": | While proton-pump inhibitors are the most effective treatment, their long-term use carries
+  develop_control/cr5 draft1 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, GER is often physiological and managed conservatively, whereas GERD is a less
+  raw/gerd1 draft0 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, the clinical manifestations are varied and nonspecific, requir
+  raw/gerd1 draft0 all sent5: From another paper titled "Gastroesophageal Reflux Disease": | Long-term proton-pump inhibitor use, the most effective GERD therapy, is associated with b
+  raw/gerd1 draft1 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, clinical manifestations are varied and nonspecific, requiring careful diagnos
+  raw/gerd1 draft1 all sent4: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors, the most effective treatment for GERD, is associa
+  raw/gerd2 draft0 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, which nece
+  raw/gerd2 draft1 all sent1: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | Risk factors in the pathogenesis of GERD include abnormal transient relaxations of the low
+  raw/gerd2 draft1 all sent2: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors for GERD treatment is associated with bone fractur
+  raw/gerd2 draft1 all sent3: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, GER is often physiological and managed conservatively, whereas GERD is a less
+  raw/gerd3 draft0 live sent1: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, requiring 
+  raw/gerd3 draft0 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In young children, however, clinical manifestations are varied and nonspecific, requiring 
+  raw/gerd3 draft1 all sent2: From the paper "Gastroesophageal reflux disease in children: What's new right now?": | In children, clinical manifestations are varied and nonspecific, necessitating careful dia
+  raw/gerd3 draft1 all sent5: From another paper titled "Gastroesophageal Reflux Disease": | Long-term use of proton-pump inhibitors is associated with bone fractures, chronic renal d
+  raw/med2 draft0 all sent3: From the paper "Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas": | Hemoglobin disorders are also reported as common among Mediterranean populations, with anc
+  raw/med3 draft0 all sent4: From the paper "Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas": | Hemoglobin disorders, which affect the oxygen-carrying part of the blood, are also reporte

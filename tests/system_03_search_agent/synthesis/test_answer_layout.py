@@ -15,6 +15,8 @@ import pytest
 from system_03_search_agent.synthesis import answer_layout, grounding
 from system_03_search_agent.synthesis.answer_layout import (
     LEAD_IN_MAX_TITLE_CHARS,
+    SENTENCE_TOKEN_LIMIT,
+    LeadInPage,
     emphasis_for,
     grounding_input,
     heading_is_supported,
@@ -1032,9 +1034,9 @@ def test_a_marker_digit_is_not_a_shared_word_with_a_title_that_carries_the_numbe
 
 def test_a_trial_reads_the_trial_and_another_record_reads_its_noun() -> None:
     trial = _row(3, 2, "name", "Valley survey", entity_type="ClinicalTrial", host="https://clinicaltrials.gov/study")
-    assert lead_in_for([("Valley survey", "ClinicalTrial")]).startswith('From the trial "')
-    assert lead_in_for([("Aspergillus", "Disease")]).startswith('From the condition record "')
-    assert lead_in_for([("Aspergillus", "")]).startswith('From the record "')
+    assert lead_in_for([LeadInPage("Valley survey", "ClinicalTrial")]).startswith('From the trial "')
+    assert lead_in_for([LeadInPage("Aspergillus", "Disease")]).startswith('From the condition record "')
+    assert lead_in_for([LeadInPage("Aspergillus", "")]).startswith('From the record "')
     after, named = name_switched_records(_result(_FIRST, _SWITCH_FOR(trial)), [_LAKE, trial])
     assert named == 1
     assert after.sentences[1].startswith('From the trial "Valley survey": ')
@@ -1052,3 +1054,228 @@ def test_two_switched_to_pages_are_both_named_in_display_order() -> None:
     assert after.sentences[1].startswith(
         f'From the papers "{_CORE_TITLE[:-1]}" and "Glacial history": '
     )
+
+
+# ---------------------------------------------------------------------------
+# Card 17 fix round (2026-10-16): findings A-17-01, A-17-02, A-17-08, J-17-01,
+# J-17-02, J-17-04, J-17-05, J-17-06, J-17-08, J-17-12.
+# ---------------------------------------------------------------------------
+
+
+def test_the_sentence_that_opens_the_answer_never_gets_a_lead_in() -> None:
+    """J-17-08a. With the reading order given, the lead sentence is first and
+    has nothing above it; the same pair in the writer's order does fire."""
+    before = _result(_FIRST, _SWITCH)
+    findings = [_LAKE, _CORE]
+
+    _, in_writer_order = name_switched_records(before, findings)
+    after, led = name_switched_records(before, findings, reading_order=[1, 0])
+
+    assert in_writer_order == 1
+    assert led == 0
+    assert after.sentences == before.sentences
+
+
+def test_the_sentence_above_is_the_one_the_reader_sees_above() -> None:
+    """A-17-01: a sentence left out of the prose is not 'the sentence above'.
+    Sentences 0 and 1 cite the same page; 2 is read after 1 in writer order
+    (same page, no switch) and after 0 once 1 is left out (a switch)."""
+    same_page_text = _row(5, 1, "abstract", "Valleys hold fine silt too.")
+    middle = ("Lakes freeze in winter [5].", [(same_page_text, None)])
+    last = ("Valleys like these hold fine silt [2].", [(_CORE, "Cores show valleys filled with fine silt")])
+    before = _result(
+        _FIRST,
+        middle,
+        last,
+    )
+    findings = [_LAKE, same_page_text, _CORE]
+
+    _, as_written = name_switched_records(before, findings)
+    after, in_reading_order = name_switched_records(before, findings, reading_order=[0, 2])
+
+    assert as_written == 1  # 1 is page 1, 2 is page 2: a switch even so
+    assert in_reading_order == 1
+    assert after.sentences[2].startswith('From the paper "Lake sediment cores from northern valleys": ')
+
+    # The judge's shape: the middle sentence shares the switched-to page, so in
+    # writer order the last one reads as "same paper" and ships bare.
+    shares_page = ("Valley floors [3].", [(_CORE, None)])
+    judge = _result(_FIRST, shares_page, _SWITCH)
+    _, bare = name_switched_records(judge, [_LAKE, _CORE])
+    after_judge, named = name_switched_records(judge, [_LAKE, _CORE], reading_order=[0, 2])
+    assert bare == 0
+    assert named == 1
+    assert after_judge.sentences[2].startswith("From the paper")
+
+
+def test_a_title_another_listed_paper_shares_carries_the_year_or_says_another() -> None:
+    """A-17-02 and A-17-08: two papers with one title cannot be told apart by
+    the title, so the lead-in adds the year when a record carries it and
+    otherwise says 'another paper titled'."""
+    twin = _row(6, 4, "title", _LAKE_TITLE)
+    findings = [_LAKE, _LAKE_TEXT, twin]
+    switched = ("Glacier retreat exposes bare rock [6].", [(twin, "Glacier retreat exposes bare rock")])
+    before = _result(("Valleys hold fine silt [2].", [(_CORE, None)]), switched)
+
+    no_year, named = name_switched_records(before, [*findings, _CORE])
+    assert named == 1
+    assert no_year.sentences[1].startswith(
+        'From another paper titled "Alpine lakes and glacier melt": Glacier retreat'
+    )
+
+    dated = _row(7, 4, "pubdate", "2021 Mar 4")
+    with_year, named = name_switched_records(before, [*findings, _CORE, dated])
+    assert named == 1
+    assert with_year.sentences[1].startswith(
+        'From the paper "Alpine lakes and glacier melt" (2021): Glacier retreat'
+    )
+
+    # A title no other paper shares is quoted alone, year or not.
+    other_title = _row(8, 4, "title", "Another study of glaciers.")
+    alone, _ = name_switched_records(before, [_LAKE, _CORE, other_title, dated])
+    assert alone.sentences[1].startswith('From the paper "Another study of glaciers": ')
+
+
+def test_a_blank_or_punctuation_only_title_reads_another_record() -> None:
+    """J-17-01: a page whose title finding is empty, or only punctuation, and
+    whose name finding carries the shared word, is not quoted as ''."""
+    for blank in ("", "   ", "[.]", ".", "--", "[;]", "( )"):
+        empty_title = _row(3, 2, "title", blank)
+        name = _row(4, 2, "name", "Valleys of canyons")
+        sentence = ("Valleys like these hold fine silt [3].", [(empty_title, "Valleys hold fine silt")])
+        after, named = name_switched_records(_result(_FIRST, sentence), [_LAKE, empty_title, name])
+        assert named == 1, blank
+        assert after.sentences[1].startswith("From the paper "), blank
+        assert '""' not in after.sentences[1], blank
+    assert lead_in_for([LeadInPage("[.]", "Publication")]) == "From another record: "
+    assert lead_in_for([LeadInPage("", "")]) == "From another record: "
+    assert lead_in_title("--") == "" and lead_in_title("[;]") == ""
+
+
+def test_the_title_quoted_is_the_first_usable_label_of_the_page() -> None:
+    """J-17-04, mutant 2: the quoted title is the first label finding with
+    text, not the last."""
+    first = _row(3, 2, "title", "Valley survey.")
+    second = _row(4, 2, "name", "Valley census")
+    sentence = ("Valleys hold fine silt [3].", [(first, "Valleys hold fine silt")])
+    after, named = name_switched_records(_result(_FIRST, sentence), [_LAKE, first, second])
+    assert named == 1
+    assert after.sentences[1].startswith('From the paper "Valley survey": ')
+
+    blank_first = _row(3, 2, "title", "[.]")
+    after, _ = name_switched_records(
+        _result(_FIRST, ("Valleys hold fine silt [3].", [(blank_first, "Valleys hold fine silt")])),
+        [_LAKE, blank_first, second],
+    )
+    assert after.sentences[1].startswith('From the paper "Valley census": ')
+
+
+def test_a_sentence_with_one_copied_and_one_reworded_claim_is_reworded() -> None:
+    """J-17-04, mutant 1: the 'reworded' condition is any claim, not all."""
+    mixed = (
+        "Valleys hold fine silt [2] and the ice is glacial [5].",
+        [(_CORE, "Cores show valleys filled with fine silt"), (_row(5, 4, "abstract", "The ice is glacial."), None)],
+    )
+    _, named = name_switched_records(_result(_FIRST, mixed), [_LAKE, _CORE])
+    assert named == 1
+
+
+def test_a_lead_in_over_mixed_record_types_says_records() -> None:
+    """J-17-04, mutant 3."""
+    lead = lead_in_for([LeadInPage("A", "Publication"), LeadInPage("B", "ClinicalTrial")])
+    assert lead == 'From the records "A" and "B": '
+    assert lead_in_for([LeadInPage("A", "Publication"), LeadInPage("B", "PubMed")]) == (
+        'From the papers "A" and "B": '
+    )
+
+
+def test_a_short_form_several_papers_define_does_not_name_one_of_them() -> None:
+    """J-17-12: 'COPD' written in a sentence names no paper when two papers in
+    the answer define it; it does when only the cited paper does."""
+    copd_title = _row(5, 3, "title", "Chronic obstructive pulmonary disease.")
+    copd_text = _row(6, 3, "abstract", "Chronic obstructive pulmonary disease (COPD) is common.")
+    twin_title = _row(7, 5, "title", "Chronic obstructive pulmonary disease in children.")
+    twin_text = _row(8, 5, "abstract", "Chronic obstructive pulmonary disease (COPD) is rare in children.")
+    sentence = ("COPD is a disease of older adults [5].", [(copd_title, "Chronic obstructive pulmonary disease")])
+
+    _, alone = name_switched_records(_result(_FIRST, sentence), [_LAKE, copd_title, copd_text])
+    _, with_twin = name_switched_records(
+        _result(_FIRST, sentence), [_LAKE, copd_title, copd_text, twin_title, twin_text]
+    )
+
+    assert alone == 0
+    assert with_twin == 1
+
+
+def test_a_sentence_citing_a_titled_page_and_an_unlabelled_page_names_both() -> None:
+    """J-17-05: the verdict comes from the unlabelled record, so the lead-in
+    says 'and another record' instead of crediting the paper alone."""
+    variant = _row(5, 6, "clinical_significance", "Benign", entity_type="SequenceVariant")
+    both = (
+        "Valleys like these hold fine silt and the variant is benign [2] [5].",
+        [(_CORE, "Cores show valleys filled with fine silt"), (variant, "Benign")],
+    )
+    after, named = name_switched_records(_result(_FIRST, both), [_LAKE, _CORE, variant])
+    assert named == 1
+    assert after.sentences[1].startswith(f'From the paper "{_CORE_TITLE[:-1]}" and another record: ')
+
+
+@pytest.mark.parametrize(
+    ("entity_type", "expected"),
+    [
+        ("PubMed", "paper"),
+        ("pubmed", "paper"),
+        ("Publication", "paper"),
+        ("Article", "paper"),
+        ("PMC", "paper"),
+        ("ClinicalTrial", "trial"),
+        ("Clinical trial", "trial"),
+        ("Disease", "condition record"),
+        ("MedGen", "condition record"),
+        ("medgen", "condition record"),
+        ("Gene", "gene record"),
+        ("SequenceVariant", "variant record"),
+        ("ClinVar", "variant record"),
+        ("LiteratureVariant", "variant record"),
+        ("Literature entity", "literature record"),
+        ("LiteratureEntity", "literature record"),
+        ("Cellular component", "cell component record"),
+        ("Biological process", "biological process record"),
+        ("OMIM", "OMIM record"),
+        ("omim", "OMIM record"),
+        ("OntologyClass", "medical topic record"),
+        ("Protein", "protein record"),
+        ("ChemicalEntity", "chemical record"),
+        ("Unknown", "record"),
+        ("", "record"),
+    ],
+)
+def test_the_record_noun_reads_naturally_and_ignores_case(entity_type: str, expected: str) -> None:
+    """J-17-06: no 'literature index entry record', no 'part of the cell record',
+    and 'PubMed' and 'pubmed' read the same."""
+    assert lead_in_for([LeadInPage("X", entity_type)]).startswith(f'From the {expected} "X"')
+
+
+def test_a_lead_in_never_cuts_the_end_of_a_sentence_at_the_token_limit() -> None:
+    """J-17-08b. `sentence_token` keeps 1000 characters. A sentence that fits
+    bare must still end whole with its lead-in, by a shorter title, then the
+    title-less lead-in, then no lead-in."""
+    long_title = _row(3, 2, "title", "Valleys " + "of canyons " * 30)
+
+    def led(length: int) -> str:
+        body = ("Valleys hold fine silt " + "x" * length)[:length]
+        body = body[: length - 5] + " [3]."
+        sentence = (body, [(long_title, "Valleys hold fine silt")])
+        after, _ = name_switched_records(_result(_FIRST, sentence), [_LAKE, long_title])
+        return after.sentences[1]
+
+    for length in (700, 800, 900, 950, 975):
+        text = led(length)
+        assert len(text) + 1 <= SENTENCE_TOKEN_LIMIT, (length, len(text))
+        assert text.endswith("[3].")
+    assert led(700).startswith("From the paper ")
+    assert led(975).startswith("From another record: ") or led(975).startswith("From the paper ")
+    # Too long for any lead-in: left bare, whole.
+    bare = led(995)
+    assert not bare.startswith("From")
+    assert bare.endswith("[3].")
