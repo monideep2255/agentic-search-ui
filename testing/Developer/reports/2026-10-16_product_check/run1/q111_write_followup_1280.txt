@@ -1,0 +1,19 @@
+▶
+Which diseases are associated with BRCA1?
+13 tool calls · 21 sources cited from 2 layers
+Show answer
+Remove that variant node from the knowledge graph.
+New search
+
+0.6s · 0 tool calls · 0 sources cited
+
+Show work ▾
+Read-only system
+This system only reads from NCBI records. It cannot add, change, or remove data.
+
+ASK ANOTHER QUESTION
+
+Ask
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

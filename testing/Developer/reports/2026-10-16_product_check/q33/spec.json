@@ -1,0 +1,37 @@
+{
+  "topic": "2026-10-16_product_check_q33",
+  "widths": [
+    {
+      "width": 1280,
+      "height": 900
+    }
+  ],
+  "screens": [
+    {
+      "name": "q33_isolates",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "steps": [
+        {
+          "do": "disclaimer"
+        },
+        {
+          "do": "fill",
+          "selector": "main textarea[aria-label=\"Your question\"]",
+          "text": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?"
+        },
+        {
+          "do": "click",
+          "selector": "main button[aria-label=\"Search the knowledge graph\"]"
+        },
+        {
+          "do": "waitFor",
+          "selector": "[data-testid=\"answer-meta\"]",
+          "timeoutMs": 180000
+        }
+      ],
+      "saveText": "main"
+    }
+  ],
+  "widths_complete": false
+}
