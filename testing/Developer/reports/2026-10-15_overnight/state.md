@@ -2,7 +2,7 @@
 
 The live ledger of the night: where each card stands, which agent holds it, and the next step. The lead rewrites a row the moment a card moves, so a session that stops at a usage limit resumes from this file, not from memory. The plan and the owner's rules: `plan.md` beside this file.
 
-Last updated: 2026-10-16 02:55.
+Last updated: 2026-10-16 03:30.
 
 ## Table of contents
 
@@ -25,14 +25,14 @@ Last updated: 2026-10-16 02:55.
 | 29 | none (removed) | Closed: verifier HOLD (3 of 24 sentences mislead); #243 closed, card back in To do; tag phase-8.8 deleted | none | A stricter pick, later |
 | 75 | none (removed) | Closed: verifier HOLD (worse after a one-off 502 or lost connection); #239 closed, card back in To do | none | The owner's call in the morning |
 | 115 | card115, fix/card115-readonly-reply-first, #240 | Judge SHIP, adversary PASS; no fix round; fresh verifier running | verifier-115 | One fix round if needed, fresh verifier, merge |
-| 94 | card94, fix/card94-isolate-lookup, #244 | Judge and adversary running | judge-94, adversary-94 | One fix round if needed, fresh verifier, merge; then card 20 |
-| 17 | card17, fix/card17-name-the-paper, #241 | Judge FIX FIRST, adversary FAIL; fix round running | fix-17 | Fresh verifier (Fable), merge |
+| 94 | none (lookup closed, #244) | Lookup closed: reaches only 11 to 18 percent of isolates, genus mapping wrong; timeout-crash fix re-split | builder-94t (card94t, fix/card94-timeout-no-crash) | Commit, pull request, judge and adversary, verifier, merge |
+| 17 | card17, fix/card17-name-the-paper, #241 | Fix round done; fresh verifier running (Fable) | verifier-17 | Merge on PASS; close on HOLD |
 | 110 | card110, fix/card110-first-sentence-redesign, #242 | Judge FIX FIRST, adversary FAIL; fix round running | fix-110 | Fresh verifier (Opus), merge; then delete the parked cards 110/111 branch |
-| 101 | card101, fix/card101-record-sentence-end | Design committed | none yet | Builder (Sonnet) when the running count drops |
-| 15 | card15, fix/card15-checked-templates | Design committed (four shapes) | none yet | Builder (Sonnet) when the running count drops |
+| 101 | card101, fix/card101-record-sentence-end | Builder running (five slices) | builder-101 | Commit per slice, pull request, judge and adversary |
+| 15 | card15, fix/card15-checked-templates | Builder running (four shapes, one slice each) | builder-15 | Commit per slice, pull request, judge and adversary |
 | 84 and 72 | none (removed) | Design on develop; not built: needs the owner's yes on the guardrail rule | none | The owner's answer in the morning |
 | 24 | card24, fix/card24-answer-depth-switch | Builder running (card 29 closed, so no answer-screen conflict) | builder-24 | Commit, pull request, judge and adversary; then delete tag phase-8.4 |
-| 20 | none yet | Waits for 94 to merge | none | Worktree from develop after 94 merges, builder (separate extraction call) |
+| 20 | card20, fix/card20-isolate-filters | Builder running (separate extraction call) | builder-20 | Commit, pull request, judge and adversary |
 | Parked branch | fix/cards110-111-summary-opening | Kept until card 110 merges or closes | none | Delete with card 110 |
 | Local tags | parked/phase-8.4, phase-8.8-snippets, card101, card15 (card84-72 deleted) | Each deleted when its card merges or closes | none | Delete with its card |
 

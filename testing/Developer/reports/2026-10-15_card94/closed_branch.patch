@@ -1,0 +1,761 @@
+diff --git a/src/system_03_search_agent/core/graph.py b/src/system_03_search_agent/core/graph.py
+index 04684f0e..b6fe81be 100644
+--- a/src/system_03_search_agent/core/graph.py
++++ b/src/system_03_search_agent/core/graph.py
+@@ -674,7 +674,10 @@ from system_03_search_agent.tools.pathogen_detection import (
+     build_citation as pathogen_build_citation,
+ )
+ from system_03_search_agent.tools.pathogen_detection import pathogen_detection
+-from system_03_search_agent.tools.pathogen_detection_schemas import PathogenDetectionOutput
++from system_03_search_agent.tools.pathogen_detection_schemas import (
++    PathogenDetectionInput,
++    PathogenDetectionOutput,
++)
+ from system_03_search_agent.tools.pubtator_annotate import build_citation as pubtator_build_citation
+ from system_03_search_agent.tools.pubtator_annotate import pubtator_annotate
+ from system_03_search_agent.tools.pubtator_annotate_schemas import (
+@@ -4791,6 +4794,10 @@ class _PlannedFollowUpCall:
+     #: the filter runs against the symbol the question resolved rather
+     #: than anything read back out of the OMIM response itself.
+     gene_symbol: str | None = None
++    #: Card 94 (2026-10-15): the BioSample accession a single-isolate lookup
++    #: (`purpose="isolate_lookup"`) is for. The organism is not known at Plan;
++    #: Act reads it from the BioSample record the first stage fetched.
++    biosample_acc: str | None = None
+ 
+ 
+ #: Per-tool Act timeouts for the four tools above, in seconds. Each is the
+@@ -4828,6 +4835,16 @@ _LAYER_TOOL_ACT_TIMEOUT_SECONDS: Final[dict[str, float]] = {
+     "pathogen_detection": 150.0,
+ }
+ 
++#: Card 94 (2026-10-15): the bound on the lookup of ONE named isolate, so the
++#: whole answer arrives in about 20 seconds. Measured live the same day with
++#: the SNP-distance scan skipped: an isolate near the start of the organism's
++#: Metadata file is found in about 3 seconds, and a BioSample the file does
++#: not hold takes about 30 seconds, because the tool reads the file to its
++#: end before it can say "not there". The lookup is stopped at this bound and
++#: the answer says so in one line beside the BioSample record. The other
++#: isolate modes keep `_LAYER_TOOL_ACT_TIMEOUT_SECONDS`.
++_ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS: Final[float] = 8.0
++
+ #: The isolate search shows more rows than the five-row layer cap, since
+ #: the rows ARE the answer rather than context beside a graph result. The
+ #: figure is the module's own, so Plan's `max_isolates` and Act's cut agree.
+@@ -5106,9 +5123,14 @@ def _layer_tool_output_to_structured_fields(
+             )
+         rows.sort(key=lambda row: str(row["fields"].get("biosample_acc", "")))
+         rows = rows[:_ISOLATE_ROW_CAP]
+-        status = isolates.status
++        status: str = isolates.status
+         if status == "ok" and not rows:
+             status = "empty"
++        if status == "timeout":
++            # Card 94: the tool's deadline cutoff is a fifth status the result
++            # event cannot carry ("ok", "empty" or "error"); it crashed Act and
++            # the whole answer with it. It is a failed search, so "error".
++            status = "error"
+         return {
+             "status": status,
+             "row_count": len(rows),
+@@ -7061,6 +7083,27 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
+                     accession_plan.record, accession_plan.uid, accession_plan.linked
+                 )
+             ]
++            if accession_plan.record.kind == "biosample" and isolate_search.names_an_isolate(
++                query.text
++            ):
++                # Card 94 (2026-10-15): "naming one isolate gets that isolate's
++                # details." The lookup is planned FIRST, so under the Section
++                # 21.3 ceiling it is never the call admission skips, but its
++                # input is built at Act: the organism comes from the BioSample
++                # record the first stage fetches, never from the question.
++                planned_tool_calls = [
++                    _PlannedFollowUpCall(
++                        tool_call=ToolCall(
++                            tool="pathogen_detection",
++                            call_id=f"pd-{uuid.uuid4().hex[:12]}",
++                            layer="layer_2_api",
++                        ),
++                        purpose="isolate_lookup",
++                        source_purpose="biosample_summary",
++                        biosample_acc=accession_plan.record.value,
++                    ),
++                    *planned_tool_calls,
++                ]
+             lead_name = persona_for_session(session_id=query.session_id, user_id=query.user_id)
+             planned_tool_calls = _assign_helpers(planned_tool_calls, lead_name=lead_name)
+             plan_payload = PlanPayload(
+@@ -8422,11 +8465,15 @@ async def _execute_planned_call(
+         # dispatch shape. The executor is looked up at call time so a test
+         # can fake it by module attribute; the timeout is the tool's own.
+         executor = _layer_tool_executor(call.tool)
+-        timeout_s = _LAYER_TOOL_ACT_TIMEOUT_SECONDS[call.tool]
++        timeout_s = (
++            _ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS
++            if planned.purpose == "isolate_lookup"
++            else _LAYER_TOOL_ACT_TIMEOUT_SECONDS[call.tool]
++        )
+         try:
+             output = await harness.enforce_timeout("act", executor(planned.tool_input), timeout_s)
+         except HarnessCallError:
+-            return _error_outcome(
++            outcome = _error_outcome(
+                 call,
+                 f"call did not complete within its {timeout_s:g}s budget",
+                 (
+@@ -8435,6 +8482,24 @@ async def _execute_planned_call(
+                 ),
+                 failure_kind="timed_out",
+             )
++            if planned.purpose == "isolate_lookup":
++                # Card 94: kept as a typed timeout so Write can say, beside the
++                # BioSample record, that the lookup was stopped.
++                outcome = dataclasses.replace(
++                    outcome,
++                    # No pair: the writer reads only what the lookup found.
++                    # A failed lookup in its evidence sent the whole answer to
++                    # the code-built list (measured live, 2026-10-15).
++                    pairs=[],
++                    layer_raw_output=PathogenDetectionOutput(
++                        status="timeout",
++                        mode="isolate_lookup",
++                        isolate_count=0,
++                        total_available=0,
++                        truncated=True,
++                    ),
++                )
++            return outcome
+         except call_budget.CallBudgetExceededError:
+             return _error_outcome(
+                 call,
+@@ -8466,11 +8531,16 @@ async def _execute_planned_call(
+                 f"{call.tool} call failed unexpectedly; the other layers' results stand",
+             )
+         shaped = _layer_tool_output_to_structured_fields(call.tool, output, planned.tool_input)
+-        return _CallOutcome(
++        outcome = _CallOutcome(
+             status=str(shaped["status"]),
+             summary=f"{shaped['status']}: {shaped['row_count']} record(s)",
+             result_count=int(shaped["row_count"]),
+             truncated=False,
++            # Card 94: the tool's own "timeout" is shaped as an error, and
++            # says so in the failure kind rather than as "other".
++            failure_kind=(
++                "timed_out" if getattr(output, "status", None) == "timeout" else None
++            ),
+             pairs=[
+                 (
+                     call,
+@@ -8485,6 +8555,14 @@ async def _execute_planned_call(
+             # branch (approved 2026-09-14, sequenced behind set 9).
+             layer_raw_output=output,
+         )
++        if planned.purpose == "isolate_lookup" and int(shaped["row_count"]) == 0:
++            # Card 94: a lookup that showed no isolate says so in one line
++            # beside the BioSample record (`_isolate_lookup_note`). Its empty
++            # or failed result is not evidence for the writer: with it in the
++            # evidence the model's summary failed grounding live and the
++            # whole answer fell back to the code-built list.
++            outcome = dataclasses.replace(outcome, pairs=[])
++        return outcome
+ 
+     # The Layer 1 graph call.
+     try:
+@@ -8669,6 +8747,111 @@ def _follow_up_planned_call(
+     return None
+ 
+ 
++def _biosample_record_fields(output: Any, accession: str) -> dict[str, Any] | None:
++    """The fields of the BioSample record a fetch returned for `accession`, or None.
++
++    Card 94 (2026-10-15): the organism of a single-isolate lookup is read from
++    this record, the one the answer shows, never from the question's words.
++    Only the record whose own `accession` is the asked one counts, so a linked
++    record (an assembly, a run) never supplies it. None when the fetch did
++    not finish or returned no such record.
++    """
++    if getattr(output, "status", None) != "ok":
++        return None
++    for record in getattr(output, "records", None) or []:
++        fields = getattr(record, "fields", None) or {}
++        if str(fields.get("accession", "")).upper() == accession.upper():
++            return dict(fields)
++    return None
++
++
++def _biosample_organism_name(output: Any, accession: str) -> str | None:
++    """The organism name in the BioSample record for `accession`, or None."""
++    fields = _biosample_record_fields(output, accession)
++    name = fields.get("organism") if fields else None
++    return name.strip() or None if isinstance(name, str) else None
++
++
++def _isolate_lookup_planned_call(
++    follow_up: _PlannedFollowUpCall, source: _CallOutcome | None
++) -> _PlannedLayerToolCall | None:
++    """The single-isolate lookup, built from the BioSample record's organism.
++
++    None when the first-stage BioSample summary did not finish, or its record
++    names no organism the Pathogen Detection tool covers: nothing is looked
++    up, and Write says so beside the BioSample record. The lookup skips the
++    SNP-distance scan (owner, 2026-10-15) and runs under
++    `_ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS`.
++    """
++    if source is None or source.raw_output is None or follow_up.biosample_acc is None:
++        return None
++    organism = isolate_search.organism_of_record(
++        _biosample_organism_name(source.raw_output, follow_up.biosample_acc)
++    )
++    if organism is None:
++        return None
++    return _PlannedLayerToolCall(
++        tool_call=follow_up.tool_call,
++        tool_input=PathogenDetectionInput.model_validate(
++            {
++                "mode": "isolate_lookup",
++                "taxon": organism.taxon_folder,
++                "biosample_acc": follow_up.biosample_acc,
++                "skip_snp_distance": True,
++            }
++        ),
++        purpose="isolate_lookup",
++    )
++
++
++def _isolate_lookup_note(state: GraphState) -> str | None:
++    """Card 94 (2026-10-15): the one plain line beside the BioSample record when
++    the single-isolate lookup showed no isolate, or None.
++
++    Says which: the isolate is not in that organism's Pathogen Detection data,
++    the lookup was stopped for time, it failed, or the BioSample record names
++    no organism to look it up under. Read from what Act kept (the lookup's
++    typed output and the BioSample record), so it holds on every surface.
++    """
++    plan = state.get("accession_plan")
++    query = state.get("query")
++    if (
++        plan is None
++        or plan.record.kind != "biosample"
++        or query is None
++        or not isolate_search.names_an_isolate(query.text)
++    ):
++        return None
++    acc = plan.record.value
++    lookups = [
++        out
++        for out in (state.get("layer3_raw_outputs") or {}).values()
++        if isinstance(out, PathogenDetectionOutput) and out.mode == "isolate_lookup"
++    ]
++    record_found = False
++    organism_name: str | None = None
++    for out in (state.get("layer2_raw_outputs") or {}).values():
++        if _biosample_record_fields(out, acc) is not None:
++            record_found = True
++            organism_name = _biosample_organism_name(out, acc)
++            break
++    organism = isolate_search.organism_of_record(organism_name)
++    if not lookups:
++        if record_found and organism is None:
++            return isolate_search.lookup_line("no_organism", acc)
++        return None
++    lookup = lookups[0]
++    if lookup.status == "ok" and lookup.isolates:
++        return None
++    if lookup.status == "timeout":
++        return isolate_search.lookup_line("timed_out", acc)
++    if lookup.status == "error":
++        return isolate_search.lookup_line("failed", acc)
++    return isolate_search.lookup_line(
++        "not_found", acc, organism.label if organism is not None else None
++    )
++
++
+ def _empty_follow_up_outcome(follow_up: _PlannedFollowUpCall, reason: str) -> _CallOutcome:
+     """A follow-up closed without a request: `empty`, with a summary that
+     says why, and no pair, since there is nothing to cite."""
+@@ -8935,6 +9118,17 @@ async def act_node(state: GraphState) -> dict[str, Any]:
+     second_stage: list[Any] = []
+     for follow_up in follow_ups:
+         source = outcome_by_purpose.get(follow_up.source_purpose)
++        if follow_up.purpose == "isolate_lookup":
++            lookup = _isolate_lookup_planned_call(follow_up, source)
++            if lookup is None:
++                outcome = _empty_follow_up_outcome(
++                    follow_up, "no Pathogen Detection organism in the BioSample record"
++                )
++                outcomes[follow_up.tool_call.call_id] = outcome
++                _close_tool_call(follow_up.tool_call, outcome)
++            else:
++                second_stage.append(lookup)
++            continue
+         if source is None or source.raw_output is None or source.status != "ok":
+             reason = (
+                 f"the {follow_up.source_purpose} search did not complete"
+@@ -9075,6 +9269,9 @@ async def act_node(state: GraphState) -> dict[str, Any]:
+         }
+         for _, planned in ordered
+         if outcomes[planned.tool_call.call_id].status == "error"
++        # Card 94: a failed single-isolate lookup has its own line beside the
++        # BioSample record, which is complete; it is not an unfinished search.
++        and getattr(planned, "purpose", "") != "isolate_lookup"
+     ]
+     # A5/F-02 fix: the real Finding list now survives into GraphState
+     # (not just its length), so write_node can read what Act actually
+@@ -15051,6 +15248,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+                 _isolate_count_note(state),
+                 *_paper_link_notes(state),
+                 _isolate_disclosure_note(state),
++                _isolate_lookup_note(state),
+                 _disease_lookup_failed_note(state),
+                 structured_fallback_note,
+                 partial_answer_note,
+diff --git a/src/system_03_search_agent/core/isolate_search.py b/src/system_03_search_agent/core/isolate_search.py
+index 419a5b84..4efa24cc 100644
+--- a/src/system_03_search_agent/core/isolate_search.py
++++ b/src/system_03_search_agent/core/isolate_search.py
+@@ -425,3 +425,61 @@ def count_sentence(organism_label: str, shown: int, total: int, complete: bool)
+         f"Pathogen Detection lists {total_words} {organism_label} {noun} with these genes; "
+         f"the first {shown:,} in the snapshot are shown."
+     )
++
++
++# ---------------------------------------------------------------------------
++# Card 94 (2026-10-15): the lookup of ONE named isolate.
++# ---------------------------------------------------------------------------
++
++
++def names_an_isolate(text: str) -> bool:
++    """Whether the question uses an isolate word ("isolate", "Pathogen Detection").
++
++    The trigger for the single-isolate lookup, beside a BioSample accession.
++    It does not look for an organism: the organism is read from the
++    BioSample record, because the question's words can name the wrong one.
++    """
++    return bool(text) and _ISOLATE_WORDS.search(text) is not None
++
++
++def organism_of_record(name: str | None) -> Organism | None:
++    """The covered organism a BioSample record's own organism name belongs to.
++
++    `name` is the record's `organism` field ("Salmonella enterica"), never
++    the question. None when the record names none or names one this table
++    does not cover (a human sample, a metagenome).
++    """
++    if not name or not name.strip():
++        return None
++    return _find_organism(name)
++
++
++#: The four sentences that stand beside the BioSample record when the
++#: single-isolate lookup shows no isolate. Owner wording, 2026-10-15.
++LOOKUP_NOT_FOUND: Final[str] = (
++    "{acc} was not found in NCBI Pathogen Detection's {organism} data, so only its BioSample record is shown."
++)
++LOOKUP_TIMED_OUT: Final[str] = (
++    "The Pathogen Detection lookup took too long and was stopped, so only the BioSample record of {acc} is shown."
++)
++LOOKUP_FAILED: Final[str] = (
++    "The Pathogen Detection lookup of {acc} did not complete, so only its BioSample record is shown."
++)
++LOOKUP_NO_ORGANISM: Final[str] = (
++    "Pathogen Detection was not looked up for {acc}: its BioSample record names no organism that "
++    "Pathogen Detection covers here, so only the BioSample record is shown."
++)
++
++
++def lookup_line(kind: str, accession: str, organism_label: str | None = None) -> str:
++    """The one plain line for a single-isolate lookup that showed no isolate.
++
++    `kind` is one of `not_found`, `timed_out`, `failed`, `no_organism`.
++    """
++    template = {
++        "not_found": LOOKUP_NOT_FOUND,
++        "timed_out": LOOKUP_TIMED_OUT,
++        "failed": LOOKUP_FAILED,
++        "no_organism": LOOKUP_NO_ORGANISM,
++    }[kind]
++    return template.format(acc=accession, organism=organism_label or "")
+diff --git a/src/system_03_search_agent/tools/pathogen_detection.py b/src/system_03_search_agent/tools/pathogen_detection.py
+index 0fad9a22..fdc86ae7 100644
+--- a/src/system_03_search_agent/tools/pathogen_detection.py
++++ b/src/system_03_search_agent/tools/pathogen_detection.py
+@@ -906,7 +906,10 @@ async def _isolate_lookup(
+         except Exception:  # noqa: BLE001 - deliberately broad, see comment above
+             cluster_id = None
+ 
+-    if cluster_id and _remaining(enrichment_deadline) > 0:
++    # Card 94 (owner, 2026-10-15): the single-isolate lookup the app plans skips
++    # this scan (`skip_snp_distance`); F-3.5-A-05 still holds for the scan when
++    # it runs, and for every other mode.
++    if cluster_id and not action.skip_snp_distance and _remaining(enrichment_deadline) > 0:
+         try:
+             snp_scan = await pathogen_ftp_transport.stream_filtered_tsv_rows(
+                 _snp_distances_url(taxon, snapshot),
+diff --git a/src/system_03_search_agent/tools/pathogen_detection_schemas.py b/src/system_03_search_agent/tools/pathogen_detection_schemas.py
+index 1bd04785..cdef8530 100644
+--- a/src/system_03_search_agent/tools/pathogen_detection_schemas.py
++++ b/src/system_03_search_agent/tools/pathogen_detection_schemas.py
+@@ -202,6 +202,15 @@ class PathogenIsolateLookupInput(BaseModel):
+         ),
+     ]
+     biosample_acc: Annotated[str, Field(min_length=1, max_length=30)]
++    skip_snp_distance: bool = Field(
++        default=False,
++        description=(
++            "Card 94 (owner, 2026-10-15): when true the lookup does not scan the "
++            "SNP-distances file for this isolate's nearest neighbour, which took "
++            "about 18 of the 20 seconds and which the answer does not show. "
++            "False keeps the original best-effort scan; no other mode has this field."
++        ),
++    )
+ 
+ 
+ class PathogenClusterSnpNeighborsInput(BaseModel):
+diff --git a/tests/system_03_search_agent/core/test_isolate_search_wiring.py b/tests/system_03_search_agent/core/test_isolate_search_wiring.py
+index 73f2175d..a863dac6 100644
+--- a/tests/system_03_search_agent/core/test_isolate_search_wiring.py
++++ b/tests/system_03_search_agent/core/test_isolate_search_wiring.py
+@@ -519,3 +519,284 @@ def test_a_place_too_long_for_the_cell_ends_with_a_mark_that_it_was_cut() -> Non
+     # A place that fits is shown whole, with no mark.
+     fits = "X" * MAX_IDENTIFIER_CHARS
+     assert isolate_place("Pathogen Detection isolate", {"geo_loc_name": fits}) == fits
++
++
++# ---------------------------------------------------------------------------
++# Card 94 (2026-10-15): "naming one isolate gets that isolate's details, or one
++# plain line saying why not." The lookup runs after the BioSample record is
++# fetched, because the organism is read from that record, not the question.
++# Each arm below was shown red by one mutation before it was kept
++# (`testing/Developer/reports/2026-10-15_card94/build.md`).
++# ---------------------------------------------------------------------------
++
++ONE_ISOLATE_QUESTION = "What is known about Salmonella isolate SAMN02147118 in Pathogen Detection?"
++WRONG_ORGANISM_QUESTION = "What is known about E. coli isolate SAMN02147118 in Pathogen Detection?"
++PLAIN_BIOSAMPLE_QUESTION = "What is BioSample SAMN02147118 and which SRA runs come from it?"
++
++
++def _biosample_plan(question: str) -> Any:
++    from system_03_search_agent.core import accession as accession_module
++
++    record = accession_module.parse_accession(question)
++    assert record is not None and record.kind == "biosample"
++    return graph_module._AccessionPlan(record=record, uid="2147118", linked={"sra": ["111"]})
++
++
++async def _plan(monkeypatch: pytest.MonkeyPatch, question: str) -> list[Any]:
++    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
++    state = _state(
++        question, resolved_entities=[], query_class="lookup", accession_plan=_biosample_plan(question)
++    )
++    return (await graph_module.plan_node(state))["tool_calls"]
++
++
++def _install_biosample_fetch(
++    monkeypatch: pytest.MonkeyPatch, organism: str | None, *, status: str = "ok"
++) -> None:
++    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchOutput, NcbiEfetchRecord
++
++    async def _efetch(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
++        root = tool_input.root
++        if root.db != "biosample":
++            return NcbiEfetchOutput(
++                status="ok", action="summary", record_count=1, total_available=1, truncated=False,
++                records=[
++                    NcbiEfetchRecord(
++                        id="111", db=root.db, fields={"runs": "SRR1", "organism": "Homo sapiens"},
++                        source_url=f"https://www.ncbi.nlm.nih.gov/{root.db}/111",
++                    )
++                ],
++            )
++        fields: dict[str, Any] = {"accession": "SAMN02147118", "title": "Pathogen sample"}
++        if organism is not None:
++            fields["organism"] = organism
++        return NcbiEfetchOutput(
++            status=status, action="summary", record_count=1, total_available=1, truncated=False,
++            records=[
++                NcbiEfetchRecord(
++                    id="2147118", db="biosample", fields=fields,
++                    source_url="https://www.ncbi.nlm.nih.gov/biosample/2147118",
++                )
++            ],
++        )
++
++    monkeypatch.setattr(graph_module, "ncbi_efetch", _efetch)
++
++
++def _install_pathogen(monkeypatch: pytest.MonkeyPatch, output: PathogenDetectionOutput | None,
++                      *, sleep: float = 0.0) -> list[Any]:
++    import asyncio
++
++    seen: list[Any] = []
++
++    async def _pd(tool_input: Any, **kwargs: Any) -> PathogenDetectionOutput:
++        seen.append(tool_input.root)
++        if sleep:
++            await asyncio.sleep(sleep)
++        assert output is not None
++        return output
++
++    monkeypatch.setattr(graph_module, "pathogen_detection", _pd)
++    return seen
++
++
++def _lookup_output(status: str) -> PathogenDetectionOutput:
++    isolates = [_isolate("SAMN02147118", "SQ0227", ["sul1", "blaTEM-1"])] if status == "ok" else []
++    return PathogenDetectionOutput(
++        status=status, mode="isolate_lookup", pdg_snapshot="PDG000000002.1", isolates=isolates,
++        isolate_count=len(isolates), total_available=len(isolates), truncated=status == "timeout",
++    )
++
++
++async def _plan_and_act(monkeypatch: pytest.MonkeyPatch, question: str) -> tuple[list[Any], dict[str, Any]]:
++    calls = await _plan(monkeypatch, question)
++    state = _state(
++        question, resolved_entities=[], query_class="lookup", tool_calls=calls,
++        accession_plan=_biosample_plan(question),
++    )
++    return calls, await graph_module.act_node(state)
++
++
++def _note(question: str, act: dict[str, Any]) -> str | None:
++    state = _state(
++        question, accession_plan=_biosample_plan(question),
++        layer2_raw_outputs=act["layer2_raw_outputs"], layer3_raw_outputs=act["layer3_raw_outputs"],
++    )
++    return graph_module._isolate_lookup_note(state)
++
++
++@pytest.mark.asyncio
++async def test_naming_one_isolate_plans_the_lookup_first_and_a_plain_biosample_question_does_not(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    calls = await _plan(monkeypatch, ONE_ISOLATE_QUESTION)
++    lookup = calls[0]
++    assert isinstance(lookup, graph_module._PlannedFollowUpCall)
++    assert lookup.tool_call.tool == "pathogen_detection" and lookup.purpose == "isolate_lookup"
++    assert lookup.source_purpose == "biosample_summary" and lookup.biosample_acc == "SAMN02147118"
++    assert [c.purpose for c in calls[1:]] == ["biosample_summary", "sra_summary"]
++    assert not any(isinstance(c, graph_module._PlannedToolCall) for c in calls), "no graph call"
++    # Populate check: no isolate word, no lookup.
++    plain = await _plan(monkeypatch, PLAIN_BIOSAMPLE_QUESTION)
++    assert [c.tool_call.tool for c in plain] == ["ncbi_efetch", "ncbi_efetch"]
++
++
++@pytest.mark.asyncio
++async def test_the_lookup_skips_the_snp_distance_scan_and_reads_the_organism_from_the_record(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """The question names E. coli; the BioSample record says Salmonella. The
++    tool is asked for the Salmonella data, with the SNP-distance scan off."""
++    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
++    seen = _install_pathogen(monkeypatch, _lookup_output("ok"))
++    _, act = await _plan_and_act(monkeypatch, WRONG_ORGANISM_QUESTION)
++    assert len(seen) == 1
++    assert seen[0].mode == "isolate_lookup" and seen[0].taxon == "Salmonella"
++    assert seen[0].biosample_acc == "SAMN02147118" and seen[0].skip_snp_distance is True
++    assert [o.mode for o in act["layer3_raw_outputs"].values()] == ["isolate_lookup"]
++    assert _note(WRONG_ORGANISM_QUESTION, act) is None, "an isolate that was found has no line"
++
++
++@pytest.mark.asyncio
++async def test_a_record_with_no_organism_is_not_looked_up_and_says_so(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    for organism in (None, "   ", "Homo sapiens"):
++        _install_biosample_fetch(monkeypatch, organism)
++        seen = _install_pathogen(monkeypatch, _lookup_output("ok"))
++        _, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
++        assert seen == [], f"organism {organism!r}: nothing is looked up"
++        note = _note(ONE_ISOLATE_QUESTION, act)
++        assert note is not None and "SAMN02147118" in note and "names no organism" in note, note
++        assert act["failed_searches"] == []
++    # Populate check: a record that names one is looked up.
++    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
++    seen = _install_pathogen(monkeypatch, _lookup_output("ok"))
++    await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
++    assert len(seen) == 1
++
++
++@pytest.mark.asyncio
++async def test_an_isolate_pathogen_detection_does_not_hold_gets_the_not_found_line(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
++    _install_pathogen(monkeypatch, _lookup_output("empty"))
++    _, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
++    assert _note(ONE_ISOLATE_QUESTION, act) == (
++        "SAMN02147118 was not found in NCBI Pathogen Detection's Salmonella data, "
++        "so only its BioSample record is shown."
++    )
++    assert act["failed_searches"] == [], "not being in the file is not an unfinished search"
++    assert not any(f.tool == "pathogen_detection" for f in act["findings"])
++
++
++@pytest.mark.asyncio
++async def test_the_tools_timeout_status_is_an_error_result_and_act_keeps_the_biosample_record(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """RED before: the tool's "timeout" status reached the result event, which
++    carries only ok, empty or error, and Act raised, so the person lost the
++    BioSample record too."""
++    shaped = graph_module._layer_tool_output_to_structured_fields(
++        "pathogen_detection", _lookup_output("timeout")
++    )
++    assert shaped["status"] == "error"
++    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
++    _install_pathogen(monkeypatch, _lookup_output("timeout"))
++    _, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
++    biosample = [
++        row for f in act["findings"] for row in (f.structured_fields or {}).get("rows", [])
++        if row["source_url"].endswith("/biosample/2147118")
++    ]
++    assert biosample, "the BioSample record stands"
++    note = _note(ONE_ISOLATE_QUESTION, act)
++    assert note is not None and "took too long and was stopped" in note, note
++    assert act["failed_searches"] == []
++    assert not any(f.tool == "pathogen_detection" for f in act["findings"]), (
++        "a failed lookup is not evidence for the writer: with it there the model's "
++        "summary failed grounding live and the answer fell back to the code-built list"
++    )
++
++
++@pytest.mark.asyncio
++async def test_a_lookup_that_outruns_its_bound_is_stopped_and_says_so(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """The bound is `_ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS`, not the 150 seconds
++    the other isolate modes get; a lookup past it is cut and the answer still
++    arrives with the BioSample record."""
++    import time
++
++    assert graph_module._ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS <= 12
++    assert graph_module._LAYER_TOOL_ACT_TIMEOUT_SECONDS["pathogen_detection"] == 150.0
++    monkeypatch.setattr(graph_module, "_ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS", 0.2)
++    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
++    _install_pathogen(monkeypatch, _lookup_output("ok"), sleep=5.0)
++    started = time.monotonic()
++    _, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
++    assert time.monotonic() - started < 3.0
++    note = _note(ONE_ISOLATE_QUESTION, act)
++    assert note is not None and "took too long and was stopped" in note, note
++    assert act["failed_searches"] == []
++    # Populate check: inside the bound the same fake returns its isolate.
++    _install_pathogen(monkeypatch, _lookup_output("ok"), sleep=0.0)
++    monkeypatch.setattr(graph_module, "_ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS", 5.0)
++    _, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
++    assert _note(ONE_ISOLATE_QUESTION, act) is None
++
++
++@pytest.mark.asyncio
++async def test_the_line_stands_beside_the_biosample_record_in_the_written_answer(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    from tests.system_03_search_agent.core.test_write_answer_structure import _install, _no_prose
++    from tests.system_03_search_agent.core.test_write_answer_structure import _state as _write_state
++
++    _install(monkeypatch, _no_prose)
++    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
++    _install_pathogen(monkeypatch, _lookup_output("empty"))
++    calls, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
++    state = _write_state("researcher")
++    state["query"] = Query(text=ONE_ISOLATE_QUESTION, session_id="s-iso", trace_id="t-iso", user_id=None)
++    state.update(
++        tool_calls=calls, accession_plan=_biosample_plan(ONE_ISOLATE_QUESTION),
++        layer2_raw_outputs=act["layer2_raw_outputs"], layer3_raw_outputs=act["layer3_raw_outputs"],
++        findings=act["findings"], findings_count=len(act["findings"]), failed_searches=[],
++    )
++    result = await graph_module.write_node(state)
++    text = " ".join(e.payload["text"] for e in result["events"] if e.type == "token")
++    assert "was not found in NCBI Pathogen Detection's Salmonella data" in text, text
++    assert any(e.type == "citation" and "/biosample/2147118" in e.payload["source_url"]
++               for e in result["events"]), "the BioSample record is still cited"
++
++
++@pytest.mark.asyncio
++async def test_one_isolates_answer_shows_its_details_with_no_sample_note(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """The lookup's one isolate reaches the answer as one row: strain,
++    BioSample accession, genes, place and year, cited to its Pathogen
++    Detection page, with no "first 20" count and no lookup line under it."""
++    from tests.system_03_search_agent.core.test_write_answer_structure import _install, _no_prose
++    from tests.system_03_search_agent.core.test_write_answer_structure import _state as _write_state
++
++    _install(monkeypatch, _no_prose)
++    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
++    _install_pathogen(monkeypatch, _lookup_output("ok"))
++    calls, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
++    state = _write_state("researcher")
++    state["query"] = Query(text=ONE_ISOLATE_QUESTION, session_id="s-iso", trace_id="t-iso", user_id=None)
++    state.update(
++        tool_calls=calls, accession_plan=_biosample_plan(ONE_ISOLATE_QUESTION),
++        layer2_raw_outputs=act["layer2_raw_outputs"], layer3_raw_outputs=act["layer3_raw_outputs"],
++        findings=act["findings"], findings_count=len(act["findings"]), failed_searches=[],
++    )
++    result = await graph_module.write_node(state)
++    tokens = [e.payload for e in result["events"] if e.type == "token"]
++    rows = [t["cells"] for t in tokens if t.get("kind") == "table_row"]
++    assert ["SQ0227", "SAMN02147118", "sul1, blaTEM-1", "2013, USA:AZ"] in rows, rows
++    assert not any("Pathogen Detection lists" in t["text"] for t in tokens), tokens
++    assert not any("was not found in NCBI Pathogen Detection" in t["text"] for t in tokens)
++    citations = [e.payload for e in result["events"] if e.type == "citation"]
++    assert any("pathogens/isolates" in c["source_url"] for c in citations), citations
+diff --git a/tests/system_03_search_agent/tools/test_pathogen_detection.py b/tests/system_03_search_agent/tools/test_pathogen_detection.py
+index 5187cc11..fee382ae 100644
+--- a/tests/system_03_search_agent/tools/test_pathogen_detection.py
++++ b/tests/system_03_search_agent/tools/test_pathogen_detection.py
+@@ -416,6 +416,53 @@ async def test_isolate_lookup_ok_parses_amr_and_ast_correctly(monkeypatch: pytes
+     )
+ 
+ 
++@pytest.mark.asyncio
++async def test_isolate_lookup_that_skips_the_snp_distance_scan_never_reads_that_file(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """Card 94 (owner, 2026-10-15): the single-isolate lookup the app plans skips
++    the SNP-distance scan, which took 18 of 20 seconds and shows nothing. The
++    isolate still comes back whole. The populate check is the sibling above,
++    where the same inputs without the flag read the file."""
++    _install_snapshot(monkeypatch)
++    cluster_row = {"biosample_acc": "SAMN02147118", "PDS_acc": "PDS000012345.1"}
++    reads = _install_reads(monkeypatch, [TsvScanResult([_metadata_row()]), TsvScanResult([cluster_row])])
++
++    output = await pathogen_detection(
++        PathogenDetectionInput(
++            mode="isolate_lookup", taxon="Salmonella", biosample_acc="SAMN02147118",
++            skip_snp_distance=True,
++        )
++    )
++
++    assert output.status == "ok", output.error
++    isolate = output.isolates[0]
++    assert isolate.strain == "SL1344" and isolate.amr_genotypes == ["ant(2'')-Ia", "aph(3')-Ia", "blaTEM-1"]
++    assert isolate.snp_distance is None
++    assert not any("SNP_distances" in call["url"] for call in reads.calls), reads.calls
++    assert len(reads.calls) == 2
++
++
++@pytest.mark.asyncio
++async def test_cluster_snp_neighbors_still_reads_the_snp_distances_file(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """Card 94: the skip is the single-isolate lookup's alone. A cluster call
++    (and F-3.5-A-05's partial scan, covered above) read it as before."""
++    _install_snapshot(monkeypatch)
++    members = [{"biosample_acc": "SAMN00000001", "PDS_acc": "PDS000012345.1"}]
++    snp_rows = [
++        {"PDS_acc": "PDS000012345.1", "biosample_acc_1": "SAMN00000001",
++         "biosample_acc_2": "SAMN00000002", "compatible_distance": "2"},
++    ]
++    reads = _install_reads(
++        monkeypatch,
++        [TsvScanResult(members), TsvScanResult(snp_rows), TsvScanResult([_metadata_row("SAMN00000001")])],
++    )
++    await pathogen_detection(_cluster_input())
++    assert any("SNP_distances" in call["url"] for call in reads.calls)
++
++
+ @pytest.mark.asyncio
+ async def test_isolate_lookup_snp_distance_populated_even_when_scan_truncated(
+     monkeypatch: pytest.MonkeyPatch,
