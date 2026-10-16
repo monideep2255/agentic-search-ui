@@ -1,0 +1,419 @@
+{
+  "tool": "verify capture",
+  "format": 1,
+  "date": "2026-10-16",
+  "topic": "2026-10-16_product_check_card24",
+  "target": {
+    "name": "develop",
+    "web": "https://search-agent-web-develop-2aeb.up.railway.app",
+    "api": "https://search-agent-api-develop-43b3.up.railway.app",
+    "health": {
+      "status": 200,
+      "app_env": "develop"
+    }
+  },
+  "checkout_head": "4286a438",
+  "deployed_commit": "de53c6aa",
+  "widths": [
+    {
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "widths_complete": true,
+  "seven_day_close": "eligible if every check passes",
+  "context": {
+    "reduced_motion": "reduce",
+    "axe_tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21a",
+      "wcag21aa"
+    ],
+    "settle_ms": 1500,
+    "browser": "chromium 151.0.7922.34"
+  },
+  "screens": [
+    {
+      "name": "q112_s1_s2_confirm_line",
+      "path": "/",
+      "design": "missing",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s1_s2_confirm_line_1280.png",
+          "reached": true,
+          "seconds_to_ready": 9.7,
+          "first_screen": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s1_s2_confirm_line_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s1_s2_confirm_line_1280.txt",
+          "prototype_screenshot": null
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "screenshot": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s1_s2_confirm_line_390.png",
+          "reached": true,
+          "seconds_to_ready": 7.9,
+          "first_screen": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s1_s2_confirm_line_390_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 390,
+          "client_width": 390,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s1_s2_confirm_line_390.txt",
+          "prototype_screenshot": null
+        }
+      ]
+    },
+    {
+      "name": "q112_s2_s3_cancel_escape_then_ask_again",
+      "path": "/",
+      "design": "missing",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s2_s3_cancel_escape_then_ask_again_1280.png",
+          "reached": true,
+          "seconds_to_ready": 35.4,
+          "first_screen": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s2_s3_cancel_escape_then_ask_again_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s2_s3_cancel_escape_then_ask_again_1280.txt",
+          "prototype_screenshot": null
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "screenshot": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s2_s3_cancel_escape_then_ask_again_390.png",
+          "reached": true,
+          "seconds_to_ready": 28.9,
+          "first_screen": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s2_s3_cancel_escape_then_ask_again_390_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 390,
+          "client_width": 390,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s2_s3_cancel_escape_then_ask_again_390.txt",
+          "prototype_screenshot": null
+        }
+      ]
+    },
+    {
+      "name": "q112_s4_weather_refusal",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s4_weather_refusal_1280.png",
+          "reached": true,
+          "seconds_to_ready": 4.9,
+          "first_screen": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s4_weather_refusal_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s4_weather_refusal_1280.txt",
+          "prototype_screenshot": null
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "screenshot": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s4_weather_refusal_390.png",
+          "reached": true,
+          "seconds_to_ready": 5.3,
+          "first_screen": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s4_weather_refusal_390_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 390,
+          "client_width": 390,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s4_weather_refusal_390.txt",
+          "prototype_screenshot": null
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "result": "pass",
+      "screen": "q112_s1_s2_confirm_line",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "9.7 s",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s1_s2_confirm_line_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s1_s2_confirm_line",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s1_s2_confirm_line",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s1_s2_confirm_line",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s1_s2_confirm_line",
+      "width": 390,
+      "check": "screen reached",
+      "value": "7.9 s",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s1_s2_confirm_line_390.png"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s1_s2_confirm_line",
+      "width": 390,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s1_s2_confirm_line",
+      "width": 390,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s1_s2_confirm_line",
+      "width": 390,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s2_s3_cancel_escape_then_ask_again",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "35.4 s",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s2_s3_cancel_escape_then_ask_again_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s2_s3_cancel_escape_then_ask_again",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s2_s3_cancel_escape_then_ask_again",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s2_s3_cancel_escape_then_ask_again",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s2_s3_cancel_escape_then_ask_again",
+      "width": 390,
+      "check": "screen reached",
+      "value": "28.9 s",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s2_s3_cancel_escape_then_ask_again_390.png"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s2_s3_cancel_escape_then_ask_again",
+      "width": 390,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s2_s3_cancel_escape_then_ask_again",
+      "width": 390,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s2_s3_cancel_escape_then_ask_again",
+      "width": 390,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s4_weather_refusal",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "4.9 s",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s4_weather_refusal_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s4_weather_refusal",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s4_weather_refusal",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s4_weather_refusal",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s4_weather_refusal",
+      "width": 390,
+      "check": "screen reached",
+      "value": "5.3 s",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s4_weather_refusal_390.png"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s4_weather_refusal",
+      "width": 390,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s4_weather_refusal",
+      "width": 390,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "q112_s4_weather_refusal",
+      "width": 390,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-16_product_check_card24/run1/results.json"
+    }
+  ],
+  "awaiting_judgement": [
+    {
+      "screen": "q112_s1_s2_confirm_line",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s1_s2_confirm_line_1280.png",
+      "prototype": null,
+      "design": "missing"
+    },
+    {
+      "screen": "q112_s1_s2_confirm_line",
+      "width": 390,
+      "app": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s1_s2_confirm_line_390.png",
+      "prototype": null,
+      "design": "missing"
+    },
+    {
+      "screen": "q112_s2_s3_cancel_escape_then_ask_again",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s2_s3_cancel_escape_then_ask_again_1280.png",
+      "prototype": null,
+      "design": "missing"
+    },
+    {
+      "screen": "q112_s2_s3_cancel_escape_then_ask_again",
+      "width": 390,
+      "app": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s2_s3_cancel_escape_then_ask_again_390.png",
+      "prototype": null,
+      "design": "missing"
+    },
+    {
+      "screen": "q112_s4_weather_refusal",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s4_weather_refusal_1280.png",
+      "prototype": null,
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "q112_s4_weather_refusal",
+      "width": 390,
+      "app": "testing/Developer/reports/2026-10-16_product_check_card24/run1/q112_s4_weather_refusal_390.png",
+      "prototype": null,
+      "design": "docs/build/design/design-system/screens/answer.html"
+    }
+  ],
+  "summary": {
+    "pass": 24,
+    "fail": 0
+  }
+}

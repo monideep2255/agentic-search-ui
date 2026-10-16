@@ -1,0 +1,1229 @@
+diff --git a/src/system_03_search_agent/core/graph.py b/src/system_03_search_agent/core/graph.py
+index 04684f0e..5d571fcf 100644
+--- a/src/system_03_search_agent/core/graph.py
++++ b/src/system_03_search_agent/core/graph.py
+@@ -517,9 +517,16 @@ from system_03_search_agent.harness.coordinator_worker import (
+     coordinator_worker_execute,
+ )
+ from system_03_search_agent.harness.decide import (
++    LEAD_LATER_INSTRUCTIONS,
++    LEAD_LATER_POINT,
++    LEAD_NEEDS_EARLIER,
+     LEAD_SENTENCE_INSTRUCTIONS,
+     LEAD_SENTENCE_NEITHER,
+     LEAD_SENTENCE_POINT,
++    LEAD_STANDALONE_INSTRUCTIONS,
++    LEAD_STANDALONE_OPTIONS,
++    LEAD_STANDALONE_POINT,
++    LEAD_STANDS_ALONE,
+     MAX_LEAD_CANDIDATES,
+     decide,
+     jev_decides,
+@@ -527,6 +534,8 @@ from system_03_search_agent.harness.decide import (
+     lead_sentence_index,
+     lead_sentence_options,
+     lead_sentence_state,
++    lead_standalone_criteria,
++    lead_standalone_state,
+ )
+ from system_03_search_agent.harness.harness import (
+     Harness,
+@@ -12696,27 +12705,76 @@ _LEAD_DECISION_MIN_BUDGET_S: Final[float] = 1.5
+ #: leads, as it did before this decision existed.
+ _LEAD_DECISION_MAX_WAIT_S: Final[float] = 1.0
+ 
++#: Added to the name of a later pick or stand-alone check that finished but
++#: did not decide the opening, so a trace reader can tell it from one that
++#: did (J2-110-03, A2-110-05).
++_LEAD_UNUSED_SUFFIX: Final[str] = ".unused"
++
++
++def _mark_unused_decisions(harness: Any, unused: list[DecisionRecord]) -> None:
++    """Rename, in this run's records, each decision in `unused` (the same
++    object `_decide_point` appended) so its name ends in
++    `_LEAD_UNUSED_SUFFIX`. Nothing else about the record changes."""
++    if not unused:
++        return
++    records = _run_decisions(harness).records
++    for position, record in enumerate(records):
++        if any(record is other for other in unused):
++            records[position] = record.model_copy(
++                update={"name": f"{record.name}{_LEAD_UNUSED_SUFFIX}"}
++            )
++
++
++def _cited_positions(model_grounding: GroundingResult | None) -> list[int]:
++    """Indexes into `model_grounding.sentences` of every sentence that
++    carries a citation marker, in reading order. Only sentences the grounding
++    pass already accepted exist here, so a stripped sentence is never
++    offered, let alone leads."""
++    if model_grounding is None:
++        return []
++    return [
++        index
++        for index, sentence in enumerate(model_grounding.sentences)
++        if _MARKER_PATTERN.search(sentence)
++    ]
++
+ 
+ def _lead_candidates(
+     model_grounding: GroundingResult | None,
+     skip: frozenset[int] = frozenset(),
+ ) -> list[int]:
+-    """Indexes into `model_grounding.sentences` of the first one or two
+-    sentences that carry a citation marker.
++    """Tier A: the first two cited sentences of the model's prose, minus any
++    the prose leaves out (card 111, `_label_only_positions`).
+ 
+-    Only sentences the grounding pass already accepted exist here: this
+-    reads the pass's own output and nothing else, so a sentence it stripped
+-    can never be offered, let alone lead. `skip` holds positions the prose
+-    leaves out (card 111, `_label_only_positions`): a sentence the answer
+-    drops is never offered, so it cannot open the answer either.
++    Slice first, then drop `skip` (card 110, V-111-01): a sentence the
++    writer put third is never promoted into this window because a repeated
++    title sat first or second. It can only come through
++    `_later_lead_candidates`, with its own checks.
+     """
++    first_two = _cited_positions(model_grounding)[:MAX_LEAD_CANDIDATES]
++    return [index for index in first_two if index not in skip]
++
++
++def _later_lead_candidates(
++    model_grounding: GroundingResult | None,
++    skip: frozenset[int] = frozenset(),
++    label_by_display: Mapping[int, str] | None = None,
++) -> list[int]:
++    """Tier B (card 110): the cited sentences after the raw first two, up to
++    two of them, never a sentence the prose leaves out and never a sentence
++    made only of cited records' own titles or names (`_is_only_record_labels`),
++    one or several, joined or not. The cut to two comes after both filters,
++    so a title never takes a slot."""
+     if model_grounding is None:
+         return []
+-    return [
++    labels = dict(label_by_display or {})
++    later = [
+         index
+-        for index, sentence in enumerate(model_grounding.sentences)
+-        if index not in skip and _MARKER_PATTERN.search(sentence)
+-    ][:MAX_LEAD_CANDIDATES]
++        for index in _cited_positions(model_grounding)[MAX_LEAD_CANDIDATES:]
++        if index not in skip
++        and not _is_only_record_labels(model_grounding.sentences[index], labels)
++    ]
++    return later[:MAX_LEAD_CANDIDATES]
+ 
+ 
+ async def _lead_sentence_choice(
+@@ -12726,52 +12784,129 @@ async def _lead_sentence_choice(
+     model_grounding: GroundingResult | None,
+     budget_s: float,
+     skip: frozenset[int] = frozenset(),
++    label_by_display: Mapping[int, str] | None = None,
+ ) -> int | None:
+     """The index of the model sentence that should open the answer, or None
+-    for the code-built count line (build phase 8.7, card 2, design C).
+-
+-    One decision through the classifier seam (`_decide_point`, so Jev
+-    decides and the guard tier steps in only when Jev fails, and the record
+-    reaches `done.decisions`). Asked only when Jev is the classifier
+-    (`CLASSIFIER_PROVIDER=jev`): with the guard tier deciding alone, the
+-    question would wait on a guard call of about 2 s (answer speed report,
+-    2026-09-26) on every answer, against Jev's 0.3 to 0.8 s, so the count
+-    line leads there as before. Fails closed to None, the count line, when:
+-    there is no candidate; less than `_LEAD_DECISION_MIN_BUDGET_S` of the
+-    Write budget is left; no pick comes within `_LEAD_DECISION_MAX_WAIT_S`
+-    or what is left of the budget; no model made a usable pick; or the pick
+-    is "neither". Code reads no word of the question: the question and the
+-    candidates are only the decision's bounded `state`.
++    for the code-built count line (build phase 8.7, card 2, design C; card
++    110, second attempt).
++
++    Two paths started together inside one bound. Path A is the lead decision
++    over the first two cited sentences, exactly as before: when it picks, that
++    sentence leads at once and nothing else is read. Only when A says
++    "neither" (or makes no usable pick) is path B read: the same decision over
++    the next two cited sentences that are not a record's own title, and a
++    pick leads only when a stand-alone check of that sentence alone says it
++    needs no sentence before it. Decisions go through the classifier seam
++    (`_decide_point`); code reads no word of the question.
++
++    Asked only when Jev is the classifier (`CLASSIFIER_PROVIDER=jev`). Fails
++    closed to None, the count line, when: there is no candidate; less than
++    `_LEAD_DECISION_MIN_BUDGET_S` of the Write budget is left; A is late
++    (B is then not read); B, its check or both are late, say "neither" or
++    "needs_earlier", or make no usable pick. The whole of it, picks and
++    check, shares `min(_LEAD_DECISION_MAX_WAIT_S, budget_s - 0.5)`.
+     """
+     candidates = _lead_candidates(model_grounding, skip)
++    later = _later_lead_candidates(model_grounding, skip, label_by_display)
+     if (
+-        not candidates
++        not (candidates or later)
+         or model_grounding is None
+         or budget_s < _LEAD_DECISION_MIN_BUDGET_S
+         or not _jev_decides()
+     ):
+         return None
+-    options = lead_sentence_options(len(candidates))
+-    spec = _DecisionSpec(
+-        point=LEAD_SENTENCE_POINT,
+-        options=options,
+-        instructions=LEAD_SENTENCE_INSTRUCTIONS,
+-        criteria=lead_sentence_criteria(options),
+-        fail_open=LEAD_SENTENCE_NEITHER,
+-    )
+-    state_text = lead_sentence_state(
+-        question, [model_grounding.sentences[index] for index in candidates]
+-    )
++    sentences = model_grounding.sentences
+     wait_s = min(_LEAD_DECISION_MAX_WAIT_S, budget_s - 0.5)
++    loop = asyncio.get_running_loop()
++    deadline = loop.time() + wait_s
++    tasks: list[asyncio.Task[DecisionRecord | None]] = []
++    # Tasks whose answer decided, or could have decided, the opening. A later
++    # task that finishes but is never read stays out and is marked unused.
++    read: set[asyncio.Task[DecisionRecord | None]] = set()
++
++    def _start(spec: _DecisionSpec, text: str) -> asyncio.Task[DecisionRecord | None]:
++        task = asyncio.ensure_future(_decide_point(harness, trace_id, spec, text))
++        tasks.append(task)
++        return task
++
++    async def _within(task: asyncio.Task[DecisionRecord | None]) -> DecisionRecord | None:
++        read.add(task)
++        return await asyncio.wait_for(task, timeout=max(0.0, deadline - loop.time()))
++
+     try:
+-        record = await asyncio.wait_for(
+-            _decide_point(harness, trace_id, spec, state_text), timeout=wait_s
++        task_a = None
++        if candidates:
++            options = lead_sentence_options(len(candidates))
++            task_a = _start(
++                _DecisionSpec(
++                    point=LEAD_SENTENCE_POINT,
++                    options=options,
++                    instructions=LEAD_SENTENCE_INSTRUCTIONS,
++                    criteria=lead_sentence_criteria(options),
++                    fail_open=LEAD_SENTENCE_NEITHER,
++                ),
++                lead_sentence_state(question, [sentences[index] for index in candidates]),
++            )
++        task_b = None
++        check_tasks: list[asyncio.Task[DecisionRecord | None]] = []
++        if later:
++            later_options = lead_sentence_options(len(later))
++            task_b = _start(
++                _DecisionSpec(
++                    point=LEAD_LATER_POINT,
++                    options=later_options,
++                    instructions=LEAD_LATER_INSTRUCTIONS,
++                    criteria=lead_sentence_criteria(later_options),
++                    fail_open=LEAD_SENTENCE_NEITHER,
++                ),
++                lead_sentence_state(question, [sentences[index] for index in later]),
++            )
++            check_spec = _DecisionSpec(
++                point=LEAD_STANDALONE_POINT,
++                options=LEAD_STANDALONE_OPTIONS,
++                instructions=LEAD_STANDALONE_INSTRUCTIONS,
++                criteria=lead_standalone_criteria(),
++                fail_open=LEAD_NEEDS_EARLIER,
++            )
++            check_tasks = [
++                _start(check_spec, lead_standalone_state(sentences[index])) for index in later
++            ]
++        try:
++            if task_a is not None:
++                picked = lead_sentence_index(
++                    _usable_choice(await _within(task_a)), len(candidates)
++                )
++                if picked is not None:
++                    return candidates[picked]
++            if task_b is None:
++                return None
++            later_pick = lead_sentence_index(_usable_choice(await _within(task_b)), len(later))
++            if later_pick is None:
++                return None
++            check = _usable_choice(await _within(check_tasks[later_pick]))
++        except TimeoutError:
++            logger.warning(
++                "lead sentence decision was late (trace %s); the count line leads", trace_id
++            )
++            return None
++        return later[later_pick] if check == LEAD_STANDS_ALONE else None
++    finally:
++        for task in tasks:
++            if not task.done():
++                task.cancel()
++        await asyncio.gather(*tasks, return_exceptions=True)
++        _mark_unused_decisions(
++            harness,
++            [
++                task.result()
++                for task in tasks
++                if task not in read
++                and task.done()
++                and not task.cancelled()
++                and task.exception() is None
++                and task.result() is not None
++            ],
+         )
+-    except TimeoutError:
+-        logger.warning("lead sentence decision was late (trace %s); the count line leads", trace_id)
+-        return None
+-    picked = lead_sentence_index(_usable_choice(record), len(candidates))
+-    return None if picked is None else candidates[picked]
+ 
+ 
+ def _asked_field(
+@@ -12836,6 +12971,99 @@ def _answer_tokens(**kwargs: Any) -> list[TokenPayload]:
+ _ECHO_END_PUNCTUATION: Final[str] = " .,;:?!"
+ 
+ 
++def _repeats_one_label(sentence: str, label_by_display: dict[int, str]) -> bool:
++    """True when `sentence` is nothing but one record's own title or name,
++    said once or more, each time cited to the record that carries it.
++
++    Structure only (card 111, factored out for card 110). The sentence
++    splits at its markers; each piece, once the grounding pass's own glue
++    rule (`_clean_claim`: a leading comma or "and") is applied and end
++    punctuation (including "?" and "!") is dropped, must equal the label of
++    the record that marker cites, one label throughout, with no text after
++    the last marker. A list of different names, any other word, or a marker
++    that cites no labelled record makes this False. It reads no word of the
++    question and no word list of its own.
++    """
++    pieces = _MARKER_PATTERN.split(sentence)
++    # split() alternates text, marker number, text, marker number, ..., text.
++    texts, numbers = pieces[0::2], pieces[1::2]
++    if not numbers or texts[-1].strip(_ECHO_END_PUNCTUATION):
++        return False
++    shown_label: str | None = None
++    seen = False
++    for text, number in zip(texts, numbers, strict=False):
++        label = label_by_display.get(int(number))
++        if not label:
++            return False
++        label_key = label.strip(_ECHO_END_PUNCTUATION).casefold()
++        if shown_label is None:
++            shown_label = label_key
++        elif label_key != shown_label:
++            return False
++        shown = _clean_claim(text).strip(_ECHO_END_PUNCTUATION).casefold()
++        if shown:
++            if shown != shown_label:
++                return False
++            seen = True
++        elif not seen:
++            return False
++    return True
++
++
++_LABEL_DASHES: Final[dict[int, str]] = dict.fromkeys(
++    map(ord, "\u2010\u2011\u2012\u2013\u2014\u2015\u2212\ufe58\ufe63\uff0d"), "-"
++)
++_LABEL_QUOTES: Final[dict[int, None]] = dict.fromkeys(
++    map(
++        ord,
++        "\"'`\u00b4\u00ab\u00bb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a",
++    )
++)
++
++
++def _label_form(text: str) -> str:
++    """`text` as the later path's title filter compares it: compatibility
++    forms folded (a no-break space or hyphen becomes the plain one), every
++    dash a hyphen, every quotation mark and apostrophe dropped, whitespace
++    collapsed, case folded. Straight and curly forms read the same."""
++    folded = unicodedata.normalize("NFKC", text).translate(_LABEL_DASHES).translate(_LABEL_QUOTES)
++    return " ".join(folded.split()).casefold()
++
++
++def _is_only_record_labels(sentence: str, label_by_display: Mapping[int, str]) -> bool:
++    """True when `sentence` is nothing but cited records' own titles or
++    names (card 110, J2-110-06 and 07, A2-110-02 and 03): one or several,
++    each cited to the record that carries it, joined by the grounding pass's
++    own glue (`_clean_claim`: a leading comma, "and", "or") or by nothing.
++
++    Used by the later path only, so card 111's `_repeats_one_label` and the
++    prose it decides stay as they were. Structure only: the label fields are
++    the ones `_lead_label_map` reads; no word list of its own. A sentence
++    with any other word, text after the last marker, or a marker that cites
++    no labelled record is not label-only. Quotation marks, dashes and
++    spacing do not tell a title from itself.
++    """
++    pieces = _MARKER_PATTERN.split(sentence)
++    texts, numbers = pieces[0::2], pieces[1::2]
++    if not numbers or _label_form(texts[-1]).strip(_ECHO_END_PUNCTUATION):
++        return False
++    seen = False
++    for text, number in zip(texts, numbers, strict=False):
++        label_key = _label_form(label_by_display.get(int(number)) or "").strip(
++            _ECHO_END_PUNCTUATION
++        )
++        if not label_key:
++            return False
++        shown = _clean_claim(_label_form(text)).strip(_ECHO_END_PUNCTUATION)
++        if shown:
++            if shown != label_key:
++                return False
++            seen = True
++        elif not seen:
++            return False
++    return True
++
++
+ def _is_label_only_sentence(
+     sentence: str,
+     label_by_display: dict[int, str],
+@@ -12850,77 +13078,68 @@ def _is_label_only_sentence(
+ 
+     - it repeats ONE name or title: a list of different names is an answer
+       to "which ...", and a single title can state a finding, so neither is
+-      ever matched;
++      ever matched (`_repeats_one_label`);
+     - that name is cited to two or more different records (two markers);
+     - every marker it carries is in `listed_markers`, the markers of the
+       listing shown, so the records are named there. With no listing the
+       set is empty and nothing matches.
+ 
+-    Structure only. The sentence splits at its markers; each piece, once the
+-    grounding pass's own glue rule (`_clean_claim`: a leading comma or
+-    "and") is applied and end punctuation (including "?" and "!") is
+-    dropped, must equal the label of the record that marker cites. Any other
+-    word, any text after the last marker or a marker that cites no labelled
+-    record makes this False. It reads no word of the question and no word
+-    list of its own.
+-
+     Args:
+         sentence: A grounded sentence with its `[n]` display markers.
+         label_by_display: Display number to the cited record's title or name.
+         listed_markers: Display numbers the listing shown cites.
+     """
+-    pieces = _MARKER_PATTERN.split(sentence)
+-    # split() alternates text, marker number, text, marker number, ..., text.
+-    texts, numbers = pieces[0::2], pieces[1::2]
+-    if len(set(numbers)) < 2 or texts[-1].strip(_ECHO_END_PUNCTUATION):
++    numbers = _MARKER_PATTERN.findall(sentence)
++    if len(set(numbers)) < 2:
+         return False
+     if not all(int(number) in listed_markers for number in numbers):
+         return False
+-    shown_label: str | None = None
+-    seen = False
+-    for text, number in zip(texts, numbers, strict=False):
+-        label = label_by_display.get(int(number))
+-        if not label:
+-            return False
+-        label_key = label.strip(_ECHO_END_PUNCTUATION).casefold()
+-        if shown_label is None:
+-            shown_label = label_key
+-        elif label_key != shown_label:
+-            return False
+-        shown = _clean_claim(text).strip(_ECHO_END_PUNCTUATION).casefold()
+-        if shown:
+-            if shown != shown_label:
+-                return False
+-            seen = True
+-        elif not seen:
+-            return False
+-    return True
++    return _repeats_one_label(sentence, label_by_display)
+ 
+ 
+-def _label_only_positions(
+-    sentences: Sequence[str],
++#: Fields whose value the later path's label-only filter reads as a record's
++#: own name: the listing's label fields, plus a record's listed clinical
++#: feature (card 110, A2-110-03: "Ectopia lentis [19] and glaucoma [27]." is
++#: two feature values, not a sentence). Card 111's prose rule keeps reading
++#: `LABEL_FIELDS` alone.
++_LATER_LABEL_FIELDS: Final[tuple[str, ...]] = (*LABEL_FIELDS, "clinical_features")
++
++
++def _lead_label_map(
+     citations: Sequence[CitationPayload],
+     synth_findings: Sequence[SynthFinding],
+-    listing_sentences: Sequence[str],
+-) -> set[int]:
+-    """Positions in `sentences` that card 111's rule would leave out of the
+-    prose: see `_is_label_only_sentence`. One function for both readers, the
+-    prose (`_answer_parts`) and the lead candidates (`_lead_candidates`), so a
+-    sentence the prose drops can never open the answer.
+-
+-    The label fields are `answer_layout.LABEL_FIELDS`, the list that decides
+-    what a listing row shows as its record's name."""
+-    citation_by_display = {citation.display_index: citation for citation in citations}
++    fields: Sequence[str] = LABEL_FIELDS,
++) -> dict[int, str]:
++    """Display number to the cited record's own title or name: the field
++    `answer_layout.LABEL_FIELDS` names, the list that decides what a listing
++    row shows as its record's name. `fields` widens it for the later path."""
+     finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
++    # The last citation per display number wins, then it is labelled or not:
++    # the order card 111 read them in (J2-110-01).
++    citation_by_display = {cited.display_index: cited for cited in citations}
+     label_by_display: dict[int, str] = {}
+     for display_index, cited in citation_by_display.items():
+         cited_finding = finding_by_citation_id.get(cited.citation_id)
+         if (
+             cited_finding is not None
+-            and cited_finding.field in LABEL_FIELDS
++            and cited_finding.field in fields
+             and cited_finding.field_value.strip()
+         ):
+             label_by_display[display_index] = cited_finding.field_value
++    return label_by_display
++
++
++def _label_only_positions(
++    sentences: Sequence[str],
++    citations: Sequence[CitationPayload],
++    synth_findings: Sequence[SynthFinding],
++    listing_sentences: Sequence[str],
++) -> set[int]:
++    """Positions in `sentences` that card 111's rule would leave out of the
++    prose: see `_is_label_only_sentence`. One function for both readers, the
++    prose (`_answer_parts`) and the lead candidates (`_lead_candidates`), so a
++    sentence the prose drops can never open the answer."""
++    label_by_display = _lead_label_map(citations, synth_findings)
+     listed_markers = frozenset(
+         int(number) for line in listing_sentences for number in _MARKER_PATTERN.findall(line)
+     )
+@@ -15134,6 +15353,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+                     if model_grounding is not None
+                     else ()
+                 ),
++                label_by_display=_lead_label_map(
++                    citations, synth_findings, _LATER_LABEL_FIELDS
++                ),
+             )
+             if summary_sentence
+             else None
+diff --git a/src/system_03_search_agent/harness/decide.py b/src/system_03_search_agent/harness/decide.py
+index 71b9db30..62671641 100644
+--- a/src/system_03_search_agent/harness/decide.py
++++ b/src/system_03_search_agent/harness/decide.py
+@@ -596,6 +596,10 @@ MAX_LEAD_CANDIDATES: Final[int] = len(LEAD_SENTENCE_PICKS)
+ _LEAD_CANDIDATE_MAX_CHARS: Final[int] = 1200
+ _LEAD_QUESTION_MAX_CHARS: Final[int] = 1000
+ 
++#: The most one standalone check reads of a sentence. A check reads one
++#: sentence, so it never shares `state` with another.
++_STANDALONE_SENTENCE_MAX_CHARS: Final[int] = 2000
++
+ LEAD_SENTENCE_INSTRUCTIONS: Final[str] = (
+     "The state is a question a person typed into a biomedical evidence search "
+     "engine, then the first one or two sentences of the written answer, each "
+@@ -662,6 +666,66 @@ def lead_sentence_state(question: str, candidates: Sequence[str]) -> str:
+     return "\n\n".join(parts)[:_STATE_MAX_CHARS]
+ 
+ 
++#: The later path (card 110, second attempt). Asked only when the first two
++#: cited sentences did not answer: the same lead decision over the third and
++#: fourth, under its own point name so the trace tells the two apart.
++LEAD_LATER_POINT: Final[str] = "write.lead_later_sentence"
++
++#: The later pick reads sentences taken from later in the answer, so it is
++#: told that: its state is not the start of the answer (A2-110-01,
++#: J2-110-04).
++LEAD_LATER_INSTRUCTIONS: Final[str] = (
++    "The state is a question a person typed into a biomedical evidence search "
++    "engine, then one or two sentences taken from later in a written answer, "
++    "each already checked word for word against the record it cites. The "
++    "sentences before them are not shown. Decide whether one of the "
++    "sentences, read on its own as the opening line, answers what the "
++    "question asks."
++)
++
++#: The standalone check. A later pick opens the answer only when this
++#: decision, asked for that one sentence alone, says it needs no sentence
++#: before it.
++LEAD_STANDALONE_POINT: Final[str] = "write.lead_stands_alone"
++LEAD_STANDS_ALONE: Final[str] = "stands_alone"
++LEAD_NEEDS_EARLIER: Final[str] = "needs_earlier"
++LEAD_STANDALONE_OPTIONS: Final[tuple[str, ...]] = (LEAD_STANDS_ALONE, LEAD_NEEDS_EARLIER)
++
++LEAD_STANDALONE_INSTRUCTIONS: Final[str] = (
++    "The state is one sentence taken from inside a written answer, already "
++    "checked word for word against the record it cites. Decide whether a "
++    "reader who has seen nothing before it could open an answer with this "
++    "sentence: it names the things it talks about, and no part of it depends "
++    "on an earlier sentence to be understood."
++)
++
++_LEAD_STANDALONE_CRITERIA: Final[dict[str, str]] = {
++    LEAD_STANDS_ALONE: (
++        "Read alone, every thing the sentence talks about is named in the sentence "
++        "itself, or is given by the sentence itself, such as a list it goes on to "
++        "state, so a reader who has seen nothing else knows what it is about."
++    ),
++    LEAD_NEEDS_EARLIER: (
++        "Read alone, some part of the sentence points to something that is not "
++        "named in it, so a reader would have to read an earlier sentence to know "
++        "what it refers to or what it continues."
++    ),
++}
++
++
++def lead_standalone_criteria() -> dict[str, str]:
++    """The two fixed criteria for the standalone check, as `decide()` requires."""
++    return dict(_LEAD_STANDALONE_CRITERIA)
++
++
++def lead_standalone_state(sentence: str) -> str:
++    """The bounded text the standalone check reads: the sentence alone, with
++    its citation markers removed. Not the question: the check is about the
++    sentence's own wording."""
++    plain = _MARKERS_IN_TEXT.sub("", sentence).strip()[:_STANDALONE_SENTENCE_MAX_CHARS]
++    return f"Sentence: {plain}"
++
++
+ def lead_sentence_index(choice: str | None, candidate_count: int) -> int | None:
+     """The candidate a usable pick names, or None for "neither" and anything
+     else, so every path but a named candidate leaves the code-built line
+diff --git a/tests/system_03_search_agent/core/test_write_answers_sooner.py b/tests/system_03_search_agent/core/test_write_answers_sooner.py
+index 3d59812b..984c306c 100644
+--- a/tests/system_03_search_agent/core/test_write_answers_sooner.py
++++ b/tests/system_03_search_agent/core/test_write_answers_sooner.py
+@@ -33,6 +33,7 @@ from __future__ import annotations
+ import asyncio
+ import re
+ import time
++from types import SimpleNamespace
+ from unittest.mock import AsyncMock
+ 
+ import pytest
+@@ -1535,3 +1536,543 @@ async def test_a_call_is_checked_on_the_prompt_it_actually_sends(
+             harness, "trace-big-prompt", "synth", "write", messages, budget_s=5.0
+         )
+     assert calls == [], calls
++
++
++# ---------------------------------------------------------------------------
++# Card 110, second attempt: the later path. Develop's two-candidate pick
++# stays as it was; a separate path may offer the third and fourth cited
++# sentences, each with a stand-alone check, only when the first pick says
++# "neither", inside the same 1 s bound.
++# ---------------------------------------------------------------------------
++
++
++def _record(choice: str | None) -> object:
++    """A decision record as `_usable_choice` reads it."""
++    return SimpleNamespace(jev_choice=choice, guard_choice=None, chosen=choice or "neither")
++
++
++def _later_seam(
++    monkeypatch: pytest.MonkeyPatch,
++    *,
++    a: tuple[str, float] = ("neither", 0.0),
++    b: tuple[str, float] = ("first", 0.0),
++    check: dict[str, tuple[str, float]] | tuple[str, float] = ("stands_alone", 0.0),
++) -> list[tuple[str, str]]:
++    """Fake `_decide_point` keyed by the decision's point; a check is keyed by
++    the sentence text it is given (a dict) or answers the same everywhere (a
++    tuple). Each answer comes after its own delay, counted from the start of
++    the call, so the three decisions run side by side as they do live.
++    Returns every (point, state) asked."""
++    asked: list[tuple[str, str]] = []
++
++    async def _decide(_harness: object, _trace: str, spec: object, text: str) -> object:
++        point = spec.point  # type: ignore[attr-defined]
++        asked.append((point, text))
++        if point == "write.lead_sentence":
++            choice, delay = a
++        elif point == "write.lead_later_sentence":
++            choice, delay = b
++        else:
++            if isinstance(check, dict):
++                key = next(k for k in check if k in text)
++                choice, delay = check[key]
++            else:
++                choice, delay = check
++        await asyncio.sleep(delay)
++        return _record(choice)
++
++    monkeypatch.setattr(graph_module, "_decide_point", _decide)
++    return asked
++
++
++def _grounded(*sentences: str) -> GroundingResult:
++    return GroundingResult(
++        narrative="x",
++        claims=[],
++        stripped_count=0,
++        refused=False,
++        sentences=sentences,
++        sentence_origins=tuple(range(len(sentences))),
++    )
++
++
++FOUR = (
++    "Alpha one is about the first thing [1].",
++    "Alpha two is about the second thing [2].",
++    "Gamma three names every symptom it describes [3].",
++    "Delta four names every symptom it describes [4].",
++)
++
++
++async def _choose(
++    grounding: GroundingResult,
++    *,
++    skip: frozenset[int] = frozenset(),
++    labels: dict[int, str] | None = None,
++    budget_s: float = 40.0,
++) -> int | None:
++    return await graph_module._lead_sentence_choice(
++        harness_module.Harness(trace_id="t110"),
++        "t110",
++        "A question?",
++        grounding,
++        budget_s,
++        skip=skip,
++        label_by_display=labels,
++    )
++
++
++@pytest.mark.asyncio
++async def test_the_third_cited_sentence_leads_when_the_first_two_do_not_and_it_stands_alone(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    """The gain. Mutation that turns this red: tier B never built."""
++    asked = _later_seam(monkeypatch)
++
++    assert await _choose(_grounded(*FOUR)) == 2
++    assert {point for point, _ in asked} == {
++        "write.lead_sentence",
++        "write.lead_later_sentence",
++        "write.lead_stands_alone",
++    }
++
++
++@pytest.mark.asyncio
++async def test_a_later_sentence_that_needs_an_earlier_one_leaves_the_count_line_leading(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    """Mutation that turns this red: the check's answer ignored."""
++    _later_seam(monkeypatch, check=("needs_earlier", 0.0))
++
++    assert await _choose(_grounded(*FOUR)) is None
++
++
++@pytest.mark.asyncio
++async def test_a_record_title_is_never_a_later_candidate() -> None:
++    """Mutations that turn this red: `_is_only_record_labels` returning False
++    always; or the two-record test left in it."""
++    title = "Preneoplastic stromal cells promote tumorigenesis"
++    grounding = _grounded(
++        "One [1].",
++        "Two [2].",
++        f"{title} [3].",
++        f"{title} [3] {title} [4].",
++        "Name A [5], Name B [6].",
++        "Name A [5] and Name B [6] and Name C [7].",
++    )
++    labels = {3: title, 4: title, 5: "Name A", 6: "Name B", 7: "Name C"}
++
++    assert graph_module._is_only_record_labels(grounding.sentences[2], labels)
++    assert graph_module._is_only_record_labels(grounding.sentences[3], labels)
++    # A list of names that are all record names is label-only too (J2-110-07).
++    assert graph_module._is_only_record_labels(grounding.sentences[4], labels)
++    assert graph_module._is_only_record_labels(grounding.sentences[5], labels)
++    # Card 111's own test is untouched: a list of different names is not it.
++    assert not graph_module._repeats_one_label(grounding.sentences[4], labels)
++    # Titles never take a slot: the cut to two comes after the filter.
++    later = _grounded("One [1].", "Two [2].", f"{title} [3].", "Names A [5], then more [6].", "Z [8].")
++    assert graph_module._later_lead_candidates(later, frozenset(), labels) == [3, 4]
++
++
++@pytest.mark.asyncio
++async def test_a_first_or_second_pick_returns_at_once_and_never_waits_for_the_later_path(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    """Mutation that turns this red: a hung tier B task the result waits on."""
++    _later_seam(monkeypatch, a=("second", 0.0), b=("first", 30.0), check=("stands_alone", 30.0))
++
++    started = time.monotonic()
++    assert await _choose(_grounded(*FOUR)) == 1
++    assert time.monotonic() - started < 0.3
++
++
++@pytest.mark.asyncio
++async def test_each_check_is_read_for_its_own_sentence(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    """The checks finish out of order; the pick is the second later sentence.
++    Mutation that turns this red: reading `checks[0]`."""
++    _later_seam(
++        monkeypatch,
++        b=("second", 0.0),
++        check={"Gamma": ("needs_earlier", 0.4), "Delta": ("stands_alone", 0.05)},
++    )
++
++    assert await _choose(_grounded(*FOUR)) == 3
++
++    _later_seam(
++        monkeypatch,
++        b=("first", 0.0),
++        check={"Gamma": ("needs_earlier", 0.4), "Delta": ("stands_alone", 0.05)},
++    )
++    assert await _choose(_grounded(*FOUR)) is None
++
++
++@pytest.mark.asyncio
++async def test_the_pick_and_the_check_share_one_bound(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    """A says "neither" at 0.5 s, B picks at 0.6 s, the check lands at 1.05 s:
++    the count line, within the 1 s bound. Mutation that turns this red:
++    giving the check a fresh second."""
++    _later_seam(monkeypatch, a=("neither", 0.5), b=("first", 0.6), check=("stands_alone", 1.05))
++
++    started = time.monotonic()
++    assert await _choose(_grounded(*FOUR)) is None
++    assert time.monotonic() - started <= 1.0 + 0.03
++
++
++@pytest.mark.asyncio
++async def test_a_late_first_pick_leaves_the_count_line_without_reading_the_later_path(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    """B finished early with a good pick and a passing check; A is late."""
++    _later_seam(monkeypatch, a=("neither", 1.5), b=("first", 0.0), check=("stands_alone", 0.0))
++
++    assert await _choose(_grounded(*FOUR)) is None
++
++
++def test_tier_a_never_holds_a_sentence_beyond_the_raw_first_two() -> None:
++    """V-111-01. Mutation that turns this red: filter-then-slice restored."""
++    grounding = _grounded(*FOUR)
++
++    assert graph_module._lead_candidates(grounding, frozenset({0})) == [1]
++    assert graph_module._lead_candidates(grounding) == [0, 1]
++
++
++@pytest.mark.asyncio
++async def test_a_sentence_that_slid_out_of_the_first_two_is_offered_only_through_the_later_path(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    """Mutation that turns this red: filter-then-slice restored."""
++    asked = _later_seam(monkeypatch, a=("neither", 0.0), b=("first", 0.0))
++
++    assert await _choose(_grounded(*FOUR), skip=frozenset({0})) == 2
++    point_a = next(text for point, text in asked if point == "write.lead_sentence")
++    assert "Gamma three" not in point_a
++    point_b = next(text for point, text in asked if point == "write.lead_later_sentence")
++    assert "Gamma three" in point_b
++
++
++@pytest.mark.asyncio
++async def test_every_started_task_is_done_or_cancelled_on_return(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    """Mutation that turns this red: the `finally` removed."""
++    _later_seam(monkeypatch, a=("first", 0.0), b=("first", 30.0), check=("stands_alone", 30.0))
++
++    assert await _choose(_grounded(*FOUR)) == 0
++    others = [t for t in asyncio.all_tasks() if t is not asyncio.current_task() and not t.done()]
++    assert others == []
++
++
++# ---------------------------------------------------------------------------
++# Card 110, fix round: the later path's title filter, the later pick's own
++# instructions, the trace and the label map.
++# ---------------------------------------------------------------------------
++
++TITLE = "Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis"
++OTHER_TITLE = "Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer"
++
++
++@pytest.mark.parametrize(
++    "sentence",
++    [
++        # J2-110-06 and A2-110-02, the reviewers' sentence, curly quotes.
++        f"\u201c{TITLE}\u201d [19].",
++        # Straight quotes, an en dash for the hyphen, a doubled space, a
++        # typographic apostrophe around the title, a no-break hyphen.
++        f'"{TITLE}" [19].',
++        TITLE.replace("-", "\u2013") + " [19].",
++        TITLE.replace(" ", "  ") + " [19].",
++        TITLE.replace("-", "\u2011") + " [19].",
++        f"\u2018{TITLE}\u2019 [19].",
++    ],
++)
++def test_a_title_in_quotes_or_with_other_dashes_is_still_a_record_title(sentence: str) -> None:
++    """J2-110-06 and A2-110-02. Mutation that turns this red: compare the
++    sentence with the label without `_label_form`."""
++    assert graph_module._is_only_record_labels(sentence, {19: TITLE})
++    assert graph_module._later_lead_candidates(
++        _grounded("One [1].", "Two [2].", sentence), frozenset(), {19: TITLE}
++    ) == []
++
++
++def test_a_label_in_a_label_map_with_an_en_dash_matches_a_sentence_with_a_hyphen() -> None:
++    en_dash_label = TITLE.replace("-", "\u2013")
++    assert graph_module._is_only_record_labels(f"{TITLE} [19].", {19: en_dash_label})
++
++
++@pytest.mark.parametrize(
++    "sentence",
++    [
++        f"{TITLE} [14] and {OTHER_TITLE} [10].",
++        f"{TITLE} [14], {OTHER_TITLE} [10].",
++        f"{TITLE} [14] or {OTHER_TITLE} [10].",
++        f"{TITLE} [14] {OTHER_TITLE} [10].",
++        f"{TITLE} [14], {OTHER_TITLE} [10], and {TITLE} [14].",
++        # The reviewers' fragment, with its two items as record names.
++        "Ectopia lentis [14] and glaucoma [10].",
++        "Ectopia lentis [14], glaucoma [10].",
++        "Ectopia lentis [14] or glaucoma [10]?",
++        "Ectopia lentis [14] glaucoma [10]",
++    ],
++)
++def test_a_sentence_made_only_of_record_names_or_titles_is_never_a_later_candidate(
++    sentence: str,
++) -> None:
++    """J2-110-07 and A2-110-03: joined by a comma, "and", "or" or nothing,
++    one record or several. Mutation that turns this red: require one label
++    throughout, as `_repeats_one_label` does."""
++    labels = {
++        14: TITLE if "Ectopia" not in sentence else "Ectopia lentis",
++        10: OTHER_TITLE if "Ectopia" not in sentence else "glaucoma",
++    }
++
++    assert graph_module._is_only_record_labels(sentence, labels)
++    assert (
++        graph_module._later_lead_candidates(
++            _grounded("One [1].", "Two [2].", sentence), frozenset(), labels
++        )
++        == []
++    )
++
++
++@pytest.mark.parametrize(
++    "sentence",
++    [
++        # A name with words around it states something, so it can answer.
++        "Ectopia lentis [14] is a feature of it.",
++        "Features include ectopia lentis [14] and glaucoma [10].",
++        "Ectopia lentis [14] and glaucoma [10] are features.",
++        "Ectopia lentis [14] and glaucoma [11].",
++        "Ectopia lentis and glaucoma [10].",
++        "Ectopia lentis [14] and also glaucoma [10] extra [10].",
++    ],
++)
++def test_a_sentence_with_any_other_word_is_still_a_later_candidate(sentence: str) -> None:
++    labels = {14: "Ectopia lentis", 10: "glaucoma"}
++
++    assert not graph_module._is_only_record_labels(sentence, labels)
++
++
++def test_the_label_filter_reads_only_the_label_map_no_word_list() -> None:
++    """Whatever the record's own label says is what counts; with no label for
++    a marker, nothing is label-only."""
++    assert graph_module._is_only_record_labels("Anything at all [3].", {3: "Anything at all"})
++    assert not graph_module._is_only_record_labels("Anything at all [3].", {})
++    assert not graph_module._is_only_record_labels("[3].", {3: "x"})
++
++
++def test_the_label_map_keeps_the_last_citation_per_display_number_as_develop_did() -> None:
++    """J2-110-01. Display 2 is carried by an earlier labelled citation and a
++    later unlabelled one: the later one wins, so display 2 has no label and
++    card 111's left-out set equals develop's. Mutation that turns this red:
++    iterate `citations` directly."""
++    citations = [
++        SimpleNamespace(display_index=1, citation_id="a"),
++        SimpleNamespace(display_index=2, citation_id="b"),
++        SimpleNamespace(display_index=2, citation_id="c"),
++    ]
++    findings = [
++        SimpleNamespace(citation_id="a", field="name", field_value="Marfan syndrome"),
++        SimpleNamespace(citation_id="b", field="name", field_value="Marfan syndrome"),
++        SimpleNamespace(citation_id="c", field="abstract", field_value="text"),
++    ]
++    sentence = "Marfan syndrome [1] and Marfan syndrome [2]."
++
++    assert graph_module._lead_label_map(citations, findings) == {1: "Marfan syndrome"}
++    assert (
++        graph_module._label_only_positions([sentence], citations, findings, ["x [1]", "y [2]"])
++        == set()
++    )
++
++
++def _recording_seam(
++    monkeypatch: pytest.MonkeyPatch,
++    answers: dict[str, tuple[str, float]],
++    harness: object,
++) -> None:
++    """Fake `_decide_point` that records a real `DecisionRecord` in the run's
++    decisions the moment it finishes, as the real one does."""
++    from system_03_search_agent.contracts.events import DecisionRecord
++
++    async def _decide(h: object, _trace: str, spec: object, text: str) -> object:
++        point = spec.point  # type: ignore[attr-defined]
++        key = point
++        if point == "write.lead_stands_alone":
++            key = next((k for k in answers if k.startswith("check:") and k[6:] in text), point)
++        choice, delay = answers[key]
++        await asyncio.sleep(delay)
++        record = DecisionRecord(
++            name=point,
++            options=list(spec.options),  # type: ignore[attr-defined]
++            chosen=choice,
++            decided_by="jev",
++            jev_choice=choice,
++        )
++        graph_module._run_decisions(h).records.append(record)
++        return record
++
++    monkeypatch.setattr(graph_module, "_decide_point", _decide)
++
++
++def _names(harness: object) -> list[str]:
++    return sorted(r.name for r in graph_module._run_decisions(harness).records)
++
++
++@pytest.mark.asyncio
++async def test_a_later_pick_and_checks_that_did_not_decide_the_opening_are_marked(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    """J2-110-03 and A2-110-05. Tier A picks; tier B and both checks finished
++    first and were never read. Mutation that turns this red: drop the
++    marking."""
++    harness = harness_module.Harness(trace_id="t110")
++    _recording_seam(
++        monkeypatch,
++        {
++            "write.lead_sentence": ("first", 0.15),
++            "write.lead_later_sentence": ("first", 0.0),
++            "check:Gamma": ("stands_alone", 0.0),
++            "check:Delta": ("needs_earlier", 0.0),
++        },
++        harness,
++    )
++
++    chosen = await graph_module._lead_sentence_choice(
++        harness, "t110", "A question?", _grounded(*FOUR), 40.0
++    )
++
++    assert chosen == 0
++    assert _names(harness) == [
++        "write.lead_later_sentence.unused",
++        "write.lead_sentence",
++        "write.lead_stands_alone.unused",
++        "write.lead_stands_alone.unused",
++    ]
++
++
++@pytest.mark.asyncio
++async def test_a_late_first_pick_marks_the_finished_later_records_unused(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    """Tier A is late (no record of its own); the later pick and its check
++    finished but were not read, so the count line leads and both are marked."""
++    harness = harness_module.Harness(trace_id="t110")
++    _recording_seam(
++        monkeypatch,
++        {
++            "write.lead_sentence": ("neither", 1.5),
++            "write.lead_later_sentence": ("first", 0.0),
++            "check:Gamma": ("stands_alone", 0.0),
++            "check:Delta": ("stands_alone", 0.0),
++        },
++        harness,
++    )
++
++    assert (
++        await graph_module._lead_sentence_choice(
++            harness, "t110", "A question?", _grounded(*FOUR), 40.0
++        )
++        is None
++    )
++    assert _names(harness) == [
++        "write.lead_later_sentence.unused",
++        "write.lead_stands_alone.unused",
++        "write.lead_stands_alone.unused",
++    ]
++
++
++@pytest.mark.asyncio
++async def test_the_later_records_that_decided_the_opening_keep_their_names(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    """Tier A says neither, tier B picks the first later sentence, that
++    sentence's check passes it: those three keep their names; only the other
++    sentence's check is marked."""
++    harness = harness_module.Harness(trace_id="t110")
++    _recording_seam(
++        monkeypatch,
++        {
++            "write.lead_sentence": ("neither", 0.0),
++            "write.lead_later_sentence": ("first", 0.0),
++            "check:Gamma": ("stands_alone", 0.0),
++            "check:Delta": ("needs_earlier", 0.0),
++        },
++        harness,
++    )
++
++    chosen = await graph_module._lead_sentence_choice(
++        harness, "t110", "A question?", _grounded(*FOUR), 40.0
++    )
++
++    assert chosen == 2
++    assert _names(harness) == [
++        "write.lead_later_sentence",
++        "write.lead_sentence",
++        "write.lead_stands_alone",
++        "write.lead_stands_alone.unused",
++    ]
++
++
++@pytest.mark.asyncio
++async def test_the_later_pick_is_asked_with_its_own_instructions(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    """A2-110-01 and J2-110-04: tier A keeps develop's instructions; the
++    later pick gets the ones that say it reads later sentences. Mutation that
++    turns this red: hand the later pick `LEAD_SENTENCE_INSTRUCTIONS`."""
++    seen: dict[str, str] = {}
++
++    async def _decide(_harness: object, _trace: str, spec: object, _text: str) -> object:
++        seen[spec.point] = spec.instructions  # type: ignore[attr-defined]
++        return _record("neither")
++
++    monkeypatch.setattr(graph_module, "_decide_point", _decide)
++
++    await _choose(_grounded(*FOUR))
++
++    assert seen["write.lead_sentence"] == decide_module.LEAD_SENTENCE_INSTRUCTIONS
++    assert seen["write.lead_later_sentence"] == decide_module.LEAD_LATER_INSTRUCTIONS
++    assert len(seen["write.lead_later_sentence"]) <= 1000
++
++
++def _feature_records() -> tuple[list[SimpleNamespace], list[SimpleNamespace]]:
++    """Citations and findings shaped like the d66_2 run: each listed clinical
++    feature is its own citation whose finding field is `clinical_features`."""
++    values = {19: "Ectopia lentis", 27: "Glaucoma", 28: "Myopia"}
++    citations = [SimpleNamespace(display_index=n, citation_id=f"ne-{n}") for n in values]
++    findings = [
++        SimpleNamespace(citation_id=f"ne-{n}", field="clinical_features", field_value=v)
++        for n, v in values.items()
++    ]
++    return citations, findings
++
++
++def test_a_fragment_of_listed_clinical_features_is_never_a_later_candidate() -> None:
++    """A2-110-03 on its real record shape: the words sit in `clinical_features`.
++    Fails before the later path read that field. Mutation that turns this red:
++    drop "clinical_features" from `_LATER_LABEL_FIELDS`."""
++    citations, findings = _feature_records()
++    labels = graph_module._lead_label_map(citations, findings, graph_module._LATER_LABEL_FIELDS)
++    grounding = _grounded("One [1].", "Two [2].", "Ectopia lentis [19] and glaucoma [27].")
++
++    assert graph_module._later_lead_candidates(grounding, frozenset(), labels) == []
++    # Card 111's own map still reads the label fields alone.
++    assert graph_module._lead_label_map(citations, findings) == {}
++
++
++def test_a_sentence_that_says_what_the_features_are_is_still_a_later_candidate() -> None:
++    """The full sentence carries words that are no record's value. Mutation
++    that turns this red: treat any sentence that cites feature records as
++    label-only."""
++    citations, findings = _feature_records()
++    labels = graph_module._lead_label_map(citations, findings, graph_module._LATER_LABEL_FIELDS)
++    sentence = (
++        "MedGen lists these clinical features: Ectopia lentis [19], Glaucoma [27] "
++        "and Myopia [28]."
++    )
++    grounding = _grounded("One [1].", "Two [2].", sentence)
++
++    assert graph_module._later_lead_candidates(grounding, frozenset(), labels) == [2]
+diff --git a/tests/system_03_search_agent/harness/test_decide.py b/tests/system_03_search_agent/harness/test_decide.py
+index 674325f0..5df6d1be 100644
+--- a/tests/system_03_search_agent/harness/test_decide.py
++++ b/tests/system_03_search_agent/harness/test_decide.py
+@@ -1022,3 +1022,81 @@ def test_no_live_path_names_the_offline_comparison() -> None:
+         and any(name in path.read_text() for name in ("compare_models", "ModelComparison", "compare_classifiers"))
+     ]
+     assert offenders == []
++
++
++def test_the_standalone_decision_has_two_options_each_with_a_criterion() -> None:
++    """The check beside a later pick: its own point, two picks, one fixed
++    criterion each, accepted by `decide()`'s own description check."""
++    options = decide_module.LEAD_STANDALONE_OPTIONS
++    criteria = decide_module.lead_standalone_criteria()
++
++    assert options == ("stands_alone", "needs_earlier")
++    assert set(criteria) == set(options)
++    assert decide_module.LEAD_STANDALONE_POINT != decide_module.LEAD_SENTENCE_POINT
++    assert decide_module.LEAD_LATER_POINT not in {
++        decide_module.LEAD_SENTENCE_POINT,
++        decide_module.LEAD_STANDALONE_POINT,
++    }
++    decide_module._check_description(
++        decide_module.LEAD_STANDALONE_POINT,
++        options,
++        decide_module.LEAD_STANDALONE_INSTRUCTIONS,
++        criteria,
++    )
++
++
++def test_the_standalone_state_is_the_sentence_alone_and_bounded() -> None:
++    """No question, no markers, and no more than the cap. Mutation: drop the
++    cap, or add the question to the state."""
++    state = decide_module.lead_standalone_state("It is a gene [3] on chromosome 17 [4].")
++    assert state == "Sentence: It is a gene on chromosome 17."
++
++    long_state = decide_module.lead_standalone_state("L" * 5000)
++    assert len(long_state) == len("Sentence: ") + decide_module._STANDALONE_SENTENCE_MAX_CHARS
++
++
++def test_the_later_point_and_the_standalone_texts_name_no_question_word() -> None:
++    """No hardcoded decisions: the classifier texts carry no word of any test
++    question and no pointer word. Mutation: put one of them into a text."""
++    texts = " ".join(
++        [
++            decide_module.LEAD_STANDALONE_INSTRUCTIONS,
++            *decide_module.lead_standalone_criteria().values(),
++            decide_module.LEAD_LATER_POINT,
++        ]
++    ).lower()
++    for word in (
++        "marfan",
++        "brca1",
++        "disease",
++        "gene",
++        "medgen",
++        "these",
++        "one is",
++        "another",
++        "they",
++    ):
++        assert word not in texts, word
++    assert len(decide_module.LEAD_STANDALONE_INSTRUCTIONS) <= 1000
++    assert all(len(v) <= 1000 for v in decide_module.lead_standalone_criteria().values())
++
++
++def test_the_later_pick_has_its_own_instructions_that_say_it_reads_later_sentences() -> None:
++    """A2-110-01 and J2-110-04. Mutation: point the later pick back at the
++    lead pick's instructions."""
++    later = decide_module.LEAD_LATER_INSTRUCTIONS
++
++    assert later != decide_module.LEAD_SENTENCE_INSTRUCTIONS
++    assert "later in a written answer" in later
++    assert "first one or two sentences" not in later
++    assert len(later) <= 1000
++    options = decide_module.lead_sentence_options(2)
++    decide_module._check_description(
++        decide_module.LEAD_LATER_POINT,
++        options,
++        later,
++        decide_module.lead_sentence_criteria(options),
++    )
++    lowered = later.lower()
++    for word in ("marfan", "brca1", "disease", "gene", "medgen", "these", "one is", "another", "they"):
++        assert word not in lowered, word

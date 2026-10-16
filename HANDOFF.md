@@ -2,7 +2,7 @@
 
 The current state a fresh session needs, and nothing else. `/phase-checkpoint` rewrites it in place at every session end and keeps it to about 4 KB. Earlier versions, and the setup steps for a new laptop, are in `docs/build/Handoff_history.md`.
 
-Last updated: 2026-10-15.
+Last updated: 2026-10-16.
 
 ## Table of contents
 
@@ -13,21 +13,27 @@ Last updated: 2026-10-15.
 
 ## What is live
 
-- Develop: `f3950564`, deployed and checked at 1280 and 390 (`testing/Developer/reports/2026-10-15_product_check/`). Production: `v0.2.0`, tag `cde4f592`. CI is green on develop again.
-- Merged 2026-10-15: card 114 (#233, develop's writer priced again, strawberry-graphql 0.327.7), card 35 (#228, merged with V2-35-02 open as card 115) and card 111 (#234, re-split alone).
-- Develop's API sets `SYNTH_MODEL=z-ai/glm-5.2`, `GUARD_MODEL` and `PLAN_MODEL=deepseek/deepseek-v4-flash`, `CLASSIFIER_PROVIDER=jev` and `PER_QUERY_COST_CAP_USD=0.25`. litellm's downloaded price map lacks OpenRouter entries today, so prices come from `harness/tiers.py`'s table.
-- GitHub also holds open pull requests #230 (card 48, waiting for its redesign) and #223 (skill lessons), and two parked branches: `fix/cards110-111-summary-opening` (card 110) and `fix/card20-isolate-year-place`.
-- Locally, besides `develop`: worktrees `~/asu-wt/card48` and `skill` for those pull requests; on the Desktop `asu-card22`, `asu-card56` and `asu-factory-43`, `-43b`, `-44`, `-47`, none removable by the clean-up checks; local branch `fix/card20-isolate-year-place`.
+- Develop: `de53c6aa`, deployed and healthy. Production: `v0.2.0`, tag `cde4f592`, unchanged. CI is green.
+- Merged overnight: cards 115 (#240), 17 (#241), 94's timeout fix (#246) and 24 (#245).
+  - Each passed CI and three independent reviews: one checks the code, one hunts for a wrong answer, a third re-checks with fresh eyes.
+  - Each passed the product check on deployed develop at 1280 and 390 (`testing/Developer/reports/2026-10-16_product_check/` and `2026-10-16_product_check_card24/`).
+- Closed overnight by your rule, each back in To do with its reviews and final diff on develop: cards 48, 75, 29, 94's lookup, 110, 101, 20 and 15. Why, one row each: `DECISIONS.md`, rows dated 2026-10-15 and 16.
+- Nothing is parked. Locally only `develop`; on GitHub only `develop` and `production`.
+- Factory is paused; its brief lists cards 75 and 100. Develop's model settings: `docs/architecture/Model_architecture.md`.
 
 ## What awaits the product owner
 
-- Retests: `testing/Retest_product_owner.md`, newest first, today's cards 114, 35 and 111 on top.
-- The product check's findings marked "needs your eye": `testing/Developer/reports/2026-10-15_product_check/product_review.md`.
-- Still open from before: the guardrail's step 3b, whether develop's writer becomes Opus 5.5 (card 5), card 40's 27 items, pull request #223. Every decision of today: `DECISIONS.md`, rows dated 2026-10-15; what broke: `LEARNINGS.md`.
+- Retests: `testing/Retest_product_owner.md`, newest first, the night's four cards on top. The team checked all four on deployed develop.
+- Two rules only you can set:
+  - Should a question asked after a long server pause be checked like any other? Today develop refuses some of them (cards 84 and 72, `testing/Developer/reports/2026-10-15_card84_72/design.md`).
+  - When a sign-in renewal reply cannot be read, should the person stay signed in? (card 75)
+- The product check's "needs your eye" findings: `testing/Developer/reports/2026-10-16_product_check/report.md`.
+- Still open from before: a stronger writer model for develop (card 5), and card 40's hook and rule changes.
+- Every decision taken for you overnight: `DECISIONS.md`, rows dated 2026-10-15 and 16. What broke: `LEARNINGS.md`.
 
 ## The one next action
 
-Build card 94's single-isolate lookup with the SNP-distance scan skipped, your call of 2026-10-15: it is the first card in the board's To do that waits on no design. Its timeout crash and empty-result wording come first (`testing/Developer/reports/2026-10-09_card94/build.md`, "Parked"). Your other calls of today, cards 48, 20, 17 and 115, follow in the board's order.
+Retest the night's four cards from `testing/Retest_product_owner.md`, then answer the two rules above. After that, the board's To do column top down: each closed card needs a design agreed with you before it is built again, starting with card 101, where a quoted record sentence ends.
 
 How to start a session: read this file, then `git status --short` and `git worktree list`, then `testing/Retest_product_owner.md` and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
 
@@ -37,7 +43,7 @@ How to start a session: read this file, then `git status --short` and `git workt
 - Retests: `testing/Retest_product_owner.md`
 - The cutoff and closed items: `testing/UI_fixes_done.md`; older: `testing/UI_fixes_archive.md`
 - Queries to type: `testing/Test_queries_and_workflows.md`
-- Each card's reviews: `testing/Developer/reports/<date>_card*`; today's: `2026-10-15_*`
+- Each card's reviews: `testing/Developer/reports/<date>_card*`; the night's plan and ledger: `2026-10-15_overnight/`
 - Factory's brief: `docs/build/Factory_onboarding.md`; other work: `testing/Future.md`
 - Models: `docs/architecture/Model_architecture.md`
 - Why, and what broke: `DECISIONS.md`, `LEARNINGS.md`; the narrative: `requirements/Plan.md`
