@@ -238,7 +238,7 @@ Before the exit checklist, verify the structure of every document this checkpoin
 
 ### Step 6b: the documents agree with each other (all modes)
 
-Run `python3 tracker/check_doc_sync.py`. It compares the board, `testing/Retest_product_owner.md`, the test queries, the board plan, the Factory brief, `HANDOFF.md` and the registry with each other, and prints each disagreement as `file:line: rule: what disagrees, and the fix`. It exists because cards 44 and 47 stayed in To do after they merged on 2026-10-06 while every per-file check was green.
+Run `python3 tracker/check_doc_sync.py`. It compares the board, `testing/Retest_product_owner.md`, the test queries, the board plan, the Factory brief, `HANDOFF.md` and the registry with each other (and checks that every done row awaiting the owner's retest has its row in `testing/Retest_product_owner.md`), and prints each disagreement as `file:line: rule: what disagrees, and the fix`. It exists because cards 44 and 47 stayed in To do after they merged on 2026-10-06 while every per-file check was green.
 
 - Exit 1: fix every finding in this checkpoint, in the document the finding names, then rerun until it exits 0. A finding never waits for the next session.
 - Exit 2: the check could not run, because a document, section or table it reads is missing. That is never a pass. If the section moved on purpose, the registry and the check catch up first, through Step 0's decision guard.
