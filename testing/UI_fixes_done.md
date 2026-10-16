@@ -207,6 +207,7 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 94, part | An isolate search that runs out of time keeps the rest of the answer | Live, awaiting your retest | 33 |
 | card 24 | A Plain language and Researcher switch beside each answer, which says it runs a new search before it spends one | Live, awaiting your retest | 112 |
 | card 75 | A command-line sign-in renewal that cannot be confirmed asks for `s3 login` once; a clear error recovers by itself; no surprise sign-out of the web app | Live, awaiting your retest | 114 |
+| card 118 | Two rare renewal cases recover by themselves (an empty 204 or 202, an address written with :443), and a 504 says its outcome is unknown | Live, awaiting your retest | 114 |
 | cards 84 and 72, step 3b count | Develop's log counts each time the server's timers run 0.25 s or more late, so the server-pause fix is decided from data | Live, counting; read on 2026-10-23 | none |
 
 ## What is done, in summary

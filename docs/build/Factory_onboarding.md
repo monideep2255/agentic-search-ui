@@ -241,7 +241,7 @@ Merged into `develop` and waiting for the product owner's retest. Leave them alo
 - Card 47 (#188): the design prototype draws the light home page the app shows.
 - Card 61 (#190): the command line and its MCP bridge give a queued request its full time, say so when the person stopped a search, refuse invisible-only feedback and name the right credential fix without printing a path. Its one open gap, card 75, merged on 2026-10-16.
 - Card 24 (#245, built by the lead on 2026-10-16 while Factory was paused): the Plain language and Researcher switch beside an answer says it runs a new search before it spends one. Its two small open marks are card 117 on the board.
-- Card 75 (#252, built by the lead on 2026-10-16 while Factory was paused): a command-line sign-in renewal that cannot be confirmed asks for `s3 login` once, a clear error recovers by itself, and nobody is signed out of the web app by a resent renewal. Two rare open cases are card 118.
+- Card 75 (#252, built by the lead on 2026-10-16 while Factory was paused): a command-line sign-in renewal that cannot be confirmed asks for `s3 login` once, a clear error recovers by itself, and nobody is signed out of the web app by a resent renewal. Its two rare open cases merged as card 118 the same day.
 
 ## Card 100: a very long email in the top bar
 
