@@ -478,6 +478,23 @@ What you should see:
 - When one sentence cites a Tay-Sachs paper and the next a BRCA paper, the second sentence names its paper; it never reads "these mutations" as if they were the first paper's.
 - Why it matters: "Other frequent variants include M694V" read as if it were about the paper above it. A person who cannot tell which paper a claim rests on cannot check it.
 
+### 114. A sign-in renewal that cannot be confirmed asks for s3 login once (card 75)
+
+Queries to try:
+
+- With `s3 mcp` running in an AI app, leave it idle until your sign-in is about to expire (about 14 minutes), then ask `Which diseases are associated with BRCA1?`. Do this on a day when System 3 answers normally.
+- Repeat while System 3 is briefly down or behind a maintenance page (a 502 or 503 from the server, or a web page instead of a reply), then ask the same question again a few seconds later.
+- Repeat when the network drops after the renewal was sent, so no reply comes back (a timeout), then ask again.
+
+What you should see:
+
+- On a normal day the answer arrives and the sign-in renews without a word.
+- A brief server error, a maintenance page, a busy message or a connection that was refused: the first question is answered with "System 3 could not renew your sign-in right now ... try again in a moment", and says your sign-in is still good. Asking again a moment later is answered with no sign-in step. Nothing is asked of you and nobody is signed out.
+- A renewal that was sent and got no readable answer (a timeout, a dropped connection, a reply that cannot be read): you are told once to run `s3 login` in a terminal. You do not need to restart the AI app; the next question after `s3 login` is answered. Until then every question gets the same one instruction, and nothing is sent to System 3.
+- You are never signed out of the web app by surprise because a renewal was repeated.
+- Cost, in the owner's words: an occasional extra command, in return for nobody being signed out of the web app by surprise.
+- Why it matters: a renewal whose outcome the program cannot know must not be sent twice, because the server then treats the sign-in as stolen and signs you out everywhere. A clear error is different: asking again is safe, so it recovers by itself.
+
 ## 2. Follow-up questions and conversation
 
 ### 20. A follow-up carries the gene forward (Product test 2, 7.1 to 7.5)
