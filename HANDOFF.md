@@ -21,7 +21,7 @@ Last updated: 2026-10-15.
 
 ## What awaits the product owner
 
-- Retests: "Waiting for your retest" in `testing/UI_fixes_done.md`, today's cards 114, 35 and 111 on top.
+- Retests: `testing/Retest_product_owner.md`, newest first, today's cards 114, 35 and 111 on top.
 - The product check's findings marked "needs your eye": `testing/Developer/reports/2026-10-15_product_check/product_review.md`.
 - Still open from before: the guardrail's step 3b, whether develop's writer becomes Opus 5.5 (card 5), card 40's 27 items, pull request #223. Every decision of today: `DECISIONS.md`, rows dated 2026-10-15; what broke: `LEARNINGS.md`.
 
@@ -29,12 +29,13 @@ Last updated: 2026-10-15.
 
 Build card 94's single-isolate lookup with the SNP-distance scan skipped, your call of 2026-10-15: it is the first card in the board's To do that waits on no design. Its timeout crash and empty-result wording come first (`testing/Developer/reports/2026-10-09_card94/build.md`, "Parked"). Your other calls of today, cards 48, 20, 17 and 115, follow in the board's order.
 
-How to start a session: read this file, then `git status --short` and `git worktree list`, then "Waiting for your retest" and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
+How to start a session: read this file, then `git status --short` and `git worktree list`, then `testing/Retest_product_owner.md` and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
 
 ## Where the facts live
 
 - The board: `testing/UI_fix_plan.md`; build order: `testing/Board_plan.md`
-- Retests, the cutoff, closed items: `testing/UI_fixes_done.md`; older: `testing/UI_fixes_archive.md`
+- Retests: `testing/Retest_product_owner.md`
+- The cutoff and closed items: `testing/UI_fixes_done.md`; older: `testing/UI_fixes_archive.md`
 - Queries to type: `testing/Test_queries_and_workflows.md`
 - Each card's reviews: `testing/Developer/reports/<date>_card*`; today's: `2026-10-15_*`
 - Factory's brief: `docs/build/Factory_onboarding.md`; other work: `testing/Future.md`
