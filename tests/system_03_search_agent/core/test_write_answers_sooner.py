@@ -1648,8 +1648,8 @@ async def test_a_later_sentence_that_needs_an_earlier_one_leaves_the_count_line_
 
 
 @pytest.mark.asyncio
-async def test_a_record_title_is_never_a_later_candidate_but_a_list_of_names_is() -> None:
-    """Mutations that turn this red: `_repeats_one_label` returning False
+async def test_a_record_title_is_never_a_later_candidate() -> None:
+    """Mutations that turn this red: `_is_only_record_labels` returning False
     always; or the two-record test left in it."""
     title = "Preneoplastic stromal cells promote tumorigenesis"
     grounding = _grounded(
@@ -1662,11 +1662,16 @@ async def test_a_record_title_is_never_a_later_candidate_but_a_list_of_names_is(
     )
     labels = {3: title, 4: title, 5: "Name A", 6: "Name B", 7: "Name C"}
 
-    assert graph_module._repeats_one_label(grounding.sentences[2], labels)
-    assert graph_module._repeats_one_label(grounding.sentences[3], labels)
+    assert graph_module._is_only_record_labels(grounding.sentences[2], labels)
+    assert graph_module._is_only_record_labels(grounding.sentences[3], labels)
+    # A list of names that are all record names is label-only too (J2-110-07).
+    assert graph_module._is_only_record_labels(grounding.sentences[4], labels)
+    assert graph_module._is_only_record_labels(grounding.sentences[5], labels)
+    # Card 111's own test is untouched: a list of different names is not it.
     assert not graph_module._repeats_one_label(grounding.sentences[4], labels)
     # Titles never take a slot: the cut to two comes after the filter.
-    assert graph_module._later_lead_candidates(grounding, frozenset(), labels) == [4, 5]
+    later = _grounded("One [1].", "Two [2].", f"{title} [3].", "Names A [5], then more [6].", "Z [8].")
+    assert graph_module._later_lead_candidates(later, frozenset(), labels) == [3, 4]
 
 
 @pytest.mark.asyncio
@@ -1759,3 +1764,315 @@ async def test_every_started_task_is_done_or_cancelled_on_return(
     assert await _choose(_grounded(*FOUR)) == 0
     others = [t for t in asyncio.all_tasks() if t is not asyncio.current_task() and not t.done()]
     assert others == []
+
+
+# ---------------------------------------------------------------------------
+# Card 110, fix round: the later path's title filter, the later pick's own
+# instructions, the trace and the label map.
+# ---------------------------------------------------------------------------
+
+TITLE = "Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis"
+OTHER_TITLE = "Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer"
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        # J2-110-06 and A2-110-02, the reviewers' sentence, curly quotes.
+        f"\u201c{TITLE}\u201d [19].",
+        # Straight quotes, an en dash for the hyphen, a doubled space, a
+        # typographic apostrophe around the title, a no-break hyphen.
+        f'"{TITLE}" [19].',
+        TITLE.replace("-", "\u2013") + " [19].",
+        TITLE.replace(" ", "  ") + " [19].",
+        TITLE.replace("-", "\u2011") + " [19].",
+        f"\u2018{TITLE}\u2019 [19].",
+    ],
+)
+def test_a_title_in_quotes_or_with_other_dashes_is_still_a_record_title(sentence: str) -> None:
+    """J2-110-06 and A2-110-02. Mutation that turns this red: compare the
+    sentence with the label without `_label_form`."""
+    assert graph_module._is_only_record_labels(sentence, {19: TITLE})
+    assert graph_module._later_lead_candidates(
+        _grounded("One [1].", "Two [2].", sentence), frozenset(), {19: TITLE}
+    ) == []
+
+
+def test_a_label_in_a_label_map_with_an_en_dash_matches_a_sentence_with_a_hyphen() -> None:
+    en_dash_label = TITLE.replace("-", "\u2013")
+    assert graph_module._is_only_record_labels(f"{TITLE} [19].", {19: en_dash_label})
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        f"{TITLE} [14] and {OTHER_TITLE} [10].",
+        f"{TITLE} [14], {OTHER_TITLE} [10].",
+        f"{TITLE} [14] or {OTHER_TITLE} [10].",
+        f"{TITLE} [14] {OTHER_TITLE} [10].",
+        f"{TITLE} [14], {OTHER_TITLE} [10], and {TITLE} [14].",
+        # The reviewers' fragment, with its two items as record names.
+        "Ectopia lentis [14] and glaucoma [10].",
+        "Ectopia lentis [14], glaucoma [10].",
+        "Ectopia lentis [14] or glaucoma [10]?",
+        "Ectopia lentis [14] glaucoma [10]",
+    ],
+)
+def test_a_sentence_made_only_of_record_names_or_titles_is_never_a_later_candidate(
+    sentence: str,
+) -> None:
+    """J2-110-07 and A2-110-03: joined by a comma, "and", "or" or nothing,
+    one record or several. Mutation that turns this red: require one label
+    throughout, as `_repeats_one_label` does."""
+    labels = {
+        14: TITLE if "Ectopia" not in sentence else "Ectopia lentis",
+        10: OTHER_TITLE if "Ectopia" not in sentence else "glaucoma",
+    }
+
+    assert graph_module._is_only_record_labels(sentence, labels)
+    assert (
+        graph_module._later_lead_candidates(
+            _grounded("One [1].", "Two [2].", sentence), frozenset(), labels
+        )
+        == []
+    )
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        # A name with words around it states something, so it can answer.
+        "Ectopia lentis [14] is a feature of it.",
+        "Features include ectopia lentis [14] and glaucoma [10].",
+        "Ectopia lentis [14] and glaucoma [10] are features.",
+        "Ectopia lentis [14] and glaucoma [11].",
+        "Ectopia lentis and glaucoma [10].",
+        "Ectopia lentis [14] and also glaucoma [10] extra [10].",
+    ],
+)
+def test_a_sentence_with_any_other_word_is_still_a_later_candidate(sentence: str) -> None:
+    labels = {14: "Ectopia lentis", 10: "glaucoma"}
+
+    assert not graph_module._is_only_record_labels(sentence, labels)
+
+
+def test_the_label_filter_reads_only_the_label_map_no_word_list() -> None:
+    """Whatever the record's own label says is what counts; with no label for
+    a marker, nothing is label-only."""
+    assert graph_module._is_only_record_labels("Anything at all [3].", {3: "Anything at all"})
+    assert not graph_module._is_only_record_labels("Anything at all [3].", {})
+    assert not graph_module._is_only_record_labels("[3].", {3: "x"})
+
+
+def test_the_label_map_keeps_the_last_citation_per_display_number_as_develop_did() -> None:
+    """J2-110-01. Display 2 is carried by an earlier labelled citation and a
+    later unlabelled one: the later one wins, so display 2 has no label and
+    card 111's left-out set equals develop's. Mutation that turns this red:
+    iterate `citations` directly."""
+    citations = [
+        SimpleNamespace(display_index=1, citation_id="a"),
+        SimpleNamespace(display_index=2, citation_id="b"),
+        SimpleNamespace(display_index=2, citation_id="c"),
+    ]
+    findings = [
+        SimpleNamespace(citation_id="a", field="name", field_value="Marfan syndrome"),
+        SimpleNamespace(citation_id="b", field="name", field_value="Marfan syndrome"),
+        SimpleNamespace(citation_id="c", field="abstract", field_value="text"),
+    ]
+    sentence = "Marfan syndrome [1] and Marfan syndrome [2]."
+
+    assert graph_module._lead_label_map(citations, findings) == {1: "Marfan syndrome"}
+    assert (
+        graph_module._label_only_positions([sentence], citations, findings, ["x [1]", "y [2]"])
+        == set()
+    )
+
+
+def _recording_seam(
+    monkeypatch: pytest.MonkeyPatch,
+    answers: dict[str, tuple[str, float]],
+    harness: object,
+) -> None:
+    """Fake `_decide_point` that records a real `DecisionRecord` in the run's
+    decisions the moment it finishes, as the real one does."""
+    from system_03_search_agent.contracts.events import DecisionRecord
+
+    async def _decide(h: object, _trace: str, spec: object, text: str) -> object:
+        point = spec.point  # type: ignore[attr-defined]
+        key = point
+        if point == "write.lead_stands_alone":
+            key = next((k for k in answers if k.startswith("check:") and k[6:] in text), point)
+        choice, delay = answers[key]
+        await asyncio.sleep(delay)
+        record = DecisionRecord(
+            name=point,
+            options=list(spec.options),  # type: ignore[attr-defined]
+            chosen=choice,
+            decided_by="jev",
+            jev_choice=choice,
+        )
+        graph_module._run_decisions(h).records.append(record)
+        return record
+
+    monkeypatch.setattr(graph_module, "_decide_point", _decide)
+
+
+def _names(harness: object) -> list[str]:
+    return sorted(r.name for r in graph_module._run_decisions(harness).records)
+
+
+@pytest.mark.asyncio
+async def test_a_later_pick_and_checks_that_did_not_decide_the_opening_are_marked(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """J2-110-03 and A2-110-05. Tier A picks; tier B and both checks finished
+    first and were never read. Mutation that turns this red: drop the
+    marking."""
+    harness = harness_module.Harness(trace_id="t110")
+    _recording_seam(
+        monkeypatch,
+        {
+            "write.lead_sentence": ("first", 0.15),
+            "write.lead_later_sentence": ("first", 0.0),
+            "check:Gamma": ("stands_alone", 0.0),
+            "check:Delta": ("needs_earlier", 0.0),
+        },
+        harness,
+    )
+
+    chosen = await graph_module._lead_sentence_choice(
+        harness, "t110", "A question?", _grounded(*FOUR), 40.0
+    )
+
+    assert chosen == 0
+    assert _names(harness) == [
+        "write.lead_later_sentence.unused",
+        "write.lead_sentence",
+        "write.lead_stands_alone.unused",
+        "write.lead_stands_alone.unused",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_a_late_first_pick_marks_the_finished_later_records_unused(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """Tier A is late (no record of its own); the later pick and its check
+    finished but were not read, so the count line leads and both are marked."""
+    harness = harness_module.Harness(trace_id="t110")
+    _recording_seam(
+        monkeypatch,
+        {
+            "write.lead_sentence": ("neither", 1.5),
+            "write.lead_later_sentence": ("first", 0.0),
+            "check:Gamma": ("stands_alone", 0.0),
+            "check:Delta": ("stands_alone", 0.0),
+        },
+        harness,
+    )
+
+    assert (
+        await graph_module._lead_sentence_choice(
+            harness, "t110", "A question?", _grounded(*FOUR), 40.0
+        )
+        is None
+    )
+    assert _names(harness) == [
+        "write.lead_later_sentence.unused",
+        "write.lead_stands_alone.unused",
+        "write.lead_stands_alone.unused",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_the_later_records_that_decided_the_opening_keep_their_names(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """Tier A says neither, tier B picks the first later sentence, that
+    sentence's check passes it: those three keep their names; only the other
+    sentence's check is marked."""
+    harness = harness_module.Harness(trace_id="t110")
+    _recording_seam(
+        monkeypatch,
+        {
+            "write.lead_sentence": ("neither", 0.0),
+            "write.lead_later_sentence": ("first", 0.0),
+            "check:Gamma": ("stands_alone", 0.0),
+            "check:Delta": ("needs_earlier", 0.0),
+        },
+        harness,
+    )
+
+    chosen = await graph_module._lead_sentence_choice(
+        harness, "t110", "A question?", _grounded(*FOUR), 40.0
+    )
+
+    assert chosen == 2
+    assert _names(harness) == [
+        "write.lead_later_sentence",
+        "write.lead_sentence",
+        "write.lead_stands_alone",
+        "write.lead_stands_alone.unused",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_the_later_pick_is_asked_with_its_own_instructions(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """A2-110-01 and J2-110-04: tier A keeps develop's instructions; the
+    later pick gets the ones that say it reads later sentences. Mutation that
+    turns this red: hand the later pick `LEAD_SENTENCE_INSTRUCTIONS`."""
+    seen: dict[str, str] = {}
+
+    async def _decide(_harness: object, _trace: str, spec: object, _text: str) -> object:
+        seen[spec.point] = spec.instructions  # type: ignore[attr-defined]
+        return _record("neither")
+
+    monkeypatch.setattr(graph_module, "_decide_point", _decide)
+
+    await _choose(_grounded(*FOUR))
+
+    assert seen["write.lead_sentence"] == decide_module.LEAD_SENTENCE_INSTRUCTIONS
+    assert seen["write.lead_later_sentence"] == decide_module.LEAD_LATER_INSTRUCTIONS
+    assert len(seen["write.lead_later_sentence"]) <= 1000
+
+
+def _feature_records() -> tuple[list[SimpleNamespace], list[SimpleNamespace]]:
+    """Citations and findings shaped like the d66_2 run: each listed clinical
+    feature is its own citation whose finding field is `clinical_features`."""
+    values = {19: "Ectopia lentis", 27: "Glaucoma", 28: "Myopia"}
+    citations = [SimpleNamespace(display_index=n, citation_id=f"ne-{n}") for n in values]
+    findings = [
+        SimpleNamespace(citation_id=f"ne-{n}", field="clinical_features", field_value=v)
+        for n, v in values.items()
+    ]
+    return citations, findings
+
+
+def test_a_fragment_of_listed_clinical_features_is_never_a_later_candidate() -> None:
+    """A2-110-03 on its real record shape: the words sit in `clinical_features`.
+    Fails before the later path read that field. Mutation that turns this red:
+    drop "clinical_features" from `_LATER_LABEL_FIELDS`."""
+    citations, findings = _feature_records()
+    labels = graph_module._lead_label_map(citations, findings, graph_module._LATER_LABEL_FIELDS)
+    grounding = _grounded("One [1].", "Two [2].", "Ectopia lentis [19] and glaucoma [27].")
+
+    assert graph_module._later_lead_candidates(grounding, frozenset(), labels) == []
+    # Card 111's own map still reads the label fields alone.
+    assert graph_module._lead_label_map(citations, findings) == {}
+
+
+def test_a_sentence_that_says_what_the_features_are_is_still_a_later_candidate() -> None:
+    """The full sentence carries words that are no record's value. Mutation
+    that turns this red: treat any sentence that cites feature records as
+    label-only."""
+    citations, findings = _feature_records()
+    labels = graph_module._lead_label_map(citations, findings, graph_module._LATER_LABEL_FIELDS)
+    sentence = (
+        "MedGen lists these clinical features: Ectopia lentis [19], Glaucoma [27] "
+        "and Myopia [28]."
+    )
+    grounding = _grounded("One [1].", "Two [2].", sentence)
+
+    assert graph_module._later_lead_candidates(grounding, frozenset(), labels) == [2]

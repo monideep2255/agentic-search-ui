@@ -517,6 +517,7 @@ from system_03_search_agent.harness.coordinator_worker import (
     coordinator_worker_execute,
 )
 from system_03_search_agent.harness.decide import (
+    LEAD_LATER_INSTRUCTIONS,
     LEAD_LATER_POINT,
     LEAD_NEEDS_EARLIER,
     LEAD_SENTENCE_INSTRUCTIONS,
@@ -12704,6 +12705,25 @@ _LEAD_DECISION_MIN_BUDGET_S: Final[float] = 1.5
 #: leads, as it did before this decision existed.
 _LEAD_DECISION_MAX_WAIT_S: Final[float] = 1.0
 
+#: Added to the name of a later pick or stand-alone check that finished but
+#: did not decide the opening, so a trace reader can tell it from one that
+#: did (J2-110-03, A2-110-05).
+_LEAD_UNUSED_SUFFIX: Final[str] = ".unused"
+
+
+def _mark_unused_decisions(harness: Any, unused: list[DecisionRecord]) -> None:
+    """Rename, in this run's records, each decision in `unused` (the same
+    object `_decide_point` appended) so its name ends in
+    `_LEAD_UNUSED_SUFFIX`. Nothing else about the record changes."""
+    if not unused:
+        return
+    records = _run_decisions(harness).records
+    for position, record in enumerate(records):
+        if any(record is other for other in unused):
+            records[position] = record.model_copy(
+                update={"name": f"{record.name}{_LEAD_UNUSED_SUFFIX}"}
+            )
+
 
 def _cited_positions(model_grounding: GroundingResult | None) -> list[int]:
     """Indexes into `model_grounding.sentences` of every sentence that
@@ -12742,15 +12762,17 @@ def _later_lead_candidates(
 ) -> list[int]:
     """Tier B (card 110): the cited sentences after the raw first two, up to
     two of them, never a sentence the prose leaves out and never a sentence
-    that is only a cited record's own title (`_repeats_one_label`). The cut
-    to two comes after both filters, so a title never takes a slot."""
+    made only of cited records' own titles or names (`_is_only_record_labels`),
+    one or several, joined or not. The cut to two comes after both filters,
+    so a title never takes a slot."""
     if model_grounding is None:
         return []
     labels = dict(label_by_display or {})
     later = [
         index
         for index in _cited_positions(model_grounding)[MAX_LEAD_CANDIDATES:]
-        if index not in skip and not _repeats_one_label(model_grounding.sentences[index], labels)
+        if index not in skip
+        and not _is_only_record_labels(model_grounding.sentences[index], labels)
     ]
     return later[:MAX_LEAD_CANDIDATES]
 
@@ -12798,6 +12820,9 @@ async def _lead_sentence_choice(
     loop = asyncio.get_running_loop()
     deadline = loop.time() + wait_s
     tasks: list[asyncio.Task[DecisionRecord | None]] = []
+    # Tasks whose answer decided, or could have decided, the opening. A later
+    # task that finishes but is never read stays out and is marked unused.
+    read: set[asyncio.Task[DecisionRecord | None]] = set()
 
     def _start(spec: _DecisionSpec, text: str) -> asyncio.Task[DecisionRecord | None]:
         task = asyncio.ensure_future(_decide_point(harness, trace_id, spec, text))
@@ -12805,6 +12830,7 @@ async def _lead_sentence_choice(
         return task
 
     async def _within(task: asyncio.Task[DecisionRecord | None]) -> DecisionRecord | None:
+        read.add(task)
         return await asyncio.wait_for(task, timeout=max(0.0, deadline - loop.time()))
 
     try:
@@ -12829,7 +12855,7 @@ async def _lead_sentence_choice(
                 _DecisionSpec(
                     point=LEAD_LATER_POINT,
                     options=later_options,
-                    instructions=LEAD_SENTENCE_INSTRUCTIONS,
+                    instructions=LEAD_LATER_INSTRUCTIONS,
                     criteria=lead_sentence_criteria(later_options),
                     fail_open=LEAD_SENTENCE_NEITHER,
                 ),
@@ -12869,6 +12895,18 @@ async def _lead_sentence_choice(
             if not task.done():
                 task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+        _mark_unused_decisions(
+            harness,
+            [
+                task.result()
+                for task in tasks
+                if task not in read
+                and task.done()
+                and not task.cancelled()
+                and task.exception() is None
+                and task.result() is not None
+            ],
+        )
 
 
 def _asked_field(
@@ -12972,6 +13010,60 @@ def _repeats_one_label(sentence: str, label_by_display: dict[int, str]) -> bool:
     return True
 
 
+_LABEL_DASHES: Final[dict[int, str]] = dict.fromkeys(
+    map(ord, "\u2010\u2011\u2012\u2013\u2014\u2015\u2212\ufe58\ufe63\uff0d"), "-"
+)
+_LABEL_QUOTES: Final[dict[int, None]] = dict.fromkeys(
+    map(
+        ord,
+        "\"'`\u00b4\u00ab\u00bb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a",
+    )
+)
+
+
+def _label_form(text: str) -> str:
+    """`text` as the later path's title filter compares it: compatibility
+    forms folded (a no-break space or hyphen becomes the plain one), every
+    dash a hyphen, every quotation mark and apostrophe dropped, whitespace
+    collapsed, case folded. Straight and curly forms read the same."""
+    folded = unicodedata.normalize("NFKC", text).translate(_LABEL_DASHES).translate(_LABEL_QUOTES)
+    return " ".join(folded.split()).casefold()
+
+
+def _is_only_record_labels(sentence: str, label_by_display: Mapping[int, str]) -> bool:
+    """True when `sentence` is nothing but cited records' own titles or
+    names (card 110, J2-110-06 and 07, A2-110-02 and 03): one or several,
+    each cited to the record that carries it, joined by the grounding pass's
+    own glue (`_clean_claim`: a leading comma, "and", "or") or by nothing.
+
+    Used by the later path only, so card 111's `_repeats_one_label` and the
+    prose it decides stay as they were. Structure only: the label fields are
+    the ones `_lead_label_map` reads; no word list of its own. A sentence
+    with any other word, text after the last marker, or a marker that cites
+    no labelled record is not label-only. Quotation marks, dashes and
+    spacing do not tell a title from itself.
+    """
+    pieces = _MARKER_PATTERN.split(sentence)
+    texts, numbers = pieces[0::2], pieces[1::2]
+    if not numbers or _label_form(texts[-1]).strip(_ECHO_END_PUNCTUATION):
+        return False
+    seen = False
+    for text, number in zip(texts, numbers, strict=False):
+        label_key = _label_form(label_by_display.get(int(number)) or "").strip(
+            _ECHO_END_PUNCTUATION
+        )
+        if not label_key:
+            return False
+        shown = _clean_claim(_label_form(text)).strip(_ECHO_END_PUNCTUATION)
+        if shown:
+            if shown != label_key:
+                return False
+            seen = True
+        elif not seen:
+            return False
+    return True
+
+
 def _is_label_only_sentence(
     sentence: str,
     label_by_display: dict[int, str],
@@ -13005,22 +13097,35 @@ def _is_label_only_sentence(
     return _repeats_one_label(sentence, label_by_display)
 
 
+#: Fields whose value the later path's label-only filter reads as a record's
+#: own name: the listing's label fields, plus a record's listed clinical
+#: feature (card 110, A2-110-03: "Ectopia lentis [19] and glaucoma [27]." is
+#: two feature values, not a sentence). Card 111's prose rule keeps reading
+#: `LABEL_FIELDS` alone.
+_LATER_LABEL_FIELDS: Final[tuple[str, ...]] = (*LABEL_FIELDS, "clinical_features")
+
+
 def _lead_label_map(
-    citations: Sequence[CitationPayload], synth_findings: Sequence[SynthFinding]
+    citations: Sequence[CitationPayload],
+    synth_findings: Sequence[SynthFinding],
+    fields: Sequence[str] = LABEL_FIELDS,
 ) -> dict[int, str]:
     """Display number to the cited record's own title or name: the field
     `answer_layout.LABEL_FIELDS` names, the list that decides what a listing
-    row shows as its record's name."""
+    row shows as its record's name. `fields` widens it for the later path."""
     finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
+    # The last citation per display number wins, then it is labelled or not:
+    # the order card 111 read them in (J2-110-01).
+    citation_by_display = {cited.display_index: cited for cited in citations}
     label_by_display: dict[int, str] = {}
-    for cited in citations:
+    for display_index, cited in citation_by_display.items():
         cited_finding = finding_by_citation_id.get(cited.citation_id)
         if (
             cited_finding is not None
-            and cited_finding.field in LABEL_FIELDS
+            and cited_finding.field in fields
             and cited_finding.field_value.strip()
         ):
-            label_by_display[cited.display_index] = cited_finding.field_value
+            label_by_display[display_index] = cited_finding.field_value
     return label_by_display
 
 
@@ -15248,7 +15353,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                     if model_grounding is not None
                     else ()
                 ),
-                label_by_display=_lead_label_map(citations, synth_findings),
+                label_by_display=_lead_label_map(
+                    citations, synth_findings, _LATER_LABEL_FIELDS
+                ),
             )
             if summary_sentence
             else None

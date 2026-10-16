@@ -671,6 +671,18 @@ def lead_sentence_state(question: str, candidates: Sequence[str]) -> str:
 #: fourth, under its own point name so the trace tells the two apart.
 LEAD_LATER_POINT: Final[str] = "write.lead_later_sentence"
 
+#: The later pick reads sentences taken from later in the answer, so it is
+#: told that: its state is not the start of the answer (A2-110-01,
+#: J2-110-04).
+LEAD_LATER_INSTRUCTIONS: Final[str] = (
+    "The state is a question a person typed into a biomedical evidence search "
+    "engine, then one or two sentences taken from later in a written answer, "
+    "each already checked word for word against the record it cites. The "
+    "sentences before them are not shown. Decide whether one of the "
+    "sentences, read on its own as the opening line, answers what the "
+    "question asks."
+)
+
 #: The standalone check. A later pick opens the answer only when this
 #: decision, asked for that one sentence alone, says it needs no sentence
 #: before it.

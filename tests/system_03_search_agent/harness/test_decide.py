@@ -1079,3 +1079,24 @@ def test_the_later_point_and_the_standalone_texts_name_no_question_word() -> Non
         assert word not in texts, word
     assert len(decide_module.LEAD_STANDALONE_INSTRUCTIONS) <= 1000
     assert all(len(v) <= 1000 for v in decide_module.lead_standalone_criteria().values())
+
+
+def test_the_later_pick_has_its_own_instructions_that_say_it_reads_later_sentences() -> None:
+    """A2-110-01 and J2-110-04. Mutation: point the later pick back at the
+    lead pick's instructions."""
+    later = decide_module.LEAD_LATER_INSTRUCTIONS
+
+    assert later != decide_module.LEAD_SENTENCE_INSTRUCTIONS
+    assert "later in a written answer" in later
+    assert "first one or two sentences" not in later
+    assert len(later) <= 1000
+    options = decide_module.lead_sentence_options(2)
+    decide_module._check_description(
+        decide_module.LEAD_LATER_POINT,
+        options,
+        later,
+        decide_module.lead_sentence_criteria(options),
+    )
+    lowered = later.lower()
+    for word in ("marfan", "brca1", "disease", "gene", "medgen", "these", "one is", "another", "they"):
+        assert word not in lowered, word
