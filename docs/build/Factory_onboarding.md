@@ -14,6 +14,9 @@ You do not need to read any other document to start. The rules you must follow a
 - [The pull request](#the-pull-request)
 - [Done so far](#done-so-far)
 - [Card 100: a very long email in the top bar](#card-100-a-very-long-email-in-the-top-bar)
+- [Card 106: the High-risk claim tag breaks across two lines on a phone](#card-106-the-high-risk-claim-tag-breaks-across-two-lines-on-a-phone)
+- [Card 117: two small marks on the Plain language and Researcher switch](#card-117-two-small-marks-on-the-plain-language-and-researcher-switch)
+- [Card 113: records kept after Stop look very pale](#card-113-records-kept-after-stop-look-very-pale)
 - [Not yours now](#not-yours-now)
 - [When you are stuck](#when-you-are-stuck)
 
@@ -23,7 +26,7 @@ You do not need to read any other document to start. The rules you must follow a
 |---|---|---|
 | Product owner | The person who runs this project | Every product decision, every retest verdict, scope, cost, new colours, new public wording, new dependencies. Their verdict closes a card |
 | Lead | The main development agent | The answer path, the board and the project's decision, handoff and learnings files, the review of your pull requests, every merge |
-| You, Factory | The second development agent | The three cards below, one at a time, each ending in a pull request |
+| You, Factory | The second development agent | The four cards below (100, 106, 113 and 117), one at a time, each ending in a pull request |
 
 You and the lead cannot message each other. Your pull request body and your report reach the lead. A question that needs a decision goes to the product owner.
 
@@ -48,7 +51,7 @@ Two values decide every close call:
 
 ## How you work here
 
-One card at a time: 100 (the long email). Cards 43, 43b, 44, 47, 61, 24 and 75 are merged: see [Done so far](#done-so-far). Once a card's pull request is open you may start the next card, but never have more than two pull requests open, and answer review comments on an open one before new work.
+One card at a time, in this order: 100, 106, 117, then 113. Cards 43, 43b, 44, 47, 61, 24 and 75 are merged: see [Done so far](#done-so-far). Once a card's pull request is open you may start the next card, but never have more than two pull requests open, and answer review comments on an open one before new work.
 
 Once per machine, before your first Playwright run: `cd frontend && npx playwright install chromium`. It downloads the browser the pinned `@playwright/test` expects and changes no file in the repository.
 
@@ -62,7 +65,7 @@ For each card:
    ```
 
    Branch names: `factory/card<N>-<short-description>`.
-2. For cards 24 and 100, install from the committed lockfile, which adds nothing new: `cd frontend && npm ci`.
+2. For a card that changes `frontend/`, install from the committed lockfile, which adds nothing new: `cd frontend && npm ci`.
 3. Read the card's section below and open the files it names.
 4. Write the test first where you can, then the fix. A test proves something only if it fails without the fix: break the one property your fix adds, watch the test go red, put the property back. Reverting the whole change does not count, because the test usually then fails on a missing name before it checks anything.
 5. Run every check in [Checks before you push](#checks-before-you-push) that applies.
@@ -81,7 +84,7 @@ None of this repository's automatic rule loading or safety hooks run for you, ap
 
 You may change:
 
-- `frontend/src/`, `frontend/e2e/` and frontend tests, for card 100.
+- `frontend/src/`, `frontend/e2e/` and frontend tests, for cards 100, 106, 113 and 117.
 - Your own report folders under `testing/Developer/reports/`.
 
 You never change, even to fix a typo:
@@ -297,6 +300,132 @@ Done when:
 - The spec passes, and it fails on develop at one or more of 721, 800 and 900. Your report names which widths failed on develop and by how many pixels.
 - Nothing changes at 360, at 390, or for a short email at 1280.
 - Build, unit tests, your spec and `accessibility.spec.ts` pass.
+
+## Card 106: the High-risk claim tag breaks across two lines on a phone
+
+Dial 1. Branch `factory/card106-risk-tag-one-line`.
+
+What the person sees today: on a phone, 390 pixels wide, the risk tag under a reopened answer reads "High-" on one line and "risk claim" on the next, because the hyphen is a place to break. Overflow stays 0. The product check of card 71 saw it on a reopened BRCA1 answer (`testing/Developer/reports/2026-10-09_product_check_71/product_review.md`). Nobody captured whether the live answer's tag breaks the same way: measure both and put the numbers in your report.
+
+What they should see: the tag stays on one line. The whole tag moves down to the next line if the row is full, and it never splits in the middle.
+
+Where, in `frontend/src/`:
+
+| What | Where |
+|---|---|
+| The tag's words, one source for the live and the reopened answer: "High-risk claim" | `lib/riskTag.ts`, `riskTagLabel` |
+| The reopened answer's tag, a span with `data-testid="saved-answer-trust-risk"`, `fontWeight: 400` and `designTokens.risk`; it follows a middle dot span | `components/screens/SavedAnswerScreen.tsx`, near line 366 |
+| The live answer's trust line, `role="status"`, `display: "flex"`, `flexWrap: "wrap"`; the risk span sits among its spans | `components/screens/AnswerScreen.tsx`, near line 2565 |
+| The words feeding the live span | `hooks/useRunView.ts` |
+| The test that keeps live and reopened words equal | `lib/riskTag.parity.test.tsx` |
+
+What to build: the tag's span gets `whiteSpace: "nowrap"` on the reopened screen. Do the same on the live trust line only if your measurement shows it breaks there too. Do not change the words in `riskTagLabel`, and do not swap the hyphen for a non-breaking one in the label: the parity test compares the words, and a changed character would change them for every reader and screen reader.
+
+If a nowrap tag makes the trust line overflow at 360 pixels, stop and say so. How a trust line should give way at that width is a design decision: ask the product owner in the pull request body, recommendation first.
+
+How to test: a new spec, `frontend/e2e/risk-tag-one-line.spec.ts`, or a case in `frontend/e2e/trust-surface.spec.ts`, which already scripts a stream with `risk_tier: "high"` (line 89). Open a saved answer whose stored tier is high at 390 and 360 pixels (height 800):
+
+- The tag's bounding box is one line tall: its height is below 1.5 times its computed line height.
+- The page never scrolls sideways (copy `noSidewaysScroll` from `frontend/e2e/answer-layout.spec.ts`).
+- At 1280 the tag is unchanged.
+- The same check on the live answer's tag at 390.
+- A unit test of `SavedAnswerScreen` that the span carries `white-space: nowrap`. Break that one property, watch the test go red, put it back.
+
+Checks: the frontend build and unit tests, your spec, `accessibility.spec.ts`, and screenshots at 1280 and 390.
+
+Done when:
+
+- The tag fits on one line at 390 and 360 pixels, reopened and live.
+- The spec fails on develop at 390 and passes with your change.
+- Nothing else on the trust line moves at 1280, and `riskTag.parity.test.tsx` still passes untouched.
+
+Do not touch: the words in `lib/riskTag.ts`, `theme.ts`, the trust line's other spans, anything in the answer path.
+
+## Card 117: two small marks on the Plain language and Researcher switch
+
+Dial 1. Branch `factory/card117-answer-switch-marks`. Two marks, one pull request, one commit for each. Card 24 built the switch; its fresh verifier filed both marks in `testing/Developer/reports/2026-10-16_card24/verifier.md` as V-24-02 and V-24-03, and `testing/UI_fixes_done.md` section "117" repeats them.
+
+Mark one, V-24-02. What the person sees today: an account whose last search came through the command line, MCP or GraphQL keeps an older saved mode, such as `clinical_brief` or `deep_technical`. Its earlier answer folds under the raw label "clinical_brief", which is an internal name, and the switch lights Plain language for it. Clicking Plain language then does nothing, because the server treats `clinical_brief` as a Researcher answer. A search from the web app overwrites the saved mode, so few people reach this.
+
+What they should see: never an internal name. The label is one of the two words the switch shows, and the lit button matches the mode the server used.
+
+Where, in `frontend/src/components/`:
+
+| What | Where |
+|---|---|
+| `depthModeLabel` falls back to the raw value when the mode is not one of the two options | `screens/AnswerScreen.tsx`, line 1301 |
+| Its two uses: the confirm line "Ask this question again in ..." (near line 2006) and the folded earlier answer's label (near line 2687) | `screens/AnswerScreen.tsx` |
+| The two options, and `displayedMode`, which today lights Researcher for `researcher` and `deep_technical` and Plain language for everything else | `controls/DepthControl.tsx`, lines 36 and 125 |
+| Existing tests to extend | `screens/AnswerScreen.depthToggle.test.tsx`, `frontend/e2e/answer-depth-switch.spec.ts` |
+
+The decision inside it: which of the two words a legacy mode should read as. The verifier found that the server folds `clinical_brief` to Researcher (the server's map is read-only for you), while `displayedMode` lights Plain language for it. Whether `clinical_brief` should light Researcher is the product owner's call: ask in the pull request body, recommendation first. The recommendation is one mapping from the four stored modes to the two words, used for the label and for the lit button. Until the owner answers, make the label safe on its own: `depthModeLabel` never returns a raw value, and any mode outside the two options reads as the word `displayedMode` gives it.
+
+How to test: write first a unit test in `AnswerScreen.depthToggle.test.tsx` that signs in with a stored mode of `clinical_brief`, asks, lands, types a follow-up, and asserts the folded label is "Plain language" or "Researcher" and never contains an underscore. Add one for `deep_technical`. Break one property (the fallback to the raw value), watch the test go red, put it back.
+
+Mark two, V-24-03. What the person sees today: with no mode picked, the status strip under the question keeps an empty announcement box that opens a second flex line. It adds about 19 px of blank space, so the answer starts lower than before card 24. The strip is 69.6 px tall at 1280 wide against 50.6 px on develop before the switch, and 122.8 px against 103.6 px at 390. About half of that is the switch itself, which the design draws. The other half is blank.
+
+What they should see: the strip as tall as its tallest child plus its padding.
+
+Where: `screens/AnswerScreen.tsx`, near line 1998. The announcement box has `aria-live="polite"`, `flexBasis: "100%"` and `order: 3`. When no mode is held it carries `mt: -1.25`, which does not cancel the row gap.
+
+What to build: keep the live region mounted, because a screen reader only announces text added to a region that was already there. Take it out of the layout while it is empty (for example with a zero-size absolute position) and put it back in flow when the confirm line is open. Do not unmount it.
+
+How to test: a Playwright case in `answer-depth-switch.spec.ts`. Land a scripted answer with no mode picked and assert the strip's height at 1280 and 390 is no more than its tallest child plus the strip's own padding and border. Measure on develop and on your branch, and put both numbers in the report. A second case: open the confirm line, press Escape, and assert the strip returns to the same height and the live region is still in the page. Break the removal from flow, watch the height case go red, put it back.
+
+Checks: build, unit tests, `answer-depth-switch.spec.ts` and `accessibility.spec.ts`, screenshots at 1280 and 390 with the line closed and open.
+
+Done when:
+
+- No internal mode name appears anywhere on the answer screen, for all four stored modes.
+- The closed strip has no blank row under it at 1280 and 390, and the report gives the measured numbers.
+- The confirm line is still announced when it opens: the region stays mounted and the existing test for it passes.
+- "Ask again" still spends exactly one search and nothing else spends one.
+
+Do not touch: the server's mode maps, `onDepthChange` and the code that sends a mode, the confirm line's wording, `theme.ts`.
+
+## Card 113: records kept after Stop look very pale
+
+Dial 1 to start, because the cause is not found. Branch `factory/card113-kept-records-ink`. Do step one before you change any code.
+
+What the person sees today: after Stop, the records the search kept, for example "Familial cancer of breast" and "BRCA1 NCBIGene:672", may look very pale grey a few seconds later. They were full ink when Stop took effect. If it is real, the person thinks: "I stopped it and the records it kept are greyed out, as if they were disabled."
+
+The evidence is two product checks, and their captures contradict each other:
+
+- `testing/Developer/reports/2026-10-09_product_check_109/product_review.md`, PR-109-03 and PR-109-04: the shot 0.4 s after Stop shows full ink, the full-page shot 4.4 s later shows pale rows.
+- `testing/Developer/reports/2026-10-09_product_check_8.7/product_review.md`, PR-87-10 and its addendum: two full-page shots pale, one probe run dark, with opacity 1, no filter and all animations finished at 8 s.
+
+Neither is conclusive. The cause could be a fade that runs after Stop, or the full-page capture, which resizes the page and may restart a rising animation mid-way. Do not assume either.
+
+Step one, by hand against the mock backend (the two shells are under [Checks before you push](#checks-before-you-push)): ask a question, press Stop as soon as the first record row shows, wait, and look. Record in the report, in numbers, for the first kept record row at 0.5, 5 and 15 seconds after Stop: computed `opacity`, computed `color`, the running animations (`element.getAnimations()`), and each ancestor's opacity. Take one viewport shot and one full-page shot at each time and say whether they agree.
+
+The paths after step one:
+
+- Every number reads full ink and the viewport shots agree: the pale rows are a capture artifact. Change no code. Your report and a short pull request say so with the numbers, so the product owner can close the card. Say that no test was added and why.
+- The numbers show a fade or an opacity below 1 after Stop: it is a real bug. Fix it, with a test that fails first.
+
+Where, in `frontend/src/`:
+
+| What | Where |
+|---|---|
+| The rising animation `RISE`, with `from: { opacity: 0 }` and `animation ... both`, applied only while `streaming` (`const rise = streaming ? RISE : {}`) | `components/screens/AnswerScreen.tsx`, lines 230 and 1561, and the rows that spread `...rise` (lines 1669 to 1836) |
+| The stopped block, with the sentence "The records found before you stopped are below." | `components/screens/RunProgress.tsx`, near line 547 |
+| The existing stopped test | `components/screens/RunScreen.stopped.test.tsx` |
+| The stop and answer-reveal timing | `hooks/useAnswerReveal.ts`, near line 67 |
+| The end-to-end stop spec | `frontend/e2e/query-stream-and-stop.spec.ts` |
+
+A thing to check, not a conclusion: `rise` becomes the empty object once `streaming` turns false, so the animation is removed in the same render that Stop lands. Read what the stopped block and the records beneath it set for `color` and `opacity` before you believe either explanation.
+
+How to test, if it is real: a Playwright case in `query-stream-and-stop.spec.ts` that presses Stop right after the first record row, waits 5 seconds, and asserts the first kept row and every ancestor have computed `opacity` 1 and the answer's ink colour from `designTokens`. Add a unit test in `RunScreen.stopped.test.tsx` for the same. Break the one property your fix adds, watch it go red, put it back.
+
+Checks: build, unit tests, `query-stream-and-stop.spec.ts`, `accessibility.spec.ts`, and screenshots at 1280 and 390 five seconds after Stop.
+
+Done when:
+
+- Your report holds the measured numbers at the three times, or a pull request that says the rows are full ink and why the shot looked pale.
+- If it was real: the kept rows are full ink 0.5, 5 and 15 seconds after Stop, at 1280 and 390, and the test fails on develop.
+- Nothing else about a stopped search changes: the words, the buttons and the history row are not yours.
+
+Do not touch: the card 109 history wording, the stopped sentence, `core/` or `synthesis/`, `theme.ts`. If the fix needs a new colour or a new rule for how a stopped answer is drawn, ask the product owner in the pull request body, recommendation first.
 
 ## Not yours now
 

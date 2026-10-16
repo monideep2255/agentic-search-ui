@@ -20,7 +20,7 @@ Last updated: 2026-10-16.
   - Today, the freeze count (#251, cards 84 and 72): the server logs each moment it falls behind.
 - Closed overnight by your rule, each back in To do with its reviews on develop: cards 48, 29, 94's lookup, 110, 101, 20 and 15. Why: `DECISIONS.md`, rows dated 2026-10-15 and 16.
 - Nothing is parked. Locally only `develop`; on GitHub only `develop` and `production`.
-- Factory is paused; its brief lists card 100. Develop's model settings: `docs/architecture/Model_architecture.md`.
+- Factory works again, on cards 100, 106, 117 and 113 (`docs/build/Factory_onboarding.md`). The board's To do column says who moves each card next.
 
 ## What awaits the product owner
 
@@ -29,6 +29,7 @@ Last updated: 2026-10-16.
   - Read a week of `event loop lag` lines from develop's log.
   - Each line is a moment the server fell behind: a freeze, a busy server or a host pause, not freezes alone.
 - Findings the product check flagged for you to look at: `testing/Developer/reports/2026-10-16_product_check/report.md`.
+- The Factory review loop, `docs/build/Factory_review_loop.md`: seven permissions, each your yes or no, before anything is installed.
 - Still open from before: a stronger writer model for develop (card 5), and card 40's hook and rule changes.
 - Every decision taken for you: `DECISIONS.md`, rows dated 2026-10-15 and 16. What broke: `LEARNINGS.md`.
 

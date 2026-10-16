@@ -1,0 +1,379 @@
+Commit 2fd99591, parked on phase/8.4 (tag deleted 2026-10-16)
+Subject: fix(web-ui): make every frontend-rendered count name what it counts
+
+Card 31, the screen half. A live TP53 answer showed "78 sources from 3
+layers" in the status strip, "of 124 available" in its lead sentence and
+"Showing 1 to 10 of 59" in a table pager, three true numbers with nothing
+to say which counted what
+(testing/Developer/reports/2026-09-20_tp53_findings/findings.md, D-2).
+useRunView's status-strip meta now says "N sources cited from M layers",
+naming the citation-marker basis rather than a bare "sources". The table
+and stacked-list pager's status now names the row kind when the answer's
+own record_line label supplies one ("59 disease rows"), falls back to
+"records" otherwise, and states the page size alongside the range. The
+Sources disclosure's own badge keeps its visible bare-number glyph, per the
+design system, and gains an accessible name distinguishing it from the
+strip's citation count: a distinct-record count after URL deduplication,
+which can legitimately differ from citations cited when one record answers
+for more than one marker. No number changed, only what surrounds it.
+
+The backend's own two strings ("of 124 available", "not shown above") are
+untouched, per the ticket; the report to the calling builder names what
+they should say to match.
+
+
+diff --git a/frontend/src/answerCountLabels.test.tsx b/frontend/src/answerCountLabels.test.tsx
+new file mode 100644
+index 00000000..090510bd
+--- /dev/null
++++ b/frontend/src/answerCountLabels.test.tsx
+@@ -0,0 +1,74 @@
++/**
++ * Card 31 (2026-09-25), the screen half: "every count names what it
++ * counts." Fixed against the live TP53 answer that showed "78 sources from
++ * 3 layers" in the status strip, "of 124 available" in its lead sentence
++ * and "Showing 1 to 10 of 59" in a table pager, three true numbers with
++ * nothing to distinguish them
++ * (`testing/Developer/reports/2026-09-20_tp53_findings/findings.md`, D-2).
++ * The backend's two strings ("of 124 available", "not shown above") are
++ * unchanged here per the ticket; only what the frontend renders is fixed.
++ */
++
++import { describe, expect, it } from "vitest";
++
++import type { AnswerBlock, Claim } from "./components/screens/AnswerScreen";
++import { recordRowNoun, recordsCountLabel } from "./components/screens/AnswerScreen";
++
++const recordLineClaim = (label: string, index: number): Claim => ({
++  text: `${label}: value ${index}`,
++  layer: 1,
++  citations: [index],
++});
++
++function recordLineBlock(label: string, rows: number): Extract<AnswerBlock, { type: "records" }> {
++  const claim = recordLineClaim(label, 0);
++  return {
++    type: "records",
++    key: "records-0",
++    source: "record_line",
++    label,
++    header: null,
++    rows: Array.from({ length: rows }, (_, i) => ({ claim, index: i, cells: [`value ${i}`] })),
++  };
++}
++
++function tableBlock(rows: number): Extract<AnswerBlock, { type: "records" }> {
++  const claim: Claim = { text: "row", layer: 1, citations: [], kind: "table_row", cells: ["a"] };
++  return {
++    type: "records",
++    key: "records-1",
++    source: "table_row",
++    label: null,
++    header: ["Name", "Identifier"],
++    rows: Array.from({ length: rows }, (_, i) => ({ claim, index: i, cells: ["a", "b"] })),
++  };
++}
++
++describe("recordRowNoun", () => {
++  it("strips the field word off a record_line block's own label", () => {
++    expect(recordRowNoun(recordLineBlock("Disease name", 3))).toBe("disease");
++    expect(recordRowNoun(recordLineBlock("Sequence variant name", 3))).toBe("sequence variant");
++    expect(recordRowNoun(recordLineBlock("Gene symbol", 3))).toBe("gene");
++    expect(recordRowNoun(recordLineBlock("Clinical trial title", 3))).toBe("clinical trial");
++  });
++
++  it("returns null for a table_row or list_item block, which carries no entity name", () => {
++    expect(recordRowNoun(tableBlock(59))).toBeNull();
++  });
++});
++
++describe("recordsCountLabel", () => {
++  it("names the noun when one is derivable from the block's own label", () => {
++    expect(recordsCountLabel(recordLineBlock("Sequence variant name", 59), 59)).toBe("59 sequence variant rows");
++  });
++
++  it("falls back to the generic noun rather than repeating a word twice", () => {
++    // "record rows" would read as an accident; a plain "records" reads as
++    // the honest fallback when the block carries no entity name at all.
++    expect(recordsCountLabel(tableBlock(59), 59)).toBe("59 records");
++  });
++
++  it("never changes the number itself, only what surrounds it", () => {
++    expect(recordsCountLabel(recordLineBlock("Disease name", 124), 124)).toContain("124");
++  });
++});
+diff --git a/frontend/src/components/screens/AnswerScreen.countsNamedPlain.test.tsx b/frontend/src/components/screens/AnswerScreen.countsNamedPlain.test.tsx
+new file mode 100644
+index 00000000..36e6d5b5
+--- /dev/null
++++ b/frontend/src/components/screens/AnswerScreen.countsNamedPlain.test.tsx
+@@ -0,0 +1,54 @@
++/**
++ * Card 31 (2026-09-25), the screen half: "every count names what it
++ * counts." This pins the Sources disclosure's own badge: a bare number
++ * visually (unchanged, the design system's own badge shape), with an
++ * accessible name that says in plain words what it is a count OF, and how
++ * it differs from the status strip's "N sources cited" (a citation-marker
++ * count) when the two legitimately disagree because one record answers for
++ * more than one marker.
++ */
++
++import { render, screen, within } from "@testing-library/react";
++import { describe, expect, it } from "vitest";
++
++import { AnswerScreen } from "./AnswerScreen";
++import type { Claim, Source } from "./AnswerScreen";
++
++const GENE_672: Source = {
++  n: 1,
++  layer: 1,
++  name: "NCBI Gene 672 · BRCA1",
++  tool: "cypher_query",
++  evidence: "curated assertion",
++  confidence: "high",
++  license: "public domain",
++  url: "https://www.ncbi.nlm.nih.gov/gene/672",
++};
++
++/** A second citation marker pointing at the SAME record as `GENE_672`. */
++const GENE_672_AGAIN: Source = { ...GENE_672, n: 2 };
++
++const CLAIMS: Claim[] = [
++  { text: "Gene 672 causes disease A.", layer: 1, citations: [1] },
++  { text: "Gene 672 also causes disease B.", layer: 1, citations: [2] },
++];
++
++describe("the Sources disclosure's own count names what it counts", () => {
++  it("says how many distinct records, in plain words, in its accessible name", () => {
++    render(
++      <AnswerScreen
++        question="Which diseases are associated with BRCA1?"
++        claims={CLAIMS}
++        sources={[GENE_672, GENE_672_AGAIN]}
++      />,
++    );
++
++    const disclosure = screen.getByTestId("sources-disclosure");
++    const badge = within(disclosure).getByTestId("sources-count");
++    // The visible glyph is still the bare number, unchanged.
++    expect(badge).toHaveTextContent("1");
++    // Its accessible name says what that "1" is a count of: one distinct
++    // record, even though TWO citation markers ([1] and [2]) point at it.
++    expect(badge).toHaveAccessibleName(/1 distinct source record listed below/i);
++  });
++});
+diff --git a/frontend/src/components/screens/AnswerScreen.tsx b/frontend/src/components/screens/AnswerScreen.tsx
+index 459cae13..b2fffe59 100644
+--- a/frontend/src/components/screens/AnswerScreen.tsx
++++ b/frontend/src/components/screens/AnswerScreen.tsx
+@@ -402,6 +402,43 @@ export function buildAnswerBlocks(claims: Claim[]): AnswerBlock[] {
+   return blocks;
+ }
+ 
++/**
++ * What one records block's rows plainly ARE, for the pager's own count
++ * (card 31, 2026-09-25). A live TP53 answer once showed "78 sources from 3
++ * layers" in the status strip, "of 124 available" in its lead sentence and
++ * "Showing 1 to 10 of 59" in this pager, three true numbers with nothing to
++ * say which counted what
++ * (`testing/Developer/reports/2026-09-20_tp53_findings/findings.md`, D-2).
++ * This is the pager's half of the fix: name the noun rather than leaving the
++ * number bare.
++ *
++ * Only a `record_line` block carries a usable label at all ("Disease name",
++ * "Sequence variant name", from `parseRecordLine`), and even that is not the
++ * plain noun a reader wants ("59 disease name rows"), so the trailing field
++ * word is stripped before lowercasing. A `table_row` or `list_item` block
++ * carries no entity name anywhere in `AnswerBlock` (only column headers,
++ * which do not reliably name what a ROW is), so it falls back to `null`
++ * rather than guessing from a header cell.
++ */
++export function recordRowNoun(block: Extract<AnswerBlock, { type: "records" }>): string | null {
++  if (!block.label) return null;
++  const stripped = block.label
++    .replace(new RegExp(`\\s+(?:${RECORD_LINE_FIELDS.join("|")})$`, "i"), "")
++    .trim();
++  return stripped.length > 0 ? stripped.toLowerCase() : null;
++}
++
++/** The pager's own count phrase: names the noun when one is derivable,
++ *  falls back to the generic "records" rather than repeating a word twice
++ *  ("record rows"). */
++export function recordsCountLabel(
++  block: Extract<AnswerBlock, { type: "records" }>,
++  totalRows: number,
++): string {
++  const noun = recordRowNoun(block);
++  return noun ? `${totalRows} ${noun} rows` : `${totalRows} records`;
++}
++
+ export interface Source {
+   n: number;
+   layer: Layer;
+@@ -1243,7 +1280,9 @@ export function AnswerBody({
+         }}
+       >
+         <Box component="span" aria-live="polite" data-testid={`${testIdPrefix}answer-records-${number}-status`}>
+-          {`Showing ${start}–${end} of ${totalRows}`}
++          {/* Card 31: names what the total counts, and what the page size
++              is, rather than a bare "of 59" beside a bare "Page 1 of 6". */}
++          {`Showing ${start}–${end} of ${recordsCountLabel(block, totalRows)}, ${RECORDS_PAGE_SIZE} per page`}
+         </Box>
+         <Box sx={{ display: "flex", alignItems: "center", gap: "14px" }}>
+           <Box
+@@ -1771,6 +1810,20 @@ export function AnswerBody({
+             <Box
+               component="span"
+               data-testid={`${testIdPrefix}sources-count`}
++              /*
++               * Card 31 (2026-09-25). This number is a different basis from
++               * the status strip's "N sources cited": that one counts every
++               * citation MARKER the answer printed (e.g. [1] through [78]),
++               * this one counts distinct RECORDS after the URL-deduplication
++               * `groupSourcesByLayer` already does, so the two can legitimately
++               * differ when one record answers for more than one marker. The
++               * visible glyph stays a bare number, the same badge shape the
++               * design system draws; the accessible name says what it counts
++               * in plain words, since nothing else on the page does.
++               */
++              aria-label={`${sourceGroups.reduce((total, group) => total + group.items.length, 0)} distinct source ${
++                sourceGroups.reduce((total, group) => total + group.items.length, 0) === 1 ? "record" : "records"
++              } listed below`}
+               sx={{
+                 ...mono,
+                 fontSize: 11,
+diff --git a/frontend/src/hooks/useRunView.metaCounts.test.tsx b/frontend/src/hooks/useRunView.metaCounts.test.tsx
+new file mode 100644
+index 00000000..02fa3675
+--- /dev/null
++++ b/frontend/src/hooks/useRunView.metaCounts.test.tsx
+@@ -0,0 +1,90 @@
++/**
++ * Card 31 (2026-09-25): the status strip's own count names what it counts.
++ * A live TP53 answer once showed "78 sources from 3 layers" here, "of 124
++ * available" in its lead sentence and "Showing 1 to 10 of 59" in a table
++ * pager, three true numbers about three different things
++ * (`testing/Developer/reports/2026-09-20_tp53_findings/findings.md`, D-2).
++ * This pins the strip's own half: "sources" became "sources cited",
++ * naming exactly what distinguishes it from the other two ("cited" versus
++ * "found" versus "shown on this page"). The number itself is untouched.
++ */
++
++import { renderHook } from "@testing-library/react";
++import { describe, expect, it } from "vitest";
++
++import type { AgentEvent } from "../lib/events";
++import { useRunView } from "./useRunView";
++
++let seq = 0;
++function envelope<TType extends AgentEvent["type"]>(
++  type: TType,
++  payload: Extract<AgentEvent, { type: TType }>["payload"],
++): AgentEvent {
++  seq += 1;
++  return { type, version: "v1", trace_id: "t", seq, ts: "2026-09-25T00:00:00Z", payload } as AgentEvent;
++}
++
++const GUARD = envelope("guard", { passed: true, category: "ok", reason: null });
++const THINK = envelope("think", {
++  narrative: "Resolving BRCA1.",
++  query_class: "single_hop",
++  resolved_entities: [],
++  clarifying_question: null,
++});
++const PLAN = envelope("plan", {
++  narrative: "Read the curated edges.",
++  tool_calls: [{ tool: "cypher_query", call_id: "c1", layer: "layer_1_graph", persona: "Levi-Montalcini" }],
++});
++const TOOL_RESULT = envelope("tool_result", {
++  call_id: "c1",
++  tool: "cypher_query",
++  layer: "layer_1_graph",
++  status: "ok",
++  persona: "Levi-Montalcini",
++  summary: "",
++  result_count: 3,
++  truncated: false,
++});
++const citation = (id: string, index: number) =>
++  envelope("citation", {
++    citation_id: id,
++    display_index: index,
++    source: "NCBI Gene",
++    source_id: "672",
++    source_url: "https://www.ncbi.nlm.nih.gov/672",
++    layer: "layer_1_graph",
++    field: "cypher_query",
++    claim_text: "x",
++    evidence_kind: "curated assertion",
++    assertion_confidence: "high",
++    population_ancestry_context: null,
++    license: "public domain",
++  });
++const TOKEN = envelope("token", { text: "BRCA1 causes HBOC [1][2]. ", marker_ids: ["k1", "k2"] });
++const DONE = envelope("done", { total_cost_usd: 0.001, total_tool_calls: 1, elapsed_ms: 900, trust_outcome: "answer" });
++
++describe("the status strip's meta line names what its sources figure counts", () => {
++  it("says 'sources cited', not a bare 'sources'", () => {
++    const view = renderHook(() =>
++      useRunView([GUARD, THINK, PLAN, TOOL_RESULT, citation("k1", 1), citation("k2", 2), TOKEN, DONE]),
++    ).result.current;
++
++    expect(view.meta).toBe("1 tool · 2 sources cited from 1 layer");
++  });
++
++  it("keeps singular wording for exactly one source, still naming it as cited", () => {
++    const view = renderHook(() =>
++      useRunView([
++        GUARD,
++        THINK,
++        PLAN,
++        TOOL_RESULT,
++        citation("k1", 1),
++        envelope("token", { text: "BRCA1 causes HBOC [1]. ", marker_ids: ["k1"] }),
++        DONE,
++      ]),
++    ).result.current;
++
++    expect(view.meta).toBe("1 tool · 1 source cited from 1 layer");
++  });
++});
+diff --git a/frontend/src/hooks/useRunView.ts b/frontend/src/hooks/useRunView.ts
+index 26a7569d..ac0554b5 100644
+--- a/frontend/src/hooks/useRunView.ts
++++ b/frontend/src/hooks/useRunView.ts
+@@ -1148,17 +1148,27 @@ export function useRunView(events: AgentEvent[]): RunView {
+       }
+     }
+     /*
+-     * Each figure NAMES what it counts (F-4.9-R-02).
++     * Each figure NAMES what it counts (F-4.9-R-02, extended by card 31,
++     * 2026-09-25).
+      *
+-     * The tools figure counts calls the run made; the layers figure counts
+-     * layers the answer actually rests on. Those are different bases, and the
+-     * old wording put them side by side as bare nouns, so "4 tools · 2 layers"
+-     * read as a contradiction of the reasoning log directly above it. Saying
+-     * "from N layers" ties the layer count to the sources it describes.
++     * The tools figure counts calls the run made; the sources figure counts
++     * distinct citation markers the answer actually printed, which is why it
++     * now says "cited" rather than a bare "sources": a live TP53 answer once
++     * showed "78 sources from 3 layers" here, "of 124 available" in its lead
++     * sentence, and "Showing 1 to 10 of 59" in a table pager, three true
++     * numbers about three different things with nothing to tell them apart
++     * (`testing/Developer/reports/2026-09-20_tp53_findings/findings.md`,
++     * D-2). "Cited" is what actually distinguishes this figure from the
++     * other two: 124 is everything the run found, 78 is how much of that
++     * this answer chose to cite, and 59 is one table's own row count, a
++     * different basis again. The layers figure counts layers the answer
++     * actually rests on, a different basis from either, so it keeps naming
++     * itself with "from N layers" rather than sitting beside the others as
++     * a bare noun.
+      */
+     const meta = landed
+       ? `${toolCalls.length} ${toolCalls.length === 1 ? "tool" : "tools"} · ` +
+-        `${sources.length} ${sources.length === 1 ? "source" : "sources"}` +
++        `${sources.length} ${sources.length === 1 ? "source" : "sources"} cited` +
+         (sources.length > 0
+           ? ` from ${layerCount} ${layerCount === 1 ? "layer" : "layers"}`
+           : "")
