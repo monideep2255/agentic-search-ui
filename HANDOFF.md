@@ -29,7 +29,7 @@ Last updated: 2026-10-16.
   - Read a week of `event loop lag` lines from develop's log.
   - Each line is a moment the server fell behind: a freeze, a busy server or a host pause, not freezes alone.
 - Findings the product check flagged for you to look at: `testing/Developer/reports/2026-10-16_product_check/report.md`.
-- The Factory review loop, `docs/build/Factory_review_loop.md`: seven permissions, each your yes or no, before anything is installed.
+- The Factory review loop is paused, not installed (`docs/build/Factory_review_loop.md`); Factory's pull requests come to me through you meanwhile.
 - Still open from before: a stronger writer model for develop (card 5), and card 40's hook and rule changes.
 - Every decision taken for you: `DECISIONS.md`, rows dated 2026-10-15 and 16. What broke: `LEARNINGS.md`.
 

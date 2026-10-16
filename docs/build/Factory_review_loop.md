@@ -1,6 +1,8 @@
 # Factory review loop
 
-How Factory's pull requests get reviewed, fixed and merged without the product owner carrying messages between Factory and the lead. Proposed on 2026-10-16 at the owner's request; nothing in it runs until the owner says yes to each permission in [What needs your yes](#what-needs-your-yes).
+How Factory's pull requests get reviewed, fixed and merged without the product owner carrying messages between Factory and the lead. Proposed on 2026-10-16 at the owner's request and approved item by item the same day (`DECISIONS.md`, 2026-10-16, "The Factory review loop is approved item by item"). It is built under `.claude/skills/factory-loop/`: the hourly script `factory_loop.py`, the review procedure `SKILL.md` and the launch agent template. Nothing runs until the owner installs it ([Install](#install)).
+
+PAUSED on 2026-10-16 at the owner's call: not merged and not installed. The built code, its tests and its report are saved as `testing/Developer/reports/2026-10-16_factory_loop/paused_build.patch` and `build.md`. Two changes were agreed before pausing and are not in the patch: the loop runs only when the owner says go, for one named card, and stops when that card merges or needs the owner (no hourly schedule); and the review may merge its own docs branch, a one-line rule the owner adds by hand, since an agent may not widen its own permissions. To resume: apply the patch on a branch, make both changes, and run the review loop on it.
 
 Last updated: 2026-10-16.
 
@@ -12,6 +14,8 @@ Last updated: 2026-10-16.
 - [When it stops and tells the owner](#when-it-stops-and-tells-the-owner)
 - [What needs your yes](#what-needs-your-yes)
 - [How we test it first](#how-we-test-it-first)
+- [Install](#install)
+- [How to switch it off](#how-to-switch-it-off)
 
 ## The problem
 
@@ -61,7 +65,7 @@ In words:
 | Part | May | May never |
 |---|---|---|
 | The job's script | List and read pull requests; push branches named `factory/...`; open a Factory pull request from Factory's own body file; start the lead's review and Factory; send one phone notice | Push any other branch; force-push; touch `develop` or `production` directly; store a key anywhere in the repository |
-| The lead's review run | Read the code; run tests, probes and gates in its own worktrees; post review comments; merge a `factory/...` pull request into `develop` when the conditions above hold; open and merge the docs pull request for the retest row | Merge anything that adds a migration, a dependency, or a change under `.claude/`, hooks, settings, auth or the graph credential; deploy to production; write to the knowledge graph; merge without the fresh verifier's PASS |
+| The lead's review run | Read the code; run tests, probes and gates in its own worktrees; post review comments; merge the one `factory/...` pull request it reviewed into `develop` when the conditions above hold; open the docs pull request for the retest row, which the lead or the owner merges | Merge anything that adds a migration, a dependency, or a change under `.claude/`, hooks, settings, auth or the graph credential; deploy to production; write to the knowledge graph; merge without the fresh verifier's PASS |
 | Factory | Edit files inside its lane's fence, run its tests and builds, commit, in its own worktree (`droid exec --auto medium`) | Push, reach GitHub, deploy, run a migration (Factory's `--auto medium` level blocks remote writes; the job does the push) |
 
 Limits, so a stuck loop cannot run up cost:
@@ -83,7 +87,7 @@ Everything else, start, review, fix, merge and the retest row, happens without a
 
 ## What needs your yes
 
-The job is part of the security layer, so each item is a separate yes or no. Nothing is installed before every item has an answer.
+The job is part of the security layer, so each item is a separate yes or no. Each item below was answered yes on 2026-10-16 (`DECISIONS.md`, "The Factory review loop is approved item by item"). Nothing is installed until the owner follows [Install](#install).
 
 1. A scheduled job in the Mac's user launch agents folder, outside the repository, running the script hourly while the Mac is awake.
 2. The script, committed under `.claude/skills/factory-loop/` through its own pull request, since it sits under `.claude/`.
@@ -99,3 +103,48 @@ The job is part of the security layer, so each item is a separate yes or no. Not
 2. Leave one deliberate gap in a test, to check the review comments, Factory picks them up, and the fix round closes it.
 3. Turn the schedule on for card 106 only.
 4. Widen to the whole lane after one card merges with no owner message.
+
+## Install
+
+The owner runs these, once, from the main checkout's root, `<repo-root>`. The loop's state, its logs and its prompt files live in `~/.factory-loop/`, outside the repository, and Factory's worktrees in `<worktree-root>/`.
+
+1. Make the two folders: `mkdir -p ~/.factory-loop/logs <worktree-root>`. The launch agent cannot write its log into a folder that does not exist.
+2. Put Factory's key in the keychain. With `-w` last and no value, the command asks for the key, so it never lands in the shell history:
+
+   ```bash
+   security add-generic-password -s factory-loop -a FACTORY_API_KEY -w
+   ```
+
+3. Find the folders of git, gh, the lead's command-line agent and Factory's headless command with `command -v`, and check each is in the template's `PATH` line. Add a missing folder to the copy in the next step.
+4. Copy the template with its placeholders filled:
+
+   ```bash
+   sed -e "s|<repo-root>|$PWD|g" -e "s|<user>|$USER|g" \
+     .claude/skills/factory-loop/com.factory-loop.plist.template \
+     > ~/Library/LaunchAgents/com.factory-loop.plist
+   ```
+
+5. Run one pass by hand first, with the schedule still off, as [How we test it first](#how-we-test-it-first) says. `--dry-run` runs only the read commands, then stops at the first one that would change anything and prints what it would have run:
+
+   ```bash
+   venv/bin/python .claude/skills/factory-loop/factory_loop.py --dry-run
+   venv/bin/python .claude/skills/factory-loop/factory_loop.py
+   ```
+
+6. Turn the schedule on: `launchctl load ~/Library/LaunchAgents/com.factory-loop.plist`. It runs once an hour while the Mac is awake, never at load.
+
+What to read afterwards:
+
+| What | Where |
+|---|---|
+| Every command each run took, one line each, the key never among them | `~/.factory-loop/logs/factory_loop.log` |
+| The day's runs and review spend, each card's fix rounds, the head each review saw | `~/.factory-loop/state.json` |
+| Each review run's full output | `~/.factory-loop/logs/review_pr<N>_<commit>.json` |
+| What the launch agent itself printed | `~/.factory-loop/logs/launchd.out.log` and `launchd.err.log` |
+
+## How to switch it off
+
+- For now: `launchctl unload ~/Library/LaunchAgents/com.factory-loop.plist`. A run already going finishes its one action and exits.
+- For good: unload it as above, then delete `~/Library/LaunchAgents/com.factory-loop.plist` and the key, `security delete-generic-password -s factory-loop -a FACTORY_API_KEY`.
+- After card 106: the loop moves on to the next card in the order line by itself, so unload it after card 106 merges until the owner widens it to the whole lane, step 4 of [How we test it first](#how-we-test-it-first).
+- Nothing else needs undoing. The loop leaves no branch but `factory/...` ones and the `chore/factory-done-<N>` branches of open docs pull requests, and `~/.factory-loop/` can stay as a record.
