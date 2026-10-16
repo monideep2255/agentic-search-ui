@@ -244,6 +244,12 @@ export function DepthControl({
 export interface DepthStripToggleProps {
   value?: AudienceDepth;
   onChange?: (value: AudienceDepth) => void;
+  /**
+   * Called when the mode already shown is clicked. Nothing is asked and no
+   * run starts; the caller uses it to close an open cost line, so clicking
+   * back reads as "never mind" (J-24-04, A-24-03).
+   */
+  onSelectCurrent?: () => void;
   /** True while a run is in flight. Item 9.12's lock, applied here too. */
   locked?: boolean;
 }
@@ -272,17 +278,19 @@ export interface DepthStripToggleProps {
  * depth the reader is already reading would burn a run and a cap slot for
  * nothing the reader asked for.
  */
-export function DepthStripToggle({ value = DEFAULT_ANSWER_MODE, onChange, locked = false }: DepthStripToggleProps) {
+export function DepthStripToggle({ value = DEFAULT_ANSWER_MODE, onChange, onSelectCurrent, locked = false }: DepthStripToggleProps) {
   const shown = displayedMode(value);
   return (
     <Box
       role="group"
-      aria-label="Answer depth"
+      // J-24-08: one name for one control, the home page's.
+      aria-label="Answer mode, audience-level depth"
       sx={{
         display: "inline-flex",
         flexShrink: 0,
         border: `1px solid ${designTokens.line}`,
-        borderRadius: 1,
+        // J-24-07: 0.5 x the theme's 8px = the design's 4px (`--r-sm`).
+        borderRadius: 0.5,
         overflow: "hidden",
         bgcolor: designTokens.surface,
       }}
@@ -298,7 +306,11 @@ export function DepthStripToggle({ value = DEFAULT_ANSWER_MODE, onChange, locked
             aria-pressed={selected}
             disabled={locked}
             onClick={() => {
-              if (locked || option === shown) return;
+              if (locked) return;
+              if (option === shown) {
+                onSelectCurrent?.();
+                return;
+              }
               onChange?.(option);
             }}
             sx={{

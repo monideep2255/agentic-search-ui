@@ -442,19 +442,20 @@ What you should see:
 
 Queries to try:
 
-- `Which diseases are associated with BRCA1?` in Plain language, as a guest. When the answer lands, click Researcher in the switch under the question, on the right.
-- Click Cancel. Click Researcher again, then click Ask again.
-- Sign in, ask the same question, and click Researcher again. Repeat at phone width.
+- `Which diseases are associated with BRCA1?` in Plain language. When the answer lands, click Researcher in the switch beside Show work, on the right.
+- Click Cancel. Click Researcher again, then click Plain language (the lit one). Click Researcher a third time and press Escape. Then click Researcher and Ask again.
+- Ask a follow-up after the switch. Repeat at phone width.
+- Ask `What is the weather in Paris?`, which is turned away.
 
 What you should see:
 
-- The switch shows Plain language selected. Clicking Plain language again does nothing.
-- Clicking Researcher shows one line under the question: "Ask this question again in Researcher? It counts as one new search (N left today)." and two buttons, Ask again and Cancel. Nothing runs yet.
-- Cancel closes the line and nothing runs. Ask again runs the question once more: the first answer folds above, the new Researcher answer joins the conversation like a follow-up, and later follow-ups use Researcher.
-- N matches the searches left today that the app shows elsewhere.
-- Signed in, the line reads "It runs as one new search." with no number.
-- While the new answer is being written the switch is gone. At 390 pixels wide the switch drops to its own line.
-- At zero searches left, Ask again still sends the question and the usual daily-limit message appears.
+- The switch shows Plain language selected. With nothing open, clicking Plain language does nothing.
+- Clicking Researcher shows one line under the row: "Ask this question again in Researcher? It runs as one new search." for everyone, with no number, and two buttons, Ask again and Cancel. Nothing runs yet.
+- Cancel, Escape, and a click on the lit mode all close the line and nothing runs. After Cancel or Escape the cursor is back on the Researcher button. Pressing Tab from Researcher goes to Ask again, then Cancel, then Show work.
+- Ask again runs the question once more and the cursor moves to the question heading. The first answer folds above, labelled "Plain language"; the new answer shows Researcher selected. Waiting a few seconds starts no third search.
+- The follow-up you ask next runs in Researcher, even if the page has been open for more than twelve minutes.
+- While the new answer is being written the switch is gone. At 390 pixels wide the switch and its line drop to their own rows.
+- The turned-away question shows no switch, and neither does an answer that asks you which gene you mean, or one that failed.
 - Why it matters: a click that spends a search must say so first. Nobody should lose a search to a mode they were only trying out.
 
 ## 2. Follow-up questions and conversation

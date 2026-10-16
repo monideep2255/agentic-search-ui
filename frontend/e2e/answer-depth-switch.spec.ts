@@ -231,14 +231,14 @@ for (const width of [1280, 390]) {
       await expect(page.getByTestId("answer-meta")).toBeVisible({ timeout: 30_000 });
       expect(posts).toHaveLength(1);
 
-      const group = page.getByRole("group", { name: /answer depth/i });
+      const group = page.getByRole("group", { name: /answer mode/i });
       await expect(group).toBeVisible();
       await expect(group.getByRole("button", { name: "Plain language" })).toHaveAttribute("aria-pressed", "true");
 
       await group.getByRole("button", { name: "Researcher" }).click();
       const line = page.getByTestId("answer-depth-confirm");
       await expect(line).toBeVisible();
-      await expect(line).toContainText("Ask this question again in Researcher?");
+      await expect(line).toHaveText(/^Ask this question again in Researcher\? It runs as one new search\.\s*Ask againCancel$/);
       expect(posts).toHaveLength(1);
       await noSidewaysScroll(page);
 
@@ -257,6 +257,16 @@ for (const width of [1280, 390]) {
       await line.getByRole("button", { name: "Ask again" }).click();
       await expect.poll(() => posts.length, { timeout: 15_000 }).toBe(2);
       expect(JSON.parse(posts[1]).audience_depth).toBe("researcher");
+      // J-24-11: wait for the new answer to land, then check no third
+      // request arrived late. The folded first answer is labelled by mode
+      // (J-24-06) and the switch now lights Researcher on the new answer.
+      await expect(page.getByTestId("previous-turn-0-mode")).toHaveText("Plain language");
+      const landed = page.getByRole("group", { name: /answer mode/i });
+      await expect(landed.getByRole("button", { name: "Researcher" })).toHaveAttribute("aria-pressed", "true", {
+        timeout: 30_000,
+      });
+      await page.waitForTimeout(1_000);
+      expect(posts).toHaveLength(2);
       await noSidewaysScroll(page);
     });
   });

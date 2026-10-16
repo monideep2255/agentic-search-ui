@@ -904,6 +904,8 @@ export interface AnswerBodyContent {
 export interface PreviousTurn extends AnswerBodyContent {
   question: string;
   meta: string;
+  /** The mode this turn was asked at; labels the folded row (J-24-06). */
+  depth?: AudienceDepth;
 }
 
 export interface AnswerScreenProps extends AnswerBodyContent {
@@ -1029,8 +1031,6 @@ export interface AnswerScreenProps extends AnswerBodyContent {
    */
   onDepthChange?: (value: AudienceDepth) => void;
   depthValue?: AudienceDepth;
-  /** Card 24. See `AnswerBodyProps.depthConfirmCopy`. */
-  depthConfirmCopy?: (modeLabel: string) => string;
 }
 
 /** Monospace marks a string transcribed exactly. Gene symbols are excluded. */
@@ -1295,12 +1295,6 @@ export interface AnswerBodyProps extends AnswerBodyContent {
   onDepthChange?: (value: AudienceDepth) => void;
   /** Which button `DepthStripToggle` lights up. Ignored when `onDepthChange` is absent. */
   depthValue?: AudienceDepth;
-  /**
-   * Card 24. The finished sentence for the confirmation line, built by
-   * `App` from the allowance it already holds, so this file never writes a
-   * number of its own. Receives the held mode's label.
-   */
-  depthConfirmCopy?: (modeLabel: string) => string;
 }
 
 /** Card 24. The label `AUDIENCE_MODE_OPTIONS` gives a mode. */
@@ -1327,7 +1321,7 @@ function DepthConfirmLine({
   return (
     <Box
       data-testid={testId}
-      sx={{ mt: 1.75, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1.25 }}
+      sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1.25 }}
     >
       <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
         {text}
@@ -1433,7 +1427,6 @@ export function AnswerBody({
   question = null,
   onDepthChange,
   depthValue,
-  depthConfirmCopy,
 }: AnswerBodyProps) {
   /** `Show work` starts closed, as the prototype's `#workPanel` does. */
   const [workOpen, setWorkOpen] = useState(false);
@@ -1447,6 +1440,28 @@ export function AnswerBody({
   useEffect(() => {
     setHeldDepth(null);
   }, [depthValue, question]);
+  /*
+   * J-24-02, J-24-03. Cancel and Escape put focus back on the button that
+   * opened the line, so a keyboard or screen-reader user is not thrown to
+   * the top of the page when the line unmounts.
+   */
+  const switchRef = useRef<HTMLDivElement | null>(null);
+  const cancelHeld = () => {
+    const mode = heldDepth;
+    setHeldDepth(null);
+    if (mode) {
+      switchRef.current
+        ?.querySelector<HTMLButtonElement>(`[data-testid="answer-depth-toggle-${mode}"]`)
+        ?.focus();
+    }
+  };
+  /*
+   * A-24-01, J-24-12. A refused, asked-back, capped or failed answer cannot
+   * differ by mode, so the switch is not offered: re-asking would spend a
+   * search for the same refusal. (A clarifying question arrives as a
+   * refusal with a label, so it is covered by the same test.)
+   */
+  const switchable = Boolean(onDepthChange) && !(refusal || refusalLabel || failure || capMessage);
   /*
    * Source disclosure state, F-4.8-D-01.
    *
@@ -1893,6 +1908,13 @@ export function AnswerBody({
       {meta || outcome ? (
         <Box
           data-testid={`${testIdPrefix}answer-status-strip`}
+          onKeyDown={(event: React.KeyboardEvent) => {
+            // J-24-03: Escape closes the cost line, like Cancel.
+            if (event.key === "Escape" && heldDepth) {
+              event.stopPropagation();
+              cancelHeld();
+            }
+          }}
           sx={{ pt: 1.5, pb: 2, mb: 2.5, borderBottom: `1px solid ${designTokens.line}` }}
         >
           <Box
@@ -1956,67 +1978,64 @@ export function AnswerBody({
             </Typography>
             {/*
               Card 24. `Main.dc.html` and `Researcher.dc.html` draw the depth
-              toggle and `Show work` as one trailing group, `margin-left:
-              auto` on the GROUP rather than on `Show work` alone, so a
-              status strip carrying only the toggle (no reasoning steps to
-              show) still pins it to the right instead of losing the auto
-              margin along with the button that used to carry it.
+              toggle and `Show work` as one trailing group on the right.
+
+              DOM ORDER IS THE TAB ORDER (J-24-03, A-24-03): the switch, then
+              the cost line it opens, then `Show work`. `order` puts the line
+              on its own row below and keeps `Show work` beside the switch,
+              so the screen reads as before and a keyboard user lands on
+              "Ask again" as the very next stop after the switch.
             */}
-            {onDepthChange || steps.length > 0 ? (
+            {switchable ? (
+              <Box ref={switchRef} sx={{ ml: "auto", display: "flex" }}>
+                <DepthStripToggle
+                  value={depthValue}
+                  onChange={setHeldDepth}
+                  onSelectCurrent={() => setHeldDepth(null)}
+                />
+              </Box>
+            ) : null}
+            {switchable ? (
               <Box
-                sx={{
-                  ml: "auto",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.75,
-                  flexWrap: "wrap",
-                }}
+                aria-live="polite"
+                sx={{ flexBasis: "100%", order: 3, ...(heldDepth ? {} : { mt: -1.25 }) }}
               >
-                {onDepthChange ? (
-                  <DepthStripToggle value={depthValue} onChange={setHeldDepth} />
-                ) : null}
-                {steps.length > 0 ? (
-                  <Box
-                    component="button"
-                    type="button"
-                    onClick={() => setWorkOpen((open) => !open)}
-                    aria-expanded={workOpen}
-                    sx={{
-                      font: "inherit",
-                      fontSize: 13,
-                      border: 0,
-                      bgcolor: "transparent",
-                      color: designTokens.link,
-                      cursor: "pointer",
-                      p: 0,
+                {heldDepth ? (
+                  <DepthConfirmLine
+                    testId="answer-depth-confirm"
+                    text={`Ask this question again in ${depthModeLabel(heldDepth)}? It runs as one new search.`}
+                    onAsk={() => {
+                      const next = heldDepth;
+                      setHeldDepth(null);
+                      onDepthChange?.(next);
                     }}
-                  >
-                    {workOpen ? "Hide work ▴" : "Show work ▾"}
-                  </Box>
+                    onCancel={cancelHeld}
+                  />
                 ) : null}
               </Box>
             ) : null}
+            {steps.length > 0 ? (
+              <Box
+                component="button"
+                type="button"
+                onClick={() => setWorkOpen((open) => !open)}
+                aria-expanded={workOpen}
+                sx={{
+                  order: 2,
+                  ml: switchable ? 0 : "auto",
+                  font: "inherit",
+                  fontSize: 13,
+                  border: 0,
+                  bgcolor: "transparent",
+                  color: designTokens.link,
+                  cursor: "pointer",
+                  p: 0,
+                }}
+              >
+                {workOpen ? "Hide work ▴" : "Show work ▾"}
+              </Box>
+            ) : null}
           </Box>
-          {onDepthChange ? (
-            <Box aria-live="polite">
-              {heldDepth ? (
-                <DepthConfirmLine
-                  testId="answer-depth-confirm"
-                  text={
-                    depthConfirmCopy
-                      ? depthConfirmCopy(depthModeLabel(heldDepth))
-                      : `Ask this question again in ${depthModeLabel(heldDepth)}? It runs as one new search.`
-                  }
-                  onAsk={() => {
-                    const next = heldDepth;
-                    setHeldDepth(null);
-                    onDepthChange(next);
-                  }}
-                  onCancel={() => setHeldDepth(null)}
-                />
-              ) : null}
-            </Box>
-          ) : null}
           {workOpen && steps.length > 0 ? (
             <Box sx={{ mt: 1.75 }}>
               <ReasoningLog steps={steps} testId={`${testIdPrefix}work-panel`} />
@@ -2659,6 +2678,15 @@ function FoldedTurn({ turn, index }: { turn: PreviousTurn; index: number }) {
                   >
                     {turn.meta}
                   </Typography>
+                  {turn.depth ? (
+                    <Typography
+                      component="span"
+                      data-testid={`previous-turn-${index}-mode`}
+                      sx={{ fontSize: 12, color: designTokens.inkMuted }}
+                    >
+                      {depthModeLabel(turn.depth)}
+                    </Typography>
+                  ) : null}
                   {/*
                     Product-owner feedback, 2026-09-13, on the retest: "have a
                     show answer and hide answer on the right hand side that
@@ -2758,7 +2786,6 @@ export function AnswerScreen({
   flaggedSources = [],
   onDepthChange,
   depthValue,
-  depthConfirmCopy,
 }: AnswerScreenProps) {
   /*
    * UI fix set 7 (R22). Bring the new turn's heading into view when a
@@ -2780,6 +2807,7 @@ export function AnswerScreen({
    * check is the same courtesy the screen fade in `App.tsx` already extends.
    */
   const headingRef = useRef<HTMLDivElement | null>(null);
+  const questionHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const running = progress !== null && progress !== undefined;
   useEffect(() => {
     if (!running) return;
@@ -2896,7 +2924,13 @@ export function AnswerScreen({
             body below. */}
         <Box ref={headingRef} sx={{ pb: 2, borderBottom: `1px solid ${designTokens.line}` }}>
           <Box sx={{ display: "flex", gap: 1.75, alignItems: "flex-start" }}>
-            <Typography variant="h3" component="h1" sx={{ flex: 1 }}>
+            <Typography
+              variant="h3"
+              component="h1"
+              ref={questionHeadingRef}
+              tabIndex={-1}
+              sx={{ flex: 1, outline: "none" }}
+            >
               {question}
             </Typography>
             {onNewSearch ? (
@@ -2989,9 +3023,17 @@ export function AnswerScreen({
                     failure={failure}
                     capMessage={capMessage}
                     systemNotes={systemNotes}
-                    onDepthChange={onDepthChange}
+                    onDepthChange={
+                      onDepthChange
+                        ? (next) => {
+                            onDepthChange(next);
+                            // J-24-02: focus goes to the question heading,
+                            // which stays mounted through the new run.
+                            questionHeadingRef.current?.focus({ preventScroll: true });
+                          }
+                        : undefined
+                    }
                     depthValue={depthValue}
-                    depthConfirmCopy={depthConfirmCopy}
                     onFlagSource={onFlagSource}
                     flaggedSources={flaggedSources}
                   />

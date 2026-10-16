@@ -87,7 +87,7 @@ describe("DepthControl, set 9", () => {
 describe("DepthStripToggle, card 24", () => {
   it("offers exactly Plain language and Researcher, with the current value lit", () => {
     render(<DepthStripToggle value="plain_language" />);
-    const group = screen.getByRole("group", { name: /answer depth/i });
+    const group = screen.getByRole("group", { name: /answer mode/i });
     const buttons = Array.from(group.querySelectorAll("button"));
     expect(buttons.map((b) => b.textContent)).toEqual(["Plain language", "Researcher"]);
     expect(screen.getByRole("button", { name: "Plain language" })).toHaveAttribute("aria-pressed", "true");
