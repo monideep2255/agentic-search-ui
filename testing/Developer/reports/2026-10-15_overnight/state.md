@@ -2,7 +2,7 @@
 
 The live ledger of the night: where each card stands, which agent holds it, and the next step. The lead rewrites a row the moment a card moves, so a session that stops at a usage limit resumes from this file, not from memory. The plan and the owner's rules: `plan.md` beside this file.
 
-Last updated: 2026-10-16 02:10.
+Last updated: 2026-10-16 02:40.
 
 ## Table of contents
 
@@ -22,7 +22,7 @@ Last updated: 2026-10-16 02:10.
 
 | Card | Worktree, branch | Stage | Agent | Next step |
 |---|---|---|---|---|
-| 29 | card29, fix/card29-abstract-sentence, #243 | Fix round done (11 of 13); fresh verifier running (Fable) | verifier-29 | Merge on PASS, product check; then card 24 |
+| 29 | none (removed) | Closed: verifier HOLD (3 of 24 sentences mislead); #243 closed, card back in To do; tag phase-8.8 deleted | none | A stricter pick, later |
 | 75 | none (removed) | Closed: verifier HOLD (worse after a one-off 502 or lost connection); #239 closed, card back in To do | none | The owner's call in the morning |
 | 115 | card115, fix/card115-readonly-reply-first, #240 | Judge SHIP, adversary PASS; no fix round; fresh verifier running | verifier-115 | One fix round if needed, fresh verifier, merge |
 | 94 | card94, fix/card94-isolate-lookup, #244 | Judge and adversary running | judge-94, adversary-94 | One fix round if needed, fresh verifier, merge; then card 20 |
@@ -31,7 +31,7 @@ Last updated: 2026-10-16 02:10.
 | 101 | card101, fix/card101-record-sentence-end | Design committed | none yet | Builder (Sonnet) when the running count drops |
 | 15 | card15, fix/card15-checked-templates | Design committed (four shapes) | none yet | Builder (Sonnet) when the running count drops |
 | 84 and 72 | none (removed) | Design on develop; not built: needs the owner's yes on the guardrail rule | none | The owner's answer in the morning |
-| 24 | none yet | Waits for 29 to merge | none | Worktree from develop after 29 merges, builder (port df7d7a2c from the tag, add the cost on click) |
+| 24 | card24, fix/card24-answer-depth-switch | Builder running (card 29 closed, so no answer-screen conflict) | builder-24 | Commit, pull request, judge and adversary; then delete tag phase-8.4 |
 | 20 | none yet | Waits for 94 to merge | none | Worktree from develop after 94 merges, builder (separate extraction call) |
 | Parked branch | fix/cards110-111-summary-opening | Kept until card 110 merges or closes | none | Delete with card 110 |
 | Local tags | parked/phase-8.4, phase-8.8-snippets, card101, card15 (card84-72 deleted) | Each deleted when its card merges or closes | none | Delete with its card |

@@ -1,0 +1,2781 @@
+diff --git a/frontend/src/components/screens/AnswerScreen.sourceSnippet.test.tsx b/frontend/src/components/screens/AnswerScreen.sourceSnippet.test.tsx
+new file mode 100644
+index 00000000..9ef15fb2
+--- /dev/null
++++ b/frontend/src/components/screens/AnswerScreen.sourceSnippet.test.tsx
+@@ -0,0 +1,175 @@
++/**
++ * The one-sentence abstract snippet under a cited paper (build phase 8.8,
++ * "card 44", "answer on top, evidence below", DECISIONS.md 2026-09-25).
++ *
++ * Pins three behaviours in the source list's per-record card:
++ *
++ *   1. A record whose `Source.snippet` is set shows it, quoted, under the
++ *      title, and it reads even while the record's own `<details>` stays
++ *      collapsed (the whole point of the product-owner request: the
++ *      sentence must not be one more click away).
++ *   2. A record with no snippet renders no snippet element at all: no
++ *      empty line, no stray quote marks.
++ *   3. `groupSourcesByLayer` carries `snippet` through its merge exactly
++ *      like every other per-record field.
++ *
++ * Follows the render harness and testid conventions
++ * `AnswerScreen.sourceGrouping.test.tsx` already established, so this file
++ * reads as a sibling of that one rather than a new pattern.
++ */
++
++import { render, screen, within } from "@testing-library/react";
++import { describe, expect, it } from "vitest";
++
++import { AnswerScreen, groupSourcesByLayer } from "./AnswerScreen";
++import type { Claim, Source } from "./AnswerScreen";
++
++const GENE_WITH_SNIPPET: Source = {
++  n: 1,
++  layer: 1,
++  name: "NCBI Gene 672 · BRCA1",
++  tool: "cypher_query",
++  evidence: "curated assertion",
++  confidence: "high",
++  license: "public domain",
++  url: "https://www.ncbi.nlm.nih.gov/gene/672",
++  snippet: "Carriers of pathogenic BRCA1 variants have a substantially increased lifetime risk of breast cancer.",
++};
++
++const MEDGEN_NO_SNIPPET: Source = {
++  n: 2,
++  layer: 2,
++  name: "MedGen C0677776 · HBOC",
++  tool: "ncbi_efetch",
++  evidence: "curated record",
++  confidence: "high",
++  license: "public domain",
++  url: "https://www.ncbi.nlm.nih.gov/medgen/C0677776",
++};
++
++const CLAIMS: Claim[] = [
++  { text: "Gene 672 causes disease A.", layer: 1, citations: [1] },
++  { text: "MedGen confirms the HBOC syndrome name.", layer: 2, citations: [2] },
++];
++
++async function renderAnswer(sources: Source[]) {
++  render(
++    <AnswerScreen question="What is the risk from BRCA1 variants?" claims={CLAIMS} sources={sources} />,
++  );
++  const disclosure = screen.getByTestId("sources-disclosure");
++  const user = (await import("@testing-library/user-event")).default.setup();
++  await user.click(within(disclosure).getByText(/^sources$/i));
++  return { disclosure, user };
++}
++
++describe("groupSourcesByLayer carries snippet through the merge", () => {
++  it("keeps the snippet on the merged record", () => {
++    const groups = groupSourcesByLayer([GENE_WITH_SNIPPET, MEDGEN_NO_SNIPPET]);
++    const l1 = groups.find((g) => g.layer === 1)!;
++    expect(l1.items[0].snippet).toBe(GENE_WITH_SNIPPET.snippet);
++  });
++
++  it("leaves snippet undefined for a record that never had one", () => {
++    const groups = groupSourcesByLayer([GENE_WITH_SNIPPET, MEDGEN_NO_SNIPPET]);
++    const l2 = groups.find((g) => g.layer === 2)!;
++    expect(l2.items[0].snippet).toBeUndefined();
++  });
++
++  it("backfills the snippet from a SECOND citation of the same url that arrives later", () => {
++    // The realistic shape: `core/graph.py`'s `_pubmed_abstract_rows` emits
++    // a paper's abstract-field citation AFTER its title citation, both
++    // sharing one `source_url`. The title citation (the first one this
++    // function sees for that url) carries no snippet of its own; the
++    // second, later citation does. Without the backfill this function's
++    // own "first citation's fields win" rule would drop it.
++    const titleCitation: Source = { ...GENE_WITH_SNIPPET, n: 5, snippet: undefined };
++    const abstractCitation: Source = { ...GENE_WITH_SNIPPET, n: 6 };
++    const groups = groupSourcesByLayer([titleCitation, abstractCitation]);
++    const l1 = groups.find((g) => g.layer === 1)!;
++    expect(l1.items[0].ns).toEqual([5, 6]);
++    expect(l1.items[0].snippet).toBe(GENE_WITH_SNIPPET.snippet);
++  });
++
++  it("never overwrites the first citation's own snippet with a later duplicate's", () => {
++    const first: Source = { ...GENE_WITH_SNIPPET, n: 5 };
++    const second: Source = { ...GENE_WITH_SNIPPET, n: 6, snippet: "A different sentence entirely." };
++    const groups = groupSourcesByLayer([first, second]);
++    const l1 = groups.find((g) => g.layer === 1)!;
++    expect(l1.items[0].snippet).toBe(GENE_WITH_SNIPPET.snippet);
++  });
++});
++
++describe("AnswerScreen source card: snippet line", () => {
++  it("shows the quoted snippet under the title WITHOUT opening the record's own disclosure", async () => {
++    const { disclosure, user } = await renderAnswer([GENE_WITH_SNIPPET, MEDGEN_NO_SNIPPET]);
++    // Open only the outer Sources panel and the layer group, exactly as
++    // `renderAnswer` does. The individual record card (`source-1`) is
++    // deliberately left closed: `openSources` starts empty and nothing
++    // here clicks it.
++    const l1Group = within(disclosure).getByTestId("sources-group-1");
++    await user.click(within(l1Group).getByText("Knowledge graph"));
++
++    const card = within(disclosure).getByTestId("source-1");
++    const snippet = within(card).getByTestId("source-1-snippet");
++    expect(snippet).toHaveTextContent(GENE_WITH_SNIPPET.snippet!);
++
++    // The load-bearing structural proof: the snippet sits inside the
++    // record's `<summary>`, the one part of a native `<details>` element a
++    // browser always renders regardless of the `open` attribute. The
++    // metadata `<dl>` (Tool, Evidence, Confidence...) sits OUTSIDE the
++    // summary, inside the collapsible body, which is why moving the
++    // snippet here (rather than beside "Tool" in the `<dl>`) is what makes
++    // it visible without opening the card. jsdom does not apply the
++    // browser's native collapse styling (this file's sibling tests already
++    // note that), so this checks DOM placement rather than visibility.
++    expect(snippet.closest("summary")).not.toBeNull();
++    const toolRow = within(card).getByText("cypher_query");
++    expect(toolRow.closest("summary")).toBeNull();
++    expect(toolRow.closest("dl")).not.toBeNull();
++  });
++
++  it("renders no snippet element at all when the record has none", async () => {
++    const { disclosure, user } = await renderAnswer([GENE_WITH_SNIPPET, MEDGEN_NO_SNIPPET]);
++    const l2Group = within(disclosure).getByTestId("sources-group-2");
++    await user.click(within(l2Group).getByText("Live NCBI APIs"));
++
++    const card = within(disclosure).getByTestId("source-2");
++    expect(within(card).queryByTestId("source-2-snippet")).not.toBeInTheDocument();
++  });
++
++  it("keeps the quoted sentence out of the toggle's accessible name", async () => {
++    const { disclosure, user } = await renderAnswer([GENE_WITH_SNIPPET, MEDGEN_NO_SNIPPET]);
++    const l1Group = within(disclosure).getByTestId("sources-group-1");
++    await user.click(within(l1Group).getByText("Knowledge graph"));
++
++    const card = within(disclosure).getByTestId("source-1");
++    const summary = card.querySelector("summary")!;
++    const labelIds = summary.getAttribute("aria-labelledby")!.split(" ");
++    const name = labelIds.map((id) => document.getElementById(id)?.textContent ?? "").join(" ");
++    expect(name).toContain("NCBI Gene 672");
++    expect(name).not.toContain("Carriers of pathogenic");
++    // The sentence is still in the summary, visible while the card is closed.
++    expect(within(summary).getByTestId("source-1-snippet")).toBeVisible();
++    // A card with no sentence keeps its plain name (no labelledby).
++    const l2Group = within(disclosure).getByTestId("sources-group-2");
++    await user.click(within(l2Group).getByText("Live NCBI APIs"));
++    expect(within(disclosure).getByTestId("source-2").querySelector("summary")).not.toHaveAttribute(
++      "aria-labelledby",
++    );
++  });
++
++  it("does not open or close the card when the sentence is clicked", async () => {
++    const { disclosure, user } = await renderAnswer([GENE_WITH_SNIPPET, MEDGEN_NO_SNIPPET]);
++    const l1Group = within(disclosure).getByTestId("sources-group-1");
++    await user.click(within(l1Group).getByText("Knowledge graph"));
++    const card = within(disclosure).getByTestId("source-1");
++    expect(card).not.toHaveAttribute("open");
++
++    await user.click(within(card).getByTestId("source-1-snippet"));
++    expect(card).not.toHaveAttribute("open");
++
++    // The card's own title still toggles it, so the click guard is on the sentence only.
++    await user.click(within(card).getByText("NCBI Gene 672 · BRCA1"));
++    expect(card).toHaveAttribute("open");
++  });
++});
+diff --git a/frontend/src/components/screens/AnswerScreen.tsx b/frontend/src/components/screens/AnswerScreen.tsx
+index 3e6f1d56..81fb883b 100644
+--- a/frontend/src/components/screens/AnswerScreen.tsx
++++ b/frontend/src/components/screens/AnswerScreen.tsx
+@@ -596,6 +596,12 @@ export interface Source {
+   confidence: string;
+   license: string;
+   url: string;
++  /**
++   * The one sentence of THIS paper's own abstract that answers the
++   * question, quoted word for word (card 29). Undefined when none was
++   * picked; an absent sentence renders nothing, never an empty line.
++   */
++  snippet?: string;
+ }
+ 
+ /**
+@@ -675,6 +681,12 @@ export interface MergedSource {
+   confidence: string;
+   license: string;
+   url: string;
++  /**
++   * The first non-empty abstract sentence among this page's citations
++   * (card 29). The server puts it on the paper's abstract citation, which
++   * may not be the citation the card's other fields come from.
++   */
++  snippet?: string;
+ }
+ 
+ /** One layer group of the Sources list. */
+@@ -804,6 +816,7 @@ export function groupSourcesByLayer(sources: Source[]): SourceGroup[] {
+       confidence: primary.confidence,
+       license: primary.license,
+       url: primary.url,
++      snippet: cited.find((source) => source.snippet)?.snippet,
+     };
+   });
+   return ([1, 2, 3] as Layer[])
+@@ -2194,6 +2207,17 @@ export function AnswerBody({
+                   >
+                     <Box
+                       component="summary"
++                      // Card 29: the quoted sentence sits in the summary so it
++                      // reads while the card is closed, but it is not part of
++                      // the toggle's name: the name is the markers, the title
++                      // and the layer only.
++                      aria-labelledby={
++                        source.snippet
++                          ? [`markers`, `name`, `layers`]
++                              .map((part) => `${testIdPrefix}source-${primaryN}-${part}`)
++                              .join(" ")
++                          : undefined
++                      }
+                       onClick={(event: React.MouseEvent) => {
+                         event.preventDefault();
+                         toggleSource(primaryN);
+@@ -2222,6 +2246,7 @@ export function AnswerBody({
+                       </Box>
+                       <Box
+                         component="span"
++                        id={`${testIdPrefix}source-${primaryN}-markers`}
+                         data-testid={`${testIdPrefix}source-${primaryN}-markers`}
+                         sx={{ ...mono, fontWeight: 700, fontSize: 12 }}
+                       >
+@@ -2229,6 +2254,7 @@ export function AnswerBody({
+                       </Box>
+                       <Typography
+                         variant="body2"
++                        id={`${testIdPrefix}source-${primaryN}-name`}
+                         sx={{ fontWeight: 600, "@media (max-width:720px)": { minWidth: 0, overflowWrap: "anywhere" } }}
+                       >
+                         {source.name}
+@@ -2244,11 +2270,47 @@ export function AnswerBody({
+                       */}
+                       <Box
+                         component="span"
++                        id={`${testIdPrefix}source-${primaryN}-layers`}
+                         data-testid={`${testIdPrefix}source-${primaryN}-layers`}
+                         sx={{ ...mono, ml: "auto", fontSize: 11.5, color: designTokens.inkMuted }}
+                       >
+                         {sourceLayerLabel(source.layers)}
+                       </Box>
++                      {/*
++                        Card 29: the one sentence of this paper's own abstract
++                        that answers the question, word for word, on a line of
++                        its own under the title. It sits in the summary so it
++                        reads while the card is collapsed. NO SNIPPET STYLE
++                        EXISTS in the design system (checked in
++                        `prototype/app.html`, `components/source-card.html` and
++                        `foundations/`; docs/build/design/README.md's coverage
++                        table does not list it): built from the foundations and
++                        the nearest designed neighbour, `source-card.html`'s
++                        `.card-note` text (13px, ink-muted). Absent: nothing is
++                        rendered, no empty line.
++                      */}
++                      {source.snippet ? (
++                        <Typography
++                          component="span"
++                          data-testid={`${testIdPrefix}source-${primaryN}-snippet`}
++                          // A click, or a drag to select and copy the quote,
++                          // must not open or close the card.
++                          onClick={(event: React.MouseEvent) => {
++                            event.preventDefault();
++                            event.stopPropagation();
++                          }}
++                          sx={{
++                            flexBasis: "100%",
++                            fontSize: 13,
++                            color: designTokens.inkMuted,
++                            overflowWrap: "anywhere",
++                            cursor: "text",
++                            userSelect: "text",
++                          }}
++                        >
++                          {`"${source.snippet}"`}
++                        </Typography>
++                      ) : null}
+                     </Box>
+ 
+                     {/*
+diff --git a/frontend/src/hooks/useRunView.snippet.test.ts b/frontend/src/hooks/useRunView.snippet.test.ts
+new file mode 100644
+index 00000000..58746542
+--- /dev/null
++++ b/frontend/src/hooks/useRunView.snippet.test.ts
+@@ -0,0 +1,104 @@
++/**
++ * Card 29: the one abstract sentence under a cited paper, as it travels from
++ * the wire to the source list.
++ *
++ * The server sends the listing's citations before the writer runs, then
++ * sends a paper's citation again with `snippet` once the batched pick is
++ * back. Pinned here: the later send carries the sentence to the source, the
++ * number and record stay as first shown, a send with no sentence leaves the
++ * source without the field, and the sentence alone never makes two sends
++ * count as different citations.
++ */
++
++import { renderHook } from "@testing-library/react";
++import { describe, expect, it } from "vitest";
++
++import { parseAgentEvent, type AgentEvent } from "../lib/events";
++import { updatesCitation, useRunView } from "./useRunView";
++
++let seq = 0;
++function ev(type: string, payload: Record<string, unknown>): AgentEvent {
++  seq += 1;
++  return { type, version: "v1", trace_id: "t29", seq, ts: "2026-10-15T00:00:00Z", payload } as unknown as AgentEvent;
++}
++
++const SENTENCE = "Caffeine intake of three milligrams per kilogram improved performance in trained cyclists.";
++
++const citation = (extra: Record<string, unknown> = {}): AgentEvent =>
++  ev("citation", {
++    citation_id: "k1",
++    display_index: 1,
++    source: "pubmed",
++    source_id: "31234567",
++    source_url: "https://pubmed.ncbi.nlm.nih.gov/31234567/",
++    layer: "layer_2_api",
++    field: "title",
++    claim_text: "Caffeine and cycling",
++    evidence_kind: "curated assertion",
++    assertion_confidence: "high",
++    population_ancestry_context: null,
++    license: "public domain",
++    ...extra,
++  });
++
++const token = ev("token", {
++  text: "Caffeine and cycling [1].",
++  marker_ids: ["k1"],
++  kind: "claim",
++});
++const done = ev("done", { total_cost_usd: 0.01, total_tool_calls: 1, elapsed_ms: 9000, trust_outcome: "answer" });
++
++const view = (events: AgentEvent[]) => renderHook(() => useRunView(events)).result.current;
++
++describe("useRunView: the abstract sentence on a paper's source", () => {
++  it("carries the sentence from a citation sent again after the listing", () => {
++    // Mutation that turns this red: leave "snippet" out of the fields
++    // `updatesCitation` ignores, so the second send is dropped as a conflict.
++    const now = view([citation(), token, citation({ snippet: SENTENCE }), done]);
++    expect(now.sources).toHaveLength(1);
++    expect(now.sources[0]!.snippet).toBe(SENTENCE);
++    expect(now.sources[0]!.n).toBe(1);
++  });
++
++  it("leaves the source without the field when no sentence was picked", () => {
++    const now = view([citation(), token, citation({ snippet: null }), done]);
++    expect(now.sources[0]!.snippet).toBeUndefined();
++  });
++
++  it("takes a sentence that arrives with the first send", () => {
++    const now = view([citation({ snippet: SENTENCE }), token, done]);
++    expect(now.sources[0]!.snippet).toBe(SENTENCE);
++  });
++
++  it("still refuses a send that changes the number or the record", () => {
++    const renumbered = citation({ display_index: 4, snippet: SENTENCE });
++    const otherRecord = citation({ source_url: "https://pubmed.ncbi.nlm.nih.gov/999/", snippet: SENTENCE });
++    const now = view([citation(), token, renumbered, otherRecord, done]);
++    expect(now.sources).toHaveLength(1);
++    expect(now.sources[0]!.snippet).toBeUndefined();
++  });
++
++  it("reads a send as the same citation when only the sentence was added", () => {
++    const early = (citation() as unknown as { payload: Parameters<typeof updatesCitation>[0] }).payload;
++    expect(updatesCitation(early, { ...early, snippet: SENTENCE })).toBe(true);
++    expect(updatesCitation(early, { ...early, snippet: SENTENCE, display_index: 2 })).toBe(false);
++  });
++});
++
++describe("the citation event contract: snippet is optional and a string or null", () => {
++  const wire = (extra: Record<string, unknown>) => {
++    const event = citation(extra) as unknown as Record<string, unknown>;
++    return event;
++  };
++
++  it("parses a citation with a sentence, with null, and with the field absent", () => {
++    for (const extra of [{ snippet: SENTENCE }, { snippet: null }, {}]) {
++      const event = wire(extra);
++      expect(parseAgentEvent("citation", event).type).toBe("citation");
++    }
++  });
++
++  it("refuses a sentence that is not a string", () => {
++    expect(() => parseAgentEvent("citation", wire({ snippet: 7 }))).toThrow();
++  });
++});
+diff --git a/frontend/src/hooks/useRunView.ts b/frontend/src/hooks/useRunView.ts
+index ba378a9c..b46754fe 100644
+--- a/frontend/src/hooks/useRunView.ts
++++ b/frontend/src/hooks/useRunView.ts
+@@ -111,7 +111,8 @@ import { citedSourceCounts } from "../components/screens/AnswerScreen";
+ /**
+  * Whether `later` is `earlier` sent again (F-8.7-A04, card 57): the same
+  * citation id and every field equal except `claim_text`, the record words the
+- * citation was checked against, which grow once the summary is checked. The
++ * citation was checked against, which grow once the summary is checked, and
++ * `snippet`, the abstract sentence that arrives after the listing. The
+  * server's rule, `contracts.token_order.updates_citation`.
+  */
+ export function updatesCitation(earlier: CitationPayload, later: CitationPayload): boolean {
+@@ -120,6 +121,9 @@ export function updatesCitation(earlier: CitationPayload, later: CitationPayload
+   const after = later as unknown as Record<string, unknown>;
+   const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+   keys.delete("claim_text");
++  // Card 29: the abstract sentence is picked beside the writer, so it arrives
++  // on the second send of a citation the listing already sent without it.
++  keys.delete("snippet");
+   for (const key of keys) {
+     if ((before[key] ?? null) !== (after[key] ?? null)) return false;
+   }
+@@ -616,6 +620,10 @@ export function useRunView(events: AgentEvent[]): RunView {
+         confidence: payload.assertion_confidence,
+         license: payload.license,
+         url: payload.source_url,
++        // Build phase 8.8 ("card 44", "answer on top, evidence below"):
++        // undefined, never an empty string, so `Source.snippet`'s "absent
++        // renders nothing" contract holds all the way from the wire.
++        snippet: payload.snippet ?? undefined,
+       });
+     }
+     sources.sort((a, b) => a.n - b.n);
+diff --git a/frontend/src/lib/events.ts b/frontend/src/lib/events.ts
+index 919cbd35..2f492312 100644
+--- a/frontend/src/lib/events.ts
++++ b/frontend/src/lib/events.ts
+@@ -241,6 +241,13 @@ export interface CitationPayload {
+   // null).
+   snapshot_date?: string | null;
+   entity_name?: string | null;
++  // T-8.8 (build phase 8.8, DECISIONS.md 2026-09-25, "card 44" and "answer
++  // on top, evidence below"): a third additive, optional field, same
++  // reasoning as the two above. The one sentence of THIS citation's own
++  // paper's abstract that answers the question, quoted verbatim, or null
++  // when no sentence was picked. See `contracts/events.py`'s
++  // `CitationPayload.snippet` docstring for the full account.
++  snippet?: string | null;
+ }
+ 
+ export interface TrustSignalPayload {
+@@ -569,7 +576,8 @@ function isCitationPayload(value: unknown): value is CitationPayload {
+     isNullableString(value.population_ancestry_context) &&
+     typeof value.license === "string" &&
+     (value.snapshot_date === undefined || isNullableString(value.snapshot_date)) &&
+-    (value.entity_name === undefined || isNullableString(value.entity_name))
++    (value.entity_name === undefined || isNullableString(value.entity_name)) &&
++    (value.snippet === undefined || isNullableString(value.snippet))
+   );
+ }
+ 
+diff --git a/src/system_03_search_agent/adapters/mcp/server.py b/src/system_03_search_agent/adapters/mcp/server.py
+index 9a1047cd..a078c1d7 100644
+--- a/src/system_03_search_agent/adapters/mcp/server.py
++++ b/src/system_03_search_agent/adapters/mcp/server.py
+@@ -407,6 +407,19 @@ def _reject_control_bytes(value: str) -> str:
+     return value
+ 
+ 
++def _citations_without_snippet(citations: list[CitationPayload]) -> list[CitationPayload]:
++    """The citations as MCP publishes them, without the abstract sentence.
++
++    Card 29 shows the quoted sentence on the web only. MCP's citation keys
++    stay exactly what they were (`_ALLOWED_RESPONSE_KEYS` is a manual
++    control), so the sentence is cleared here and, being empty,
++    `CitationPayload` leaves the key out when it serializes.
++    """
++    return [
++        c.model_copy(update={"snippet": None}) if c.snippet is not None else c for c in citations
++    ]
++
++
+ class AskBiomedicalQuestionOutput(BaseModel):
+     """Section 13.2's locked `output_schema`, field for field."""
+ 
+@@ -1320,7 +1333,7 @@ async def _fold_run_to_response(
+ 
+     return AskBiomedicalQuestionOutput(
+         answer=answer_text,
+-        citations=citations,
++        citations=_citations_without_snippet(citations),
+         trust_signal=answer_trust_signal,
+         run_id=run_id,
+         persona_name=persona_name,
+@@ -1665,7 +1678,7 @@ async def reopen_past_answer(
+         asked_at=saved.asked_at,
+         audience_depth=audience_depth,
+         answer_markdown=saved.answer_markdown,
+-        citations=citations,
++        citations=_citations_without_snippet(citations),
+         citations_omitted=citations_omitted,
+         trust_signal=saved.trust_signal,
+         trust_line=saved.trust_line,
+diff --git a/src/system_03_search_agent/contracts/events.py b/src/system_03_search_agent/contracts/events.py
+index ae949fce..f9c272a6 100644
+--- a/src/system_03_search_agent/contracts/events.py
++++ b/src/system_03_search_agent/contracts/events.py
+@@ -383,6 +383,14 @@ class ToolResultPayload(ToolStartPayload):
+     truncated: bool
+ 
+ 
++def _snippet_is_absent(value: object) -> bool:
++    """True when a citation has no abstract sentence, so the key is left
++    out of the serialized payload and a citation without one has exactly
++    the keys it had before card 29 (an older reader that forbids extra
++    keys never meets it)."""
++    return value is None
++
++
+ def _placement_is_absent(value: object) -> bool:
+     """True when a token carries no placement, so it is left out of the
+     serialized payload and a request that did not ask for it gets the
+@@ -518,6 +526,20 @@ class CitationPayload(BaseModel):
+     # artifact.
+     snapshot_date: str | None = Field(None, max_length=32)
+     entity_name: str | None = Field(None, max_length=256)
++    # T-8.8 (build phase 8.8, DECISIONS.md 2026-09-25, "card 44" and "answer
++    # on top, evidence below"): a third additive, optional field, same
++    # pattern as the two above. The ONE sentence of this citation's OWN
++    # paper's abstract that answers the question, quoted VERBATIM
++    # (`synthesis.snippets.pick_snippet` never lets a model reword it) and
++    # capped at 500 characters, matching `synthesis.snippets.
++    # MAX_SENTENCE_CHARS`'s own cap on what is ever offered as a candidate.
++    # `None` when no sentence was picked (the model chose "none", the
++    # decision seam failed, or the citation carries no abstract to split
++    # in the first place), never a guess. This field is meaningful only on
++    # a citation whose `source` IS the paper the sentence was drawn from;
++    # it must never be attached to a different citation than the one it
++    # was extracted for.
++    snippet: str | None = Field(None, max_length=500, exclude_if=_snippet_is_absent)
+ 
+ 
+ class TrustSignalPayload(BaseModel):
+diff --git a/src/system_03_search_agent/contracts/token_order.py b/src/system_03_search_agent/contracts/token_order.py
+index be7e076d..ca9fe4ce 100644
+--- a/src/system_03_search_agent/contracts/token_order.py
++++ b/src/system_03_search_agent/contracts/token_order.py
+@@ -62,12 +62,14 @@ def _text_of(token: Any) -> str:
+     return str(getattr(token, "text", "") or "")
+ 
+ 
+-#: The one field a citation sent again may change (F-8.7-A04, card 57):
+-#: its checked record words, which gain the summary sentences' words once
+-#: the summary is checked. Its number, record, link and every other field
+-#: stay as they were sent, because a chip with that number may already be
+-#: on screen.
+-CITATION_UPDATABLE_FIELDS = frozenset({"claim_text"})
++#: The fields a citation sent again may change. `claim_text` (F-8.7-A04,
++#: card 57): its checked record words, which gain the summary sentences'
++#: words once the summary is checked. `snippet` (card 29): the sentence of
++#: the paper's own abstract that answers the question, picked beside the
++#: writer and so known only after the listing's citations were sent. Its
++#: number, record, link and every other field stay as they were sent,
++#: because a chip with that number may already be on screen.
++CITATION_UPDATABLE_FIELDS = frozenset({"claim_text", "snippet"})
+ 
+ 
+ def citation_fields(citation: Any) -> dict[str, Any]:
+diff --git a/src/system_03_search_agent/core/graph.py b/src/system_03_search_agent/core/graph.py
+index 04684f0e..9dddc786 100644
+--- a/src/system_03_search_agent/core/graph.py
++++ b/src/system_03_search_agent/core/graph.py
+@@ -624,6 +624,12 @@ from system_03_search_agent.synthesis.sentence_check import (
+     SentenceCheckUnreadable,
+     check_reworded_sentences,
+ )
++from system_03_search_agent.synthesis.snippets import (
++    MAX_SNIPPET_PAPERS,
++    TRIM_LIMIT_CHARS,
++    SnippetPaper,
++    pick_snippets,
++)
+ from system_03_search_agent.synthesis.trust import (
+     ClaimTrust,
+     aggregate,
+@@ -1246,6 +1252,9 @@ class _RunDecisions:
+     #: that decides what is said about a condition's clinical features. None
+     #: when Think never started it (small talk, or a Write reached directly).
+     features_task: asyncio.Task[DecisionRecord | None] | None = None
++    #: The batched abstract-sentence pick (card 29), started by Write beside
++    #: the writer and read once, after it. None until started.
++    snippet_task: asyncio.Task[dict[str, str]] | None = None
+ 
+ 
+ #: One entry per live run, keyed by the run's `Harness`. `core/run.py`
+@@ -7617,7 +7626,7 @@ def _rows_for_citation(rows: list[CypherQueryRow]) -> list[CypherQueryRow]:
+ # (the gene's official symbol) over the bare numeric id already present in
+ # the question and the CURIE. Mirrors how a Layer 1 row never repeats its
+ # own CURIE inside `fields` either.
+-_NCBI_EFETCH_ROW_IDENTITY_FIELDS: frozenset[str] = frozenset({"gene_id"})
++_NCBI_EFETCH_ROW_IDENTITY_FIELDS: frozenset[str] = frozenset({"gene_id", "retracted"})
+ 
+ 
+ #: UI fix 11.21 wiring: per breadth purpose, the record fields that reach
+@@ -7771,6 +7780,8 @@ _SRA_RUN_ACCESSION = re.compile(r'acc="([A-Z]{3}\d+(?:\.\d+)?)"')
+ #: `_cap_text`, long before this function ever runs).
+ _PUBMED_ABSTRACTS_PURPOSE: Final[str] = "pubmed_abstracts"
+ _PUBMED_ABSTRACT_FIELD: Final[str] = "abstract"
++#: Set by the PubMed fetch parse on a record PubMed marks retracted.
++_PUBMED_RETRACTED_FIELD: Final[str] = "retracted"
+ 
+ 
+ def _pubmed_abstract_rows(
+@@ -12774,6 +12785,137 @@ async def _lead_sentence_choice(
+     return None if picked is None else candidates[picked]
+ 
+ 
++# ---------------------------------------------------------------------------
++# Card 29 (2026-10-15): under each of the first five cited papers that have
++# an abstract, the one sentence of its own abstract that answers the
++# question. One batched classifier call starts beside the writer, from the
++# papers the listing cites, so it adds no wait. Its picks are attached to
++# those papers' citations once the writer is done. A pick that is late,
++# failed, empty or not word for word in the abstract shows nothing, and the
++# paper looks as it did before.
++# ---------------------------------------------------------------------------
++
++
++def _snippet_papers(
++    citations: Sequence[CitationPayload],
++    synth_findings: Sequence[SynthFinding],
++    raw_outputs: Mapping[str, Any] | None = None,
++) -> list[SnippetPaper]:
++    """One `SnippetPaper` for each cited paper that has an abstract, in the
++    order the answer numbers them.
++
++    The abstract is the fullest text held: the fetched record's own, before
++    the findings trim cuts it at 2,000 characters. Only when no record is
++    held does the trimmed finding stand in, marked cut when it ends in the
++    trim's ellipsis or sits at its limit. A paper the fetched record marks
++    retracted (`retracted` field, from its publication types) is flagged.
++    """
++    record_by_url: dict[str, Any] = {}
++    for output in (raw_outputs or {}).values():
++        for record in getattr(output, "records", None) or ():
++            url = getattr(record, "source_url", None)
++            if url and isinstance(getattr(record, "fields", None), dict):
++                record_by_url.setdefault(url, record)
++    abstract_by_url: dict[str, str] = {}
++    for finding in synth_findings:
++        if finding.field == _PUBMED_ABSTRACT_FIELD and finding.source_url and finding.field_value:
++            abstract_by_url.setdefault(finding.source_url, finding.field_value)
++    papers: list[SnippetPaper] = []
++    seen: set[str] = set()
++    for citation in sorted(citations, key=lambda c: c.display_index):
++        url = citation.source_url
++        if url in seen or url not in abstract_by_url:
++            continue
++        seen.add(url)
++        record = record_by_url.get(url)
++        full = record.fields.get(_PUBMED_ABSTRACT_FIELD) if record is not None else None
++        retracted = record is not None and record.fields.get(_PUBMED_RETRACTED_FIELD) is True
++        if isinstance(full, str) and full.strip():
++            papers.append(SnippetPaper(url, full, cut=False, retracted=retracted))
++        else:
++            trimmed = abstract_by_url[url]
++            papers.append(
++                SnippetPaper(
++                    url,
++                    trimmed,
++                    cut=trimmed.endswith("\u2026") or len(trimmed) >= TRIM_LIMIT_CHARS,
++                    retracted=retracted,
++                )
++            )
++    return papers
++
++
++def _start_snippet_pick(
++    harness: Harness,
++    trace_id: str,
++    question: str,
++    citations: Sequence[CitationPayload],
++    synth_findings: Sequence[SynthFinding],
++    raw_outputs: Mapping[str, Any] | None = None,
++) -> None:
++    """Start the per-paper pick beside the writer, once per run. Asked only
++    when Jev is the classifier (`CLASSIFIER_PROVIDER=jev`), as the lead
++    sentence is: with the guard tier deciding alone it would wait on a call
++    of about 2 s. Nothing to ask, nothing started. Each paper is its own
++    decision, run together, and each reaches `done.decisions`."""
++    if not _jev_decides():
++        return
++    papers = _snippet_papers(citations, synth_findings, raw_outputs)[:MAX_SNIPPET_PAPERS]
++    if not papers:
++        return
++    entry = _run_decisions(harness)
++    _cancel_if_pending(entry.snippet_task)
++    entry.snippet_task = asyncio.create_task(
++        pick_snippets(harness, trace_id, question, papers, entry.records.append)
++    )
++
++
++def _drop_snippet_pick(harness: Any) -> None:
++    """Stop a pick nobody will read. Never awaits."""
++    entry = _run_decisions(harness)
++    task, entry.snippet_task = entry.snippet_task, None
++    _cancel_if_pending(task)
++
++
++async def _attach_snippets(
++    harness: Harness,
++    citations: list[CitationPayload],
++    deadline: float | None = None,
++) -> list[CitationPayload]:
++    """`citations` with each picked sentence on its paper's abstract
++    citation, or on the paper's first citation when only its title is cited.
++
++    The pick is read with the late-read grace (`_read_late_decision`'s
++    rule): done, it costs nothing; still running past
++    `_LATE_DECISION_GRACE_S`, it is stopped and nothing is attached.
++    """
++    entry = _run_decisions(harness)
++    task, entry.snippet_task = entry.snippet_task, None
++    if task is None:
++        return citations
++    wait_s = _LATE_DECISION_GRACE_S
++    if deadline is not None:
++        wait_s = min(wait_s, deadline - time.monotonic())
++    if not task.done() and wait_s > 0:
++        await asyncio.wait({task}, timeout=wait_s)
++    if not task.done():
++        task.cancel()
++        logger.warning("snippet pick was late; the papers show their titles only")
++        return citations
++    if task.cancelled() or task.exception() is not None:
++        return citations
++    picked = task.result()
++    attached = list(citations)
++    for url, sentence in picked.items():
++        own = [i for i, c in enumerate(attached) if c.source_url == url]
++        if not own:
++            continue
++        abstract_own = [i for i in own if attached[i].field == _PUBMED_ABSTRACT_FIELD]
++        index = (abstract_own or own)[0]
++        attached[index] = attached[index].model_copy(update={"snippet": sentence})
++    return attached
++
++
+ def _asked_field(
+     clinical_features_asked: bool, failed_searches: list[dict[str, str]]
+ ) -> AskedField | None:
+@@ -13631,6 +13773,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
+         return await _write_answer(state)
+     finally:
+         _drop_features_decision(state["harness"])
++        _drop_snippet_pick(state["harness"])
+         # Build phase 8.7, card 50: a second draft started beside the first
+         # never outlives the Write step, however it ends.
+         await _drop_second_draft(state["harness"])
+@@ -14104,6 +14247,17 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+             listing_citations, listing_tokens = build_listing(listing_grounding)
+     reads_placement = _request_reads_placement(state)
+     listing_sent = bool(listing_tokens) and reads_placement
++    if listing_citations and not cap_hit:
++        # Card 29: the batched abstract-sentence pick starts here, beside
++        # the writer, over the papers the listing cites.
++        _start_snippet_pick(
++            harness,
++            trace_id,
++            query.text,
++            listing_citations,
++            synth_findings,
++            layer2_raw_outputs,
++        )
+     if listing_sent:
+         # Its own paragraph: in reading order the summary always precedes it.
+         sink.emit_live(
+@@ -14717,6 +14871,10 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+                 else sent_by_id[c.citation_id]
+                 for c in citations
+             ]
++        # Card 29: the picked sentence goes on its paper's citation. A
++        # citation already sent without one is sent again with it
++        # (`snippet` is an updatable field, `contracts.token_order`).
++        citations = await _attach_snippets(harness, citations, write_started_at + write_budget_s)
+         # T-3.4-07, Section 7.2: floor a conflicted claim's outcome at
+         # `flag` AFTER citations exist (it needs their `source_url` for
+         # `ConflictResult`) and BEFORE the answer-level aggregate below, so
+diff --git a/src/system_03_search_agent/synthesis/snippets.py b/src/system_03_search_agent/synthesis/snippets.py
+new file mode 100644
+index 00000000..bff548a0
+--- /dev/null
++++ b/src/system_03_search_agent/synthesis/snippets.py
+@@ -0,0 +1,537 @@
++"""The one-sentence abstract snippet under a cited paper (build phase 8.8,
++DECISIONS.md 2026-09-25, "card 44" and "answer on top, evidence below").
++
++Product-owner decision: under each cited paper in the answer's sources
++list, show the ONE sentence of that paper's OWN abstract that answers the
++question, quoted verbatim and cited to that paper. Nothing is added to the
++answer text itself. The LitSense route was closed because LitSense cannot
++be pointed at a paper; this route cannot cite the wrong paper because the
++sentence comes from the cited paper's own abstract, which the product
++already fetches.
++
++Two functions, split deliberately so the deterministic half never touches
++a model:
++
++    split_abstract_sentences: a pure, bounded sentence splitter. No model
++        call, no network call, testable with nothing but strings in and
++        strings out.
++    pick_snippet: the one model call, routed through the classifier seam
++        (`harness.decide.decide`), the same seam every other closed-option
++        choice in the loop already goes through (`core.graph`'s
++        "classifier seam, wired" section). It never paraphrases: the
++        model picks WHICH sentence answers the question, or "none", and
++        the sentence text returned is always one of the exact strings
++        `split_abstract_sentences` produced, never text the model wrote.
++
++Depends on:
++    - system_03_search_agent.harness.decide (decide)
++    - system_03_search_agent.harness.harness (Harness)
++
++Reads:
++    - Nothing beyond its arguments. No environment variable, no network
++      call of its own; `decide()` is the only thing here that reaches a
++      model, and it owns its own CLASSIFIER_PROVIDER read.
++
++Writes:
++    - Nothing. `pick_snippet` records its decision through `decide()`
++      exactly like every other decision point; this module does not
++      append to any log itself.
++
++WIRED INTO THE LOOP (card 29, 2026-10-15): `core/graph.py`'s Write step
++starts `pick_snippets` once, beside the writer, for the first
++`MAX_SNIPPET_PAPERS` cited papers that have an abstract, and attaches each
++verified sentence to that paper's citation. Each paper is its own
++`pick_snippet` decision through `decide()` (Jev first, the guard tier when
++Jev fails), all asked together. A retracted paper is never asked about, and
++a sentence cut short by a trim is never offered or shown.
++"""
++
++from __future__ import annotations
++
++import asyncio
++import logging
++import re
++from collections.abc import Callable, Sequence
++from dataclasses import dataclass
++from typing import Final
++
++from system_03_search_agent.contracts.events import DecisionRecord
++from system_03_search_agent.harness.decide import decide
++from system_03_search_agent.harness.harness import Harness
++
++logger = logging.getLogger(__name__)
++
++# ---------------------------------------------------------------------------
++# split_abstract_sentences: deterministic, bounded, no model, no network.
++# ---------------------------------------------------------------------------
++
++#: The count cap on what this function returns. An abstract is a few
++#: hundred words in practice; this bound exists so a malformed or
++#: adversarial "abstract" (production-standards.md's untrusted-content
++#: gate: a Layer 3 fetch is data, never a trusted length) cannot make the
++#: caller iterate an unbounded list.
++MAX_SENTENCES: Final[int] = 40
++
++#: The per-sentence character cap. Matches `CitationPayload.snippet`'s own
++#: `max_length=500` (contracts/events.py): a sentence too long to ever fit
++#: the field it would be stored in is not offered as a candidate at all,
++#: rather than being truncated and handed to a model as something other
++#: than the exact text it will be cited as.
++MAX_SENTENCE_CHARS: Final[int] = 500
++
++#: A sentence shorter than this many words is a fragment, not a claim: a
++#: figure caption fragment, a running head, a stray heading line inside an
++#: abstract field. Skipped rather than offered as a candidate.
++MIN_SENTENCE_WORDS: Final[int] = 8
++
++#: A private-use codepoint, never legitimately present in a PubMed
++#: abstract, used to shield a period inside an abbreviation or a decimal
++#: number from the sentence-boundary split, then restored afterward.
++_PERIOD_SHIELD: Final[str] = ""
++
++#: Abbreviations whose trailing period is not a sentence boundary. Matched
++#: case-insensitively, longest-first is not required here because none is
++#: a prefix of another in this list.
++_ABBREVIATIONS: Final[tuple[str, ...]] = (
++    "et al.",
++    "e.g.",
++    "i.e.",
++    "cf.",
++    "vs.",
++    "approx.",
++    "fig.",
++    "figs.",
++    "no.",
++    "nos.",
++    "dr.",
++    "mr.",
++    "mrs.",
++    "ms.",
++    "prof.",
++    "inc.",
++    "jr.",
++    "sr.",
++    "vol.",
++    "ed.",
++    "eds.",
++    "eq.",
++    "ref.",
++    "refs.",
++)
++
++#: `\b` before the alternation is load-bearing, not decoration. Without it
++#: "ed." (an abbreviation for "edition") matched inside the last four
++#: letters of "tested.", "reported.", "increased." and every other past-
++#: tense verb ending a sentence, which is most of them; a word boundary
++#: only asserts between a word character and a non-word character (or a
++#: string edge), and every character inside "tested" is a word character,
++#: so `\btested` never crosses one, but `\bed\.` still matches a genuine
++#: standalone "Ed." (e.g. "Ed. Smith"). Caught by
++#: `test_et_al_does_not_split_the_sentence` before this guard existed:
++#: that test's second sentence, "...cell line tested. A follow-up...",
++#: silently failed to split at all.
++_ABBREV_PATTERN: Final[re.Pattern[str]] = re.compile(
++    r"\b(?:" + "|".join(re.escape(abbr) for abbr in _ABBREVIATIONS) + ")", re.IGNORECASE
++)
++
++#: A period between two digits, e.g. the "0.05" in "p < 0.05" or a percent
++#: like "12.3%". Never a sentence boundary.
++_DECIMAL_PERIOD: Final[re.Pattern[str]] = re.compile(r"(?<=\d)\.(?=\d)")
++
++#: A sentence boundary: one or more of `.`, `!`, `?`, followed by
++#: whitespace and then an uppercase letter, a digit (a sentence can open a
++#: new numbered point), or end of string. The shielded periods above never
++#: match this, because they are no longer literal periods by the time this
++#: pattern runs.
++_SENTENCE_BOUNDARY: Final[re.Pattern[str]] = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9])")
++
++#: A crude, deliberately bounded stand-in for "this sentence has a verb".
++#: No part-of-speech tagger is a dependency this module wants (production-
++#: standards.md's untrusted-content gate already means every abstract
++#: sentence is untrusted text handed to no model at this stage), so the
++#: check is: does any word look like a finite or non-finite verb form,
++#: either one of a fixed closed set of common auxiliary and copular verbs,
++#: or a word ending in a common verb inflection. This under- and over-
++#: matches at the margins by design; its only job is to reject a fragment
++#: with no verb at all, such as a running head or a figure caption, not to
++#: parse grammar.
++_VERB_WORDS: Final[frozenset[str]] = frozenset(
++    {
++        "is", "are", "was", "were", "be", "been", "being",
++        "has", "have", "had",
++        "do", "does", "did",
++        "can", "could", "will", "would", "shall", "should", "may", "might", "must",
++    }
++)
++_VERB_SUFFIX_RE: Final[re.Pattern[str]] = re.compile(r"[a-z]{3,}(?:s|ed|ing)$")
++
++
++def _looks_like_a_verb(word: str) -> bool:
++    lowered = word.strip(".,;:()[]\"'").lower()
++    if not lowered:
++        return False
++    if lowered in _VERB_WORDS:
++        return True
++    return bool(_VERB_SUFFIX_RE.search(lowered))
++
++
++def _has_verb_like_token(sentence: str) -> bool:
++    return any(_looks_like_a_verb(word) for word in sentence.split())
++
++
++def _shield_periods(text: str) -> str:
++    shielded = _ABBREV_PATTERN.sub(lambda m: m.group(0)[:-1] + _PERIOD_SHIELD, text)
++    shielded = _DECIMAL_PERIOD.sub(_PERIOD_SHIELD, shielded)
++    return shielded
++
++
++def _unshield(sentence: str) -> str:
++    return sentence.replace(_PERIOD_SHIELD, ".")
++
++
++def split_abstract_sentences(text: str) -> list[str]:
++    """Split `text` (a paper's abstract) into candidate sentences.
++
++    Deterministic and bounded, per `goal-contracts.md`'s "a verify surface
++    must state its own coverage": this function protects "et al.", "e.g.",
++    "i.e." and a fixed list of similar abbreviations, and any period
++    between two digits (a decimal number, including the "0.05" in a "p <
++    0.05" style clause), from being read as a sentence boundary. It does
++    NOT protect every abbreviation in the English language, an ellipsis
++    followed by a capital letter, or a period inside a quotation mark
++    immediately followed by a capital word; those remaining shapes are the
++    coverage gap this docstring names rather than hides.
++
++    A resulting fragment is dropped, never returned, when it has fewer
++    than `MIN_SENTENCE_WORDS` words, when it has no verb-like token at all
++    (`_has_verb_like_token`), or when it exceeds `MAX_SENTENCE_CHARS`
++    characters (a sentence that long could never be stored in
++    `CitationPayload.snippet` anyway, so it is not offered as a candidate).
++    The returned list is capped at `MAX_SENTENCES` entries.
++
++    Returns:
++        The kept sentences, in the order they appeared in `text`, each
++        stripped of leading and trailing whitespace, with no abbreviation
++        or decimal period altered from the source text.
++    """
++    stripped = text.strip()
++    if not stripped:
++        return []
++
++    shielded = _shield_periods(stripped)
++    raw_pieces = _SENTENCE_BOUNDARY.split(shielded)
++
++    sentences: list[str] = []
++    for piece in raw_pieces:
++        sentence = _unshield(piece).strip()
++        if not sentence:
++            continue
++        if len(sentence) > MAX_SENTENCE_CHARS:
++            continue
++        word_count = len(sentence.split())
++        if word_count < MIN_SENTENCE_WORDS:
++            continue
++        if not _has_verb_like_token(sentence):
++            continue
++        sentences.append(sentence)
++        if len(sentences) >= MAX_SENTENCES:
++            break
++    return sentences
++
++
++# ---------------------------------------------------------------------------
++# pick_snippet: the one model call, through the classifier seam.
++# ---------------------------------------------------------------------------
++
++#: `DecisionRecord.options` (contracts/events.py) caps the options LIST at
++#: 12 entries. One of those slots is always "none", so at most this many
++#: sentence candidates are ever offered in a single decision.
++MAX_CANDIDATE_SENTENCES: Final[int] = 11
++
++#: How many leading sentences a long abstract keeps; the rest of the window
++#: is its last sentences (`candidate_window`).
++_HEAD_SENTENCES: Final[int] = 3
++
++#: The option id meaning "no sentence in the abstract answers the
++#: question". Always offered, always last.
++_NONE_OPTION: Final[str] = "none"
++
++_INSTRUCTIONS: Final[str] = (
++    "The state is a question a person typed into a biomedical evidence search "
++    "engine. Each numbered option is one verbatim sentence from a single "
++    "paper's own abstract, to be shown under that paper. Pick the one sentence "
++    "that states a finding or result that answers the question and can be read "
++    "on its own, without the sentences before it. Aims, objectives, methods, "
++    "scope, background and sentences saying what a review covers are not "
++    "findings: pick 'none' when no sentence is a finding that answers the "
++    "question. Never combine sentences, never reword: pick exactly one option "
++    "as written."
++)
++
++_NONE_CRITERION: Final[str] = (
++    "No sentence states a finding or result that answers the question and "
++    "reads on its own. The closest ones are an aim, objective, method, scope, "
++    "background or review-coverage sentence, lean on the sentences before "
++    "them, or are about a different aspect of the subject."
++)
++
++#: How a trimmed abstract ends. `ncbi_eutils_actions._cap_text` appends the
++#: first at 4,000 characters; the structured-field cap in
++#: `harness/coordinator_worker.py` ends a 2,000-character trim with the
++#: second. A sentence that reaches either is a fragment, never offered.
++_TRIM_MARKER_TEXT: Final[str] = "[truncated]"
++_TRIM_MARKER_ELLIPSIS: Final[str] = "\u2026"
++
++#: The length at which the findings trim cuts a field value (2,000
++#: characters, `synthesis.findings.MAX_FIELD_VALUE_CHARS`). A value this
++#: long may have been cut without a marker.
++TRIM_LIMIT_CHARS: Final[int] = 2000
++
++#: A retraction or withdrawal NOTICE inside an abstract: the shape of a
++#: publisher's notice about the paper itself ("This article has been
++#: retracted", "Notice of retraction", "Elsevier Policy on Article
++#: Withdrawal"). It reads no topic word of any question; it only recognises
++#: a paper that says of itself that it was retracted. A paper whose
++#: abstract carries one is treated as retracted, whatever its record says.
++_RETRACTION_NOTICE: Final[re.Pattern[str]] = re.compile(
++    r"\b(?:this|the)\s+(?:article|paper|publication|manuscript|study|work|report)\b"
++    r"[^.]{0,60}\b(?:retracted|withdrawn)\b"
++    r"|\bretraction\s+notice\b|\bnotice\s+of\s+retraction\b"
++    r"|\bwithdrawal\s+policy\b|\bpolicy\s+on\s+article\s+withdrawal\b"
++    r"|\bhas\s+been\s+retracted\b",
++    re.IGNORECASE,
++)
++
++
++def has_retraction_notice(text: str) -> bool:
++    """Whether `text` (an abstract) carries a retraction or withdrawal notice."""
++    return bool(text) and _RETRACTION_NOTICE.search(text) is not None
++
++
++def abstract_candidates(abstract: str, *, cut: bool = False) -> list[str]:
++    """The candidate window of `abstract`, with a trimmed tail left out.
++
++    `cut` says the caller knows the text was trimmed. The trim markers are
++    also read from the text itself. When the text was trimmed, its last
++    piece ends mid-sentence, so it is never offered; neither is any
++    sentence that ends in a trim marker.
++    """
++    text = abstract.strip()
++    trimmed = cut
++    if text.endswith(_TRIM_MARKER_TEXT):
++        text = text[: -len(_TRIM_MARKER_TEXT)].rstrip()
++        trimmed = True
++    elif text.endswith(_TRIM_MARKER_ELLIPSIS):
++        trimmed = True
++    sentences = split_abstract_sentences(text)
++    if trimmed and sentences and text.endswith(sentences[-1]):
++        sentences = sentences[:-1]
++    sentences = [
++        sentence
++        for sentence in sentences
++        if not sentence.endswith((_TRIM_MARKER_ELLIPSIS, _TRIM_MARKER_TEXT))
++    ]
++    return candidate_window(sentences)
++
++
++@dataclass(frozen=True)
++class Snippet:
++    """The one sentence chosen to sit under a cited paper.
++
++    `text` is always one of the exact strings `split_abstract_sentences`
++    returned for that paper's abstract: `pick_snippet` never lets a model's
++    own wording reach this field. Never paraphrase, never join sentences.
++    """
++
++    text: str
++
++
++def candidate_window(sentences: Sequence[str]) -> list[str]:
++    """At most `MAX_CANDIDATE_SENTENCES` sentences to offer, in abstract order.
++
++    An abstract with more sentences keeps its first `_HEAD_SENTENCES` and its
++    last ones: the closing sentences of a structured abstract are where it
++    states what it found, so cutting from the end would drop the likeliest
++    answer. Position only; no word of the abstract or the question is read.
++    """
++    if len(sentences) <= MAX_CANDIDATE_SENTENCES:
++        return list(sentences)
++    tail = MAX_CANDIDATE_SENTENCES - _HEAD_SENTENCES
++    return [*sentences[:_HEAD_SENTENCES], *sentences[-tail:]]
++
++
++def _option_id(index: int) -> str:
++    return f"s{index}"
++
++
++def _index_from_option_id(option_id: str, candidate_count: int) -> int | None:
++    if not option_id.startswith("s"):
++        return None
++    try:
++        index = int(option_id[1:])
++    except ValueError:
++        return None
++    if not (0 <= index < candidate_count):
++        return None
++    return index
++
++
++async def pick_snippet(
++    harness: Harness,
++    trace_id: str,
++    question: str,
++    abstract_sentences: Sequence[str],
++    on_decision: Callable[[DecisionRecord], None] | None = None,
++) -> Snippet | None:
++    """Ask `decide(point="write.snippet", ...)` which sentence, if any, of
++    `abstract_sentences` most directly answers `question`.
++
++    `abstract_sentences` is truncated to `MAX_CANDIDATE_SENTENCES` before
++    building the decision (the abstract's own sentence order is preserved;
++    a caller that cares which of a long abstract's sentences are offered
++    should already have picked its most relevant slice, since this
++    function does not re-rank). An empty `abstract_sentences` list is not
++    a decision to make at all: `decide()` is never called, and this
++    returns `None` immediately.
++
++    Returns:
++        A `Snippet` carrying the exact sentence text picked, or `None`
++        when the sentence "none" was chosen, when nobody made a usable
++        pick (`decide()`'s own fail-open path), or when the decision
++        itself could not be reached at all. A failed decision returns
++        `None`: show nothing. Silence is honest here; a wrong snippet is
++        not, so this function never guesses.
++    """
++    candidates = candidate_window(abstract_sentences)
++    if not candidates:
++        return None
++
++    options = [_option_id(i) for i in range(len(candidates))] + [_NONE_OPTION]
++    criteria = {_option_id(i): sentence for i, sentence in enumerate(candidates)}
++    criteria[_NONE_OPTION] = _NONE_CRITERION
++
++    try:
++        record = await decide(
++            harness,
++            trace_id,
++            "write.snippet",
++            question,
++            options,
++            instructions=_INSTRUCTIONS,
++            criteria=criteria,
++            default=_NONE_OPTION,
++        )
++    except Exception:  # noqa: BLE001 - a broken seam must never break the answer
++        return None
++
++    if on_decision is not None:
++        on_decision(record)
++    if record.chosen == _NONE_OPTION:
++        return None
++    index = _index_from_option_id(record.chosen, len(candidates))
++    if index is None:
++        return None
++    return Snippet(text=candidates[index])
++
++
++# ---------------------------------------------------------------------------
++# pick_snippets: one decision per paper, all asked together.
++# ---------------------------------------------------------------------------
++
++#: The most papers one answer shows a sentence under (the owner's choice,
++#: DECISIONS.md 2026-10-15): the first five cited papers with an abstract.
++MAX_SNIPPET_PAPERS: Final[int] = 5
++
++
++@dataclass(frozen=True)
++class SnippetPaper:
++    """One cited paper offered to the pick.
++
++    `abstract` is the fullest text the caller holds. `cut` says it was
++    trimmed (the caller knows the limit it came through). `retracted` says
++    the paper's own record marks it retracted. A retracted paper uses its
++    place among the first five and is never asked about.
++    """
++
++    key: str
++    abstract: str
++    cut: bool = False
++    retracted: bool = False
++
++
++def verified_sentence(sentence: str | None, abstract: str) -> str | None:
++    """The sentence when it is word for word inside `abstract` and fits the
++    field it is stored in, and is not a cut-off piece; otherwise None.
++
++    `abstract` is the untrimmed text the sentence was drawn from, never a
++    shortened copy of it.
++    """
++    if not sentence or sentence not in abstract or len(sentence) > MAX_SENTENCE_CHARS:
++        return None
++    if sentence.endswith((_TRIM_MARKER_ELLIPSIS, _TRIM_MARKER_TEXT)):
++        return None
++    return sentence
++
++
++async def pick_snippets(
++    harness: Harness,
++    trace_id: str,
++    question: str,
++    papers: Sequence[SnippetPaper],
++    on_decision: Callable[[DecisionRecord], None] | None = None,
++) -> dict[str, str]:
++    """The sentence that answers `question` for each of the first
++    `MAX_SNIPPET_PAPERS` papers, as `{key: sentence}`.
++
++    `papers` is in the order the answer lists them. A paper with no
++    abstract, or none that splits into candidates, is skipped and uses no
++    place. A retracted paper (its record says so, or its abstract carries a
++    retraction notice) uses a place, is never asked about and shows
++    nothing. Every other paper is asked on its own through `decide()` (Jev
++    first, the guard tier when Jev fails), all together, each passing its
++    record to `on_decision`. A paper whose pick is "none", unusable, cut
++    off, or not word for word inside its own untrimmed abstract is left
++    out. Never raises.
++    """
++    asked: list[tuple[str, str, list[str]]] = []
++    seen: set[str] = set()
++    placed = 0
++    for paper in papers:
++        if placed >= MAX_SNIPPET_PAPERS:
++            break
++        if not paper.abstract or not paper.abstract.strip() or paper.key in seen:
++            continue
++        candidates = abstract_candidates(paper.abstract, cut=paper.cut)
++        if not candidates and not paper.retracted:
++            continue
++        seen.add(paper.key)
++        placed += 1
++        if paper.retracted or has_retraction_notice(paper.abstract):
++            continue
++        asked.append((paper.key, paper.abstract, candidates))
++    if not asked:
++        return {}
++
++    picks = await asyncio.gather(
++        *(
++            pick_snippet(harness, trace_id, question, candidates, on_decision)
++            for _key, _abstract, candidates in asked
++        ),
++        return_exceptions=True,
++    )
++    shown: dict[str, str] = {}
++    for (key, abstract, _candidates), pick in zip(asked, picks, strict=True):
++        if not isinstance(pick, Snippet):
++            continue
++        verified = verified_sentence(pick.text, _untrimmed(abstract))
++        if verified is not None:
++            shown[key] = verified
++    return shown
++
++
++def _untrimmed(abstract: str) -> str:
++    """The abstract as the sentence was drawn from it, trim marker removed."""
++    text = abstract.strip()
++    if text.endswith(_TRIM_MARKER_TEXT):
++        text = text[: -len(_TRIM_MARKER_TEXT)].rstrip()
++    return text
+diff --git a/src/system_03_search_agent/tools/ncbi_eutils_actions.py b/src/system_03_search_agent/tools/ncbi_eutils_actions.py
+index 75447902..13eb0cd3 100644
+--- a/src/system_03_search_agent/tools/ncbi_eutils_actions.py
++++ b/src/system_03_search_agent/tools/ncbi_eutils_actions.py
+@@ -1229,6 +1229,31 @@ async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
+ # ---------------------------------------------------------------------------
+ 
+ 
++#: Publication types PubMed gives a retracted paper ("Retracted Publication")
++#: or the notice that retracts one ("Retraction of Publication").
++_PUBMED_RETRACTION_TYPES: Final[frozenset[str]] = frozenset(
++    {"retracted publication", "retraction of publication"}
++)
++
++
++def _pubmed_record_is_retracted(article_el: ElementTree.Element) -> bool:
++    """Whether the fetched PubMed record marks the paper retracted.
++
++    Read from XML the efetch call already returned, so it costs no extra
++    network call: a publication type of "Retracted Publication", or a
++    CommentsCorrections entry of type RetractionIn.
++    """
++    for type_el in article_el.findall("MedlineCitation/Article/PublicationTypeList/PublicationType"):
++        if "".join(type_el.itertext()).strip().lower() in _PUBMED_RETRACTION_TYPES:
++            return True
++    for comment_el in article_el.findall(
++        "MedlineCitation/CommentsCorrectionsList/CommentsCorrections"
++    ):
++        if comment_el.get("RefType") == "RetractionIn":
++            return True
++    return False
++
++
+ def _extract_pubmed_articles(root: ElementTree.Element) -> list[NcbiEfetchRecord]:
+     """Extract one record per <PubmedArticle> from a live-verified PubmedArticleSet.
+ 
+@@ -1267,6 +1292,11 @@ def _extract_pubmed_articles(root: ElementTree.Element) -> list[NcbiEfetchRecord
+             fields["title"] = _cap_text(title)
+         if abstract:
+             fields["abstract"] = _cap_text(abstract)
++        # PubMed marks a retracted paper in the record this call already
++        # fetched: its publication types, or a RetractionIn comment. Set
++        # only when true, so a record that is not retracted is unchanged.
++        if _pubmed_record_is_retracted(article_el):
++            fields["retracted"] = True
+ 
+         records.append(
+             NcbiEfetchRecord(
+diff --git a/tests/system_03_search_agent/adapters/mcp/test_citation_keys_card29.py b/tests/system_03_search_agent/adapters/mcp/test_citation_keys_card29.py
+new file mode 100644
+index 00000000..93d6c19b
+--- /dev/null
++++ b/tests/system_03_search_agent/adapters/mcp/test_citation_keys_card29.py
+@@ -0,0 +1,70 @@
++"""Card 29: MCP publishes develop's citation keys, never the abstract sentence.
++
++`_ALLOWED_RESPONSE_KEYS` in `test_no_cost_and_auth.py` is a manual control, so
++the web-only `snippet` is cleared before MCP serializes a citation.
++"""
++
++from __future__ import annotations
++
++import pytest
++
++from system_03_search_agent.adapters.mcp import server as server_module
++from system_03_search_agent.contracts.events import TokenPayload
++from tests.system_03_search_agent.adapters.mcp.test_parity_tools import (
++    _GUARD_OK,
++    _TRUST_LINE,
++    _answer_trust,
++    _citation,
++    _done,
++    _fold,
++    _stream_of,
++)
++
++# Develop's citation keys: MCP's allowlist is a manual control, so card 29's
++# `snippet` must never appear in what this surface publishes.
++_DEVELOP_CITATION_KEYS = {
++    "citation_id",
++    "display_index",
++    "source",
++    "source_id",
++    "source_url",
++    "layer",
++    "field",
++    "claim_text",
++    "evidence_kind",
++    "assertion_confidence",
++    "population_ancestry_context",
++    "license",
++    "snapshot_date",
++    "entity_name",
++}
++
++
++class TestMcpPublishesDevelopsCitationKeys:
++    @pytest.mark.asyncio
++    async def test_a_live_answer_leaves_the_abstract_sentence_out(
++        self, monkeypatch: pytest.MonkeyPatch
++    ) -> None:
++        # Mutation that turns this red: pass `citations` through unchanged at
++        # the fold's return.
++        with_sentence = _citation(1).model_copy(update={"snippet": "A quoted abstract sentence."})
++        stream = _stream_of(
++            _GUARD_OK,
++            ("token", TokenPayload(text="Feature 1 [1]. ", marker_ids=["c1"])),
++            ("citation", with_sentence),
++            ("trust_signal", _answer_trust("answer")),
++            ("done", _done("answer", trust_line=_TRUST_LINE)),
++        )
++
++        result = await _fold(monkeypatch, stream)
++
++        dumped = result.model_dump()["citations"][0]
++        assert set(dumped) == _DEVELOP_CITATION_KEYS
++        assert "snippet" not in result.model_dump_json()
++
++    def test_a_reopened_answer_leaves_it_out_too(self) -> None:
++        stored = [{**_citation(1).model_dump(), "snippet": "A quoted abstract sentence."}]
++        citations, _ = server_module._reopened_citations(stored, "One [1].")
++        assert citations[0].snippet == "A quoted abstract sentence.", "populate check"
++        published = server_module._citations_without_snippet(citations)
++        assert set(published[0].model_dump()) == _DEVELOP_CITATION_KEYS
+diff --git a/tests/system_03_search_agent/contracts/test_citation_snippet.py b/tests/system_03_search_agent/contracts/test_citation_snippet.py
+new file mode 100644
+index 00000000..5d650fb5
+--- /dev/null
++++ b/tests/system_03_search_agent/contracts/test_citation_snippet.py
+@@ -0,0 +1,88 @@
++"""`CitationPayload.snippet` (build phase 8.8, "card 44", "answer on top,
++evidence below"): the third additive, optional field, same pattern as
++`snapshot_date` and `entity_name`.
++
++Kept in its own file rather than added to `test_events.py` directly, since
++that shared file may be edited concurrently by another builder this same
++phase; this file only imports `CitationPayload` and duplicates the small
++`_valid_kwargs` baseline `test_events.py`'s own `TestCitationPayload`
++class already uses, so there is nothing here for the two files to
++conflict over.
++
++Covers: the field defaults to `None` (every payload built before this
++phase still validates unchanged, per Section 2.6's additive-only rule),
++accepts a real value, accepts an explicit `None`, and rejects a value over
++its 500-character `max_length`, matching `synthesis.snippets.
++MAX_SENTENCE_CHARS`. Does not cover whether a `snippet` value actually
++came from the cited paper's own abstract; that is a property of the
++caller (the future `core/graph.py` wiring), not of the schema, and no
++schema-level check can enforce it.
++"""
++
++from __future__ import annotations
++
++import pytest
++from pydantic import ValidationError
++
++from system_03_search_agent.contracts.events import CitationPayload
++
++
++def _valid_kwargs(**overrides: object) -> dict[str, object]:
++    base: dict[str, object] = {
++        "citation_id": "c_1",
++        "display_index": 1,
++        "source": "PubMed",
++        "source_id": "12345",
++        "source_url": "https://pubmed.ncbi.nlm.nih.gov/12345",
++        "layer": "layer_3_enrichment",
++        "field": "abstract",
++        "claim_text": "The gene increases risk of early onset disease.",
++        "evidence_kind": "literature_comention",
++        "assertion_confidence": "moderate",
++        "population_ancestry_context": None,
++        "license": "publisher_terms_apply",
++    }
++    base.update(overrides)
++    return base
++
++
++class TestCitationSnippet:
++    def test_defaults_to_none(self) -> None:
++        payload = CitationPayload(**_valid_kwargs())
++        assert payload.snippet is None
++
++    def test_explicit_none_accepted(self) -> None:
++        payload = CitationPayload(**_valid_kwargs(snippet=None))
++        assert payload.snippet is None
++
++    def test_a_real_sentence_is_accepted_verbatim(self) -> None:
++        sentence = "The gene increases risk of early onset disease across every cohort tested."
++        payload = CitationPayload(**_valid_kwargs(snippet=sentence))
++        assert payload.snippet == sentence
++
++    def test_exactly_500_characters_accepted(self) -> None:
++        sentence = "x" * 500
++        payload = CitationPayload(**_valid_kwargs(snippet=sentence))
++        assert payload.snippet == sentence
++
++    def test_over_500_characters_rejected(self) -> None:
++        with pytest.raises(ValidationError):
++            CitationPayload(**_valid_kwargs(snippet="x" * 501))
++
++    def test_still_forbids_an_unrelated_extra_field(self) -> None:
++        # Guards against a future edit accidentally dropping
++        # `model_config = ConfigDict(extra="forbid")` while adding a field.
++        with pytest.raises(ValidationError):
++            CitationPayload(**_valid_kwargs(some_field_nobody_declared="x"))
++
++    def test_a_citation_with_no_sentence_has_no_snippet_key(self) -> None:
++        # Develop's reader forbids extra keys and a saved row is read back by
++        # it on a rollback, so an absent sentence leaves the key out.
++        dumped = CitationPayload(**_valid_kwargs()).model_dump()
++        assert "snippet" not in dumped
++        assert "snippet" not in CitationPayload(**_valid_kwargs(snippet=None)).model_dump_json()
++
++    def test_a_citation_with_a_sentence_carries_the_key(self) -> None:
++        sentence = "The gene increases risk of early onset disease across every cohort tested."
++        assert CitationPayload(**_valid_kwargs(snippet=sentence)).model_dump()["snippet"] == sentence
++
+diff --git a/tests/system_03_search_agent/core/test_abstract_sentence_wiring.py b/tests/system_03_search_agent/core/test_abstract_sentence_wiring.py
+new file mode 100644
+index 00000000..918d15d1
+--- /dev/null
++++ b/tests/system_03_search_agent/core/test_abstract_sentence_wiring.py
+@@ -0,0 +1,625 @@
++"""Card 29 (2026-10-15): the one abstract sentence under a cited paper.
++
++The owner's words: "Under each of the first five cited papers that have an
++abstract, I see the one sentence of its own abstract that answers my
++question, so I know why it was cited without opening it; later papers show
++their title only, as today."
++
++What this file pins, through the real Write step (`write_node`) with only the
++models faked:
++
++- Each of the first five papers with an abstract gets its own classifier
++  decision, started together beside the writer; the sixth and later papers
++  are never asked and show no sentence. Each decision reaches
++  `done.decisions`.
++- A paper PubMed marks retracted, or whose abstract carries a retraction
++  notice, is never asked about and shows no sentence.
++- A sentence cut short when an abstract was trimmed is never offered or
++  shown.
++- A sentence is attached only when it is word for word inside its own
++  paper's abstract.
++- A late pick, a failed batch with no usable fallback, or the guard tier as
++  the only classifier shows no sentence, and the paper looks as before.
++- A citation the listing already sent without a sentence is sent again with
++  it, and every surface keeps the later one (`updates_citation`).
++- A citation with no sentence has no `snippet` key at all.
++- The pick is cancelled on every way out of `write_node`, and the grace
++  never waits past the write budget.
++"""
++
++from __future__ import annotations
++
++import asyncio
++import time
++from unittest.mock import AsyncMock
++
++import pytest
++
++from system_03_search_agent.contracts.events import CitationPayload
++from system_03_search_agent.contracts.query import Query
++from system_03_search_agent.contracts.token_order import one_per_citation_id
++from system_03_search_agent.core import graph as graph_module
++from system_03_search_agent.harness import decide as decide_module
++from system_03_search_agent.harness import harness as harness_module
++from system_03_search_agent.harness.jev_client import JevCallError, JevResult
++from system_03_search_agent.synthesis import snippets as snippets_module
++from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION, SynthFinding
++from tests.system_03_search_agent.core.test_write_answer_structure import (
++    _FINDING_LINE,
++    _fake_response,
++    _quoting_abstracts,
++)
++from tests.system_03_search_agent.core.test_write_completeness import _env  # noqa: F401
++
++_QUESTION = "Does caffeine improve exercise performance?"
++
++
++def _abstract(n: int) -> str:
++    return (
++        f"Background sentence number {n} describes the setting of the caffeine trial in detail. "
++        f"Caffeine intake of three milligrams per kilogram improved performance in study {n}. "
++        f"The authors of study {n} conclude that moderate doses are effective for athletes."
++    )
++
++
++def _pmid(n: int) -> str:
++    return str(30000000 + n)
++
++
++def _papers_state(
++    count: int,
++    *,
++    with_abstract: set[int] | None = None,
++    retracted: set[int] | None = None,
++    abstracts: dict[int, str] | None = None,
++) -> dict[str, object]:
++    from system_03_search_agent.harness.coordinator_worker import Finding
++    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchOutput, NcbiEfetchRecord
++
++    with_abstract = set(range(count)) if with_abstract is None else with_abstract
++    records = [
++        NcbiEfetchRecord(
++            id=_pmid(n),
++            db="pubmed",
++            fields={
++                "title": f"Caffeine and exercise performance, study {n}",
++                **(
++                    {"abstract": (abstracts or {}).get(n, _abstract(n))}
++                    if n in with_abstract
++                    else {}
++                ),
++                **({"retracted": True} if n in (retracted or set()) else {}),
++            },
++            source_url=f"https://pubmed.ncbi.nlm.nih.gov/{_pmid(n)}/",
++        )
++        for n in range(count)
++    ]
++    output = NcbiEfetchOutput(
++        status="ok",
++        action="fetch",
++        records=records,
++        record_count=len(records),
++        total_available=len(records),
++        truncated=False,
++    )
++    finding = Finding(
++        call_id="ne-snip",
++        tool="ncbi_efetch",
++        layer="layer_2_api",
++        source="structured_pass_through",
++        structured_fields=graph_module._ncbi_efetch_output_to_structured_fields(
++            output, "pubmed_abstracts"
++        ),
++        extracted_entities=None,
++        normalized_ids=None,
++        evidence_summary=None,
++    )
++    query = Query(
++        text=_QUESTION,
++        session_id="session-snippet",
++        trace_id="trace-snippet",
++        user_id=None,
++        audience_depth="researcher",  # type: ignore[arg-type]
++    )
++    return {
++        "query": query,
++        "harness": harness_module.Harness(trace_id=query.trace_id),
++        "seq": 0,
++        "start_monotonic": time.monotonic(),
++        "findings": [finding],
++        "findings_count": 1,
++        "layer2_raw_outputs": {"ne-snip": output},
++        "topic_search_term": "caffeine AND exercise AND performance",
++    }
++
++
++def _models(
++    monkeypatch: pytest.MonkeyPatch, *, quote_abstracts: bool = True, guard_pick: str | None = None
++) -> None:
++    async def _dispatch(*_args: object, **kwargs: object):
++        messages = kwargs.get("messages") or []
++        joined = "\n".join(m.get("content") or "" for m in messages)  # type: ignore[union-attr]
++        if SYNTH_SYSTEM_INSTRUCTION in joined:
++            lines = {int(i): body.strip() for i, body in _FINDING_LINE.findall(joined)}
++            if quote_abstracts:
++                return _fake_response(_quoting_abstracts(lines))
++            return _fake_response(" ".join(f"{body} [{i}]." for i, body in lines.items()))
++        if guard_pick is not None and snippets_module._INSTRUCTIONS[:60] in joined:
++            return _fake_response(guard_pick)
++        return _fake_response("not an option")
++
++    monkeypatch.setattr(harness_module.litellm, "acompletion", AsyncMock(side_effect=_dispatch))
++    monkeypatch.setattr(
++        harness_module.litellm,
++        "get_model_info",
++        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
++    )
++
++
++def _jev(
++    monkeypatch: pytest.MonkeyPatch,
++    *,
++    choose: str | None = "s1",
++    error: str | None = None,
++    delay_s: float = 0.0,
++) -> list[dict[str, object]]:
++    """Fake the one-question Jev call every decision goes through; returns
++    every request it received (one per decision)."""
++    asked: list[dict[str, object]] = []
++
++    async def _call_jev(**kwargs: object) -> JevResult:
++        if kwargs.get("question_key") == "write.snippet":
++            asked.append(kwargs)
++        if delay_s and kwargs.get("question_key") == "write.snippet":
++            await asyncio.sleep(delay_s)
++        if error is not None:
++            raise JevCallError(f"Jev failed: {error}", reason=error)
++        options = list(kwargs["options"])  # type: ignore[arg-type]
++        if choose == "last":
++            pick = options[-2]
++        else:
++            pick = choose if choose in options else options[-1]
++        return JevResult(
++            resolved_model="typesafe/jev-1.13",
++            choice=pick,
++            confidence=0.9,
++            probabilities={option: (0.9 if option == pick else 0.1) for option in options},
++            input_tokens=10,
++            output_tokens=1,
++            cost_usd=0.00002,
++            latency_ms=300,
++        )
++
++    monkeypatch.setattr(decide_module, "call_jev", _call_jev)
++    return asked
++
++
++@pytest.fixture
++def jev_on(monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setenv("CLASSIFIER_PROVIDER", "jev")
++    _models(monkeypatch)
++
++
++@pytest.fixture
++def placement_contract(monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setattr(graph_module, "_request_reads_placement", lambda _state: True)
++
++
++def _citations(result: dict) -> list[dict]:
++    return one_per_citation_id(e.payload for e in result["events"] if e.type == "citation")
++
++
++def _snippets_by_url(result: dict) -> dict[str, str]:
++    return {c["source_url"]: c["snippet"] for c in _citations(result) if c.get("snippet")}
++
++
++def _url(n: int) -> str:
++    return f"https://pubmed.ncbi.nlm.nih.gov/{_pmid(n)}/"
++
++
++@pytest.mark.asyncio
++async def test_every_cited_paper_with_an_abstract_gets_its_own_decision_and_sentence(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    asked = _jev(monkeypatch, choose="s1")
++
++    result = await graph_module.write_node(_papers_state(5))
++
++    assert len(asked) == 5, "one decision per paper"
++    done = next(e for e in result["events"] if e.type == "done")
++    points = [d["name"] for d in done.payload["decisions"] if d["name"] == "write.snippet"]
++    assert len(points) == 5, "each decision reaches done.decisions"
++    shown = _snippets_by_url(result)
++    assert set(shown) == {_url(n) for n in range(5)}, shown
++    for n in range(5):
++        assert shown[_url(n)] == (
++            f"Caffeine intake of three milligrams per kilogram improved performance in study {n}."
++        )
++        assert shown[_url(n)] in _abstract(n)
++
++
++def _cite(n: int) -> CitationPayload:
++    return CitationPayload(
++        citation_id=f"c{n}",
++        display_index=n + 1,
++        source="pubmed",
++        source_id=_pmid(n),
++        source_url=_url(n),
++        layer="layer_2_api",
++        field="abstract",
++        claim_text="x",
++        evidence_kind="primary_assertion",
++        assertion_confidence="asserted",
++        population_ancestry_context=None,
++        license="public_domain_us_gov",
++    )
++
++
++def _abstract_finding(n: int) -> SynthFinding:
++    return SynthFinding(
++        ref_index=n + 1,
++        citation_id=f"c{n}",
++        layer="layer_2_api",
++        tool="ncbi_efetch",
++        field="abstract",
++        field_value=_abstract(n),
++        source_url=_url(n),
++    )
++
++
++@pytest.mark.asyncio
++async def test_only_the_first_five_papers_are_ever_asked_about(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    asked = _jev(monkeypatch, choose="s1")
++    harness = harness_module.Harness(trace_id="trace-cap")
++    citations = [_cite(n) for n in range(8)]
++    findings = [_abstract_finding(n) for n in range(8)]
++
++    graph_module._start_snippet_pick(harness, "trace-cap", _QUESTION, citations, findings)
++    attached = await graph_module._attach_snippets(harness, citations)
++
++    assert len(asked) == 5
++    assert [bool(c.snippet) for c in attached] == [True] * 5 + [False] * 3
++
++
++@pytest.mark.asyncio
++async def test_a_paper_without_an_abstract_uses_no_slot_and_shows_nothing(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    _jev(monkeypatch, choose="s1")
++
++    result = await graph_module.write_node(_papers_state(5, with_abstract={0, 2, 3, 4}))
++
++    shown = _snippets_by_url(result)
++    assert _url(1) not in shown
++    assert set(shown) == {_url(n) for n in (0, 2, 3, 4)}, shown
++
++
++@pytest.mark.asyncio
++async def test_the_sentence_sits_on_the_papers_abstract_citation(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    _jev(monkeypatch, choose="s1")
++
++    result = await graph_module.write_node(_papers_state(2))
++
++    carriers = [c for c in _citations(result) if c.get("snippet")]
++    assert carriers
++    for citation in carriers:
++        assert citation["field"] == "abstract", citation
++
++
++@pytest.mark.asyncio
++async def test_a_sentence_not_word_for_word_in_the_abstract_is_never_shown(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    _jev(monkeypatch, choose="s1")
++    real_split = snippets_module.split_abstract_sentences
++    monkeypatch.setattr(
++        snippets_module,
++        "split_abstract_sentences",
++        lambda text: [sentence + " (reworded)" for sentence in real_split(text)],
++    )
++
++    result = await graph_module.write_node(_papers_state(3))
++
++    assert _snippets_by_url(result) == {}
++
++
++@pytest.mark.asyncio
++async def test_a_late_pick_shows_nothing_and_the_answer_does_not_wait_for_it(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    _jev(monkeypatch, choose="s1", delay_s=5.0)
++    monkeypatch.setattr(graph_module, "_LATE_DECISION_GRACE_S", 0.2)
++
++    started = time.monotonic()
++    result = await graph_module.write_node(_papers_state(3))
++
++    assert _snippets_by_url(result) == {}
++    assert time.monotonic() - started < 3.0
++    assert any(e.type == "done" for e in result["events"])
++
++
++@pytest.mark.asyncio
++async def test_when_jev_fails_the_guard_tier_decides_each_paper(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    _jev(monkeypatch, error="http_error")
++    _models(monkeypatch, guard_pick="s2")
++
++    result = await graph_module.write_node(_papers_state(2))
++
++    shown = _snippets_by_url(result)
++    assert shown[_url(0)] == (
++        "The authors of study 0 conclude that moderate doses are effective for athletes."
++    )
++
++
++@pytest.mark.asyncio
++async def test_when_neither_model_makes_a_pick_nothing_is_shown(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    _jev(monkeypatch, error="timeout")
++
++    result = await graph_module.write_node(_papers_state(2))
++
++    assert _snippets_by_url(result) == {}
++    assert any(e.type == "done" for e in result["events"])
++
++
++@pytest.mark.asyncio
++async def test_none_from_the_classifier_shows_nothing_and_the_field_stays_empty(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    _jev(monkeypatch, choose="none")
++
++    result = await graph_module.write_node(_papers_state(2))
++
++    assert _snippets_by_url(result) == {}
++    for citation in _citations(result):
++        assert citation.get("snippet") is None
++
++
++@pytest.mark.asyncio
++async def test_with_the_guard_tier_as_classifier_no_pick_is_asked(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
++    _models(monkeypatch)
++    asked = _jev(monkeypatch, choose="s1")
++
++    result = await graph_module.write_node(_papers_state(2))
++
++    assert asked == []
++    assert _snippets_by_url(result) == {}
++
++
++@pytest.mark.asyncio
++async def test_a_listing_citation_already_sent_is_sent_again_with_the_sentence(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None, placement_contract: None
++) -> None:
++    _jev(monkeypatch, choose="s1")
++    # The writer quotes no abstract, so only the listing's title citations
++    # exist, already sent before the pick came back.
++    _models(monkeypatch, quote_abstracts=False)
++
++    result = await graph_module.write_node(_papers_state(2))
++
++    events = [e.payload for e in result["events"] if e.type == "citation"]
++    by_id: dict[str, list[dict]] = {}
++    for payload in events:
++        by_id.setdefault(payload["citation_id"], []).append(payload)
++    resent = [sends for sends in by_id.values() if len(sends) > 1]
++    assert resent, "a listing citation must be sent again once its sentence is known"
++    for sends in resent:
++        assert sends[0].get("snippet") is None
++        assert sends[-1]["snippet"]
++    assert _snippets_by_url(result), "every surface keeps the later send"
++
++
++def _offered(asked: list[dict[str, object]]) -> list[str]:
++    """Every sentence any decision was offered, as the model read it."""
++    return [
++        sentence
++        for call in asked
++        for option, sentence in dict(call["criteria"]).items()  # type: ignore[call-overload]
++        if option != "none"
++    ]
++
++
++@pytest.mark.asyncio
++async def test_a_paper_pubmed_marks_retracted_is_never_asked_about_and_shows_nothing(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    asked = _jev(monkeypatch, choose="s1")
++
++    result = await graph_module.write_node(_papers_state(5, retracted={1, 3}))
++
++    shown = _snippets_by_url(result)
++    assert set(shown) == {_url(0), _url(2), _url(4)}, shown
++    assert len(asked) == 3, "the retracted papers are not asked about"
++    rows = _papers_state(5, retracted={1, 3})["findings"][0].structured_fields["rows"]  # type: ignore[index]
++    assert all("retracted" not in row["fields"] for row in rows), "the flag is not a citable fact"
++    offered = " ".join(_offered(asked))
++    assert "study 1" not in offered and "study 3" not in offered
++
++
++@pytest.mark.asyncio
++async def test_an_abstract_carrying_a_retraction_notice_is_treated_as_retracted(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    asked = _jev(monkeypatch, choose="s1")
++    notice = (
++        _abstract(1)
++        + " This article has been retracted: please see the publisher's policy on article withdrawal."
++    )
++
++    result = await graph_module.write_node(_papers_state(3, abstracts={1: notice}))
++
++    shown = _snippets_by_url(result)
++    assert set(shown) == {_url(0), _url(2)}, shown
++    assert len(asked) == 2
++
++
++def _long_abstract(n: int, *, total: int) -> str:
++    filler = " ".join(
++        f"Filler sentence {i} of study {n} reports an unrelated measurement in the cohort."
++        for i in range(200)
++    )
++    text = (
++        f"Caffeine intake of three milligrams per kilogram improved performance in study {n}. "
++        + filler
++    )
++    return text[:total]
++
++
++@pytest.mark.asyncio
++async def test_a_sentence_cut_short_by_the_trim_is_never_offered_or_shown(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    # 5,000 characters: cut at 4,000 by the fetch ("[truncated]") and at 2,000
++    # by the findings trim ("..."). The classifier takes the last option offered.
++    asked = _jev(monkeypatch, choose="last")
++    abstract = _long_abstract(0, total=5000)
++
++    result = await graph_module.write_node(_papers_state(1, abstracts={0: abstract}))
++
++    offered = _offered(asked)
++    assert offered, "the complete sentences are still offered"
++    for sentence in offered:
++        assert not sentence.endswith(("\u2026", "[truncated]")), sentence
++        assert sentence.endswith("."), sentence
++        assert sentence in abstract[:4000]
++    shown = _snippets_by_url(result)
++    assert shown[_url(0)] in offered
++
++
++@pytest.mark.asyncio
++async def test_the_shown_sentence_is_checked_against_the_untrimmed_abstract(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    # The only complete sentence the paper states sits past character 2,000, where
++    # the findings trim has cut the copy the writer reads.
++    asked = _jev(monkeypatch, choose="last")
++    lead = " ".join(f"Background sentence {i} describes the trial setting in considerable detail for readers." for i in range(30))
++    closing = "Caffeine improved time trial performance in trained cyclists by four percent."
++    abstract = lead + " " + closing
++    assert 2000 < len(abstract) < 4000
++
++    result = await graph_module.write_node(_papers_state(1, abstracts={0: abstract}))
++
++    assert _snippets_by_url(result) == {_url(0): closing}
++    assert closing in _offered(asked)
++
++
++@pytest.mark.asyncio
++async def test_a_citation_with_no_sentence_has_no_snippet_key(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    _jev(monkeypatch, choose="none")
++
++    result = await graph_module.write_node(_papers_state(2))
++
++    payloads = [e.payload for e in result["events"] if e.type == "citation"]
++    assert payloads
++    for payload in payloads:
++        assert "snippet" not in payload, payload
++
++
++class _PickProbe:
++    """A stand-in for `pick_snippets` that never finishes by itself. It also
++    keeps the task `_start_snippet_pick` makes for it, so a test can tell
++    whether that task was cancelled, even one cancelled before it first ran."""
++
++    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
++        self.tasks: list[asyncio.Task[dict[str, str]]] = []
++        monkeypatch.setattr(graph_module, "pick_snippets", self._never_finishes)
++        real_start = graph_module._start_snippet_pick
++
++        def _spy(harness: object, *args: object, **kwargs: object) -> None:
++            real_start(harness, *args, **kwargs)  # type: ignore[arg-type]
++            task = graph_module._run_decisions(harness).snippet_task
++            if task is not None:
++                self.tasks.append(task)
++
++        monkeypatch.setattr(graph_module, "_start_snippet_pick", _spy)
++
++    async def _never_finishes(self, *_args: object, **_kwargs: object) -> dict[str, str]:
++        await asyncio.sleep(30)
++        return {}
++
++    async def settle(self) -> None:
++        for _ in range(3):
++            await asyncio.sleep(0)
++
++
++@pytest.mark.asyncio
++async def test_the_pick_is_cancelled_when_the_answer_ends_without_reading_it(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    probe = _PickProbe(monkeypatch)
++    # An answer that fails after the pick started: the writer prompt cannot be built.
++    monkeypatch.setattr(
++        graph_module, "build_synth_messages", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
++    )
++    state = _papers_state(2)
++
++    try:
++        await graph_module.write_node(state)
++    except RuntimeError:
++        pass
++    await probe.settle()
++
++    assert len(probe.tasks) == 1, "the pick had started beside the writer"
++    assert probe.tasks[0].cancelled(), "the pick is cancelled on a failed answer too"
++    assert graph_module._run_decisions(state["harness"]).snippet_task is None
++
++
++@pytest.mark.asyncio
++async def test_a_pick_still_running_when_the_answer_ends_is_cancelled(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    probe = _PickProbe(monkeypatch)
++    monkeypatch.setattr(graph_module, "_LATE_DECISION_GRACE_S", 0.2)
++    state = _papers_state(2)
++
++    result = await graph_module.write_node(state)
++    await probe.settle()
++
++    assert any(e.type == "done" for e in result["events"])
++    assert len(probe.tasks) == 1
++    assert probe.tasks[0].cancelled()
++    assert graph_module._run_decisions(state["harness"]).snippet_task is None
++
++
++@pytest.mark.asyncio
++async def test_the_grace_never_waits_past_the_write_budget(
++    monkeypatch: pytest.MonkeyPatch, jev_on: None
++) -> None:
++    probe = _PickProbe(monkeypatch)
++    harness = harness_module.Harness(trace_id="trace-grace")
++    citations = [_cite(0)]
++    findings = [_abstract_finding(0)]
++    assert graph_module._LATE_DECISION_GRACE_S >= 1.0
++
++    graph_module._start_snippet_pick(harness, "trace-grace", _QUESTION, citations, findings)
++    await asyncio.sleep(0)
++    started = time.monotonic()
++    # The write budget ran out 5 s ago: no grace at all.
++    attached = await graph_module._attach_snippets(harness, citations, started - 5.0)
++    spent = time.monotonic() - started
++
++    assert spent < 0.3, f"waited {spent:.2f}s past a spent budget"
++    assert attached == citations
++    await probe.settle()
++    assert probe.tasks[0].cancelled()
++
++    # And with 0.3 s of budget left, the wait is that, not the full grace.
++    graph_module._start_snippet_pick(harness, "trace-grace", _QUESTION, citations, findings)
++    await asyncio.sleep(0)
++    started = time.monotonic()
++    await graph_module._attach_snippets(harness, citations, started + 0.3)
++    spent = time.monotonic() - started
++    assert 0.2 < spent < 0.7, f"waited {spent:.2f}s with 0.3 s of budget left"
+diff --git a/tests/system_03_search_agent/fixtures/debugging_guide_manifest.json b/tests/system_03_search_agent/fixtures/debugging_guide_manifest.json
+index 560de737..8b654008 100644
+--- a/tests/system_03_search_agent/fixtures/debugging_guide_manifest.json
++++ b/tests/system_03_search_agent/fixtures/debugging_guide_manifest.json
+@@ -112,6 +112,7 @@
+     "src/system_03_search_agent/synthesis/provenance_defaults.py": "6c6597471c5b7e01b0767c08fec2901772c145000c59fd452284b0ec440b9f55",
+     "src/system_03_search_agent/synthesis/refuse.py": "951119a3072a9cb7266aa1538a11b38af71e39dc06d8a70b175d2926d9fe5054",
+     "src/system_03_search_agent/synthesis/sentence_check.py": "c707a7a0ef9d8613870b4b04779870c8cf9303718fe0d11c5fd95bde94fc2988",
++    "src/system_03_search_agent/synthesis/snippets.py": "4d7fda73716580d07f1e00bed7f027f77ea9e6b26d79e883a0c817156b407509",
+     "src/system_03_search_agent/synthesis/trust.py": "ded0f214c009e15af1e2deb5a070d2ec713205207d721d6f9ebed6cec51018bb",
+     "src/system_03_search_agent/tools/__init__.py": "d22e1c348d091c7c6ccd332f479ea472f799c450c93c1bb4437ddc8e46651d02",
+     "src/system_03_search_agent/tools/agtype.py": "0dfcdd279242f49c7fdc6cb93fc76dac49349a24474c3548a1a69e89d10ce86f",
+diff --git a/tests/system_03_search_agent/synthesis/test_snippets.py b/tests/system_03_search_agent/synthesis/test_snippets.py
+new file mode 100644
+index 00000000..3ea3ebf7
+--- /dev/null
++++ b/tests/system_03_search_agent/synthesis/test_snippets.py
+@@ -0,0 +1,478 @@
++"""Tests for `synthesis/snippets.py` (build phase 8.8, "card 44", "answer
++on top, evidence below").
++
++Two halves, tested separately per the module's own split:
++
++    `split_abstract_sentences` is pure and deterministic. Every test below
++    runs it with nothing but strings in and strings out, no mock needed.
++
++    `pick_snippet` makes exactly one call, to `decide()`. Every test below
++    monkeypatches `snippets.decide` (the name imported into this module's
++    namespace, the same pattern `test_decide.py` and `core/graph.py`'s own
++    tests use for a from-import), so no model and no network is ever
++    reached here.
++
++COVERAGE STATEMENT, per `goal-contracts.md`'s "a verify surface must state
++its own coverage": this file proves the splitter protects "et al." and a
++decimal period (including a "p < 0.05" shape), drops a too-short fragment
++and a fragment with no verb-like token, excludes an over-long sentence,
++and caps at `MAX_SENTENCES`. It does NOT prove the splitter handles every
++abbreviation in English, an ellipsis, or a quoted sentence boundary; the
++module's own docstring names that gap. For `pick_snippet`, this file
++proves the empty-candidate short-circuit, a chosen sentence returned
++verbatim, "none" and an unusable choice both returning `None`, a raised
++exception returning `None` rather than propagating, and the
++`MAX_CANDIDATE_SENTENCES` truncation actually reaching `decide()`'s
++`options` and `criteria`. It does not exercise `decide()`'s own internals
++(Jev, the guard tier, the fallback logic); those are `test_decide.py`'s
++job.
++"""
++
++from __future__ import annotations
++
++from unittest.mock import AsyncMock
++
++import pytest
++
++from system_03_search_agent.contracts.events import DecisionRecord
++from system_03_search_agent.synthesis import snippets as snippets_module
++from system_03_search_agent.synthesis.snippets import (
++    MAX_CANDIDATE_SENTENCES,
++    MAX_SENTENCE_CHARS,
++    MAX_SENTENCES,
++    MAX_SNIPPET_PAPERS,
++    Snippet,
++    SnippetPaper,
++    abstract_candidates,
++    candidate_window,
++    has_retraction_notice,
++    pick_snippet,
++    pick_snippets,
++    split_abstract_sentences,
++    verified_sentence,
++)
++
++# ---------------------------------------------------------------------------
++# split_abstract_sentences
++# ---------------------------------------------------------------------------
++
++
++def test_splits_two_plain_sentences() -> None:
++    text = (
++        "The variant increases transcription of the downstream gene significantly. "
++        "This effect was replicated in a second independent cohort of patients."
++    )
++    result = split_abstract_sentences(text)
++    assert result == [
++        "The variant increases transcription of the downstream gene significantly.",
++        "This effect was replicated in a second independent cohort of patients.",
++    ]
++
++
++def test_et_al_does_not_split_the_sentence() -> None:
++    # Catches: a naive `.` split that would cut this into "Smith et al" and
++    # "showed that the mutation increases enzymatic activity twofold.",
++    # losing the subject of the sentence it belongs to.
++    text = (
++        "Smith et al. showed that the mutation increases enzymatic activity "
++        "twofold in every cell line tested. A larger follow-up study later "
++        "confirmed the same effect independently."
++    )
++    result = split_abstract_sentences(text)
++    assert len(result) == 2
++    assert result[0].startswith("Smith et al. showed that")
++    assert result[0].endswith("twofold in every cell line tested.")
++    assert result[1] == "A larger follow-up study later confirmed the same effect independently."
++
++
++def test_eg_and_ie_do_not_split_the_sentence() -> None:
++    text = (
++        "Several confounders, e.g. age and smoking status, were adjusted for in "
++        "the regression model used across all analyses. Results held regardless "
++        "of age or smoking status once the model was applied."
++    )
++    result = split_abstract_sentences(text)
++    assert len(result) == 2
++    assert "e.g. age and smoking status" in result[0]
++    assert result[1].startswith("Results held regardless")
++
++
++def test_decimal_number_does_not_split_the_sentence() -> None:
++    # "0.05" must never be read as two sentence-ending periods.
++    text = (
++        "The estimated carrier frequency was 0.05 in the population studied here, "
++        "consistent with three prior independent reports on the same cohort."
++    )
++    result = split_abstract_sentences(text)
++    assert len(result) == 1
++    assert "0.05" in result[0]
++
++
++def test_p_value_clause_does_not_split_the_sentence() -> None:
++    text = (
++        "The association was statistically significant with p < 0.05 across "
++        "every cohort tested in this replication study of the original finding."
++    )
++    result = split_abstract_sentences(text)
++    assert len(result) == 1
++    assert "p < 0.05" in result[0]
++
++
++def test_short_fragment_is_dropped() -> None:
++    # Under MIN_SENTENCE_WORDS (8): a caption-shaped fragment, not a claim.
++    text = (
++        "Figure 1 overview. "
++        "The gene increases the risk of early disease onset significantly across cohorts."
++    )
++    result = split_abstract_sentences(text)
++    assert len(result) == 1
++    assert result[0].startswith("The gene increases")
++
++
++def test_fragment_with_no_verb_like_token_is_dropped() -> None:
++    # Eight words, none a verb by the fixed set or the -s/-ed/-ing heuristic:
++    # a running-head shape a real abstract can carry, never a claim.
++    text = (
++        "Table one title page appendix index annex glossary. "
++        "The gene increases risk of disease onset significantly across cohorts."
++    )
++    result = split_abstract_sentences(text)
++    assert len(result) == 1
++    assert result[0].startswith("The gene increases")
++
++
++def test_overlong_sentence_is_excluded() -> None:
++    long_sentence = "This finding replicates across a very large number of cohorts " * 10
++    long_sentence = long_sentence.strip() + "."
++    assert len(long_sentence) > MAX_SENTENCE_CHARS
++    text = long_sentence + " A second, ordinary sentence confirms the same result independently."
++    result = split_abstract_sentences(text)
++    assert len(result) == 1
++    assert result[0].startswith("A second, ordinary sentence")
++
++
++def test_bounded_at_max_sentences() -> None:
++    one = "The protein regulates transcription during early development stages. "
++    text = one * 60
++    result = split_abstract_sentences(text)
++    assert len(result) == MAX_SENTENCES
++
++
++def test_empty_and_whitespace_input_returns_empty_list() -> None:
++    assert split_abstract_sentences("") == []
++    assert split_abstract_sentences("   \n\t  ") == []
++
++
++def test_returned_sentences_never_carry_the_shield_character() -> None:
++    text = (
++        "Smith et al. reported a frequency of 0.05 across three cohorts of "
++        "patients enrolled in this multi-site replication study of the finding."
++    )
++    for sentence in split_abstract_sentences(text):
++        assert "" not in sentence
++
++
++# ---------------------------------------------------------------------------
++# pick_snippet
++# ---------------------------------------------------------------------------
++
++_CANDIDATES = [
++    "The gene increases risk of early onset disease across every cohort tested.",
++    "No association was found between the variant and disease severity scores.",
++    "Carriers showed a twofold increase in expression relative to non-carriers.",
++]
++
++
++def _record(chosen: str, options: list[str]) -> DecisionRecord:
++    return DecisionRecord(name="write.snippet", options=options, chosen=chosen, decided_by="guard")
++
++
++@pytest.mark.asyncio
++async def test_no_candidates_returns_none_without_calling_decide(monkeypatch: pytest.MonkeyPatch) -> None:
++    mock_decide = AsyncMock()
++    monkeypatch.setattr(snippets_module, "decide", mock_decide)
++    result = await pick_snippet(harness=object(), trace_id="t1", question="q", abstract_sentences=[])
++    assert result is None
++    mock_decide.assert_not_called()
++
++
++@pytest.mark.asyncio
++async def test_chosen_sentence_is_returned_verbatim(monkeypatch: pytest.MonkeyPatch) -> None:
++    options = ["s0", "s1", "s2", "none"]
++    monkeypatch.setattr(snippets_module, "decide", AsyncMock(return_value=_record("s1", options)))
++    result = await pick_snippet(
++        harness=object(), trace_id="t1", question="Does the variant affect severity?",
++        abstract_sentences=_CANDIDATES,
++    )
++    assert result == Snippet(text=_CANDIDATES[1])
++
++
++@pytest.mark.asyncio
++async def test_chosen_none_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
++    options = ["s0", "s1", "s2", "none"]
++    monkeypatch.setattr(snippets_module, "decide", AsyncMock(return_value=_record("none", options)))
++    result = await pick_snippet(
++        harness=object(), trace_id="t1", question="q", abstract_sentences=_CANDIDATES
++    )
++    assert result is None
++
++
++@pytest.mark.asyncio
++async def test_a_failed_decision_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
++    # "A failed decision returns None (show nothing): silence is honest, a
++    # wrong snippet is not." This is the case where the seam itself blows up.
++    async def _boom(*_args: object, **_kwargs: object) -> DecisionRecord:
++        raise RuntimeError("classifier seam unavailable")
++
++    monkeypatch.setattr(snippets_module, "decide", _boom)
++    result = await pick_snippet(
++        harness=object(), trace_id="t1", question="q", abstract_sentences=_CANDIDATES
++    )
++    assert result is None
++
++
++@pytest.mark.asyncio
++async def test_an_out_of_range_choice_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
++    # Defensive: `decide()` should never hand back an option it was not
++    # offered, but this function does not trust that blindly either.
++    options = ["s0", "s1", "s2", "none"]
++    monkeypatch.setattr(snippets_module, "decide", AsyncMock(return_value=_record("s9", options)))
++    result = await pick_snippet(
++        harness=object(), trace_id="t1", question="q", abstract_sentences=_CANDIDATES
++    )
++    assert result is None
++
++
++@pytest.mark.asyncio
++async def test_candidates_are_truncated_to_the_options_bound(monkeypatch: pytest.MonkeyPatch) -> None:
++    # DecisionRecord.options carries max_length=12 (contracts/events.py):
++    # one slot is always "none", so at most MAX_CANDIDATE_SENTENCES
++    # sentences may ever reach `decide()`.
++    many = [f"Sentence number {i} makes a distinct claim about the finding here." for i in range(15)]
++    captured: dict[str, object] = {}
++
++    async def _capture(harness: object, trace_id: str, point: str, state: str, options: list[str], **kwargs: object) -> DecisionRecord:
++        captured["options"] = options
++        captured["criteria"] = kwargs["criteria"]
++        captured["instructions"] = kwargs["instructions"]
++        return _record("none", options)
++
++    monkeypatch.setattr(snippets_module, "decide", _capture)
++    await pick_snippet(harness=object(), trace_id="t1", question="q", abstract_sentences=many)
++
++    options = captured["options"]
++    assert isinstance(options, list)
++    assert len(options) == MAX_CANDIDATE_SENTENCES + 1
++    assert options[-1] == "none"
++    assert set(options) == set(captured["criteria"])  # type: ignore[arg-type]
++    assert captured["instructions"]
++
++
++@pytest.mark.asyncio
++async def test_picking_from_the_truncated_set_still_returns_the_right_sentence(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    many = [f"Sentence number {i} makes a distinct claim about the finding here." for i in range(15)]
++    # A long abstract offers its first three and its last eight sentences
++    # (`candidate_window`), so the closing findings are never cut off. The
++    # last option names the abstract's own last sentence.
++    last_offered_index = MAX_CANDIDATE_SENTENCES - 1
++    options = [f"s{i}" for i in range(MAX_CANDIDATE_SENTENCES)] + ["none"]
++    monkeypatch.setattr(
++        snippets_module, "decide", AsyncMock(return_value=_record(f"s{last_offered_index}", options))
++    )
++    result = await pick_snippet(harness=object(), trace_id="t1", question="q", abstract_sentences=many)
++    assert result == Snippet(text=many[-1])
++
++
++def test_the_window_keeps_the_first_three_and_the_last_eight_of_a_long_abstract() -> None:
++    many = [f"s{i}" for i in range(20)]
++    window = candidate_window(many)
++    assert len(window) == MAX_CANDIDATE_SENTENCES
++    assert window[:3] == ["s0", "s1", "s2"]
++    assert window[-1] == "s19"
++    assert candidate_window(many[:5]) == many[:5]
++
++
++# ---------------------------------------------------------------------------
++# The decision's wording: generic, bounded, no question words.
++# ---------------------------------------------------------------------------
++
++
++def test_the_instructions_and_criteria_fit_decides_limit_and_name_what_to_skip() -> None:
++    instructions = snippets_module._INSTRUCTIONS
++    none_criterion = snippets_module._NONE_CRITERION
++    assert len(instructions) <= 1000 and len(none_criterion) <= 1000
++    for word in ("finding", "on its own", "aims", "objectives", "methods", "scope", "background"):
++        assert word in instructions.lower()
++    # Generic: nothing of any test question or topic is written into the wording.
++    for topic in ("caffeine", "metformin", "migraine", "hydroxychloroquine", "autism", "vaccine"):
++        assert topic not in (instructions + none_criterion).lower()
++
++
++# ---------------------------------------------------------------------------
++# Retraction notice, trimmed tail, untrimmed check.
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.parametrize(
++    "text",
++    [
++        "This article has been retracted: please see Elsevier Policy on Article Withdrawal.",
++        "Notice of retraction of the paper published in 2020.",
++        "The study was withdrawn by the authors; this paper is no longer valid.",
++        "Retraction notice: the editors have retracted this work.",
++    ],
++)
++def test_a_retraction_or_withdrawal_notice_is_recognised(text: str) -> None:
++    assert has_retraction_notice(f"Caffeine improved running time in the trial. {text}")
++
++
++@pytest.mark.parametrize(
++    "text",
++    [
++        "Opioid withdrawal symptoms were milder in the treated group of patients.",
++        "The drug was withdrawn from the market after a safety review of 2004.",
++        "Participants who withdrew from the study were counted as retained in the analysis.",
++    ],
++)
++def test_a_clinical_use_of_the_word_is_not_a_notice(text: str) -> None:
++    assert not has_retraction_notice(text)
++
++
++_FULL = (
++    "Caffeine intake of three milligrams per kilogram improved performance in the trial. "
++    "The authors of the trial conclude that moderate doses are effective for athletes."
++)
++
++
++def test_a_cut_tail_is_never_a_candidate() -> None:
++    cut = _FULL + " Mechanistically, caffeine inhibited adenosine receptors in the muscle, thereby\u2026"
++    assert abstract_candidates(cut) == split_abstract_sentences(_FULL)
++    marked = _FULL + " Mechanistically, caffeine inhibited adenosine receptors in the muscle, thereby [truncated]"
++    assert abstract_candidates(marked) == split_abstract_sentences(_FULL)
++
++
++def test_the_caller_can_say_the_text_was_cut_without_a_marker() -> None:
++    hard_cut = _FULL + " Mechanistically, caffeine inhibited adenosine receptors in the muscle, thereby the"
++    assert abstract_candidates(hard_cut) == split_abstract_sentences(hard_cut)
++    assert abstract_candidates(hard_cut, cut=True) == split_abstract_sentences(_FULL)
++
++
++def test_an_untrimmed_abstract_keeps_every_complete_sentence() -> None:
++    assert abstract_candidates(_FULL) == split_abstract_sentences(_FULL)
++
++
++def test_a_sentence_ending_in_a_trim_marker_is_never_verified() -> None:
++    fragment = "Mechanistically, caffeine inhibited adenosine receptors in the muscle, thereby\u2026"
++    assert verified_sentence(fragment, _FULL + " " + fragment) is None
++    assert verified_sentence(split_abstract_sentences(_FULL)[0], _FULL) is not None
++
++
++# ---------------------------------------------------------------------------
++# pick_snippets: one decision per paper
++# ---------------------------------------------------------------------------
++
++
++def _paper(n: int, **kwargs: object) -> SnippetPaper:
++    abstract = (
++        f"Background sentence number {n} describes the setting of the caffeine trial in detail. "
++        f"Caffeine intake of three milligrams per kilogram improved performance in study {n}. "
++        f"The authors of study {n} conclude that moderate doses are effective for athletes."
++    )
++    return SnippetPaper(key=f"k{n}", abstract=abstract, **kwargs)  # type: ignore[arg-type]
++
++
++def _pick_second(calls: list[str], recorded: list[DecisionRecord] | None = None):
++    async def _decide(harness: object, trace_id: str, point: str, state: str, options: list[str], **kwargs: object) -> DecisionRecord:
++        calls.append(point)
++        return _record("s1", options)
++
++    return _decide
++
++
++@pytest.mark.asyncio
++async def test_each_paper_gets_its_own_decision_and_each_is_recorded(monkeypatch: pytest.MonkeyPatch) -> None:
++    calls: list[str] = []
++    monkeypatch.setattr(snippets_module, "decide", _pick_second(calls))
++    recorded: list[DecisionRecord] = []
++
++    shown = await pick_snippets(
++        object(), "t", "q", [_paper(n) for n in range(3)], recorded.append  # type: ignore[arg-type]
++    )
++
++    assert calls == ["write.snippet"] * 3
++    assert len(recorded) == 3
++    assert set(shown) == {"k0", "k1", "k2"}
++    assert shown["k1"].startswith("Caffeine intake of three milligrams")
++
++
++@pytest.mark.asyncio
++async def test_the_decisions_run_together_not_one_after_another(monkeypatch: pytest.MonkeyPatch) -> None:
++    import asyncio
++    import time
++
++    async def _slow(harness: object, trace_id: str, point: str, state: str, options: list[str], **kwargs: object) -> DecisionRecord:
++        await asyncio.sleep(0.3)
++        return _record("s1", options)
++
++    monkeypatch.setattr(snippets_module, "decide", _slow)
++    started = time.monotonic()
++    shown = await pick_snippets(object(), "t", "q", [_paper(n) for n in range(5)])  # type: ignore[arg-type]
++    assert len(shown) == 5
++    assert time.monotonic() - started < 0.9
++
++
++@pytest.mark.asyncio
++async def test_only_the_first_five_papers_are_asked(monkeypatch: pytest.MonkeyPatch) -> None:
++    calls: list[str] = []
++    monkeypatch.setattr(snippets_module, "decide", _pick_second(calls))
++    shown = await pick_snippets(object(), "t", "q", [_paper(n) for n in range(8)])  # type: ignore[arg-type]
++    assert len(calls) == MAX_SNIPPET_PAPERS == 5
++    assert set(shown) == {f"k{n}" for n in range(5)}
++
++
++@pytest.mark.asyncio
++async def test_a_retracted_paper_is_not_asked_and_holds_its_place(monkeypatch: pytest.MonkeyPatch) -> None:
++    calls: list[str] = []
++    monkeypatch.setattr(snippets_module, "decide", _pick_second(calls))
++    papers = [_paper(0, retracted=True)] + [_paper(n) for n in range(1, 7)]
++    shown = await pick_snippets(object(), "t", "q", papers)  # type: ignore[arg-type]
++    assert len(calls) == 4, "five places, one of them the retracted paper"
++    assert "k0" not in shown and set(shown) == {"k1", "k2", "k3", "k4"}
++
++
++@pytest.mark.asyncio
++async def test_a_notice_inside_the_abstract_makes_the_paper_retracted(monkeypatch: pytest.MonkeyPatch) -> None:
++    calls: list[str] = []
++    monkeypatch.setattr(snippets_module, "decide", _pick_second(calls))
++    noticed = SnippetPaper(
++        key="kn",
++        abstract=_paper(0).abstract + " This article has been retracted at the request of the authors.",
++    )
++    shown = await pick_snippets(object(), "t", "q", [noticed])  # type: ignore[arg-type]
++    assert calls == [] and shown == {}
++
++
++@pytest.mark.asyncio
++async def test_a_sentence_not_in_the_untrimmed_abstract_is_dropped(monkeypatch: pytest.MonkeyPatch) -> None:
++    async def _bad(harness: object, trace_id: str, point: str, state: str, options: list[str], **kwargs: object) -> DecisionRecord:
++        return _record("s1", options)
++
++    monkeypatch.setattr(snippets_module, "decide", _bad)
++    monkeypatch.setattr(
++        snippets_module, "pick_snippet", AsyncMock(return_value=Snippet(text="A sentence the paper never states at all."))
++    )
++    assert await pick_snippets(object(), "t", "q", [_paper(0)]) == {}  # type: ignore[arg-type]
++
++
++@pytest.mark.asyncio
++async def test_a_failed_decision_for_one_paper_leaves_the_others(monkeypatch: pytest.MonkeyPatch) -> None:
++    async def _some(harness: object, trace_id: str, point: str, state: str, options: list[str], **kwargs: object) -> DecisionRecord:
++        if "study 1 " in state or any("study 1." in str(v) for v in dict(kwargs["criteria"]).values()):  # type: ignore[call-overload]
++            raise RuntimeError("seam down")
++        return _record("s1", options)
++
++    monkeypatch.setattr(snippets_module, "decide", _some)
++    shown = await pick_snippets(object(), "t", "q", [_paper(0), _paper(1), _paper(2)])  # type: ignore[arg-type]
++    assert set(shown) == {"k0", "k2"}
+diff --git a/tests/system_03_search_agent/tools/test_ncbi_eutils_actions.py b/tests/system_03_search_agent/tools/test_ncbi_eutils_actions.py
+index 62a82e4c..491e3b38 100644
+--- a/tests/system_03_search_agent/tools/test_ncbi_eutils_actions.py
++++ b/tests/system_03_search_agent/tools/test_ncbi_eutils_actions.py
+@@ -1532,6 +1532,20 @@ class TestParseMedgenClinicalFeatures:
+ # ===========================================================================
+ 
+ 
++_TYPES_RETRACTED = (
++    "<PublicationTypeList><PublicationType>Journal Article</PublicationType>"
++    + "<PublicationType>Retracted Publication</PublicationType></PublicationTypeList>"
++)
++_TYPES_NOTICE = (
++    "<PublicationTypeList><PublicationType>Retraction of Publication</PublicationType>"
++    + "</PublicationTypeList>"
++)
++_TYPES_PLAIN = (
++    "<PublicationTypeList><PublicationType>Journal Article</PublicationType>"
++    + "</PublicationTypeList>"
++)
++
++
+ class TestFetch:
+     @pytest.mark.asyncio
+     async def test_happy_path_cites_record_host_not_fetch_host(
+@@ -1564,6 +1578,66 @@ class TestFetch:
+         assert record.source_url == "https://pubmed.ncbi.nlm.nih.gov/21376230/"
+         assert "eutils.ncbi.nlm.nih.gov" not in record.source_url
+ 
++    @pytest.mark.asyncio
++    @pytest.mark.parametrize(
++        ("extra_xml", "expected"),
++        [
++            (_TYPES_RETRACTED, True),
++            (_TYPES_NOTICE, True),
++            (_TYPES_PLAIN, False),
++        ],
++    )
++    async def test_a_record_pubmed_marks_retracted_carries_that_flag(
++        self, monkeypatch: pytest.MonkeyPatch, extra_xml: str, expected: bool
++    ) -> None:
++        """Card 29: the fetched record's own publication types say it was
++        retracted; no further network call is made to learn it."""
++        _install(
++            monkeypatch,
++            [
++                _xml_response(
++                    "<PubmedArticleSet><PubmedArticle><MedlineCitation>"
++                    "<PMID>32205204</PMID>"
++                    "<Article><ArticleTitle>A title</ArticleTitle>"
++                    "<Abstract><AbstractText>Real abstract text.</AbstractText></Abstract>"
++                    f"{extra_xml}"
++                    "</Article></MedlineCitation></PubmedArticle></PubmedArticleSet>"
++                )
++            ],
++        )
++        output = await ncbi_eutils_actions.fetch(
++            NcbiEfetchFetchInput(
++                action="fetch", db="pubmed", ids=["32205204"], rettype="abstract", retmode="xml"
++            )
++        )
++        assert output.records[0].fields.get("retracted") is (True if expected else None)
++
++    @pytest.mark.asyncio
++    async def test_a_retraction_comment_marks_the_record_retracted(
++        self, monkeypatch: pytest.MonkeyPatch
++    ) -> None:
++        _install(
++            monkeypatch,
++            [
++                _xml_response(
++                    "<PubmedArticleSet><PubmedArticle><MedlineCitation>"
++                    "<PMID>9500320</PMID>"
++                    "<Article><ArticleTitle>A title</ArticleTitle>"
++                    "<Abstract><AbstractText>Real abstract text.</AbstractText></Abstract>"
++                    "</Article><CommentsCorrectionsList>"
++                    '<CommentsCorrections RefType="RetractionIn"><PMID>20137807</PMID>'
++                    "</CommentsCorrections></CommentsCorrectionsList>"
++                    "</MedlineCitation></PubmedArticle></PubmedArticleSet>"
++                )
++            ],
++        )
++        output = await ncbi_eutils_actions.fetch(
++            NcbiEfetchFetchInput(
++                action="fetch", db="pubmed", ids=["9500320"], rettype="abstract", retmode="xml"
++            )
++        )
++        assert output.records[0].fields["retracted"] is True
++
+     @pytest.mark.asyncio
+     async def test_empty_article_set_fabricates_no_records(
+         self, monkeypatch: pytest.MonkeyPatch
