@@ -33,6 +33,10 @@ from system_03_search_agent.adapters.mcp.server import server as mcp_server
 from system_03_search_agent.adapters.mcp.server import (
     transport_security_settings as mcp_transport_security_settings,
 )
+from system_03_search_agent.adapters.web_sse.loop_stall import (
+    start_loop_stall_watch,
+    stop_loop_stall_watch,
+)
 from system_03_search_agent.adapters.web_sse.proxy_scheme import ProxySchemeMiddleware
 from system_03_search_agent.auth.dependencies import (
     _GUEST_SESSION_NO_LONGER_VALID_DETAIL,
@@ -245,9 +249,13 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     `app`, never to a mounted sub-app on its own.
     """
     _run_startup_migrations_if_requested()
-    async with AsyncExitStack() as stack:
-        await stack.enter_async_context(_mcp_asgi_app.router.lifespan_context(_mcp_asgi_app))
-        yield
+    stall_watch = start_loop_stall_watch()
+    try:
+        async with AsyncExitStack() as stack:
+            await stack.enter_async_context(_mcp_asgi_app.router.lifespan_context(_mcp_asgi_app))
+            yield
+    finally:
+        await stop_loop_stall_watch(stall_watch)
 
 
 app = FastAPI(lifespan=_lifespan)
