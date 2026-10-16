@@ -2,7 +2,7 @@
 
 The live ledger of the night: where each card stands, which agent holds it, and the next step. The lead rewrites a row the moment a card moves, so a session that stops at a usage limit resumes from this file, not from memory. The plan and the owner's rules: `plan.md` beside this file.
 
-Last updated: 2026-10-16 05:50. A usage limit stopped six agents at about 01:08; all six were resumed at 05:10 with a deadline before the 07:00 close.
+Last updated: 2026-10-16 06:00. A usage limit stopped six agents at about 01:08; all six were resumed at 05:10 with a deadline before the 07:00 close.
 
 ## Table of contents
 
@@ -31,7 +31,7 @@ Last updated: 2026-10-16 05:50. A usage limit stopped six agents at about 01:08;
 | 101 | none (removed) | Closed: judge FIX FIRST and adversary FAIL (sentences develop shows are dropped); #248 closed, branch and tag deleted, reports on the docs branch | none | Pair quote marks by the record, later |
 | 15 | none (removed) | Closed: judge FIX FIRST and adversary FAIL (a remembered condition's variants shown for a new subject); #249 closed, branch and tag deleted, reports on the docs branch | none | Skip the shape decision for a remembered subject, later |
 | 84 and 72 | none (removed) | Design on develop; not built: needs the owner's yes on the guardrail rule | none | The owner's answer in the morning |
-| 24 | card24, fix/card24-answer-depth-switch, #245 | Fresh verifier PASS (V-24-02 and V-24-03 minor, named open as card 117); develop merged in; CI running | none | Merge on green; then delete tag phase-8.4 |
+| 24 | none (merged #245, de53c6aa) | Merged on the verifier's PASS; in the retest file; tag phase-8.4 deleted; V-24-02 and V-24-03 are card 117 | none | Product check at the close |
 | 20 | none (removed) | Closed: adversary FAIL (a Georgia question counted every USA isolate; postal-code states dropped under an exact-looking count); #247 closed, branch deleted, reports on the docs branch | none | A design for matching a place to how the file writes it, later |
 | Parked branch | none | Deleted with card 110 | none | Done |
 | Local tags | parked/phase-8.4, phase-8.8-snippets, card101, card15 (card84-72 deleted) | Each deleted when its card merges or closes | none | Delete with its card |
@@ -43,9 +43,10 @@ Last updated: 2026-10-16 05:50. A usage limit stopped six agents at about 01:08;
 | #236 | Retest file | Documentation |
 | #237 | Overnight skill lessons | Documentation |
 | #238 | `/ship` retest rule | Tooling |
-| #240 | 115, the read-only reply for a graph-change follow-up | Product check at the close |
-| #241 | 17, the paper named when a sentence moves to another | Product check at the close |
-| #246 | 94 part, a timed-out isolate search keeps the answer | Product check at the close |
+| #240 | 115, the read-only reply for a graph-change follow-up | PASS, `2026-10-16_product_check` |
+| #241 | 17, the paper named when a sentence moves to another | PASS, `2026-10-16_product_check` |
+| #246 | 94 part, a timed-out isolate search keeps the answer | PASS, `2026-10-16_product_check` |
+| #245 | 24, the Plain language and Researcher switch | Product check after its deploy |
 
 ## Spend
 

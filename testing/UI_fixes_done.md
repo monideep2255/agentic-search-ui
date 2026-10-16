@@ -205,6 +205,7 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 115 | A follow-up asking to change the graph gets the read-only reply | Live, awaiting your retest | 111 |
 | card 17 | A reworded sentence that moves to a different paper names that paper | Live, awaiting your retest | 113 |
 | card 94, part | An isolate search that runs out of time keeps the rest of the answer | Live, awaiting your retest | 33 |
+| card 24 | A Plain language and Researcher switch beside each answer, which says it runs a new search before it spends one | Live, awaiting your retest | 112 |
 
 ## What is done, in summary
 
