@@ -611,6 +611,344 @@ class TestRenewal:
         _assert_no_secret(harness, expired)
 
 
+# ---------------------------------------------------------------------------
+# Card 75, fix round: the latch holds at the moment of the POST, an unknown
+# outcome latches, and a new sign-in is picked up without a restart.
+# ---------------------------------------------------------------------------
+
+
+class RotatingRefresh:
+    """`/auth/refresh` as `auth/router.py` answers it: a live refresh token is
+    swapped for a new one and recorded as used, and a used one revokes every
+    live sign-in (`_revoke_family_on_reuse`) and answers 401. `plan` gives the
+    action for each call in order, "ok" once it runs out:
+
+        ("proxy", status)           a proxy answers; the server never sees it
+        ("unreadable", delay)       rotates, waits, then answers an unreadable 200
+        ("lose", exception, delay)  rotates, waits, then the reply is lost
+        ("status", status)          rotates, then answers this status
+    """
+
+    def __init__(self, stand_in: StandIn, plan: list[tuple] | None = None) -> None:
+        self.stand_in = stand_in
+        self.plan = list(plan or [])
+        self.active = {"refresh-1"}
+        self.used: set[str] = set()
+        self.sent: list[str] = []  # every refresh token posted, proxy answers included
+        self.spent_sends = 0  # a used token reaching the server
+        self.family_revoked = 0
+        self.count = 0
+
+    async def answer(self, request: httpx.Request) -> httpx.Response:
+        self.count += 1
+        action = self.plan.pop(0) if self.plan else ("ok",)
+        token = json.loads(request.content)["refresh_token"]
+        self.sent.append(token)
+        if action[0] == "proxy":
+            return httpx.Response(action[1])
+        if token in self.used:
+            self.spent_sends += 1
+            self.family_revoked += 1
+            self.active.clear()
+            return httpx.Response(401, json={"detail": "revoked"})
+        if token not in self.active:
+            return httpx.Response(401, json={"detail": "invalid"})
+        self.active.discard(token)
+        self.used.add(token)
+        new_refresh = f"refresh-{len(self.used) + 1}"
+        new_access = jwt(900, f"renewed-{self.count}")
+        self.active.add(new_refresh)
+        self.stand_in.valid_tokens.add(new_access)
+        if action[0] == "ok":
+            return httpx.Response(200, json={"access_token": new_access, "refresh_token": new_refresh})
+        if action[0] == "unreadable":
+            await asyncio.sleep(action[1])
+            return _unreadable(request)
+        if action[0] == "lose":
+            await asyncio.sleep(action[2])
+            raise action[1]("reply lost", request=request)
+        return httpx.Response(action[1])
+
+
+def _cancel(request_id: int) -> bytes:
+    return json.dumps(
+        {"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": request_id}}
+    ).encode()
+
+
+async def _line(harness: Harness, message: Any) -> None:
+    await harness.bridge.handle_line(json.dumps(message).encode())
+
+
+def _assert_no_tokens(harness: Harness, *tokens: str) -> None:
+    for token in (*tokens, "refresh-1", "refresh-2", "refresh-3", "login-1"):
+        assert token not in harness.output()
+
+
+class TestRenewalLatchFixRound:
+    # -- the check at the moment of the POST (A-75-01, J-75-04, A-75-07) ----
+
+    @pytest.mark.asyncio
+    async def test_a_waiting_request_never_sends_the_spent_token_when_the_renewer_is_cancelled(
+        self, signed_in
+    ) -> None:
+        # A-75-01. Mutation: drop the `if sent in wired: raise` check in
+        # `_RenewalClient.post` -> request 4 posts refresh-1 and the family
+        # is revoked.
+        expired = jwt(-5, "a7501")
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in, [("unreadable", 0.3)])
+        harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
+        await _line(harness, CALL(3))
+        await asyncio.sleep(0.05)
+        await _line(harness, CALL(4))
+        await asyncio.sleep(0.05)
+        await harness.bridge.handle_line(_cancel(3))
+        await harness.bridge.drain()
+
+        assert server.sent == ["refresh-1"]
+        assert server.family_revoked == 0
+        assert stand_in.mcp_requests == []
+        replies = harness.replies()
+        assert [r["id"] for r in replies] == [4]
+        assert replies[0]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        _assert_no_tokens(harness, expired)
+
+    @pytest.mark.asyncio
+    async def test_a_request_that_arrives_after_a_cancel_never_sends_the_spent_token(
+        self, signed_in
+    ) -> None:
+        # J-75-04. Mutation: as above.
+        expired = jwt(-5, "j7504")
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in, [("unreadable", 0.4)])
+        harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
+        await _line(harness, CALL(3))
+        await asyncio.sleep(0.1)
+        await harness.bridge.handle_line(_cancel(3))
+        await asyncio.sleep(0.05)
+        await _line(harness, CALL(4))  # starts while the renewal is still in flight
+        await harness.bridge.drain()
+
+        assert server.sent == ["refresh-1"]
+        assert server.family_revoked == 0
+        assert [r["id"] for r in harness.replies()] == [4]
+        _assert_no_tokens(harness, expired)
+
+    @pytest.mark.asyncio
+    async def test_asking_again_after_a_timeout_never_sends_the_spent_token(
+        self, signed_in, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # A-75-07. Mutation: as above.
+        monkeypatch.setattr(mcp_bridge, "REQUEST_DEADLINE_SECONDS", 0.2)
+        expired = jwt(-5, "a7507")
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in, [("unreadable", 0.5)])
+        harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
+        await _line(harness, CALL(3))
+        await asyncio.sleep(0.3)  # request 3 has been answered, its renewal still runs
+        assert [r["id"] for r in harness.replies()] == [3], "populate check: the deadline hit"
+        await _line(harness, CALL(4))
+        await harness.bridge.drain()
+
+        assert server.sent == ["refresh-1"]
+        assert server.family_revoked == 0
+        assert stand_in.mcp_requests == []
+        _assert_no_tokens(harness, expired)
+
+    # -- a reply lost after the request was sent (A-75-02, J-75-02) -------
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "error", [httpx.ReadTimeout, httpx.ReadError, httpx.RemoteProtocolError]
+    )
+    async def test_a_renewal_reply_lost_after_it_was_sent_latches(self, signed_in, error) -> None:
+        # A-75-02 and J-75-02. Mutation: in `_RenewalClient.post`, take the
+        # token back on every `httpx.HTTPError` -> the second request posts
+        # the rotated-away refresh-1 and the family is revoked.
+        expired = jwt(-5, "a7502")
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in, [("lose", error, 0.0)])
+        harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
+        replies = await harness.send(CALL(11), CALL(12))
+
+        assert server.sent == ["refresh-1"]
+        assert server.family_revoked == 0
+        assert stand_in.mcp_requests == []
+        assert replies[0]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE
+        assert replies[1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        _assert_no_tokens(harness, expired)
+
+    # -- a new sign-in is picked up without a restart (A-75-05, J-75-07) ---
+
+    @pytest.mark.asyncio
+    async def test_s3_login_revives_a_latched_bridge_without_a_restart(self, signed_in) -> None:
+        # A-75-05 and J-75-07. Mutation: `_resume_from_file` returns False
+        # -> the request after `s3 login` is still refused.
+        expired = jwt(-5, "a7505")
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in)
+        server.active.clear()  # the stored sign-in was revoked: the server answers 401
+        harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
+        first = await harness.send(CALL(11))
+        assert first[0]["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED, "populate check: latched"
+
+        login_access = jwt(900, "login")
+        stand_in.valid_tokens.add(login_access)
+        server.active.add("login-1")
+        credentials.store(
+            credentials.Credentials(base_url=BASE, access_token=login_access, refresh_token="login-1")
+        )
+        second = await harness.send(CALL(12))
+
+        assert second[-1]["id"] == 12
+        assert second[-1]["result"]["isError"] is False
+        assert [r.headers["authorization"] for r in stand_in.mcp_requests] == [f"Bearer {login_access}"]
+        assert server.sent == ["refresh-1"], "the new sign-in needed no renewal at all"
+        assert server.spent_sends == 0
+        _assert_no_tokens(harness, expired, login_access)
+
+    @pytest.mark.asyncio
+    async def test_a_latched_bridge_never_resumes_with_the_spent_token_itself(self, signed_in) -> None:
+        # The re-read exit compares against the spent token held in memory.
+        # Mutation: the check `current.refresh_token in self._wired` replaced
+        # by False -> the file's unchanged refresh-1 resumes the bridge and a
+        # request reaches `/mcp/` after the latch.
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in)
+        server.active.clear()
+        harness, _ = _refresh_harness(stand_in, signed_in("opaque"), server.answer)
+        replies = await harness.send(CALL(11), CALL(12), CALL(13))
+
+        assert len(stand_in.mcp_requests) == 1, "only the request that found the token refused"
+        assert server.sent == ["refresh-1"]
+        assert replies[1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        assert replies[2]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        assert "picked up" not in harness.stderr.getvalue()
+        _assert_no_tokens(harness, "opaque")
+
+    # -- a saved recovery copy is picked up (A-75-06, J-75-03) -------------
+
+    @pytest.mark.asyncio
+    async def test_a_renewal_saved_to_the_recovery_copy_is_picked_up_not_locked_out(
+        self, signed_in, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # A-75-06 and J-75-03. Mutation: `_resume_from_file` returns False ->
+        # the second request is refused although nothing was lost.
+        expired = jwt(-5, "a7506")
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in)
+        harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
+        real_store = credentials.store
+        failures = [OSError(28, "No space left on device")]
+
+        def store_fails_once(creds: credentials.Credentials) -> None:
+            if failures:
+                raise failures.pop()
+            real_store(creds)
+
+        monkeypatch.setattr(credentials, "store", store_fails_once)
+        first = await harness.send(CALL(11))
+        assert first[0]["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED
+        assert "could not be saved" in first[0]["error"]["message"]
+        assert "expired" not in first[0]["error"]["message"]
+        second = await harness.send(CALL(12))
+
+        assert second[-1]["id"] == 12
+        assert second[-1]["result"]["isError"] is False
+        assert server.sent == ["refresh-1"]
+        assert server.family_revoked == 0
+        _assert_no_tokens(harness, expired)
+
+    @pytest.mark.asyncio
+    async def test_a_renewal_that_could_not_be_saved_anywhere_latches(
+        self, signed_in, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # J-75-05. Mutation: `_latch_if_spent` returns early for a
+        # `SessionLostError` -> the second request reaches `/mcp/`.
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in)
+        harness, _ = _refresh_harness(stand_in, signed_in("opaque"), server.answer)
+
+        def store_always_fails(_creds: credentials.Credentials) -> None:
+            raise OSError(28, "No space left on device")
+
+        monkeypatch.setattr(credentials, "store", store_always_fails)
+        monkeypatch.setattr(credentials, "_write_recovery_copy", lambda _creds: False)
+        replies = await harness.send(CALL(11), CALL(12))
+
+        assert replies[0]["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED
+        assert replies[1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        assert len(stand_in.mcp_requests) == 1, "nothing is sent after the latch"
+        assert server.sent == ["refresh-1"]
+        assert server.family_revoked == 0
+        _assert_no_tokens(harness, "opaque")
+
+    @pytest.mark.asyncio
+    async def test_a_renewal_cancelled_after_it_was_sent_latches(self, signed_in) -> None:
+        # The design: an outcome the bridge cannot know latches. Mutation: in
+        # `_latch_if_spent`, return early for a cancelled task -> the second
+        # request reaches `/mcp/`.
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in, [("unreadable", 5.0)])
+        harness, _ = _refresh_harness(stand_in, signed_in("opaque"), server.answer)
+        await _line(harness, CALL(11))
+        await asyncio.sleep(0.1)
+        renewal = [t for t in harness.bridge._tasks if "refresh_locked" in repr(t.get_coro())]
+        assert len(renewal) == 1
+        assert server.sent == ["refresh-1"], "populate check: the renewal was sent"
+        renewal[0].cancel()
+        await asyncio.gather(*renewal, return_exceptions=True)
+        await asyncio.sleep(0.05)
+        before = len(stand_in.mcp_requests)
+        await harness.send(CALL(12))
+
+        assert len(stand_in.mcp_requests) == before
+        assert server.sent == ["refresh-1"]
+        _assert_no_tokens(harness, "opaque")
+
+    # -- a proxy 429 does not latch (J-75-01), a 5xx is told truthfully (J-75-06)
+
+    @pytest.mark.asyncio
+    async def test_a_proxy_429_on_renewal_does_not_latch(self, signed_in) -> None:
+        # J-75-01, the 429 half. Mutation: remove the `== 429` discard in
+        # `_RenewalClient.post` -> the second request is refused.
+        expired = jwt(-5, "j7501")
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in, [("proxy", 429)])
+        harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
+        replies = await harness.send(CALL(11), CALL(12))
+
+        assert replies[0]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE
+        assert "429" in replies[0]["error"]["message"]
+        assert "expired" not in replies[0]["error"]["message"]
+        assert replies[1]["id"] == 12
+        assert replies[1]["result"]["isError"] is False
+        assert server.sent == ["refresh-1", "refresh-1"]
+        assert server.family_revoked == 0
+        _assert_no_tokens(harness, expired)
+
+    @pytest.mark.asyncio
+    async def test_the_message_after_a_server_error_says_the_renewal_failed(self, signed_in) -> None:
+        # J-75-06. Mutation: make the status branch in `_renew` never match
+        # -> the person is told the sign-in "has expired or was signed out".
+        expired = jwt(-5, "j7506")
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in, [("proxy", 503)])
+        harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
+        replies = await harness.send(CALL(11), CALL(12))
+
+        message = replies[0]["error"]["message"]
+        assert replies[0]["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED
+        assert "could not renew your sign-in (it answered 503)" in message
+        assert "expired" not in message
+        assert "expired, already used" not in harness.stderr.getvalue()
+        assert "503" in harness.stderr.getvalue()
+        assert replies[1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT, "a 5xx still latches"
+        assert server.sent == ["refresh-1"]
+        _assert_no_tokens(harness, expired)
+
+
 class TestAccessTokenExpiry:
     def test_reads_exp_from_a_jwt(self) -> None:
         token = jwt(100, "x")
