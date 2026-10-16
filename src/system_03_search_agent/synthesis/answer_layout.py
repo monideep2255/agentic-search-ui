@@ -68,6 +68,7 @@ from typing import Any, Literal
 
 from system_03_search_agent.contracts.events import source_page_key
 from system_03_search_agent.core.next_step import entity_type_noun
+from system_03_search_agent.synthesis import grounding as grounding_module
 from system_03_search_agent.synthesis.disease_names import (
     is_placeholder_condition_title,
     readable_disease_name,
@@ -85,6 +86,10 @@ from system_03_search_agent.synthesis.grounding import (
     _split_sentences,
     content_tokens,
     display_index_by_citation_id,
+    names_by_short_form,
+    record_labels_by_page,
+    short_forms_by_page,
+    title_words_shared,
 )
 
 BlockKind = Literal["heading", "paragraph"]
@@ -1130,6 +1135,148 @@ def drop_record_restatements(
             sentence_origins=tuple(origin for _, origin, _ in kept),
         ),
         dropped,
+    )
+
+
+#: Card 17 (2026-10-15). The longest title a lead-in quotes whole; a longer
+#: one is cut at a word boundary and ends in the cut mark, so a cut shows.
+LEAD_IN_MAX_TITLE_CHARS = 160
+
+#: The words of a lead-in. `{noun}` is "the paper", "the trial" or "the
+#: <noun> record"; `{titles}` the quoted titles. The sentence follows after
+#: the colon, unchanged to its first letter.
+LEAD_IN_FRAME = "From {noun} {titles}: "
+
+_LEAD_IN_QUOTES = str.maketrans({"\u201c": "'", "\u201d": "'", '"': "'"})
+
+
+def lead_in_title(label: str) -> str:
+    """A record's title made safe to quote, by mechanical steps only.
+
+    Whitespace collapsed, square brackets removed (a marker is `[N]` and a
+    title must never carry one), one trailing full stop removed (a question
+    mark stays), double quotes turned to single quotes, then cut at a word
+    boundary past `LEAD_IN_MAX_TITLE_CHARS`. Code never chooses which part
+    of a title carries its meaning.
+    """
+    text = " ".join(label.replace("[", " ").replace("]", " ").split())
+    text = text.removesuffix(".").rstrip()
+    text = text.translate(_LEAD_IN_QUOTES)
+    return clip_to_word(text, LEAD_IN_MAX_TITLE_CHARS)
+
+
+def _lead_in_noun(entity_types: list[str]) -> str:
+    """"the paper", "the trial" or "the <noun> record", plural for many."""
+    count = len(entity_types)
+    nouns = {plain_noun(kind) for kind in entity_types}
+    if len(nouns) != 1:
+        return "the records"
+    noun = nouns.pop()
+    if noun == "published paper":
+        return "the paper" if count == 1 else "the papers"
+    if noun == "clinical trial":
+        return "the trial" if count == 1 else "the trials"
+    if noun == _PLAIN_NOUN_FALLBACK[0]:
+        return "the record" if count == 1 else "the records"
+    return f"the {noun} record" if count == 1 else f"the {noun} records"
+
+
+def lead_in_for(pages: list[tuple[str, str]]) -> str:
+    """The lead-in for `pages`, each a (label, entity type), in display order."""
+    quoted = [f'"{lead_in_title(label)}"' for label, _ in pages]
+    titles = quoted[0] if len(quoted) == 1 else ", ".join(quoted[:-1]) + " and " + quoted[-1]
+    return LEAD_IN_FRAME.format(noun=_lead_in_noun([kind for _, kind in pages]), titles=titles)
+
+
+def name_switched_records(
+    grounding: GroundingResult, synth_findings: list[SynthFinding]
+) -> tuple[GroundingResult, int]:
+    """Prefix a lead-in naming its paper to a sentence that switched on one word.
+
+    Card 17 (2026-10-15, option E). A reworded sentence that moves to a page
+    the sentence above did not cite, and shares one title word with it at
+    most, is kept by the switch rule on that one word, and a pointing word
+    ("these variants") then reads as the page above. Nothing is dropped and
+    no word of any sentence changes: the lead-in is added in front, built
+    from the record's own title. Fires only when all hold: a sentence was
+    shown before it; it is reworded; its cited pages are disjoint from the
+    previous shown sentence's pages; no cited page shares two title words or
+    a defined short form while one shares exactly one; that page has a label.
+
+    Returns the result and the number of sentences given a lead-in. The
+    input is returned unchanged, and 0, when sentence structure is unknown
+    or the claim cursor does not close, as `drop_record_restatements` does.
+    """
+    if not grounding.sentences or not grounding.claims:
+        return grounding, 0
+    labels_by_url = record_labels_by_page(synth_findings)
+    short_forms_by_url = short_forms_by_page(synth_findings)
+    # The title a lead-in quotes: the first label finding on each page.
+    title_by_page: dict[str, str] = {}
+    kind_by_page: dict[str, str] = {}
+    for finding in synth_findings:
+        page = source_page_key(finding.source_url)
+        if page and finding.field in grounding_module.LABEL_FIELDS and page not in title_by_page:
+            title_by_page[page] = finding.field_value
+            kind_by_page[page] = finding.entity_type
+    claims = list(grounding.claims)
+    cursor = 0
+    previous_pages: set[str] | None = None
+    sentences: list[str] = []
+    named = 0
+    for sentence in grounding.sentences:
+        marker_count = len(_MARKER.findall(sentence))
+        if cursor + marker_count > len(claims):
+            return grounding, 0
+        own = claims[cursor : cursor + marker_count]
+        cursor += marker_count
+        pages: list[str] = []
+        urls_by_page: dict[str, set[str]] = {}
+        for claim in own:
+            url = (claim.finding.source_url or "").strip()
+            page = source_page_key(url)
+            if page and page not in urls_by_page:
+                pages.append(page)
+            if page:
+                urls_by_page.setdefault(page, set()).add(url)
+        page_set = set(pages)
+        text = _MARKER.sub(" ", sentence)
+        shared_counts: list[int] = []
+        by_short_form = False
+        for page in pages:
+            label = " ".join(labels_by_url.get(url, "") for url in sorted(urls_by_page[page]))
+            shared_counts.append(len(title_words_shared(text, label)))
+            by_short_form = by_short_form or any(
+                names_by_short_form(text, labels_by_url.get(url, ""), short_forms_by_url.get(url))
+                for url in urls_by_page[page]
+            )
+        fires = (
+            previous_pages is not None
+            and bool(own)
+            and any(claim.evidence_quote for claim in own)
+            and not (page_set & previous_pages)
+            and all(count <= 1 for count in shared_counts)
+            and any(count == 1 for count in shared_counts)
+            and not by_short_form
+        )
+        named_pages = [page for page in pages if page in title_by_page]
+        if fires and named_pages:
+            sentence = lead_in_for([(title_by_page[p], kind_by_page[p]) for p in named_pages]) + sentence
+            named += 1
+        previous_pages = page_set
+        sentences.append(sentence)
+    if cursor != len(claims) or not named:
+        return grounding, 0
+    return (
+        GroundingResult(
+            narrative=" ".join(sentences).strip(),
+            claims=list(grounding.claims),
+            stripped_count=grounding.stripped_count,
+            refused=grounding.refused,
+            sentences=tuple(sentences),
+            sentence_origins=grounding.sentence_origins,
+        ),
+        named,
     )
 
 

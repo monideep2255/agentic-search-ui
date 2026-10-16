@@ -565,6 +565,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     is_plain_language,
     isolate_place,
     key_terms,
+    name_switched_records,
     parse_synth_layout,
     placeholder_link_count,
     placeholder_links_note,
@@ -14579,6 +14580,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     # back to it if the listing below grounds nothing.
     prose_before_drop = grounding
     restatements_dropped = 0
+    switches_named = 0
     # Every depth since item 12.12 (2026-09-23). It used to be Researcher
     # only, on the grounds that a Plain language paragraph often IS a
     # one-record sentence. That was the "One trial is named X. Another is
@@ -14592,6 +14594,11 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         and grounding.claims
     ):
         grounding, restatements_dropped = drop_record_restatements(grounding, synth_findings)
+        # Card 17 (2026-10-15): a reworded sentence that switched papers on one
+        # shared title word names its paper. Adds a prefix, drops nothing.
+        grounding, switches_named = name_switched_records(grounding, synth_findings)
+        if switches_named:
+            logger.info("card 17: %d switched sentence(s) given a lead-in", switches_named)
 
     model_grounding: GroundingResult | None = None if structured_fallback_used else grounding
     tail_sentences: tuple[str, ...] = ()

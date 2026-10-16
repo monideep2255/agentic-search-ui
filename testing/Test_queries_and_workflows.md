@@ -438,6 +438,24 @@ What you should see:
 - Each answer still has written sentences above its records. A plain-language GERD answer shows about two to three sentences; a sentence that drops a limiting word such as "transient" is held back rather than shown.
 - Why it matters: a parent reading about an older child, or a reader told a symptom is GERD's when the paper only suspects it, takes a wider claim as fact. A missing sentence is better than a wider one.
 
+### 113. A sentence that moves to a different paper says which paper (card 17)
+
+Queries to try:
+
+- `Are there any beneficial variants typically found in people of mediterranean descent?` in Plain language, then in Researcher, five times each
+- `What are the typical symptoms and risk factors of GERD?` in Plain language and in Researcher
+- `What genetic variants are common in people of Ashkenazi Jewish descent?` in Researcher, three times, then once in Plain language
+
+What you should see:
+
+- Where a written sentence moves to a different paper and its only link to that paper's title is one shared word, the sentence opens with `From the paper "<that paper's title>":` and then reads exactly as before. Click the sentence's citation: it opens the paper named in the lead-in.
+- A sentence that says more than one title word, or writes the paper's own abbreviation (such as GERD), has no lead-in: it already names its paper.
+- The first written sentence, a sentence that continues in the same paper, and a sentence copied word for word from a record have no lead-in.
+- No written sentence is lost against the same question before this change. A lead-in only adds words in front.
+- A long title is cut at a word with "…" at the end, never in the middle of a word and never at a colon, so a label such as "RETRACTED:" is not dropped.
+- When one sentence cites a Tay-Sachs paper and the next a BRCA paper, the second sentence names its paper; it never reads "these mutations" as if they were the first paper's.
+- Why it matters: "Other frequent variants include M694V" read as if it were about the paper above it. A person who cannot tell which paper a claim rests on cannot check it.
+
 ## 2. Follow-up questions and conversation
 
 ### 20. A follow-up carries the gene forward (Product test 2, 7.1 to 7.5)
@@ -2050,6 +2068,7 @@ Every feature accounted for, in three tables:
 |---|---|---|
 | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
 | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
+| card 17 | A written sentence that moves to a different paper on one shared title word opens with the name of that paper | Query 113 |
 | card 35 | An off-topic follow-up that contains a word such as "cell" or "study" is checked for topic like any other question | Query 111 |
 | cards 84 and 72 | When the check every question passes first cannot finish, the message says nothing was searched, the problem was ours, and to ask again | Query 109 |
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |

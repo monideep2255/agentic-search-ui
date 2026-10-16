@@ -15,8 +15,8 @@ SRC = sys.argv[1]
 FOLDERS = sys.argv[2:]
 sys.path.insert(0, SRC)
 
-from system_03_search_agent.synthesis import grounding as gr  # noqa: E402
-from system_03_search_agent.synthesis.findings import SynthFinding  # noqa: E402
+from system_03_search_agent.synthesis import grounding as gr
+from system_03_search_agent.synthesis.findings import SynthFinding
 
 
 def plain(sentence: str) -> str:
@@ -100,7 +100,7 @@ def result_for(narrative, fs, quotes, approve):
 
 def walk(result, fs):
     """Per shown sentence: refs, pages, reworded, and per cited page the shared stems."""
-    by_ref = {f.ref_index: f for f in fs}
+    {f.ref_index: f for f in fs}
     labels_by_url: dict[str, str] = {}
     for f in fs:
         url = (f.source_url or "").strip()
@@ -135,8 +135,8 @@ def walk(result, fs):
                 ):
                     hit.append(short)
             shorts[url] = hit
-        out.append(dict(sentence=plain(sentence), refs=refs, urls=urls, reworded=reworded,
-                        shared=shared, shorts=shorts, labels={u: labels_by_url.get(u, "") for u in urls}))
+        out.append({"sentence": plain(sentence), "refs": refs, "urls": urls, "reworded": reworded,
+                        "shared": shared, "shorts": shorts, "labels": {u: labels_by_url.get(u, "") for u in urls}})
     return out
 
 

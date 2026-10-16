@@ -1471,23 +1471,12 @@ def run_grounding_pass(
     licensed_question = _licensed_question_content(question)
     # Items 12.9 and 12.10: each record's own title and name, keyed by page,
     # so a synthesis may name its subject the way the cited paper names it.
-    labels_by_url: dict[str, str] = {}
-    for labelled in synth_findings:
-        url = (labelled.source_url or "").strip()
-        if url and labelled.field in LABEL_FIELDS:
-            labels_by_url[url] = f"{labels_by_url.get(url, '')} {labelled.field_value}".strip()
+    labels_by_url = record_labels_by_page(synth_findings)
     # Card 88 (2026-10-05): the short forms each record defines in its own
     # retrieved text, keyed by page, so a sentence may name a record by its
     # own abbreviation (`defined_short_forms`). Used by the switch rule only,
     # never to license words in `synthesis_is_supported_by`.
-    text_by_url: dict[str, list[str]] = {}
-    for finding in synth_findings:
-        url = (finding.source_url or "").strip()
-        if url:
-            text_by_url.setdefault(url, []).append(finding.field_value)
-    short_forms_by_url = {
-        url: defined_short_forms(" ".join(values)) for url, values in text_by_url.items()
-    }
+    short_forms_by_url = short_forms_by_page(synth_findings)
 
     surviving_sentences: list[str] = []
     surviving_origins: list[int] = []
@@ -2087,6 +2076,53 @@ def defined_short_forms(text: str) -> dict[str, str]:
     return forms
 
 
+def record_labels_by_page(synth_findings: list[SynthFinding]) -> dict[str, str]:
+    """Each record's own title and name, keyed by page link.
+
+    Items 12.9 and 12.10. One place builds this map, so the switch rule and
+    the card 17 lead-in read the same labels.
+    """
+    labels_by_url: dict[str, str] = {}
+    for labelled in synth_findings:
+        url = (labelled.source_url or "").strip()
+        if url and labelled.field in LABEL_FIELDS:
+            labels_by_url[url] = f"{labels_by_url.get(url, '')} {labelled.field_value}".strip()
+    return labels_by_url
+
+
+def short_forms_by_page(synth_findings: list[SynthFinding]) -> dict[str, dict[str, str]]:
+    """The short forms each record defines in its own text, keyed by page link."""
+    text_by_url: dict[str, list[str]] = {}
+    for finding in synth_findings:
+        url = (finding.source_url or "").strip()
+        if url:
+            text_by_url.setdefault(url, []).append(finding.field_value)
+    return {url: defined_short_forms(" ".join(values)) for url, values in text_by_url.items()}
+
+
+def title_words_shared(sentence: str, labels: str) -> set[str]:
+    """The stemmed content words a sentence shares with a record's title."""
+    if not labels.strip():
+        return set()
+    return _stemmed(content_tokens(sentence)) & _stemmed(content_tokens(labels))
+
+
+def names_by_short_form(
+    sentence: str, labels: str, short_forms: dict[str, str] | None = None
+) -> bool:
+    """Whether a sentence writes a short form its record's own text defines."""
+    if not labels.strip():
+        return False
+    title = _stemmed(content_tokens(labels))
+    for short, long_form in (short_forms or {}).items():
+        long_stems = _stemmed(content_tokens(long_form))
+        if not long_stems & title:
+            continue
+        if re.search(rf"(?<![A-Za-z0-9]){re.escape(short)}(?![A-Za-z0-9])", sentence):
+            return True
+    return False
+
+
 def _names_its_record(
     sentence: str, labels: str, short_forms: dict[str, str] | None = None
 ) -> bool:
@@ -2113,17 +2149,9 @@ def _names_its_record(
     """
     if not labels.strip():
         return False
-    title = _stemmed(content_tokens(labels))
-    said = _stemmed(content_tokens(sentence))
-    if said & title:
-        return True
-    for short, long_form in (short_forms or {}).items():
-        long_stems = _stemmed(content_tokens(long_form))
-        if not long_stems & title:
-            continue
-        if re.search(rf"(?<![A-Za-z0-9]){re.escape(short)}(?![A-Za-z0-9])", sentence):
-            return True
-    return False
+    return bool(title_words_shared(sentence, labels)) or names_by_short_form(
+        sentence, labels, short_forms
+    )
 
 
 def _capitalise_opening(sentence: str) -> str:

@@ -256,3 +256,33 @@ async def test_a_sentence_the_prose_leaves_out_is_never_a_lead_candidate(
     assert "Sentence 1: NCBIGene:672 is associated" in state, state
     assert "Sentence 2" not in state, state
     assert claims[0].startswith("NCBIGene:672 is associated"), claims
+
+
+def test_a_sentence_with_a_card_17_lead_in_stays_in_the_prose_and_may_lead() -> None:
+    """Card 17: the lead-in gives a label-shaped sentence words beyond its
+    label, so the card 111 rule leaves it in, and `_lead_candidates` still
+    offers it at index 1.
+
+    Mutation that turns this red: make `_is_label_only_sentence` ignore the
+    text before the first marker."""
+    from system_03_search_agent.synthesis.grounding import GroundingResult
+
+    title = "Valley cores"
+    citations = [SimpleNamespace(display_index=i, citation_id=f"c{i}") for i in (1, 2)]
+    findings = [
+        SimpleNamespace(citation_id=f"c{i}", field="title", field_value=title) for i in (1, 2)
+    ]
+    bare = f"{title} [1] and {title} [2]."
+    led = f'From the paper "{title}": {bare}'
+    listing = [f"{title} [1].", f"{title} [2]."]
+
+    assert graph_module._label_only_positions([bare, led], citations, findings, listing) == {0}
+
+    grounding = GroundingResult(
+        narrative=f"Lakes feed rivers [1]. {led}",
+        claims=[],
+        stripped_count=0,
+        refused=False,
+        sentences=("Lakes feed rivers [1].", led),
+    )
+    assert graph_module._lead_candidates(grounding) == [0, 1]

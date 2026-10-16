@@ -8,20 +8,30 @@ control and once without it.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from system_03_search_agent.synthesis import answer_layout, grounding
 from system_03_search_agent.synthesis.answer_layout import (
+    LEAD_IN_MAX_TITLE_CHARS,
     emphasis_for,
     grounding_input,
     heading_is_supported,
     key_terms,
+    lead_in_for,
+    lead_in_title,
+    name_switched_records,
     parse_synth_layout,
     table_second_cell,
 )
 from system_03_search_agent.synthesis.disease_names import readable_disease_name
 from system_03_search_agent.synthesis.findings import SynthFinding, apply_resolved_disease_names
-from system_03_search_agent.synthesis.grounding import GroundedClaim, run_grounding_pass
+from system_03_search_agent.synthesis.grounding import (
+    GroundedClaim,
+    GroundingResult,
+    run_grounding_pass,
+)
 from system_03_search_agent.synthesis.trust import ClaimTrust, answer_trust_line
 
 
@@ -835,3 +845,210 @@ def test_the_lead_sentence_never_writes_more_markers_than_a_token_can_carry(dept
     markers = [int(n) for n in re.findall(r"\[(\d+)\]", sentence)]
     assert 0 < len(markers) <= MAX_SUMMARY_MARKERS == 20, sentence
     assert "35" in sentence, "the count still tells the truth about all records"
+
+
+# ---------------------------------------------------------------------------
+# Card 17 (2026-10-15): a sentence that switches papers names its paper.
+# Every record below is neutral and built here, never a test question.
+# ---------------------------------------------------------------------------
+
+_LAKE_TITLE = "Alpine lakes and glacier melt."
+_CORE_TITLE = "Lake sediment cores from northern valleys."
+
+
+def _row(
+    ref: int,
+    page: int,
+    field: str,
+    value: str,
+    *,
+    entity_type: str = "Publication",
+    host: str = "https://pubmed.ncbi.nlm.nih.gov",
+) -> SynthFinding:
+    return SynthFinding(
+        ref_index=ref,
+        citation_id=f"c-{ref}",
+        layer="layer_2_ncbi_api",
+        tool="ncbi_efetch",
+        field=field,
+        field_value=value,
+        source_url=f"{host}/{page}/",
+        entity_type=entity_type,
+    )
+
+
+def _result(*pairs: tuple[str, list[tuple[SynthFinding, str | None]]]) -> GroundingResult:
+    """A grounded result built by hand: each pair is a sentence and the
+    (finding, evidence quote) of each marker in it, in order."""
+    claims = [
+        GroundedClaim(claim_text=sentence, finding=finding, evidence_quote=quote)
+        for sentence, cited in pairs
+        for finding, quote in cited
+    ]
+    sentences = tuple(sentence for sentence, _ in pairs)
+    return GroundingResult(
+        narrative=" ".join(sentences),
+        claims=claims,
+        stripped_count=3,
+        refused=False,
+        sentences=sentences,
+        sentence_origins=tuple(range(len(sentences))),
+    )
+
+
+_LAKE = _row(1, 1, "title", _LAKE_TITLE)
+_LAKE_TEXT = _row(2, 1, "abstract", "Glacier melt feeds the high lakes each summer.")
+_CORE = _row(3, 2, "title", _CORE_TITLE)
+_CORE_TEXT = _row(4, 2, "abstract", "Cores show valleys filled with fine silt.")
+_FIRST = ("Glacier melt feeds the high lakes [1].", [(_LAKE, None)])
+_SWITCH = ("Valleys like these hold fine silt [2].", [(_CORE, "Cores show valleys filled with fine silt")])
+
+
+def test_a_switched_sentence_on_one_shared_word_gets_the_lead_in_and_nothing_else_changes() -> None:
+    """Fires: reworded, other page, one shared title word, no short form."""
+    before = _result(_FIRST, _SWITCH)
+    after, named = name_switched_records(before, [_LAKE, _LAKE_TEXT, _CORE, _CORE_TEXT])
+
+    assert named == 1
+    assert after.sentences[0] == before.sentences[0]
+    assert after.sentences[1] == f'From the paper "{_CORE_TITLE[:-1]}": ' + before.sentences[1]
+    assert after.claims == before.claims
+    assert after.stripped_count == before.stripped_count == 3
+    assert after.sentence_origins == before.sentence_origins
+    assert after.narrative == " ".join(after.sentences)
+
+
+def test_a_pass_that_does_nothing_leaves_the_sentence_bare() -> None:
+    """Mutation proof: the sentence of the first test has no lead-in until
+    the pass runs. Mutation that turns the first test red: make
+    `name_switched_records` return its input."""
+    before = _result(_FIRST, _SWITCH)
+    assert not before.sentences[1].startswith("From the")
+    after, _ = name_switched_records(before, [_LAKE, _CORE])
+    assert after.sentences[1].startswith("From the paper")
+
+
+def test_the_first_sentence_of_the_prose_never_gets_a_lead_in() -> None:
+    """There is no sentence above it for a pointing word to be misread against."""
+    reworded_first = ("Glacier melt feeds the high lakes [1].", [(_LAKE, "Glacier melt feeds the high lakes")])
+    after, named = name_switched_records(_result(reworded_first, _FIRST), [_LAKE, _CORE])
+
+    assert named == 0
+    assert after.sentences[0] == reworded_first[0]
+
+
+def test_a_move_from_a_papers_title_to_its_abstract_is_no_switch() -> None:
+    """One page under two refs: the reader is already in that paper."""
+    title_sentence = ("Lakes and glacier melt [1].", [(_LAKE, None)])
+    same_page = ("A glacier feeds the valleys [2].", [(_LAKE_TEXT, "A glacier feeds the valleys")])
+    after, named = name_switched_records(_result(title_sentence, same_page), [_LAKE, _LAKE_TEXT])
+
+    assert named == 0
+    assert after.sentences[1] == same_page[0]
+
+
+def test_two_shared_title_words_or_a_defined_short_form_name_the_paper_already() -> None:
+    two_words = (
+        "Sediment cores from valleys hold fine silt [2].",
+        [(_CORE, "Cores show valleys filled with fine silt")],
+    )
+    _, named = name_switched_records(_result(_FIRST, two_words), [_LAKE, _CORE])
+    assert named == 0
+
+    # One cited page anchored by two words and another by one: the sentence
+    # already names a paper, so it is not led in.
+    glacial = _row(5, 4, "title", "Glacial history.")
+    mixed = (
+        "Sediment cores hold silt [2] and the ice is glacial [5].",
+        [(_CORE, "Cores show valleys filled with fine silt"), (glacial, "The ice is glacial")],
+    )
+    _, named_mixed = name_switched_records(_result(_FIRST, mixed), [_LAKE, _CORE, glacial])
+    assert named_mixed == 0
+
+    copd_title = _row(5, 3, "title", "Chronic obstructive pulmonary disease.")
+    copd_text = _row(
+        6, 3, "abstract", "Chronic obstructive pulmonary disease (COPD) is common in older adults."
+    )
+    short_form = (
+        "COPD is a disease of older adults [5].",
+        [(copd_title, "Chronic obstructive pulmonary disease")],
+    )
+    findings = [_LAKE, copd_title, copd_text]
+    _, named_short = name_switched_records(_result(_FIRST, short_form), findings)
+    assert named_short == 0
+
+    one_word = (
+        "A disease of older adults [5].",
+        [(copd_title, "Chronic obstructive pulmonary disease")],
+    )
+    _, named_one = name_switched_records(_result(_FIRST, one_word), findings)
+    assert named_one == 1
+
+
+def test_a_copied_sentence_gets_no_lead_in() -> None:
+    copied = ("Valleys like these hold fine silt [2].", [(_CORE, None)])
+    after, named = name_switched_records(_result(_FIRST, copied), [_LAKE, _CORE])
+
+    assert named == 0
+    assert after.sentences[1] == copied[0]
+
+
+def test_a_translated_title_is_quoted_without_brackets_and_markers_stay_the_sentences_own() -> None:
+    assert lead_in_title("[Translated title].") == "Translated title"
+    assert lead_in_title('What\'s "new" now?') == "What's 'new' now?"
+    bracketed = _row(3, 2, "title", "[Valley cores].")
+    after, named = name_switched_records(_result(_FIRST, _SWITCH_FOR(bracketed)), [_LAKE, bracketed])
+
+    assert named == 1
+    assert after.sentences[1].startswith('From the paper "Valley cores": Valleys')
+    assert re.findall(r"\[[^\]]*\]", after.sentences[1]) == ["[2]"]
+
+
+def _SWITCH_FOR(finding: SynthFinding) -> tuple[str, list[tuple[SynthFinding, str | None]]]:
+    return ("Valleys like these hold fine silt [2].", [(finding, "Valleys hold fine silt")])
+
+
+def test_a_long_title_is_cut_at_a_word_boundary_with_the_cut_mark_and_one_at_the_cap_is_whole() -> None:
+    whole = "a" * (LEAD_IN_MAX_TITLE_CHARS - 1) + "b"
+    assert lead_in_title(whole) == whole
+    words = " ".join(["valley"] * 40)
+    cut = lead_in_title(words)
+    assert cut.endswith("…")
+    assert len(cut) <= LEAD_IN_MAX_TITLE_CHARS
+    assert cut[:-1].endswith("valley")
+    exact = " ".join(["valley"] * 22)[:LEAD_IN_MAX_TITLE_CHARS].rstrip()
+    assert lead_in_title(exact) == exact
+
+
+def test_a_marker_digit_is_not_a_shared_word_with_a_title_that_carries_the_number() -> None:
+    """A title ending "Older Than 18 Years" must not share the digit of a marker."""
+    numbered = _row(3, 2, "title", "Results in people older than 18 years.")
+    sentence = ("Valleys hold fine silt [18].", [(numbered, "Valleys hold fine silt")])
+    after, named = name_switched_records(_result(_FIRST, sentence), [_LAKE, numbered])
+
+    assert named == 0
+    assert after.sentences[1] == sentence[0]
+
+
+def test_a_trial_reads_the_trial_and_another_record_reads_its_noun() -> None:
+    trial = _row(3, 2, "name", "Valley survey", entity_type="ClinicalTrial", host="https://clinicaltrials.gov/study")
+    assert lead_in_for([("Valley survey", "ClinicalTrial")]).startswith('From the trial "')
+    assert lead_in_for([("Aspergillus", "Disease")]).startswith('From the condition record "')
+    assert lead_in_for([("Aspergillus", "")]).startswith('From the record "')
+    after, named = name_switched_records(_result(_FIRST, _SWITCH_FOR(trial)), [_LAKE, trial])
+    assert named == 1
+    assert after.sentences[1].startswith('From the trial "Valley survey": ')
+
+
+def test_two_switched_to_pages_are_both_named_in_display_order() -> None:
+    third = _row(5, 4, "title", "Glacial history.")
+    both = (
+        "Valleys hold fine silt [2] and the ice is glacial [3].",
+        [(_CORE, "Cores show valleys filled with fine silt"), (third, "The ice is glacial")],
+    )
+    after, named = name_switched_records(_result(_FIRST, both), [_LAKE, _CORE, third])
+
+    assert named == 1
+    assert after.sentences[1].startswith(
+        f'From the papers "{_CORE_TITLE[:-1]}" and "Glacial history": '
+    )
