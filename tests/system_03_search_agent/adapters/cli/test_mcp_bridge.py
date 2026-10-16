@@ -1136,6 +1136,39 @@ class TestRenewalOutcomes:
         assert server.spent_sends == 0 and server.family_revoked == 0
         _assert_no_tokens(harness, expired)
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("status", [201, 202, 204])
+    async def test_a_2xx_other_than_200_retries_quietly(self, signed_in, status) -> None:
+        # V-75B-01. Mutation: quiet only for 300 <= status < 600 -> latches.
+        expired = jwt(-5, f"c{status}x")
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in, [("proxy", status)])
+        harness, _ = _refresh_harness(stand_in, signed_in(expired), server.answer)
+        replies = await harness.send(CALL(11), CALL(12))
+
+        assert replies[0]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE
+        assert "s3 login" not in replies[0]["error"]["message"]
+        assert "expired" not in replies[0]["error"]["message"]
+        assert replies[1]["result"]["isError"] is False
+        assert server.sent == ["refresh-1", "refresh-1"]
+        assert server.family_revoked == 0
+
+    @pytest.mark.asyncio
+    async def test_a_504_says_the_outcome_is_unknown_not_expired(self, signed_in) -> None:
+        # V-75B-02. Mutation: remove the 504 branch in `_renew` -> the old
+        # "expired" words return.
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in, [("status", 504)])
+        harness, _ = _refresh_harness(stand_in, signed_in(jwt(-5, "u504")), server.answer)
+        replies = await harness.send(CALL(11))
+
+        message = replies[0]["error"]["message"]
+        assert "may have renewed" in message and "s3 login" in message
+        assert "expired" not in message and "signed out" not in message
+        log = harness.stderr.getvalue()
+        assert "unknown" in log and "504" in log
+        assert "expired" not in log and "revoked" not in log
+
     # -- an empty 200 versus an unreadable one (A-75B-02) -------------------
 
     @pytest.mark.asyncio
@@ -1229,6 +1262,61 @@ class TestRenewalOutcomes:
         second = await harness.send(CALL(12))
 
         assert second[-1]["result"]["isError"] is False
+
+    @pytest.mark.asyncio
+    async def test_a_default_port_is_the_same_server(self, signed_in) -> None:
+        # V-75B-03. Mutation: drop the default-port strip in `_normalised_address`.
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in)
+        server.active.clear()
+        harness, _ = _refresh_harness(stand_in, signed_in(jwt(-5, "p443")), server.answer)
+        await harness.send(CALL(11))
+
+        login_access = jwt(900, "p443login")
+        stand_in.valid_tokens.add(login_access)
+        credentials.store(
+            credentials.Credentials(
+                base_url=BASE + ":443", access_token=login_access, refresh_token="login-1"
+            )
+        )
+        second = await harness.send(CALL(12))
+        assert second[-1]["result"]["isError"] is False
+
+    def test_only_a_default_port_is_dropped_from_an_address(self) -> None:
+        norm = mcp_bridge._normalised_address
+        assert norm("https://h:443") == norm("https://h")
+        assert norm("http://h:80/") == norm("http://h")
+        assert norm("https://h:8443") != norm("https://h")
+        assert norm("https://h:80") != norm("https://h")
+
+    @pytest.mark.asyncio
+    async def test_a_lock_timeout_on_a_latched_bridge_is_named_in_the_log(
+        self, signed_in, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # V-75B-04. Mutation: remove the `RefreshLockTimeoutError` clause.
+        stand_in = StandIn(valid_tokens=set())
+        server = RotatingRefresh(stand_in)
+        server.active.clear()
+        harness, _ = _refresh_harness(stand_in, signed_in(jwt(-5, "lk")), server.answer)
+        await harness.send(CALL(11))
+
+        class Busy:
+            def __init__(self, _path) -> None:
+                pass
+
+            async def __aenter__(self):
+                raise credentials.RefreshLockTimeoutError("held at /secret/path", remedy="x")
+
+            async def __aexit__(self, *exc_info):
+                return False
+
+        monkeypatch.setattr(credentials, "_CredentialFileLock", Busy)
+        second = await harness.send(CALL(12))
+
+        assert second[-1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        log = harness.stderr.getvalue()
+        assert "another s3 command was holding the sign-in file" in log
+        assert "/secret/path" not in log
 
     @pytest.mark.asyncio
     async def test_a_new_sign_in_for_another_server_says_to_restart(self, signed_in) -> None:

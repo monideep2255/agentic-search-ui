@@ -147,6 +147,11 @@ _OTHER_SERVER = (
     "this MCP server uses, so this request was not sent. Restart this MCP "
     "server to use it."
 )
+_UNKNOWN_RENEWAL = (
+    "System 3 did not confirm whether it renewed your sign-in (a gateway timed "
+    "out), so this request was not sent. The server may have renewed it. "
+    f"{_SIGN_IN_NOW}"
+)
 _SIGN_IN_SPENT = (
     "Your System 3 sign-in could not be renewed earlier in this MCP server, "
     f"so this request was not sent. {_SIGN_IN_NOW}"
@@ -880,6 +885,14 @@ class McpBridge:
                     # rotated the token, so the outcome is unknown.
                     self.log(f"could not read the sign-in renewal reply; {_SIGN_IN_NOW}")
                     raise BridgeError(SIGN_IN_NEEDED, _UNREADABLE_RENEWAL) from exc
+                if isinstance(exc, credentials_module.RefreshError) and status == 504:
+                    # A gateway stopped waiting for a server that may have
+                    # renewed: the outcome is unknown, not an expiry.
+                    self.log(
+                        "could not confirm the sign-in renewal: POST /auth/refresh returned "
+                        f"504, so the outcome is unknown; {_SIGN_IN_NOW}"
+                    )
+                    raise BridgeError(SIGN_IN_NEEDED, _UNKNOWN_RENEWAL) from exc
                 # The module's text never holds a token, but it can quote a
                 # response header, so it is sanitized like any server text
                 # before it reaches a terminal or a host's log.
@@ -956,6 +969,12 @@ class McpBridge:
         try:
             async with credentials_module._CredentialFileLock(credentials_module._lock_path()):
                 current = credentials_module.load()
+        except credentials_module.RefreshLockTimeoutError:
+            self.log(
+                "could not check for a new sign-in: another s3 command was holding "
+                "the sign-in file"
+            )
+            return None
         except (credentials_module.CredentialsError, OSError):
             return None
         if current.refresh_token in self._wired:
@@ -969,12 +988,16 @@ class McpBridge:
 
 
 def _normalised_address(base_url: str) -> str:
-    """A server address with the scheme and host in lower case and no
-    trailing slash, so `https://host` and `https://host/` are one server."""
+    """A server address with the scheme and host in lower case, no trailing
+    slash and no default port, so `https://host`, `https://host/` and
+    `https://host:443` are one server. Any other port is another server."""
     parts = urlsplit(base_url.strip())
-    return urlunsplit(
-        (parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"), parts.query, "")
-    )
+    scheme = parts.scheme.lower()
+    netloc = parts.netloc.lower()
+    default_port = {"https": ":443", "http": ":80"}.get(scheme)
+    if default_port and netloc.endswith(default_port):
+        netloc = netloc[: -len(default_port)]
+    return urlunsplit((scheme, netloc, parts.path.rstrip("/"), parts.query, ""))
 
 
 class _SpentTokenRefused(Exception):
@@ -1041,7 +1064,9 @@ class _RenewalClient:
             elif not response.content:
                 self.empty = True
                 self.quiet = True
-        elif status not in (401, 504) and 300 <= status < 600:
+        elif status not in (401, 504):
+            # Every other status, a 2xx that is not 200 included: the app
+            # never answers one after renewing.
             self.quiet = True
         if self.quiet:
             wired.discard(sent)  # type: ignore[arg-type]
