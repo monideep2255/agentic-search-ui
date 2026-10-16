@@ -438,6 +438,26 @@ What you should see:
 - Each answer still has written sentences above its records. A plain-language GERD answer shows about two to three sentences; a sentence that drops a limiting word such as "transient" is held back rather than shown.
 - Why it matters: a parent reading about an older child, or a reader told a symptom is GERD's when the paper only suspects it, takes a wider claim as fact. A missing sentence is better than a wider one.
 
+### 112. Switching between Plain language and Researcher on an answer asks first (card 24)
+
+Queries to try:
+
+- `Which diseases are associated with BRCA1?` in Plain language. When the answer lands, click Researcher in the switch beside Show work, on the right.
+- Click Cancel. Click Researcher again, then click Plain language (the lit one). Click Researcher a third time and press Escape. Then click Researcher and Ask again.
+- Ask a follow-up after the switch. Repeat at phone width.
+- Ask `What is the weather in Paris?`, which is turned away.
+
+What you should see:
+
+- The switch shows Plain language selected. With nothing open, clicking Plain language does nothing.
+- Clicking Researcher shows one line under the row: "Ask this question again in Researcher? It runs as one new search." for everyone, with no number, and two buttons, Ask again and Cancel. Nothing runs yet.
+- Cancel, Escape, and a click on the lit mode all close the line and nothing runs. After Cancel or Escape the cursor is back on the Researcher button. Pressing Tab from Researcher goes to Ask again, then Cancel, then Show work.
+- Ask again runs the question once more and the cursor moves to the question heading. The first answer folds above, labelled "Plain language"; the new answer shows Researcher selected. Waiting a few seconds starts no third search.
+- The follow-up you ask next runs in Researcher, even if the page has been open for more than twelve minutes.
+- While the new answer is being written the switch is gone. At 390 pixels wide the switch and its line drop to their own rows.
+- The turned-away question shows no switch, and neither does an answer that asks you which gene you mean, or one that failed.
+- Why it matters: a click that spends a search must say so first. Nobody should lose a search to a mode they were only trying out.
+
 ### 113. A sentence that moves to a different paper says which paper (card 17)
 
 Queries to try:

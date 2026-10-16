@@ -29,6 +29,7 @@ import { Component, createRef, Fragment, useEffect, useRef, useState } from "rea
 import { Box, Typography, useMediaQuery } from "@mui/material";
 
 import { designTokens, layerColour } from "../../theme";
+import { AUDIENCE_MODE_OPTIONS, DepthStripToggle, type AudienceDepth } from "../controls/DepthControl";
 import type { ReasoningStep } from "./RunProgress";
 import { ReasoningLog } from "./ReasoningLog";
 import { RECORDS_PAGE_SIZE, RecordsPaginationBar } from "../answer/RecordsPaginationBar";
@@ -903,6 +904,8 @@ export interface AnswerBodyContent {
 export interface PreviousTurn extends AnswerBodyContent {
   question: string;
   meta: string;
+  /** The mode this turn was asked at; labels the folded row (J-24-06). */
+  depth?: AudienceDepth;
 }
 
 export interface AnswerScreenProps extends AnswerBodyContent {
@@ -1020,6 +1023,14 @@ export interface AnswerScreenProps extends AnswerBodyContent {
    */
   onFlagSource?: (n: number) => void;
   flaggedSources?: number[];
+  /**
+   * Card 24. Present only from the answer screen's caller when a landed
+   * answer's depth can be switched in place, which today is every live turn:
+   * a streaming preview has no landed depth to switch yet, and a folded
+   * previous turn is a question the reader is no longer looking at.
+   */
+  onDepthChange?: (value: AudienceDepth) => void;
+  depthValue?: AudienceDepth;
 }
 
 /** Monospace marks a string transcribed exactly. Gene symbols are excluded. */
@@ -1269,6 +1280,91 @@ export interface AnswerBodyProps extends AnswerBodyContent {
    * main point is the lead's first emphasised term.
    */
   question?: string | null;
+  /**
+   * Card 24 (2026-09-25). Present only for the live turn: `AnswerScreen`
+   * passes this to the one `AnswerBody` call that renders the current
+   * answer, never to the streaming preview or to a folded previous turn,
+   * both of which either have no landed depth to switch or belong to a
+   * question the reader is no longer looking at.
+   *
+   * When present, the status strip renders `DepthStripToggle` beside `Show
+   * work`. Choosing the other depth calls this with the NEW depth; it is
+   * `AnswerScreen`'s caller's job to re-run the question at it, the same
+   * as any other depth change.
+   */
+  onDepthChange?: (value: AudienceDepth) => void;
+  /** Which button `DepthStripToggle` lights up. Ignored when `onDepthChange` is absent. */
+  depthValue?: AudienceDepth;
+}
+
+/** Card 24. The label `AUDIENCE_MODE_OPTIONS` gives a mode. */
+function depthModeLabel(value: AudienceDepth): string {
+  return AUDIENCE_MODE_OPTIONS.find((o) => o.value === value)?.label ?? value;
+}
+
+/**
+ * Card 24. The cost shown before a mode switch re-runs the question: one
+ * sentence from the caller, then "Ask again" (styled as New search) and
+ * "Cancel" (styled as Show work). No design draws it; named in the report.
+ */
+function DepthConfirmLine({
+  testId,
+  text,
+  onAsk,
+  onCancel,
+}: {
+  testId: string;
+  text: string;
+  onAsk: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Box
+      data-testid={testId}
+      sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1.25 }}
+    >
+      <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
+        {text}
+      </Typography>
+      <Box
+        component="button"
+        type="button"
+        onClick={onAsk}
+        sx={{
+          font: "inherit",
+          fontSize: 12.5,
+          fontWeight: 600,
+          px: 1.6,
+          py: 0.6,
+          flex: "none",
+          borderRadius: 0.5,
+          cursor: "pointer",
+          color: designTokens.surface,
+          bgcolor: designTokens.blue,
+          border: `1px solid ${designTokens.blue}`,
+          "&:hover": { bgcolor: designTokens.navy, borderColor: designTokens.navy },
+        }}
+      >
+        Ask again
+      </Box>
+      <Box
+        component="button"
+        type="button"
+        onClick={onCancel}
+        sx={{
+          font: "inherit",
+          fontSize: 13,
+          border: 0,
+          bgcolor: "transparent",
+          color: designTokens.link,
+          cursor: "pointer",
+          p: 0,
+        }}
+      >
+        Cancel
+      </Box>
+    </Box>
+  );
 }
 
 /**
@@ -1329,9 +1425,43 @@ export function AnswerBody({
   streaming = false,
   writing = false,
   question = null,
+  onDepthChange,
+  depthValue,
 }: AnswerBodyProps) {
   /** `Show work` starts closed, as the prototype's `#workPanel` does. */
   const [workOpen, setWorkOpen] = useState(false);
+  /*
+   * Card 24. The mode the person clicked and has not yet confirmed. The
+   * switch only ever sets this; `onDepthChange` (a new run) fires from "Ask
+   * again" alone. Cleared when the answer's own mode or question changes,
+   * so a new answer never opens with a stale prompt.
+   */
+  const [heldDepth, setHeldDepth] = useState<AudienceDepth | null>(null);
+  useEffect(() => {
+    setHeldDepth(null);
+  }, [depthValue, question]);
+  /*
+   * J-24-02, J-24-03. Cancel and Escape put focus back on the button that
+   * opened the line, so a keyboard or screen-reader user is not thrown to
+   * the top of the page when the line unmounts.
+   */
+  const switchRef = useRef<HTMLDivElement | null>(null);
+  const cancelHeld = () => {
+    const mode = heldDepth;
+    setHeldDepth(null);
+    if (mode) {
+      switchRef.current
+        ?.querySelector<HTMLButtonElement>(`[data-testid="answer-depth-toggle-${mode}"]`)
+        ?.focus();
+    }
+  };
+  /*
+   * A-24-01, J-24-12. A refused, asked-back, capped or failed answer cannot
+   * differ by mode, so the switch is not offered: re-asking would spend a
+   * search for the same refusal. (A clarifying question arrives as a
+   * refusal with a label, so it is covered by the same test.)
+   */
+  const switchable = Boolean(onDepthChange) && !(refusal || refusalLabel || failure || capMessage);
   /*
    * Source disclosure state, F-4.8-D-01.
    *
@@ -1776,7 +1906,17 @@ export function AnswerBody({
         everything below is this component's.
       */}
       {meta || outcome ? (
-        <Box sx={{ pt: 1.5, pb: 2, mb: 2.5, borderBottom: `1px solid ${designTokens.line}` }}>
+        <Box
+          data-testid={`${testIdPrefix}answer-status-strip`}
+          onKeyDown={(event: React.KeyboardEvent) => {
+            // J-24-03: Escape closes the cost line, like Cancel.
+            if (event.key === "Escape" && heldDepth) {
+              event.stopPropagation();
+              cancelHeld();
+            }
+          }}
+          sx={{ pt: 1.5, pb: 2, mb: 2.5, borderBottom: `1px solid ${designTokens.line}` }}
+        >
           <Box
             sx={{
               display: "flex",
@@ -1836,6 +1976,44 @@ export function AnswerBody({
               {elapsedMs !== null ? `${(elapsedMs / 1000).toFixed(1)}s · ` : ""}
               {meta}
             </Typography>
+            {/*
+              Card 24. `Main.dc.html` and `Researcher.dc.html` draw the depth
+              toggle and `Show work` as one trailing group on the right.
+
+              DOM ORDER IS THE TAB ORDER (J-24-03, A-24-03): the switch, then
+              the cost line it opens, then `Show work`. `order` puts the line
+              on its own row below and keeps `Show work` beside the switch,
+              so the screen reads as before and a keyboard user lands on
+              "Ask again" as the very next stop after the switch.
+            */}
+            {switchable ? (
+              <Box ref={switchRef} sx={{ ml: "auto", display: "flex" }}>
+                <DepthStripToggle
+                  value={depthValue}
+                  onChange={setHeldDepth}
+                  onSelectCurrent={() => setHeldDepth(null)}
+                />
+              </Box>
+            ) : null}
+            {switchable ? (
+              <Box
+                aria-live="polite"
+                sx={{ flexBasis: "100%", order: 3, ...(heldDepth ? {} : { mt: -1.25 }) }}
+              >
+                {heldDepth ? (
+                  <DepthConfirmLine
+                    testId="answer-depth-confirm"
+                    text={`Ask this question again in ${depthModeLabel(heldDepth)}? It runs as one new search.`}
+                    onAsk={() => {
+                      const next = heldDepth;
+                      setHeldDepth(null);
+                      onDepthChange?.(next);
+                    }}
+                    onCancel={cancelHeld}
+                  />
+                ) : null}
+              </Box>
+            ) : null}
             {steps.length > 0 ? (
               <Box
                 component="button"
@@ -1843,7 +2021,8 @@ export function AnswerBody({
                 onClick={() => setWorkOpen((open) => !open)}
                 aria-expanded={workOpen}
                 sx={{
-                  ml: "auto",
+                  order: 2,
+                  ml: switchable ? 0 : "auto",
                   font: "inherit",
                   fontSize: 13,
                   border: 0,
@@ -2499,6 +2678,15 @@ function FoldedTurn({ turn, index }: { turn: PreviousTurn; index: number }) {
                   >
                     {turn.meta}
                   </Typography>
+                  {turn.depth ? (
+                    <Typography
+                      component="span"
+                      data-testid={`previous-turn-${index}-mode`}
+                      sx={{ fontSize: 12, color: designTokens.inkMuted }}
+                    >
+                      {depthModeLabel(turn.depth)}
+                    </Typography>
+                  ) : null}
                   {/*
                     Product-owner feedback, 2026-09-13, on the retest: "have a
                     show answer and hide answer on the right hand side that
@@ -2596,6 +2784,8 @@ export function AnswerScreen({
   systemNotes = [],
   onFlagSource,
   flaggedSources = [],
+  onDepthChange,
+  depthValue,
 }: AnswerScreenProps) {
   /*
    * UI fix set 7 (R22). Bring the new turn's heading into view when a
@@ -2617,6 +2807,7 @@ export function AnswerScreen({
    * check is the same courtesy the screen fade in `App.tsx` already extends.
    */
   const headingRef = useRef<HTMLDivElement | null>(null);
+  const questionHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const running = progress !== null && progress !== undefined;
   useEffect(() => {
     if (!running) return;
@@ -2733,7 +2924,13 @@ export function AnswerScreen({
             body below. */}
         <Box ref={headingRef} sx={{ pb: 2, borderBottom: `1px solid ${designTokens.line}` }}>
           <Box sx={{ display: "flex", gap: 1.75, alignItems: "flex-start" }}>
-            <Typography variant="h3" component="h1" sx={{ flex: 1 }}>
+            <Typography
+              variant="h3"
+              component="h1"
+              ref={questionHeadingRef}
+              tabIndex={-1}
+              sx={{ flex: 1, outline: "none" }}
+            >
               {question}
             </Typography>
             {onNewSearch ? (
@@ -2826,6 +3023,17 @@ export function AnswerScreen({
                     failure={failure}
                     capMessage={capMessage}
                     systemNotes={systemNotes}
+                    onDepthChange={
+                      onDepthChange
+                        ? (next) => {
+                            onDepthChange(next);
+                            // J-24-02: focus goes to the question heading,
+                            // which stays mounted through the new run.
+                            questionHeadingRef.current?.focus({ preventScroll: true });
+                          }
+                        : undefined
+                    }
+                    depthValue={depthValue}
                     onFlagSource={onFlagSource}
                     flaggedSources={flaggedSources}
                   />

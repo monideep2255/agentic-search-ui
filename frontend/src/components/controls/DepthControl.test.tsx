@@ -11,7 +11,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { DepthControl, displayedMode } from "./DepthControl";
+import { DepthControl, DepthStripToggle, displayedMode } from "./DepthControl";
 
 describe("DepthControl, set 9", () => {
   it("offers exactly Plain language and Researcher, Plain language by default", () => {
@@ -76,5 +76,50 @@ describe("DepthControl, set 9", () => {
     expect(displayedMode("clinical_brief")).toBe("plain_language");
     render(<DepthControl variant="onLight" value="deep_technical" />);
     expect(screen.getByRole("button", { name: "Researcher" })).toHaveAttribute("aria-pressed", "true");
+  });
+});
+
+/**
+ * Card 24 (2026-09-25): the compact status-strip toggle. No "Answer mode"
+ * label and no info button, unlike `DepthControl` above, per the transcribed
+ * mockup (see the component's own docstring).
+ */
+describe("DepthStripToggle, card 24", () => {
+  it("offers exactly Plain language and Researcher, with the current value lit", () => {
+    render(<DepthStripToggle value="plain_language" />);
+    const group = screen.getByRole("group", { name: /answer mode/i });
+    const buttons = Array.from(group.querySelectorAll("button"));
+    expect(buttons.map((b) => b.textContent)).toEqual(["Plain language", "Researcher"]);
+    expect(screen.getByRole("button", { name: "Plain language" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Researcher" })).toHaveAttribute("aria-pressed", "false");
+    // Card 24's whole point: no repeat of the pre-ask explainer on this
+    // surface.
+    expect(screen.queryByText(/answer mode/i)).toBeNull();
+    expect(screen.queryByRole("button", { name: /about answer modes/i })).toBeNull();
+  });
+
+  it("calls onChange with the OTHER depth when clicked", () => {
+    const onChange = vi.fn();
+    render(<DepthStripToggle value="plain_language" onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "Researcher" }));
+    expect(onChange).toHaveBeenCalledWith("researcher");
+  });
+
+  it("does nothing when the already-selected option is clicked", () => {
+    // Re-running the same question at the depth already on screen would
+    // burn a run and a cap slot for nothing the reader asked for.
+    const onChange = vi.fn();
+    render(<DepthStripToggle value="plain_language" onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "Plain language" }));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("is locked while a search runs, matching item 9.12", () => {
+    const onChange = vi.fn();
+    render(<DepthStripToggle value="plain_language" onChange={onChange} locked />);
+    const researcher = screen.getByRole("button", { name: "Researcher" });
+    expect(researcher).toBeDisabled();
+    fireEvent.click(researcher);
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

@@ -5118,9 +5118,14 @@ def _layer_tool_output_to_structured_fields(
             )
         rows.sort(key=lambda row: str(row["fields"].get("biosample_acc", "")))
         rows = rows[:_ISOLATE_ROW_CAP]
-        status = isolates.status
+        status: str = isolates.status
         if status == "ok" and not rows:
             status = "empty"
+        if status == "timeout":
+            # Card 94: the tool's deadline cutoff is a fifth status the result
+            # event cannot carry ("ok", "empty" or "error"); it crashed Act and
+            # the whole answer with it. It is a failed search, so "error".
+            status = "error"
         return {
             "status": status,
             "row_count": len(rows),
@@ -8483,6 +8488,9 @@ async def _execute_planned_call(
             summary=f"{shaped['status']}: {shaped['row_count']} record(s)",
             result_count=int(shaped["row_count"]),
             truncated=False,
+            # Card 94: the tool's own "timeout" is shaped as an error, and
+            # says so in the failure kind rather than as "other".
+            failure_kind=("timed_out" if getattr(output, "status", None) == "timeout" else None),
             pairs=[
                 (
                     call,
