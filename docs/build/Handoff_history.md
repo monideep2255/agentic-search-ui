@@ -7,6 +7,7 @@ Last updated: 2026-10-16.
 ## Table of contents
 
 - [Starting on another computer](#starting-on-another-computer)
+- [Handoff as of 2026-10-16, morning](#handoff-as-of-2026-10-16-morning)
 - [Handoff as of 2026-10-15](#handoff-as-of-2026-10-15)
 - [Handoff as of 2026-10-09, night](#handoff-as-of-2026-10-09-night)
 - [Handoff as of 2026-10-09, morning](#handoff-as-of-2026-10-09-morning)
@@ -103,6 +104,47 @@ For a laptop with nothing installed. The commands are for macOS on Apple silicon
    uvicorn system_03_search_agent.adapters.web_sse.app:app --reload
    npm run dev --prefix frontend
    ```
+
+## Handoff as of 2026-10-16, morning
+
+### What is live
+
+- Develop: `de53c6aa`, deployed and healthy. Production: `v0.2.0`, tag `cde4f592`, unchanged. CI is green.
+- Merged overnight: cards 115 (#240), 17 (#241), 94's timeout fix (#246) and 24 (#245).
+  - Each passed CI and three independent reviews: one checks the code, one hunts for a wrong answer, a third re-checks with fresh eyes.
+  - Each passed the product check on deployed develop at 1280 and 390 (`testing/Developer/reports/2026-10-16_product_check/` and `2026-10-16_product_check_card24/`).
+- Closed overnight by your rule, each back in To do with its reviews and final diff on develop: cards 48, 75, 29, 94's lookup, 110, 101, 20 and 15. Why, one row each: `DECISIONS.md`, rows dated 2026-10-15 and 16.
+- Nothing is parked. Locally only `develop`; on GitHub only `develop` and `production`.
+- Factory is paused; its brief lists cards 75 and 100. Develop's model settings: `docs/architecture/Model_architecture.md`.
+
+### What awaits the product owner
+
+- Retests: `testing/Retest_product_owner.md`, newest first, the night's four cards on top. The team checked all four on deployed develop.
+- Two rules only you can set:
+  - Should a question asked after a long server pause be checked like any other? Today develop refuses some of them (cards 84 and 72, `testing/Developer/reports/2026-10-15_card84_72/design.md`).
+  - When a sign-in renewal reply cannot be read, should the person stay signed in? (card 75)
+- The product check's "needs your eye" findings: `testing/Developer/reports/2026-10-16_product_check/report.md`.
+- Still open from before: a stronger writer model for develop (card 5), and card 40's hook and rule changes.
+- Every decision taken for you overnight: `DECISIONS.md`, rows dated 2026-10-15 and 16. What broke: `LEARNINGS.md`.
+
+### The one next action
+
+Retest the night's four cards from `testing/Retest_product_owner.md`, then answer the two rules above. After that, the board's To do column top down: each closed card needs a design agreed with you before it is built again, starting with card 101, where a quoted record sentence ends.
+
+How to start a session: read this file, then `git status --short` and `git worktree list`, then `testing/Retest_product_owner.md` and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
+
+### Where the facts live
+
+- The board: `testing/UI_fix_plan.md`; build order: `testing/Board_plan.md`
+- Retests: `testing/Retest_product_owner.md`
+- The cutoff and closed items: `testing/UI_fixes_done.md`; older: `testing/UI_fixes_archive.md`
+- Queries to type: `testing/Test_queries_and_workflows.md`
+- Each card's reviews: `testing/Developer/reports/<date>_card*`; the night's plan and ledger: `2026-10-15_overnight/`
+- Factory's brief: `docs/build/Factory_onboarding.md`; other work: `testing/Future.md`
+- Models: `docs/architecture/Model_architecture.md`
+- Why, and what broke: `DECISIONS.md`, `LEARNINGS.md`; the narrative: `requirements/Plan.md`
+- How a card or phase runs: `.claude/skills/bossman-mode/SKILL.md`; releases: `docs/build/Release_flow.md`
+- The registry and sync check: `tracker/Living_documents.md`, `tracker/check_doc_sync.py`
 
 ## Handoff as of 2026-10-15
 

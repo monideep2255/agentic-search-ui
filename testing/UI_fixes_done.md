@@ -208,7 +208,7 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 24 | A Plain language and Researcher switch beside each answer, which says it runs a new search before it spends one | Live, awaiting your retest | 112 |
 | card 75 | A command-line sign-in renewal that cannot be confirmed asks for `s3 login` once; a clear error recovers by itself; no surprise sign-out of the web app | Live, awaiting your retest | 114 |
 | card 118 | Two rare renewal cases recover by themselves (an empty 204 or 202, an address written with :443), and a 504 says its outcome is unknown | Live, awaiting your retest | 114 |
-| cards 84 and 72, step 3b count | Develop's log counts each time the server's timers run 0.25 s or more late, so the server-pause fix is decided from data | Live, counting; read on 2026-10-23 | none |
+| cards 84 and 72, step 3b count | Develop's log counts each time the server's timers run 0.25 s or more late, so the server-pause fix is decided from data | Live, counting; read on 23 October | none |
 
 ## What is done, in summary
 
@@ -253,7 +253,8 @@ session starts here rather than reconstructing state.
 LAST UPDATED 2026-10-16, AT THE END OF THE OVERNIGHT OF 2026-10-15 TO 16. THE ONE THING TO KNOW:
 
 - Four cards merged overnight, each behind CI, its reviews and a fresh verifier: 115 (#240), 17 (#241), 94's timeout fix (#246) and 24 (#245). All four passed the product check on deployed develop at 1280 and 390 (`testing/Developer/reports/2026-10-16_product_check/` and `2026-10-16_product_check_card24/`) and wait for your retest
-- Eight cards were built and closed under your overnight rule because a review or verifier found something worse than develop: 48, 75, 29, 94's lookup, 110, 101, 20 and 15. Each is back in To do with its reviews and final diff kept on develop; each needs a redesign, not a fix
+- Eight cards were built and closed overnight under your rule; seven stay in To do, each needing a redesign. Card 75 was rebuilt on 2026-10-16 to your call and merged with card 118 (#252, #253)
+- On 2026-10-16 you chose to count server freezes before building the gatekeeper's fix: develop logs `event loop lag` lines since #251; read them on 23 October
 - Nothing is parked any more: no parked branch, no parked tag, no leftover worktree. Locally only `develop`; on GitHub only `develop` and `production`
 
 `HANDOFF.md` says what to do next.
@@ -293,8 +294,7 @@ This section is also the shared plan.
 ### What is waiting on the product owner
 
 - `testing/Retest_product_owner.md`, newest first, the night's cards 24, 94's timeout fix, 17 and 115 on top; each row names its queries in `testing/Test_queries_and_workflows.md`.
-- Cards 84 and 72, step 3b: whether a question after a long server pause is checked like any other, which lets through what develop refuses today (`testing/Developer/reports/2026-10-15_card84_72/design.md`).
-- Card 75: a sign-in renewal reply that cannot be read; its build was held because after a one-off server error it signed the person out where develop does not. The next design needs your rule on what a failed renewal does.
+- Cards 84 and 72, step 3b: on 23 October, a week of `event loop lag` lines decides whether the gatekeeper's freeze fix is worth building (`testing/Developer/reports/2026-10-15_card84_72/design.md`).
 - The redesigns of the closed cards 48, 116, 110, 29, 94's lookup, 101, 20 and 15, each named in its board row.
 - The product checks' "needs your eye" findings: `testing/Developer/reports/2026-10-16_product_check/report.md` (PR-1016-01 to 05) and `testing/Developer/reports/2026-10-15_product_check/product_review.md`.
 - The guardrail's step 2 waits for a week of logs.
@@ -534,6 +534,15 @@ Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-
 | 12.17 | A good question sometimes fails at the think step and shows a refusal | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it | Seen twice in about forty live runs over 2026-09-23 and 2026-09-24: `Does coffee help make exercise more effective?` and `is there a trial recruiting for melanoma`, both at researcher depth, each failing with "the plan tier's response did not match the think classification schema". Neither question reaches 12.3's ask-back, which only reads one to three words, so tonight's work did not cause it. The reader sees a refusal for a question the product answers on every other run. Evidence: `testing/Developer/reports/2026-09-24_no_hardcoding/live_runs/` |
 
 ## Session history
+
+### 2026-10-16, daytime, in one table
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| Cards 84 and 72, step 3b | Your call: count first. Built, judged, attacked (the line would have vanished under develop's logging and CI was red), one fix round, fresh verifier PASS | Merged (#251), read the counts on 23 October |
+| Card 75 | Your call: ask for `s3 login` only when a renewal's outcome is truly unknown. Rebuilt from #239, reviewed, one fix round, fresh verifier HOLD on two rare cases; your call: merge and fix both next | Merged (#252), in Retest |
+| Card 118 | The two rare cases and two wordings from card 75's verifier. Reviewed, one fix round, verifier HOLD on two unreachable cases; your call: merge and note them | Merged (#253), in Retest |
+| Reviewer report files | Two pairs of reviewers shared one file name; each wrote a clean copy | `LEARNINGS.md`, 2026-10-16 |
 
 ### The night of 2026-10-15 to 16, in one table
 

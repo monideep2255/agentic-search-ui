@@ -65,6 +65,8 @@ NEW OVERNIGHT, 15 TO 16 OCTOBER, on the practice site, each change read by three
 - When the answer moves from one paper to another on a reworded sentence, it now names the paper first, so a reader can tell which paper a claim rests on.
 - A question about bacterial isolates whose database search runs out of time keeps the rest of its answer, with a note saying the search took too long. Before, the whole answer was lost.
 - A Plain language and Researcher switch now sits beside every answer. Clicking the other mode first says it will run the question again as one new search, and nothing runs until you press Ask again.
+- Later on 16 October: the command line no longer signs a person out of the web app when it cannot tell whether its sign-in renewal reached the server. It asks for one `s3 login` instead, and a brief server error recovers by itself.
+- The server now writes one log line each time it falls behind by a quarter of a second or more, so the product owner can see in a week whether a fix for slow moments is worth building.
 - Eight other changes were built and reviewed overnight and then taken back, because a reviewer found each could show something wrong that the site does not show today. They wait for new designs, listed below.
 
 ### 15 October
@@ -1191,7 +1193,7 @@ Where the finished work sits against what is still ahead:
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
 1. The product owner retests what went live overnight on 16 October, then 15 October, then 8 and 9 October, newest first.
-2. The product owner's answers on two rules: whether a question asked after a long server pause is checked like any other, and what happens when a sign-in renewal cannot be read.
+2. On 23 October, a week of the new freeze count decides whether the gatekeeper's freeze fix is worth building.
 3. New designs for the changes taken back: reading a year and a place for isolate questions in a way that matches how the records write places; looking up one named isolate; the checked database searches; where a quoted record sentence ends; the answer's first sentence; the one-sentence paper quotes; and asking which aspect a broad subject means.
 4. Two small marks on the new mode switch: an old saved mode shown by its raw name, and a little blank space above the answer.
 5. Finish the coronavirus question: the unusual spellings and the follow-up cases the first fix left open.
