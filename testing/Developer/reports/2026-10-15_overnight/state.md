@@ -2,7 +2,7 @@
 
 The live ledger of the night: where each card stands, which agent holds it, and the next step. The lead rewrites a row the moment a card moves, so a session that stops at a usage limit resumes from this file, not from memory. The plan and the owner's rules: `plan.md` beside this file.
 
-Last updated: 2026-10-16 03:45.
+Last updated: 2026-10-16 03:55.
 
 ## Table of contents
 
@@ -25,7 +25,7 @@ Last updated: 2026-10-16 03:45.
 | 29 | none (removed) | Closed: verifier HOLD (3 of 24 sentences mislead); #243 closed, card back in To do; tag phase-8.8 deleted | none | A stricter pick, later |
 | 75 | none (removed) | Closed: verifier HOLD (worse after a one-off 502 or lost connection); #239 closed, card back in To do | none | The owner's call in the morning |
 | 115 | card115, fix/card115-readonly-reply-first, #240 | Judge SHIP, adversary PASS; no fix round; fresh verifier running | verifier-115 | One fix round if needed, fresh verifier, merge |
-| 94 | none (lookup closed, #244) | Lookup closed: reaches only 11 to 18 percent of isolates, genus mapping wrong; timeout-crash fix re-split | builder-94t (card94t, fix/card94-timeout-no-crash) | Commit, pull request, judge and adversary, verifier, merge |
+| 94 | card94t, fix/card94-timeout-no-crash, #246 (lookup #244 closed) | Timeout fix built; judge and adversary running | judge-94t, adversary-94t | Fresh verifier, merge |
 | 17 | card17, fix/card17-name-the-paper, #241 | Fix round done; fresh verifier running (Fable) | verifier-17 | Merge on PASS; close on HOLD |
 | 110 | card110, fix/card110-first-sentence-redesign, #242 | Judge FIX FIRST, adversary FAIL; fix round running | fix-110 | Fresh verifier (Opus), merge; then delete the parked cards 110/111 branch |
 | 101 | card101, fix/card101-record-sentence-end | Builder running (five slices) | builder-101 | Commit per slice, pull request, judge and adversary |
