@@ -1,0 +1,866 @@
+== sentence_check_raw/gp1 draft0 live sent2 anchored
+   prev: The typical symptoms are heartburn and regurgitation, which means stomach contents come back up into the throat.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Several factors can contribute to GERD, including abnormal relaxation of the lower esophageal sphincter (the valve between the esophagus and stomach), weaknesses in the esophageal lining's defense, impaired movement and 
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=[] short=['GERD']
+== sentence_check_raw/gp1 draft0 all sent3 anchored
+   prev: GERD can seriously affect a person's quality of life and may lead to complications such as erosive esophagitis, esophageal strictures, and Barrett esophagus, wh
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Several factors can contribute to GERD, including abnormal relaxation of the lower esophageal sphincter (the valve between the esophagus and stomach), weaknesses in the esophageal lining's defense, impaired movement and 
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=[] short=['GERD']
+== sentence_check_raw/gp1 draft1 all sent3 ONE-WORD
+   prev: It can lead to serious problems including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can develop into esophageal ca
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Risk factors in children include defects in the esophagus's protective lining, problems with stomach and esophagus movement, and anatomical defects such as hiatal hernia.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== sentence_check_raw/gp1 draft1 all sent4 ONE-WORD
+   prev: Risk factors in children include defects in the esophagus's protective lining, problems with stomach and esophagus movement, and anatomical defects such as hiat
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of the most common treatment, proton-pump inhibitors, carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gp2 draft0 all sent3 anchored
+   prev: It can hurt your quality of life and may lead to serious problems like inflammation of the esophagus, narrowing of the esophagus, and a condition called Barrett
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, GERD is less common than simple reflux and causes troublesome symptoms that may need medical treatment.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children', 'reflux'] short=['GERD']
+== sentence_check_raw/gp2 draft0 all sent4 ONE-WORD
+   prev: In children, GERD is less common than simple reflux and causes troublesome symptoms that may need medical treatment.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: The most effective treatment is a class of drugs called proton-pump inhibitors, but long-term use carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gp2 draft1 live sent2 ONE-WORD
+   prev: The condition happens when stomach contents flow back into the esophagus or mouth, causing symptoms or complications.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, the symptoms can be varied and nonspecific, requiring careful evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== sentence_check_raw/gp2 draft1 all sent3 ONE-WORD
+   prev: GERD can lead to serious problems including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can precede esophageal cance
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, the symptoms can be varied and nonspecific, requiring careful evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== sentence_check_raw/gp3 draft0 all sent3 anchored
+   prev: GERD can affect quality of life and may lead to erosive esophagitis, esophageal strictures, and Barrett esophagus, which is a precursor to esophageal cancer.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, GERD is a less common pathological process that causes troublesome symptoms and may require medical management.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GERD']
+== sentence_check_raw/gp3 draft1 live sent2 anchored
+   prev: The condition happens when stomach contents flow back into the esophagus or mouth, causing symptoms or complications.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, GERD shows varied and nonspecific signs, making careful diagnosis important.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GERD']
+== sentence_check_raw/gp3 draft1 all sent2 anchored
+   prev: The condition happens when stomach contents flow back into the esophagus or mouth, causing symptoms or complications.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, GERD shows varied and nonspecific signs, making careful diagnosis important.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GERD']
+== sentence_check_raw/gp3 draft1 all sent4 ONE-WORD
+   prev: Risk factors and underlying causes include abnormal relaxations of the valve between the esophagus and stomach, weakness in the esophageal lining's defenses, pr
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of the most common treatment, proton-pump inhibitors, is itself linked to bone fractures, kidney disease, pneumonia, and intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gp4 draft1 live sent1 ONE-WORD
+   prev: The typical symptoms of GERD are heartburn and regurgitation of stomach contents into the throat.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Reflux symptoms are among the most common reasons people visit their primary care doctor.
+   -> 'Gastroesophageal Reflux Disease.' shared=['reflux'] short=[]
+== sentence_check_raw/gp4 draft1 all sent3 anchored
+   prev: If left untreated, GERD can lead to serious problems including inflammation, narrowing of the esophagus, and a condition called Barrett esophagus, which can dev
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, ordinary reflux is common and usually harmless, while GERD is a less common but more serious problem that may need treatment.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children', 'reflux'] short=['GERD']
+== sentence_check_raw/gp4 draft1 all sent5 ONE-WORD
+   prev: In children, risk factors include abnormal relaxation of the valve between the stomach and esophagus, weakness in the esophageal lining, poor movement and empty
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Reflux symptoms are among the most common reasons people visit their primary care doctor.
+   -> 'Gastroesophageal Reflux Disease.' shared=['reflux'] short=[]
+== sentence_check_raw/gp4 draft1 all sent6 anchored
+   prev: Reflux symptoms are among the most common reasons people visit their primary care doctor.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Long-term use of the main medications used to treat GERD, called proton-pump inhibitors, can carry risks including bone fractures, kidney disease, pneumonia, and intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=['GERD']
+== sentence_check_raw/gp4 draft1 all sent7 ONE-WORD
+   prev: Long-term use of the main medications used to treat GERD, called proton-pump inhibitors, can carry risks including bone fractures, kidney disease, pneumonia, an
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In adults, reflux symptoms are typically evaluated with proton pump inhibitor trials, and certain situations call for referral to a gastroenterology specialist.
+   -> 'Gastroesophageal Reflux Disease.' shared=['reflux'] short=[]
+== sentence_check_raw/gp5 draft0 live sent2 anchored
+   prev: GERD is a gastrointestinal motility disorder where stomach contents flow back into the esophagus or mouth, causing symptoms or complications.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, GERD has varied and nonspecific signs that require careful evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GERD']
+== sentence_check_raw/gp5 draft0 live sent4 ONE-WORD
+   prev: Factors that contribute to GERD include abnormal relaxations of the lower esophageal sphincter, defects in the esophageal lining's defense, impaired movement an
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: While the most effective treatment is proton-pump inhibitors, long-term use carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gp5 draft0 all sent3 anchored
+   prev: It can lead to serious complications including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can develop into esophage
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, GERD has varied and nonspecific signs that require careful evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GERD']
+== sentence_check_raw/gp5 draft0 all sent5 ONE-WORD
+   prev: Factors that contribute to GERD include abnormal relaxations of the lower esophageal sphincter, defects in the esophageal lining's defense, impaired movement an
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: While the most effective treatment is proton-pump inhibitors, long-term use carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gr1 draft0 live sent2 ONE-WORD
+   prev: The disease affects quality of life and may lead to erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Beyond abnormal transient relaxations of the lower esophageal sphincter, contributing factors include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, and anatomical defects 
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['reflux'] short=[]
+== sentence_check_raw/gr1 draft0 all sent3 anchored
+   prev: The hallmark symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, clinical manifestations are varied and nonspecific, requiring careful diagnostic evaluation to distinguish physiologic reflux from pathologic GERD.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children', 'reflux'] short=['GERD']
+== sentence_check_raw/gr1 draft0 all sent5 anchored
+   prev: Beyond abnormal transient relaxations of the lower esophageal sphincter, contributing factors include defects in esophageal mucosal defense, impaired esophageal
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors, the most effective treatment for GERD, is itself associated with bone fractures, chronic and acute renal disease, community-acquired pneumonia, and Clostridium difficile intestina
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=['GERD']
+== sentence_check_raw/gr1 draft1 live sent1 anchored
+   prev: GERD is a gastrointestinal motility disorder stemming from reflux of stomach contents into the esophagus or oral cavity, with heartburn and regurgitation of gas
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Several factors contribute to GERD pathogenesis, including abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, 
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['reflux'] short=['GERD']
+== sentence_check_raw/gr1 draft1 live sent2 ONE-WORD
+   prev: Several factors contribute to GERD pathogenesis, including abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defen
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors, the most effective treatment, is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal inf
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gr1 draft1 live sent3 anchored
+   prev: Long-term use of proton-pump inhibitors, the most effective treatment, is associated with bone fractures, chronic renal disease, acute renal disease, community-
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: GER in children is very common and often physiological, managed conservatively, whereas GERD is a less common pathologic process causing troublesome symptoms that may need medical management.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GER', 'GERD']
+== sentence_check_raw/gr1 draft1 all sent1 anchored
+   prev: GERD is a gastrointestinal motility disorder stemming from reflux of stomach contents into the esophagus or oral cavity, with heartburn and regurgitation of gas
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Several factors contribute to GERD pathogenesis, including abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, 
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['reflux'] short=['GERD']
+== sentence_check_raw/gr1 draft1 all sent2 ONE-WORD
+   prev: Several factors contribute to GERD pathogenesis, including abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defen
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors, the most effective treatment, is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal inf
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gr1 draft1 all sent3 anchored
+   prev: Long-term use of proton-pump inhibitors, the most effective treatment, is associated with bone fractures, chronic renal disease, acute renal disease, community-
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: GER in children is very common and often physiological, managed conservatively, whereas GERD is a less common pathologic process causing troublesome symptoms that may need medical management.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GER', 'GERD']
+== sentence_check_raw/gr2 draft0 live sent2 ONE-WORD
+   prev: The characteristic symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== sentence_check_raw/gr2 draft0 all sent3 ONE-WORD
+   prev: The characteristic symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== sentence_check_raw/gr2 draft0 all sent5 anchored
+   prev: Several factors contribute to GERD pathogenesis beyond abnormal transient relaxations of the lower esophageal sphincter.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors, the most effective GERD treatment, is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intestina
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=['GERD']
+== sentence_check_raw/gr2 draft1 all sent2 anchored
+   prev: The classic symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Several factors contribute to GERD pathogenesis, including abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, 
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['reflux'] short=['GERD']
+== sentence_check_raw/gr2 draft1 all sent3 ONE-WORD
+   prev: Several factors contribute to GERD pathogenesis, including abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defen
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors, the most effective treatment, is itself associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intesti
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gr3 draft0 live sent2 ONE-WORD
+   prev: The hallmark symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== sentence_check_raw/gr3 draft0 live sent4 anchored
+   prev: Several factors contribute to GERD pathogenesis beyond abnormal transient relaxations of the lower esophageal sphincter, including defects in esophageal mucosal
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: GERD affects quality of life and may lead to erosive esophagitis, esophageal strictures, and Barrett esophagus, which is a precursor to esophageal adenocarcinoma.
+   -> 'Gastroesophageal Reflux Disease.' shared=[] short=['GERD']
+== sentence_check_raw/gr3 draft0 all sent3 ONE-WORD
+   prev: The hallmark symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== sentence_check_raw/gr3 draft0 all sent6 ONE-WORD
+   prev: Several factors contribute to GERD pathogenesis beyond abnormal transient relaxations of the lower esophageal sphincter, including defects in esophageal mucosal
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors, the most effective pharmacologic treatment, is itself associated with adverse outcomes including bone fractures, chronic and acute renal disease, community-acquired pneumonia, and
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gr4 draft0 live sent1 ONE-WORD
+   prev: GERD is a gastrointestinal motility disorder caused by reflux of stomach contents into the esophagus or oral cavity, producing symptoms or complications.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Pathogenic factors include abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, and anatomical defects of the lo
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['reflux'] short=[]
+== sentence_check_raw/gr4 draft0 live sent2 ONE-WORD
+   prev: Pathogenic factors include abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impaired esophageal and gast
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors, the most effective treatment, is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal inf
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gr4 draft0 all sent1 ONE-WORD
+   prev: GERD is a gastrointestinal motility disorder caused by reflux of stomach contents into the esophagus or oral cavity, producing symptoms or complications.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, requiring careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== sentence_check_raw/gr4 draft0 all sent3 ONE-WORD
+   prev: Pathogenic factors include abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impaired esophageal and gast
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors, the most effective treatment, is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal inf
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gr4 draft0 all sent4 anchored
+   prev: Long-term use of proton-pump inhibitors, the most effective treatment, is associated with bone fractures, chronic renal disease, acute renal disease, community-
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Management of GERD in children should be targeted to the underlying aetiopathogenesis and aimed at limiting complications.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GERD']
+== sentence_check_raw/gr4 draft1 live sent2 ONE-WORD
+   prev: The condition is a gastrointestinal motility disorder resulting from reflux of stomach contents into the esophagus or oral cavity.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== sentence_check_raw/gr4 draft1 live sent3 anchored
+   prev: In young children, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: GERD is most effectively treated with proton-pump inhibitors, though long-term PPI use is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficil
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=['GERD']
+== sentence_check_raw/gr4 draft1 all sent2 ONE-WORD
+   prev: The condition is a gastrointestinal motility disorder resulting from reflux of stomach contents into the esophagus or oral cavity.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== sentence_check_raw/gr4 draft1 all sent4 anchored
+   prev: Physiological gastroesophageal reflux in children is common and managed conservatively, whereas GERD is a less common pathologic process that may need medical m
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: GERD is most effectively treated with proton-pump inhibitors, though long-term PPI use is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficil
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=['GERD']
+== sentence_check_raw/gr5 draft0 live sent2 ONE-WORD
+   prev: The hallmark symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== sentence_check_raw/gr5 draft0 live sent4 ONE-WORD
+   prev: Several factors contribute to GERD pathogenesis beyond abnormal transient relaxations of the lower esophageal sphincter.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: While proton-pump inhibitors are the most effective treatment, long-term use is associated with bone fractures, chronic and acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal infectio
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gr5 draft0 all sent3 ONE-WORD
+   prev: The hallmark symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== sentence_check_raw/gr5 draft0 all sent5 ONE-WORD
+   prev: Several factors contribute to GERD pathogenesis beyond abnormal transient relaxations of the lower esophageal sphincter.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: While proton-pump inhibitors are the most effective treatment, long-term use is associated with bone fractures, chronic and acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal infectio
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/gr5 draft1 all sent2 anchored
+   prev: The characteristic symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, clinical manifestations are varied and nonspecific, requiring careful diagnostic evaluation to distinguish physiological gastroesophageal reflux from pathologic GERD.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children', 'gastroesophageal', 'reflux'] short=['GERD']
+== sentence_check_raw/gr5 draft1 all sent4 ONE-WORD
+   prev: In pediatric populations, pathogenetic factors include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, abnormal t
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors, the most effective treatment, is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal inf
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== sentence_check_raw/md1 draft0 all sent2 anchored
+   prev: Different gene mutations cause different levels of enzyme deficiency, with classes assigned to various degrees of deficiency and disease manifestation.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: A study of Hispanic patients in Texas found a β-globin chain variant in 67% of Hispanic patients, distributed across 10 variants.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hispanic', 'patient', 'texa', 'variant', 'β-globin'] short=[]
+== sentence_check_raw/md1 draft1 all sent2 anchored
+   prev: This condition can cause a range of problems including jaundice in newborns and episodes of red blood cell breakdown triggered by infections, certain drugs, or 
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Familial Mediterranean fever is another condition common in people of Mediterranean descent, caused by mutations in the MEFV gene, and it leads to recurrent fever, abdominal pain, and other inflammatory symptoms.
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv'] short=[]
+== sentence_check_raw/md1 draft1 all sent3 anchored
+   prev: Familial Mediterranean fever is another condition common in people of Mediterranean descent, caused by mutations in the MEFV gene, and it leads to recurrent fev
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: A separate study found a high rate of multiple harmful genetic changes in Turkish families with neurodevelopmental disorders, identifying disease-causing variants in 218 distinct genes.
+   -> 'High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.' shared=['disorder', 'high', 'neurodevelopmental', 'turkish'] short=[]
+== sentence_check_raw/md2 draft0 all sent2 anchored
+   prev: In this condition, acute episodes are triggered by exposure to oxidative stressors such as infections, certain drugs, or fava beans, and management focuses on a
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Familial Mediterranean fever is another condition reported as common among Mediterranean populations, caused by mutations in the MEFV gene and affecting Turkish, Jewish, Arabic, and Armenian populations in particular.
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population', 'turkish'] short=[]
+== sentence_check_raw/md2 draft0 all sent3 anchored
+   prev: Familial Mediterranean fever is another condition reported as common among Mediterranean populations, caused by mutations in the MEFV gene and affecting Turkish
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: One large Turkish study identified the R202Q mutation as the most prevalent MEFV variant, followed by M694V, E148Q, and others.
+   -> 'Molecular analyses of MEFV gene mutation variants in Turkish population.' shared=['mefv', 'mutation', 'turkish', 'variant'] short=[]
+== sentence_check_raw/md2 draft0 all sent4 anchored
+   prev: One large Turkish study identified the R202Q mutation as the most prevalent MEFV variant, followed by M694V, E148Q, and others.
+   prev titles: ['Molecular analyses of MEFV gene mutation variants in Turkish population.']
+   this: A separate study documents hemoglobin β-globin variants in Hispanic patients, noting that ancestry and geography play a significant role in the incidence and nature of these disorders.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin', 'hispanic', 'patient', 'variant', 'β-globin'] short=[]
+== sentence_check_raw/md2 draft1 live sent1 anchored
+   prev: G6PD deficiency is the most common enzyme deficiency worldwide, affecting roughly 400 million people, and it most commonly affects persons of African, Asian, Me
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: A large consortium study of 27,504 patients from 35 institutions in Turkey and Northern Cyprus combined MEFV gene analysis results and clinical findings to examine how specific variants contribute to clinical findings in
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['clinical', 'consortium', 'gene', 'mefv', 'study', 'variant'] short=[]
+== sentence_check_raw/md2 draft1 live sent2 anchored
+   prev: A large consortium study of 27,504 patients from 35 institutions in Turkey and Northern Cyprus combined MEFV gene analysis results and clinical findings to exam
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: In a study of 2,504 patients with FMF variants, R202Q was the most common mutation at 39.2%, and the most common combination was R202Q/M694V at 16.98%.
+   -> 'Molecular analyses of MEFV gene mutation variants in Turkish population.' shared=['mutation', 'variant'] short=[]
+== sentence_check_raw/md2 draft1 all sent1 anchored
+   prev: G6PD deficiency is the most common enzyme deficiency worldwide, affecting roughly 400 million people, and it most commonly affects persons of African, Asian, Me
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Familial Mediterranean fever is a monogenic autoinflammatory disorder caused by mutations in the MEFV gene, and it mainly affects people of Mediterranean descent with a higher incidence in the Turkish, Jewish, Arabic, an
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population', 'turkish'] short=[]
+== sentence_check_raw/md2 draft1 all sent3 anchored
+   prev: A large consortium study of 27,504 patients from 35 institutions in Turkey and Northern Cyprus combined MEFV gene analysis results and clinical findings to exam
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: In a study of 2,504 patients with FMF variants, R202Q was the most common mutation at 39.2%, and the most common combination was R202Q/M694V at 16.98%.
+   -> 'Molecular analyses of MEFV gene mutation variants in Turkish population.' shared=['mutation', 'variant'] short=[]
+== sentence_check_raw/md2 draft1 all sent4 anchored
+   prev: In a study of 2,504 patients with FMF variants, R202Q was the most common mutation at 39.2%, and the most common combination was R202Q/M694V at 16.98%.
+   prev titles: ['Molecular analyses of MEFV gene mutation variants in Turkish population.']
+   this: A study of neurodevelopmental disorders in the Turkish population found multilocus pathogenic variation in 51 of 176 solved families, or 28.9%, mostly driven by runs of homozygosity reflecting genomic segments that are i
+   -> 'High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.' shared=['disorder', 'multilocu', 'neurodevelopmental', 'pathogenic', 'population', 'turkish', 'variation'] short=[]
+== sentence_check_raw/md3 draft0 all sent1 anchored
+   prev: Familial Mediterranean fever is an inherited inflammatory disorder caused by mutations in the MEFV gene, and it mainly affects people of Mediterranean descent, 
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: One large Turkish study found that the most common MEFV mutation was R202Q, present in about 39 percent of patients tested.
+   -> 'Molecular analyses of MEFV gene mutation variants in Turkish population.' shared=['mefv', 'mutation', 'turkish'] short=[]
+== sentence_check_raw/md3 draft0 all sent2 ONE-WORD
+   prev: One large Turkish study found that the most common MEFV mutation was R202Q, present in about 39 percent of patients tested.
+   prev titles: ['Molecular analyses of MEFV gene mutation variants in Turkish population.']
+   this: In this condition, different gene mutations cause different levels of enzyme deficiency, and acute episodes of red blood cell breakdown can be triggered by infection, certain drugs, or fava beans.
+   -> 'Diagnosis and management of G6PD deficiency.' shared=['deficiency'] short=[]
+== sentence_check_raw/md3 draft1 live sent2 anchored
+   prev: This condition causes repeated fevers, abdominal pain, and other inflammatory symptoms.
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: Research on hemoglobin variants found that ancestry and geography play a significant role in the incidence and nature of these blood disorders, with Mediterranean populations among the most affected.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin', 'variant'] short=[]
+== sentence_check_raw/md3 draft1 all sent1 anchored
+   prev: One paper discusses G6PD deficiency, an inherited disorder that most commonly affects people of African, Asian, Mediterranean, or Middle-Eastern descent and cau
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Another group of studies focuses on Familial Mediterranean fever, a disease caused by changes in a gene called MEFV that mainly affects people of Mediterranean descent, including Turkish, Jewish, Arabic, and Armenian pop
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population', 'study', 'turkish'] short=[]
+== sentence_check_raw/md3 draft1 all sent3 anchored
+   prev: This condition causes repeated fevers, abdominal pain, and other inflammatory symptoms.
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: A separate study examined harmful genetic changes in Turkish people with neurodevelopmental disorders, finding that many families carried multiple disease-causing variants at once.
+   -> 'High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.' shared=['disorder', 'neurodevelopmental', 'turkish'] short=[]
+== sentence_check_raw/md3 draft1 all sent4 anchored
+   prev: A separate study examined harmful genetic changes in Turkish people with neurodevelopmental disorders, finding that many families carried multiple disease-causi
+   prev titles: ['High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the ']
+   this: Research on hemoglobin variants found that ancestry and geography play a significant role in the incidence and nature of these blood disorders, with Mediterranean populations among the most affected.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin', 'variant'] short=[]
+== sentence_check_raw/md4 draft0 live sent1 ONE-WORD
+   prev: Familial Mediterranean fever is an inherited autoinflammatory disease that mainly affects people of Mediterranean descent, including Turkish, Jewish, Arabic, an
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: Another condition discussed is glucose-6-phosphate dehydrogenase deficiency, described as the most common enzyme deficiency worldwide, which commonly affects persons of African, Asian, Mediterranean, or Middle-Eastern de
+   -> 'Diagnosis and management of G6PD deficiency.' shared=['deficiency'] short=[]
+== sentence_check_raw/md4 draft0 live sent3 ONE-WORD
+   prev: This deficiency can cause red blood cell breakdown triggered by infections, certain drugs, or fava beans.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Hemoglobin disorders are also described as common single-gene disorders, with ancestry and geography playing a significant role and African, Asian, and Mediterranean populations among the most affected.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin'] short=[]
+== sentence_check_raw/md4 draft0 all sent1 ONE-WORD
+   prev: Familial Mediterranean fever is an inherited autoinflammatory disease that mainly affects people of Mediterranean descent, including Turkish, Jewish, Arabic, an
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: Another condition discussed is glucose-6-phosphate dehydrogenase deficiency, described as the most common enzyme deficiency worldwide, which commonly affects persons of African, Asian, Mediterranean, or Middle-Eastern de
+   -> 'Diagnosis and management of G6PD deficiency.' shared=['deficiency'] short=[]
+== sentence_check_raw/md4 draft0 all sent3 ONE-WORD
+   prev: This deficiency can cause red blood cell breakdown triggered by infections, certain drugs, or fava beans.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Hemoglobin disorders are also described as common single-gene disorders, with ancestry and geography playing a significant role and African, Asian, and Mediterranean populations among the most affected.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin'] short=[]
+== sentence_check_raw/md4 draft1 live sent1 anchored
+   prev: Different gene mutations cause different levels of enzyme deficiency, and acute hemolysis can be triggered by infection, oxidative drugs, or fava beans.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: A large study of familial Mediterranean fever analyzed MEFV gene variants in 27,504 patients from Turkey and Northern Cyprus, describing the disease as a monogenic autoinflammatory disorder that mainly affects people of 
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population', 'study', 'turkish', 'variant'] short=[]
+== sentence_check_raw/md4 draft1 all sent2 anchored
+   prev: Different gene mutations cause different levels of enzyme deficiency, and acute hemolysis can be triggered by infection, oxidative drugs, or fava beans.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: A large study of familial Mediterranean fever analyzed MEFV gene variants in 27,504 patients from Turkey and Northern Cyprus, describing the disease as a monogenic autoinflammatory disorder that mainly affects people of 
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population', 'study', 'turkish', 'variant'] short=[]
+== sentence_check_raw/md4 draft1 all sent3 anchored
+   prev: A large study of familial Mediterranean fever analyzed MEFV gene variants in 27,504 patients from Turkey and Northern Cyprus, describing the disease as a monoge
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: A genome-wide study of neurodevelopmental disorders in 234 Turkish families identified deleterious variants in 218 distinct genes, with 51 families showing multilocus pathogenic variation.
+   -> 'High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.' shared=['disorder', 'multilocu', 'neurodevelopmental', 'pathogenic', 'turkish', 'variation'] short=[]
+== sentence_check_raw/md5 draft1 all sent1 anchored
+   prev: One paper describes G6PD deficiency as the most common enzyme deficiency worldwide, affecting people of African, Asian, Mediterranean, or Middle-Eastern descent
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Another study reports that Familial Mediterranean fever, caused by mutations in the MEFV gene, mainly affects people of Mediterranean descent, including Turkish, Jewish, Arabic, and Armenian populations, leading to repea
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population', 'study', 'turkish'] short=[]
+== sentence_check_raw/md5 draft1 all sent2 anchored
+   prev: Another study reports that Familial Mediterranean fever, caused by mutations in the MEFV gene, mainly affects people of Mediterranean descent, including Turkish
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: A study of hemoglobin variants in Hispanic patients notes that hemoglobin disorders are the most common single-gene disorders in humans, with ancestry and geography playing a significant role, and that African, Asian, an
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin', 'hispanic', 'patient', 'variant'] short=[]
+== develop_control/cm1 draft0 all sent1 anchored
+   prev: Familial Mediterranean fever is an autoinflammatory disorder that mainly affects people of Mediterranean descent, with higher incidence in Turkish, Jewish, Arab
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: Among Turkish patients, the most common MEFV mutation is R202Q, found in about 39% of cases, followed by M694V at about 25%.
+   -> 'Molecular analyses of MEFV gene mutation variants in Turkish population.' shared=['mefv', 'mutation', 'turkish'] short=[]
+== develop_control/cm1 draft0 all sent2 ONE-WORD
+   prev: Among Turkish patients, the most common MEFV mutation is R202Q, found in about 39% of cases, followed by M694V at about 25%.
+   prev titles: ['Molecular analyses of MEFV gene mutation variants in Turkish population.']
+   this: Different gene mutations cause different levels of enzyme deficiency, and acute episodes can be triggered by infection, oxidative drugs, or fava beans.
+   -> 'Diagnosis and management of G6PD deficiency.' shared=['deficiency'] short=[]
+== develop_control/cm1 draft0 all sent3 anchored
+   prev: Different gene mutations cause different levels of enzyme deficiency, and acute episodes can be triggered by infection, oxidative drugs, or fava beans.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Hemoglobinopathies, including variants in the β-globin gene, are described as the most common single-gene disorders in humans, with African, Asian, and Mediterranean populations among the most affected.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['variant', 'β-globin'] short=[]
+== develop_control/cm1 draft1 all sent1 anchored
+   prev: One study describes an enzyme deficiency called G6PD deficiency, which is an inherited disorder that most commonly affects people of African, Asian, Mediterrane
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Another set of studies focuses on a condition called Familial Mediterranean Fever, which mainly affects people of Mediterranean descent, including Turkish, Jewish, Arabic, and Armenian populations, and is caused by chang
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population', 'study', 'turkish'] short=[]
+== develop_control/cm1 draft1 all sent3 anchored
+   prev: A separate study examined MEFV gene changes across 27,504 patients from 35 institutions in Turkey and Northern Cyprus to better understand how specific gene cha
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: A study of hemoglobin variants in Hispanic patients in Texas found that 67% of Hispanic patients carried a beta-globin chain variant, and noted that ancestry and geography play a significant role in the incidence of hemo
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin', 'hispanic', 'patient', 'texa', 'variant'] short=[]
+== develop_control/cm2 draft0 all sent2 ONE-WORD
+   prev: This condition causes recurring fever, abdominal pain, and joint problems, and is caused by changes in a gene called MEFV.
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: Large studies in Turkey have mapped which specific gene changes are most frequent, with one called R202Q being the most common.
+   -> 'Molecular analyses of MEFV gene mutation variants in Turkish population.' shared=['gene'] short=[]
+== develop_control/cm2 draft0 all sent3 ONE-WORD
+   prev: Large studies in Turkey have mapped which specific gene changes are most frequent, with one called R202Q being the most common.
+   prev titles: ['Molecular analyses of MEFV gene mutation variants in Turkish population.']
+   this: Hemoglobin disorders, which affect the oxygen-carrying protein in blood, are also frequent in Mediterranean populations.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin'] short=[]
+== develop_control/cm2 draft1 all sent1 anchored
+   prev: G6PD deficiency is described as the most common enzyme deficiency worldwide, affecting people of Mediterranean descent among others, and causing problems such a
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Familial Mediterranean fever is another condition that mainly affects people of Mediterranean descent, caused by changes in a gene called MEFV, leading to recurrent fever and pain.
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv'] short=[]
+== develop_control/cm2 draft1 all sent2 anchored
+   prev: Familial Mediterranean fever is another condition that mainly affects people of Mediterranean descent, caused by changes in a gene called MEFV, leading to recur
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: Hemoglobin variants, which affect the oxygen-carrying part of blood, are also among the most common single-gene disorders in Mediterranean populations.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin', 'variant'] short=[]
+== develop_control/cm2 draft1 all sent3 anchored
+   prev: Hemoglobin variants, which affect the oxygen-carrying part of blood, are also among the most common single-gene disorders in Mediterranean populations.
+   prev titles: ['Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas']
+   this: The literature also reports that multilocus pathogenic variation contributes to neurodevelopmental disorders in the Turkish population.
+   -> 'High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.' shared=['disorder', 'multilocu', 'neurodevelopmental', 'pathogenic', 'population', 'turkish', 'variation'] short=[]
+== develop_control/cm3 draft0 all sent1 anchored
+   prev: Acute hemolysis in G6PD deficiency is triggered by exposure to oxidative stressors such as infections, certain drugs, or fava beans.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Familial Mediterranean fever is caused by mutations in the MEFV gene and mainly affects people of Mediterranean descent, with higher incidence in Turkish, Jewish, Arabic, and Armenian populations.
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population', 'turkish'] short=[]
+== develop_control/cm4 draft0 all sent1 anchored
+   prev: One of the most common inherited enzyme disorders worldwide, affecting people of African, Asian, Mediterranean, or Middle-Eastern descent, is caused by variants
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: A separate group of variants in the MEFV gene, also common in Mediterranean-descended populations, causes Familial Mediterranean Fever, a condition involving recurrent fever, abdominal pain, and inflammation.
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population', 'variant'] short=[]
+== develop_control/cm4 draft0 all sent2 anchored
+   prev: A separate group of variants in the MEFV gene, also common in Mediterranean-descended populations, causes Familial Mediterranean Fever, a condition involving re
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: Hemoglobin variants, including those in the β-globin gene, are similarly reported as common single-gene disorders in Mediterranean populations and their descendants.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin', 'variant', 'β-globin'] short=[]
+== develop_control/cm4 draft1 live sent2 anchored
+   prev: Persons with this condition also may be asymptomatic.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: The prevalence of neurodevelopmental disorders is greater than 3%.
+   -> 'High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.' shared=['disorder', 'neurodevelopmental', 'prevalenc'] short=[]
+== develop_control/cm4 draft1 all sent5 anchored
+   prev: Persons with this condition also may be asymptomatic.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Familial Mediterranean fever is caused by mutations in the MEFV gene and mainly affects people of Mediterranean descent, with a higher incidence in Turkish, Jewish, Arabic, and Armenian populations.
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population', 'turkish'] short=[]
+== develop_control/cm4 draft1 all sent9 anchored
+   prev: The most common co-variant was the R202Q/M694V genotype.
+   prev titles: ['Molecular analyses of MEFV gene mutation variants in Turkish population.']
+   this: A study of neurodevelopmental disorders in the Turkish population found a high prevalence of multilocus pathogenic variation, identifying 51 families with multilocus pathogenic variation out of 176 solved families.
+   -> 'High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.' shared=['disorder', 'high', 'multilocu', 'neurodevelopmental', 'pathogenic', 'population', 'prevalenc', 'turkish', 'variation'] short=[]
+== develop_control/cm5 draft0 live sent1 ONE-WORD
+   prev: Approximately 400 million people are affected worldwide.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Other frequent variants include M694V at about 25% and E148Q at about 11.5%.
+   -> 'Molecular analyses of MEFV gene mutation variants in Turkish population.' shared=['variant'] short=[]
+== develop_control/cm5 draft0 live sent2 anchored
+   prev: Other frequent variants include M694V at about 25% and E148Q at about 11.5%.
+   prev titles: ['Molecular analyses of MEFV gene mutation variants in Turkish population.']
+   this: A study of patients in Texas found that 67% of Hispanic patients carried a β-globin chain variant, spread across 10 different forms.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hispanic', 'patient', 'texa', 'variant', 'β-globin'] short=[]
+== develop_control/cm5 draft0 all sent2 anchored
+   prev: Approximately 400 million people are affected worldwide.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Another well-documented condition is Familial Mediterranean fever, an inherited autoinflammatory disorder that mainly affects people of Mediterranean descent, with higher rates in Turkish, Jewish, Arabic, and Armenian po
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['population', 'turkish'] short=[]
+== develop_control/cm5 draft0 all sent4 anchored
+   prev: It causes recurrent fever, abdominal pain, and joint problems, and is caused by changes in a gene called MEFV.
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: Studies of Turkish patients have identified the most common MEFV variant as R202Q, found in about 39% of tested alleles.
+   -> 'Molecular analyses of MEFV gene mutation variants in Turkish population.' shared=['mefv', 'turkish', 'variant'] short=[]
+== develop_control/cm5 draft0 all sent6 anchored
+   prev: Other frequent variants include M694V at about 25% and E148Q at about 11.5%.
+   prev titles: ['Molecular analyses of MEFV gene mutation variants in Turkish population.']
+   this: Hemoglobin variants, which affect the oxygen-carrying protein in blood, are also more common in Mediterranean populations along with African and Asian groups.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin', 'variant'] short=[]
+== develop_control/cm5 draft1 all sent3 anchored
+   prev: Treatment focuses on avoiding those triggers, and most episodes resolve on their own, though a blood transfusion is occasionally needed.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Another condition frequently studied in Mediterranean populations is familial Mediterranean fever, caused by mutations in a gene called MEFV.
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population'] short=[]
+== develop_control/cm5 draft1 all sent4 ONE-WORD
+   prev: Another condition frequently studied in Mediterranean populations is familial Mediterranean fever, caused by mutations in a gene called MEFV.
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: Hemoglobin disorders, which affect the oxygen-carrying protein in blood, are also reported as common in Mediterranean populations and their descendants.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin'] short=[]
+== develop_control/cm5 draft1 all sent5 anchored
+   prev: Hemoglobin disorders, which affect the oxygen-carrying protein in blood, are also reported as common in Mediterranean populations and their descendants.
+   prev titles: ['Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas']
+   this: Research on brain-development disorders in Turkish families has identified harmful genetic changes rather than beneficial ones, with disease-causing variants found across 218 different genes.
+   -> 'High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.' shared=['disorder', 'turkish'] short=[]
+== develop_control/cp1 draft0 all sent4 anchored
+   prev: Long-term use of the most common treatment, proton-pump inhibitors, carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, GERD can have varied and nonspecific symptoms, and factors that contribute to it include defects in the esophageal lining's defenses, problems with esophageal and stomach movement, and anatomical issues such
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GERD']
+== develop_control/cp1 draft1 all sent2 anchored
+   prev: The condition happens when stomach contents flow back into the esophagus or mouth, and it can lead to complications including erosion of the esophageal lining, 
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, reflux is common and usually harmless, whereas GERD is less common but can cause troublesome symptoms that are varied and nonspecific, requiring careful evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children', 'reflux'] short=['GERD']
+== develop_control/cp1 draft1 all sent3 ONE-WORD
+   prev: In children, reflux is common and usually harmless, whereas GERD is less common but can cause troublesome symptoms that are varied and nonspecific, requiring ca
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton pump inhibitors, the most effective treatment, carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== develop_control/cp2 draft0 live sent1 anchored
+   prev: GERD can affect quality of life and may lead to more serious problems including inflammation of the esophagus, narrowing of the esophagus, and a condition calle
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Risk factors for GERD include problems with the esophageal lining's defense, impaired movement and clearance of the esophagus and stomach, and anatomical defects such as hiatal hernia.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=[] short=['GERD']
+== develop_control/cp2 draft0 all sent1 anchored
+   prev: GERD can affect quality of life and may lead to more serious problems including inflammation of the esophagus, narrowing of the esophagus, and a condition calle
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Risk factors for GERD include problems with the esophageal lining's defense, impaired movement and clearance of the esophagus and stomach, and anatomical defects such as hiatal hernia.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=[] short=['GERD']
+== develop_control/cp2 draft1 live sent2 anchored
+   prev: GERD happens when stomach contents flow back into the esophagus or mouth, causing discomfort or complications.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, the signs of GERD can be varied and unclear, so careful evaluation is needed.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GERD']
+== develop_control/cp2 draft1 all sent3 anchored
+   prev: It can lower quality of life and may lead to inflammation of the esophagus, narrowing of the esophagus, or Barrett esophagus, which can precede esophageal cance
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Risk factors for GERD in children include a hiatal hernia, weak esophageal lining, and problems with how the esophagus and stomach move and clear food.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GERD']
+== develop_control/cp2 draft1 all sent5 anchored
+   prev: In young children, the signs of GERD can be varied and unclear, so careful evaluation is needed.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of the most common GERD medications, called proton-pump inhibitors, carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=['GERD']
+== develop_control/cp3 draft0 all sent2 anchored
+   prev: The typical symptoms are heartburn and regurgitation, meaning stomach contents come back up into the throat.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Several factors can raise a person's risk of developing GERD, including weakness in the esophageal lining's defenses, problems with how the esophagus and stomach move and clear food, and anatomical defects such as a hiat
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=[] short=['GERD']
+== develop_control/cp3 draft0 all sent4 anchored
+   prev: In children, GERD is less common than simple reflux and is a disease process that causes troublesome symptoms needing careful evaluation and sometimes medical t
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Left untreated, GERD can reduce quality of life and lead to serious problems including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can develop into esophageal cancer.
+   -> 'Gastroesophageal Reflux Disease.' shared=[] short=['GERD']
+== develop_control/cp3 draft1 live sent2 anchored
+   prev: The disease happens when stomach contents flow back into the esophagus or mouth, causing symptoms or complications.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Risk factors for GERD include abnormal relaxations of the valve between the esophagus and stomach, weaknesses in the esophagus's protective lining, problems with how the esophagus and stomach move and clear contents, and
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=[] short=['GERD']
+== develop_control/cp3 draft1 all sent2 ONE-WORD
+   prev: The disease happens when stomach contents flow back into the esophagus or mouth, causing symptoms or complications.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, the signs can be varied and hard to pin down, and the condition involves involuntary passage of gastric contents into the esophagus.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== develop_control/cp3 draft1 all sent4 ONE-WORD
+   prev: Risk factors for GERD include abnormal relaxations of the valve between the esophagus and stomach, weaknesses in the esophagus's protective lining, problems wit
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of the most common treatment, proton-pump inhibitors, carries its own risks including bone fractures, kidney disease, pneumonia, and intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== develop_control/cp4 draft0 live sent2 anchored
+   prev: The typical symptoms are heartburn and regurgitation of gastric contents into the throat.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Several factors can contribute to GERD, including abnormal relaxations of the muscular valve between the esophagus and stomach, weaknesses in the esophageal lining's defenses, problems with stomach and esophageal movemen
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=[] short=['GERD']
+== develop_control/cp4 draft0 all sent2 ONE-WORD
+   prev: The typical symptoms are heartburn and regurgitation of gastric contents into the throat.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, the symptoms are varied and nonspecific, making diagnosis more challenging.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== develop_control/cp4 draft0 all sent4 anchored
+   prev: Several factors can contribute to GERD, including abnormal relaxations of the muscular valve between the esophagus and stomach, weaknesses in the esophageal lin
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: GERD can lead to serious complications including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which is a precursor to esophageal cancer.
+   -> 'Gastroesophageal Reflux Disease.' shared=[] short=['GERD']
+== develop_control/cp4 draft1 live sent2 ONE-WORD
+   prev: The condition happens when stomach contents flow back into the esophagus or mouth.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Children's symptoms are varied and nonspecific, requiring careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== develop_control/cp4 draft1 all sent4 anchored
+   prev: Long-term use of the most common treatment, proton-pump inhibitors, carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, GERD can be caused by a weak lower esophageal sphincter, poor mucosal defense, impaired stomach and esophageal motility, and anatomical defects such as hiatal hernia.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GERD']
+== develop_control/cp5 draft0 live sent1 ONE-WORD
+   prev: The typical symptoms of GERD are heartburn and regurgitation of stomach contents into the throat.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, symptoms can be varied and nonspecific, making careful diagnosis important.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== develop_control/cp5 draft0 all sent2 ONE-WORD
+   prev: The condition happens when stomach contents flow back into the esophagus or mouth, which can lead to complications such as inflammation, narrowing of the esopha
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, symptoms can be varied and nonspecific, making careful diagnosis important.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== develop_control/cp5 draft0 all sent4 anchored
+   prev: Factors that contribute to GERD include abnormal relaxation of the lower esophageal sphincter, weakened esophageal lining defenses, impaired movement and cleara
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors, the main treatment for GERD, is associated with bone fractures, kidney disease, pneumonia, and intestinal infection by Clostridium difficile.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=['GERD']
+== develop_control/cp5 draft1 all sent2 anchored
+   prev: It happens when stomach contents flow back into the esophagus or mouth, and it can lead to serious problems including inflammation of the esophagus, narrowing o
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Risk factors for GERD include a hiatal hernia, weakened esophageal defenses, and problems with how the esophagus and stomach move and clear contents.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=[] short=['GERD']
+== develop_control/cp5 draft1 all sent3 anchored
+   prev: Risk factors for GERD include a hiatal hernia, weakened esophageal defenses, and problems with how the esophagus and stomach move and clear contents.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of the most common GERD medications, called proton-pump inhibitors, carries its own risks including bone fractures, kidney disease, pneumonia, and intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=['GERD']
+== develop_control/cp5 draft1 all sent4 anchored
+   prev: Long-term use of the most common GERD medications, called proton-pump inhibitors, carries its own risks including bone fractures, kidney disease, pneumonia, and
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, reflux is common and often normal, but GERD is a less common and more serious form that causes troubling symptoms and needs careful evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children', 'reflux'] short=['GERD']
+== develop_control/cr1 draft0 live sent2 anchored
+   prev: The hallmark symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Multiple mechanisms contribute to GERD development beyond abnormal transient relaxations of the lower esophageal sphincter.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=[] short=['GERD']
+== develop_control/cr1 draft0 all sent2 anchored
+   prev: The hallmark symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation to distinguish physiological reflux from pathological GERD.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children', 'reflux'] short=['GERD']
+== develop_control/cr1 draft0 all sent5 anchored
+   prev: These include defects in esophageal mucosal defense, impaired esophageal and gastric motility with delayed clearance, and anatomical barrier defects such as hia
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Untreated GERD may lead to erosive esophagitis, esophageal strictures, and Barrett esophagus, which is a precursor to esophageal adenocarcinoma.
+   -> 'Gastroesophageal Reflux Disease.' shared=[] short=['GERD']
+== develop_control/cr1 draft1 all sent2 anchored
+   prev: GERD affects quality of life.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, GERD is a pathologic process involving abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, and ana
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GERD']
+== develop_control/cr3 draft0 all sent2 ONE-WORD
+   prev: The hallmark symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== develop_control/cr3 draft0 all sent3 anchored
+   prev: In young children, however, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: GERD can lead to erosive esophagitis, esophageal strictures, and Barrett esophagus, the latter being a precursor to esophageal adenocarcinoma.
+   -> 'Gastroesophageal Reflux Disease.' shared=[] short=['GERD']
+== develop_control/cr3 draft0 all sent4 anchored
+   prev: GERD can lead to erosive esophagitis, esophageal strictures, and Barrett esophagus, the latter being a precursor to esophageal adenocarcinoma.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Pathogenetic factors that predispose to GERD include abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, and an
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['reflux'] short=['GERD']
+== develop_control/cr3 draft0 all sent5 anchored
+   prev: Pathogenetic factors that predispose to GERD include abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, im
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: GERD is most effectively treated with proton-pump inhibitors, though long-term PPI use carries risks including bone fractures, chronic and acute renal disease, community-acquired pneumonia, and Clostridium difficile inte
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=['GERD']
+== develop_control/cr3 draft1 all sent1 ONE-WORD
+   prev: GERD is a gastrointestinal motility disorder caused by reflux of stomach contents into the esophagus or oral cavity, and its typical symptoms are heartburn and 
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, clinical manifestations are varied and nonspecific, requiring careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== develop_control/cr3 draft1 all sent3 ONE-WORD
+   prev: Pathogenic factors include abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impaired esophageal and gast
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: The condition is most effectively treated with proton-pump inhibitors, though long-term use is associated with bone fractures, chronic and acute renal disease, community-acquired pneumonia, and Clostridium difficile inte
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== develop_control/cr4 draft0 live sent1 ONE-WORD
+   prev: Gastroesophageal reflux disease (GERD) is a gastrointestinal motility disorder caused by reflux of stomach contents into the esophagus or oral cavity, producing
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, requiring careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== develop_control/cr4 draft0 all sent2 ONE-WORD
+   prev: The hallmark symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, requiring careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== develop_control/cr4 draft0 all sent5 anchored
+   prev: Several mechanisms underlie GERD, including abnormal transient relaxations of the lower esophageal sphincter, impaired esophageal and gastric motility, defects 
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: If untreated, GERD may lead to erosive esophagitis, esophageal strictures, Barrett esophagus, and esophageal adenocarcinoma.
+   -> 'Gastroesophageal Reflux Disease.' shared=[] short=['GERD']
+== develop_control/cr4 draft1 live sent1 anchored
+   prev: Clinical manifestations in young children are varied and nonspecific, necessitating careful diagnostic evaluation.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: GERD is fundamentally a clinical diagnosis.
+   -> 'Gastroesophageal Reflux Disease.' shared=[] short=['GERD']
+== develop_control/cr4 draft1 all sent2 anchored
+   prev: Long-term proton-pump inhibitor use — the most effective pharmacologic treatment — is associated with bone fractures, chronic and acute renal disease, community
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, GERD is a less common pathologic process distinct from physiological reflux, and its pathogenesis involves abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defe
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children', 'reflux'] short=['GERD']
+== develop_control/cr4 draft1 all sent4 anchored
+   prev: Clinical manifestations in young children are varied and nonspecific, necessitating careful diagnostic evaluation.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: GERD is fundamentally a clinical diagnosis.
+   -> 'Gastroesophageal Reflux Disease.' shared=[] short=['GERD']
+== develop_control/cr5 draft0 live sent2 ONE-WORD
+   prev: The classic symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== develop_control/cr5 draft0 all sent3 ONE-WORD
+   prev: The classic symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== develop_control/cr5 draft0 all sent6 ONE-WORD
+   prev: Several factors contribute to GERD pathogenesis beyond abnormal transient relaxations of the lower esophageal sphincter.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: While proton-pump inhibitors are the most effective treatment, their long-term use carries risks including bone fractures, chronic and acute renal disease, community-acquired pneumonia, and Clostridium difficile intestin
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== develop_control/cr5 draft1 all sent2 anchored
+   prev: Long-term use of proton-pump inhibitors, the most effective treatment, is associated with bone fractures, chronic renal disease, acute renal disease, community-
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, GER is often physiological and managed conservatively, whereas GERD is a less common pathologic process causing troublesome symptoms.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GER', 'GERD']
+== raw/gerd1 draft0 all sent2 ONE-WORD
+   prev: Heartburn and regurgitation are the hallmark clinical features of GERD in adults.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, the clinical manifestations are varied and nonspecific, requiring careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== raw/gerd1 draft0 all sent5 anchored
+   prev: Additional pathogenetic factors include defects in esophageal mucosal defense and impaired esophageal and gastric motility and clearance.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term proton-pump inhibitor use, the most effective GERD therapy, is associated with bone fractures, chronic and acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=['GERD']
+== raw/gerd1 draft1 all sent2 ONE-WORD
+   prev: The characteristic symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, clinical manifestations are varied and nonspecific, requiring careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== raw/gerd1 draft1 all sent4 anchored
+   prev: In children, pathogenetic factors include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, anatomical defects of t
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors, the most effective treatment for GERD, is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intes
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=['GERD']
+== raw/gerd2 draft0 all sent2 ONE-WORD
+   prev: The hallmark symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, which necessitates careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== raw/gerd2 draft0 all sent4 anchored
+   prev: Several factors contribute to GERD pathogenesis beyond abnormal transient relaxations of the lower esophageal sphincter, including defects in esophageal mucosal
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: GERD may lead to complications including erosive esophagitis, esophageal strictures, and Barrett esophagus, which is a precursor to esophageal adenocarcinoma.
+   -> 'Gastroesophageal Reflux Disease.' shared=[] short=['GERD']
+== raw/gerd2 draft1 all sent1 anchored
+   prev: The typical symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx, and the disease may lead to complications including erosiv
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: Risk factors in the pathogenesis of GERD include abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, and anatom
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['reflux'] short=['GERD']
+== raw/gerd2 draft1 all sent2 anchored
+   prev: Risk factors in the pathogenesis of GERD include abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impair
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors for GERD treatment is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=['GERD']
+== raw/gerd2 draft1 all sent3 anchored
+   prev: Long-term use of proton-pump inhibitors for GERD treatment is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pne
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, GER is often physiological and managed conservatively, whereas GERD is a less common pathologic process causing troublesome symptoms that may require medical management, and clinical manifestations in young 
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=['GER', 'GERD']
+== raw/gerd3 draft0 live sent1 ONE-WORD
+   prev: Heartburn and regurgitation are the hallmark symptoms of GERD.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, requiring careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== raw/gerd3 draft0 all sent2 ONE-WORD
+   prev: Heartburn and regurgitation are the hallmark symptoms of GERD.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In young children, however, clinical manifestations are varied and nonspecific, requiring careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== raw/gerd3 draft0 all sent4 anchored
+   prev: Abnormal transient relaxations of the lower esophageal sphincter contribute to GERD pathogenesis.
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: GERD may lead to complications including erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma.
+   -> 'Gastroesophageal Reflux Disease.' shared=[] short=['GERD']
+== raw/gerd3 draft1 all sent2 ONE-WORD
+   prev: The characteristic symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.
+   prev titles: ['Gastroesophageal Reflux Disease.']
+   this: In children, clinical manifestations are varied and nonspecific, necessitating careful diagnostic evaluation.
+   -> "Gastroesophageal reflux disease in children: What's new right now?" shared=['children'] short=[]
+== raw/gerd3 draft1 all sent5 ONE-WORD
+   prev: Pathogenic factors include abnormal transient relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impaired esophageal and gast
+   prev titles: ["Gastroesophageal reflux disease in children: What's new right now?"]
+   this: Long-term use of proton-pump inhibitors is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal infection.
+   -> 'Gastroesophageal Reflux Disease.' shared=['diseas'] short=[]
+== raw/med1 draft0 live sent1 anchored
+   prev: Different gene mutations cause different levels of enzyme deficiency, with classes assigned to various degrees of deficiency and disease manifestation.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Familial Mediterranean fever is caused by mutations in the MEFV gene and mainly affects people of Mediterranean descent, with a higher incidence in the Turkish, Jewish, Arabic, and Armenian populations.
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population', 'turkish'] short=[]
+== raw/med1 draft0 live sent2 anchored
+   prev: Familial Mediterranean fever is caused by mutations in the MEFV gene and mainly affects people of Mediterranean descent, with a higher incidence in the Turkish,
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: The findings report 1,424 variants of human hemoglobin described, with 951 involving the β-globin gene.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin', 'variant', 'β-globin'] short=[]
+== raw/med1 draft0 all sent2 anchored
+   prev: Different gene mutations cause different levels of enzyme deficiency, with classes assigned to various degrees of deficiency and disease manifestation.
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Familial Mediterranean fever is caused by mutations in the MEFV gene and mainly affects people of Mediterranean descent, with a higher incidence in the Turkish, Jewish, Arabic, and Armenian populations.
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['gene', 'mefv', 'population', 'turkish'] short=[]
+== raw/med1 draft0 all sent3 anchored
+   prev: Familial Mediterranean fever is caused by mutations in the MEFV gene and mainly affects people of Mediterranean descent, with a higher incidence in the Turkish,
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: The findings report 1,424 variants of human hemoglobin described, with 951 involving the β-globin gene.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin', 'variant', 'β-globin'] short=[]
+== raw/med2 draft0 all sent1 anchored
+   prev: Different gene mutations cause different levels of enzyme deficiency, and acute episodes are triggered by exposure to oxidative stressors such as infections, ce
+   prev titles: ['Diagnosis and management of G6PD deficiency.']
+   this: Familial Mediterranean fever is an inherited autoinflammatory disorder that mainly affects people of Mediterranean descent, with a higher incidence in Turkish, Jewish, Arabic, and Armenian populations.
+   -> 'Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Cons' shared=['population', 'turkish'] short=[]
+== raw/med2 draft0 all sent3 ONE-WORD
+   prev: It is caused by mutations in the MEFV gene and produces recurrent fever, abdominal pain, and joint and kidney complications.
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: Hemoglobin disorders are also reported as common among Mediterranean populations, with ancestry and geography playing a significant role in their incidence.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin'] short=[]
+== raw/med2 draft1 all sent3 anchored
+   prev: One large study of 27,504 patients from Turkey and Northern Cyprus examined how specific gene changes relate to patients' symptoms.
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: A separate study examined brain development disorders in Turkish families and found that many had harmful gene changes across multiple genes, with 51 families showing multiple damaging variants at once.
+   -> 'High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.' shared=['disorder', 'turkish'] short=[]
+== raw/med2 draft1 all sent4 anchored
+   prev: A separate study examined brain development disorders in Turkish families and found that many had harmful gene changes across multiple genes, with 51 families s
+   prev titles: ['High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the ']
+   this: Finally, a study of blood disorders noted that Mediterranean populations are among the most affected by hemoglobin variants, which are described as "the most common single-gene disorders in humans".
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin', 'variant'] short=[]
+== raw/med3 draft0 all sent2 anchored
+   prev: This disorder causes repeated episodes of fever, abdominal pain, and joint problems.
+   prev titles: ['Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study']
+   this: Studies of Turkish patients have identified specific genetic changes in the MEFV gene, with one called R202Q being the most common.
+   -> 'Molecular analyses of MEFV gene mutation variants in Turkish population.' shared=['gene', 'mefv', 'turkish'] short=[]
+== raw/med3 draft0 all sent3 anchored
+   prev: Studies of Turkish patients have identified specific genetic changes in the MEFV gene, with one called R202Q being the most common.
+   prev titles: ['Molecular analyses of MEFV gene mutation variants in Turkish population.']
+   this: Research on brain development disorders in the Turkish population has also found that many families carry multiple harmful genetic changes at once, often because of shared ancestry.
+   -> 'High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.' shared=['disorder', 'population', 'turkish'] short=[]
+== raw/med3 draft0 all sent4 ONE-WORD
+   prev: Research on brain development disorders in the Turkish population has also found that many families carry multiple harmful genetic changes at once, often becaus
+   prev titles: ['High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the ']
+   this: Hemoglobin disorders, which affect the oxygen-carrying part of the blood, are also reported as common in African, Asian, and Mediterranean populations.
+   -> 'Hemoglobin β-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.' shared=['hemoglobin'] short=[]
+{'shown': 465, 'reworded': 444, 'switch_ref': 173, 'switch_page': 173, 'one_word': 65, 'first': 111}

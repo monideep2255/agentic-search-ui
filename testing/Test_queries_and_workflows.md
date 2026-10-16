@@ -458,6 +458,26 @@ What you should see:
 - The turned-away question shows no switch, and neither does an answer that asks you which gene you mean, or one that failed.
 - Why it matters: a click that spends a search must say so first. Nobody should lose a search to a mode they were only trying out.
 
+### 113. A sentence that moves to a different paper says which paper (card 17)
+
+Queries to try:
+
+- `Are there any beneficial variants typically found in people of mediterranean descent?` in Plain language, then in Researcher, five times each
+- `What are the typical symptoms and risk factors of GERD?` in Plain language and in Researcher
+- `What genetic variants are common in people of Ashkenazi Jewish descent?` in Researcher, three times, then once in Plain language
+
+What you should see:
+
+- Where a written sentence moves to a different paper and its only link to that paper's title is one shared word, the sentence opens with `From the paper "<that paper's title>":` and then reads exactly as before. Click the sentence's citation: it opens the paper named in the lead-in.
+- A sentence that says more than one title word, or writes an abbreviation only that paper defines, has no lead-in: it already names its paper. An abbreviation several papers in the answer define (such as GERD) does not count as naming one of them.
+- When another paper in the answer has the same title, the lead-in reads `From the paper "<title>" (<year>):` if the record carries a year, otherwise `From another paper titled "<title>":`.
+- Known and open: a sentence whose only link to its paper is an abbreviation several papers define, with no shared title word, still has no lead-in, as before this change.
+- The first written sentence, a sentence that continues in the same paper, and a sentence copied word for word from a record have no lead-in.
+- No written sentence is lost against the same question before this change. A lead-in only adds words in front.
+- A long title is cut at a word with "…" at the end, never in the middle of a word and never at a colon, so a label such as "RETRACTED:" is not dropped.
+- When one sentence cites a Tay-Sachs paper and the next a BRCA paper, the second sentence names its paper; it never reads "these mutations" as if they were the first paper's.
+- Why it matters: "Other frequent variants include M694V" read as if it were about the paper above it. A person who cannot tell which paper a claim rests on cannot check it.
+
 ## 2. Follow-up questions and conversation
 
 ### 20. A follow-up carries the gene forward (Product test 2, 7.1 to 7.5)
@@ -946,11 +966,13 @@ Queries to try:
 - Ask query 1 (`Which diseases are associated with BRCA1?`), then `Which cell phone is it best to buy this year?`
 - Then `Is it effective to invest in bitcoin right now?`
 - Controls, each after query 1: `and what about it in children?`, `what about its symptoms` and `tell me more about it`.
+- A change request after query 1: `Remove that variant node from the knowledge graph.` (card 115).
 
 What you should see:
 
 - The two off-topic follow-ups are refused with the "Outside biomedical research" label, and no search runs.
 - Each control is answered about BRCA1, as before this card.
+- The change request is told the graph is read-only and what it can show, never "I answer questions about biomedical evidence", and at once.
 - A follow-up that points back at the conversation now gets one more quick topic check, run beside the safety check, so the person waits for the slower of the two, not both.
 - Known: a model makes the topic call, not a word list, so a borderline follow-up can go either way.
 - Why it matters: a person should not pay for, or trust, a biomedical answer to a question that is not biomedical because one word matched.
@@ -2070,6 +2092,7 @@ Every feature accounted for, in three tables:
 |---|---|---|
 | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
 | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
+| card 17 | A written sentence that moves to a different paper on one shared title word opens with the name of that paper | Query 113 |
 | card 35 | An off-topic follow-up that contains a word such as "cell" or "study" is checked for topic like any other question | Query 111 |
 | cards 84 and 72 | When the check every question passes first cannot finish, the message says nothing was searched, the problem was ours, and to ask again | Query 109 |
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |

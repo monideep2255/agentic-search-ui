@@ -1457,3 +1457,27 @@ async def test_a_check_with_only_oversized_items_asks_no_model(monkeypatch) -> N
     candidates = [_sized("sentence", sentence_check_module.MAX_SENTENCE_CHARS + 1, 40)]
     assert await _check(candidates, guard=guard, harness=object()) == frozenset()
     assert guard.calls == []
+
+
+def test_card_17_a_one_word_switch_is_kept_and_names_its_paper() -> None:
+    """The switch rule keeps a reworded sentence that shares one title word
+    with its record; card 17's pass then names that record. The sentence is
+    bare until the pass runs (develop's output), and carries the lead-in after
+    it, with its own words unchanged."""
+    from system_03_search_agent.synthesis import answer_layout
+
+    findings = [FMF, G6PD, FMF_TITLE, G6PD_TITLE]
+    one_word = FIRST + (
+        "Deficiency can lead to jaundice in newborns and red cell breakdown "
+        '[3: "G6PD deficiency can cause neonatal hyperbilirubinemia and acute hemolysis"].'
+    )
+    result = _approve_all(one_word)
+    assert len(result.sentences) == 2, result.sentences
+    assert result.sentences[1].startswith("Deficiency can"), result.sentences
+
+    named, count = answer_layout.name_switched_records(result, findings)
+    assert count == 1
+    assert named.sentences[1] == (
+        'From the paper "Diagnosis and management of G6PD deficiency": ' + result.sentences[1]
+    )
+    assert named.sentences[0] == result.sentences[0]
