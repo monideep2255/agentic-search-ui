@@ -1711,3 +1711,82 @@ async def test_the_literature_decision_is_under_way_before_thinks_call(
     await _run("which papers discuss statin side effects")
     assert order.index("plan.literature") < order.index("think"), order
     assert order.index("think.recent_years") < order.index("think"), order
+
+
+# ---------------------------------------------------------------------------
+# Card 48 redesign (owner, 2026-10-15): the classifier also judges whether a
+# message names a record. A pick of `names_a_record` searches, never asks.
+# ---------------------------------------------------------------------------
+
+
+def test_the_ask_back_decision_offers_a_names_a_record_judgement() -> None:
+    spec = graph_module._ASK_BACK
+    assert "names_a_record" in spec.options
+    assert set(spec.criteria) == set(spec.options)
+    assert spec.fail_open == "proceed"
+    assert "names_a_record" in spec.instructions
+    assert "never asked back" in spec.criteria["names_a_record"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "text",
+    [
+        # One to three words, and longer. Neither is recognised by
+        # `_names_a_record`, so only the classifier's pick can save it.
+        "BRCA1",
+        _LONG_OPENING,
+    ],
+)
+async def test_a_names_a_record_pick_searches_and_never_asks(
+    monkeypatch: pytest.MonkeyPatch, text: str
+) -> None:
+    """MUTATION PROOF: making `think_node` treat any pick other than
+    `proceed` as `ask_back` turns both cases red. `clarify_reply=None` makes
+    any choices-writer call fail loudly on the longer path."""
+    assert not graph_module._names_a_record(text)
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=_clarify_reply("this record"))
+    asked = _install_decide(monkeypatch, {"think.ask_back": "names_a_record"})
+
+    events = await _run(text)
+    assert "think.ask_back" in asked, asked
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+    assert "tool_start" in [event.type for event in events]
+
+
+@pytest.mark.asyncio
+async def test_a_names_a_record_pick_writes_no_choices_on_the_longer_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_tools(monkeypatch)
+    dispatched = _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch, {"think.ask_back": "names_a_record"})
+
+    await _run(_LONG_OPENING)
+    assert "clarify" not in dispatched, dispatched
+
+
+@pytest.mark.asyncio
+async def test_the_record_check_still_never_forces_an_ask_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The code check only forces a search: `ask_back` on a text it
+    recognises searches, and `proceed` on one it does not also searches."""
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=_clarify_reply("this"))
+    _install_decide(monkeypatch, {"think.ask_back": "ask_back"})
+    events = await _run("PMID 33057194")
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+
+
+def test_the_ask_back_description_passes_the_seams_own_check() -> None:
+    """`decide` rejects a description over its length cap or one whose
+    criteria do not match the options; a live run found the first draft over
+    the cap while every stubbed test stayed green."""
+    from system_03_search_agent.harness import decide as decide_module
+
+    spec = graph_module._ASK_BACK
+    decide_module._check_description(spec.point, spec.options, spec.instructions, spec.criteria)

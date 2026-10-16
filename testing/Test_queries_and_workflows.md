@@ -1546,6 +1546,7 @@ Queries to try:
 - Controls, each first after a reload: `How do birds fly?`, `What is Marfan syndrome?`, `what does the literature say about metformin` and `Tell me about PMID 33057194.`.
 - After one of the first two is asked back, click one of the offered choices, or type a reply such as `Tell me more about the second one.`.
 - Type `What can you do?` first after a reload.
+- Also first after a reload, each naming one record in a different notation: a variant in HGVS, a ClinVar RCV or VCV accession, a PMC id, a DOI, a GEO or SRA accession.
 
 What you should see:
 
@@ -1553,6 +1554,7 @@ What you should see:
 - The four controls are searched with no question back: each asks something of its own, or names one exact record.
 - A clicked choice or a typed reply is never asked which aspect again. It is searched, or, for a reply that points back to something the product no longer holds, told which detail to add.
 - `What can you do?` is never asked which aspect, however it is punctuated.
+- A message that names one record, in any notation, is always searched and never asked which aspect. The classifier judges this itself; a code check for common identifiers backs it up and can only force a search.
 - A real question waits at most one second longer than before, and only when the decision is slow; the decision took 0.27 s at the median in this card's live runs.
 - Known: a model makes the call, not a list. In the fix round's live runs (three each) it asked back none of 118 real questions and 33 of 33 broad subjects; a subject with a narrow name, such as `Tell me about TP53.`, is usually asked back too.
 - Known: an asked-back question shows its choices only after a second, writing call; the review measured that call alone at 1.4 to 6.4 s.
