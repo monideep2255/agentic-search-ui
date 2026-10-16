@@ -9,8 +9,8 @@ Fix agent, dial position 2. Base c2395ca7, branch `fix/card110-first-sentence-re
 - [Mutations](#mutations)
 - [Label map fuzz](#label-map-fuzz)
 - [Replay bar](#replay-bar)
-- [Feature round](#feature-round-lead-decision-on-clinical_features)
 - [Gates](#gates)
+- [Feature round](#feature-round-lead-decision-on-clinical_features)
 - [Open](#open)
 
 ## Findings
