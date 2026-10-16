@@ -206,6 +206,7 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 17 | A reworded sentence that moves to a different paper names that paper | Live, awaiting your retest | 113 |
 | card 94, part | An isolate search that runs out of time keeps the rest of the answer | Live, awaiting your retest | 33 |
 | card 24 | A Plain language and Researcher switch beside each answer, which says it runs a new search before it spends one | Live, awaiting your retest | 112 |
+| card 75 | A command-line sign-in renewal that cannot be confirmed asks for `s3 login` once; a clear error recovers by itself; no surprise sign-out of the web app | Live, awaiting your retest | 114 |
 
 ## What is done, in summary
 
