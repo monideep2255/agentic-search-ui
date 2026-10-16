@@ -64,7 +64,7 @@ def test_the_mutation_test_passes_and_every_rule_has_an_arm():
     rules = {rule for _, _, rule in sync._mutations()}
     assert rules == {
         "card-in-one-place", "retest-names-query", "card-exists",
-        "factory-lane", "handoff-agrees", "registry-paths",
+        "factory-lane", "handoff-agrees", "live-in-retest-file", "registry-paths",
     }
 
 
@@ -131,3 +131,30 @@ def test_the_real_documents_are_read_in_under_five_seconds(capsys):
     elapsed = time.monotonic() - started
     assert code in (0, 1), capsys.readouterr().out
     assert elapsed < 5
+
+
+def test_a_done_row_awaiting_retest_needs_its_retest_row():
+    assert "Live, awaiting your retest" in sync.GOLDEN[sync.DONE]
+    assert _rules(dict(sync.GOLDEN)) == []
+    missing = sync._mutate(sync.RETEST, "card 94, part (#158)", "card 95, part (#158)")
+    (finding,) = sync._golden_run(missing)
+    assert finding.rule == "live-in-retest-file"
+    assert finding.file == sync.DONE
+    assert "Add the row to testing/Retest_product_owner.md" in finding.message
+    assert "change this status" in finding.message
+
+
+def test_a_part_marker_on_either_side_is_the_same_card():
+    texts = sync._mutate(sync.DONE, "| card 94, part |", "| card 94 |")
+    assert _rules(texts) == []
+
+
+def test_an_item_with_no_card_is_matched_by_its_exact_text():
+    texts = sync._mutate(sync.RETEST, "| 12.3 |", "| 12.4 |")
+    assert _rules(texts) == ["live-in-retest-file"]
+
+
+def test_other_done_statuses_need_no_retest_row():
+    texts = sync._mutate(sync.DONE, "| card 62 | Install works first time | Approved |",
+                         "| card 62 | Install works first time | Retest |")
+    assert _rules(texts) == []
