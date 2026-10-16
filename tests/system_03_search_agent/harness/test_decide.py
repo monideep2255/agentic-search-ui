@@ -1022,3 +1022,60 @@ def test_no_live_path_names_the_offline_comparison() -> None:
         and any(name in path.read_text() for name in ("compare_models", "ModelComparison", "compare_classifiers"))
     ]
     assert offenders == []
+
+
+def test_the_standalone_decision_has_two_options_each_with_a_criterion() -> None:
+    """The check beside a later pick: its own point, two picks, one fixed
+    criterion each, accepted by `decide()`'s own description check."""
+    options = decide_module.LEAD_STANDALONE_OPTIONS
+    criteria = decide_module.lead_standalone_criteria()
+
+    assert options == ("stands_alone", "needs_earlier")
+    assert set(criteria) == set(options)
+    assert decide_module.LEAD_STANDALONE_POINT != decide_module.LEAD_SENTENCE_POINT
+    assert decide_module.LEAD_LATER_POINT not in {
+        decide_module.LEAD_SENTENCE_POINT,
+        decide_module.LEAD_STANDALONE_POINT,
+    }
+    decide_module._check_description(
+        decide_module.LEAD_STANDALONE_POINT,
+        options,
+        decide_module.LEAD_STANDALONE_INSTRUCTIONS,
+        criteria,
+    )
+
+
+def test_the_standalone_state_is_the_sentence_alone_and_bounded() -> None:
+    """No question, no markers, and no more than the cap. Mutation: drop the
+    cap, or add the question to the state."""
+    state = decide_module.lead_standalone_state("It is a gene [3] on chromosome 17 [4].")
+    assert state == "Sentence: It is a gene on chromosome 17."
+
+    long_state = decide_module.lead_standalone_state("L" * 5000)
+    assert len(long_state) == len("Sentence: ") + decide_module._STANDALONE_SENTENCE_MAX_CHARS
+
+
+def test_the_later_point_and_the_standalone_texts_name_no_question_word() -> None:
+    """No hardcoded decisions: the classifier texts carry no word of any test
+    question and no pointer word. Mutation: put one of them into a text."""
+    texts = " ".join(
+        [
+            decide_module.LEAD_STANDALONE_INSTRUCTIONS,
+            *decide_module.lead_standalone_criteria().values(),
+            decide_module.LEAD_LATER_POINT,
+        ]
+    ).lower()
+    for word in (
+        "marfan",
+        "brca1",
+        "disease",
+        "gene",
+        "medgen",
+        "these",
+        "one is",
+        "another",
+        "they",
+    ):
+        assert word not in texts, word
+    assert len(decide_module.LEAD_STANDALONE_INSTRUCTIONS) <= 1000
+    assert all(len(v) <= 1000 for v in decide_module.lead_standalone_criteria().values())

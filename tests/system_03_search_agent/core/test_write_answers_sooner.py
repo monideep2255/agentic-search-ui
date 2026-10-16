@@ -33,6 +33,7 @@ from __future__ import annotations
 import asyncio
 import re
 import time
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -1535,3 +1536,226 @@ async def test_a_call_is_checked_on_the_prompt_it_actually_sends(
             harness, "trace-big-prompt", "synth", "write", messages, budget_s=5.0
         )
     assert calls == [], calls
+
+
+# ---------------------------------------------------------------------------
+# Card 110, second attempt: the later path. Develop's two-candidate pick
+# stays as it was; a separate path may offer the third and fourth cited
+# sentences, each with a stand-alone check, only when the first pick says
+# "neither", inside the same 1 s bound.
+# ---------------------------------------------------------------------------
+
+
+def _record(choice: str | None) -> object:
+    """A decision record as `_usable_choice` reads it."""
+    return SimpleNamespace(jev_choice=choice, guard_choice=None, chosen=choice or "neither")
+
+
+def _later_seam(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    a: tuple[str, float] = ("neither", 0.0),
+    b: tuple[str, float] = ("first", 0.0),
+    check: dict[str, tuple[str, float]] | tuple[str, float] = ("stands_alone", 0.0),
+) -> list[tuple[str, str]]:
+    """Fake `_decide_point` keyed by the decision's point; a check is keyed by
+    the sentence text it is given (a dict) or answers the same everywhere (a
+    tuple). Each answer comes after its own delay, counted from the start of
+    the call, so the three decisions run side by side as they do live.
+    Returns every (point, state) asked."""
+    asked: list[tuple[str, str]] = []
+
+    async def _decide(_harness: object, _trace: str, spec: object, text: str) -> object:
+        point = spec.point  # type: ignore[attr-defined]
+        asked.append((point, text))
+        if point == "write.lead_sentence":
+            choice, delay = a
+        elif point == "write.lead_later_sentence":
+            choice, delay = b
+        else:
+            if isinstance(check, dict):
+                key = next(k for k in check if k in text)
+                choice, delay = check[key]
+            else:
+                choice, delay = check
+        await asyncio.sleep(delay)
+        return _record(choice)
+
+    monkeypatch.setattr(graph_module, "_decide_point", _decide)
+    return asked
+
+
+def _grounded(*sentences: str) -> GroundingResult:
+    return GroundingResult(
+        narrative="x",
+        claims=[],
+        stripped_count=0,
+        refused=False,
+        sentences=sentences,
+        sentence_origins=tuple(range(len(sentences))),
+    )
+
+
+FOUR = (
+    "Alpha one is about the first thing [1].",
+    "Alpha two is about the second thing [2].",
+    "Gamma three names every symptom it describes [3].",
+    "Delta four names every symptom it describes [4].",
+)
+
+
+async def _choose(
+    grounding: GroundingResult,
+    *,
+    skip: frozenset[int] = frozenset(),
+    labels: dict[int, str] | None = None,
+    budget_s: float = 40.0,
+) -> int | None:
+    return await graph_module._lead_sentence_choice(
+        harness_module.Harness(trace_id="t110"),
+        "t110",
+        "A question?",
+        grounding,
+        budget_s,
+        skip=skip,
+        label_by_display=labels,
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_third_cited_sentence_leads_when_the_first_two_do_not_and_it_stands_alone(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """The gain. Mutation that turns this red: tier B never built."""
+    asked = _later_seam(monkeypatch)
+
+    assert await _choose(_grounded(*FOUR)) == 2
+    assert {point for point, _ in asked} == {
+        "write.lead_sentence",
+        "write.lead_later_sentence",
+        "write.lead_stands_alone",
+    }
+
+
+@pytest.mark.asyncio
+async def test_a_later_sentence_that_needs_an_earlier_one_leaves_the_count_line_leading(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """Mutation that turns this red: the check's answer ignored."""
+    _later_seam(monkeypatch, check=("needs_earlier", 0.0))
+
+    assert await _choose(_grounded(*FOUR)) is None
+
+
+@pytest.mark.asyncio
+async def test_a_record_title_is_never_a_later_candidate_but_a_list_of_names_is() -> None:
+    """Mutations that turn this red: `_repeats_one_label` returning False
+    always; or the two-record test left in it."""
+    title = "Preneoplastic stromal cells promote tumorigenesis"
+    grounding = _grounded(
+        "One [1].",
+        "Two [2].",
+        f"{title} [3].",
+        f"{title} [3] {title} [4].",
+        "Name A [5], Name B [6].",
+        "Name A [5] and Name B [6] and Name C [7].",
+    )
+    labels = {3: title, 4: title, 5: "Name A", 6: "Name B", 7: "Name C"}
+
+    assert graph_module._repeats_one_label(grounding.sentences[2], labels)
+    assert graph_module._repeats_one_label(grounding.sentences[3], labels)
+    assert not graph_module._repeats_one_label(grounding.sentences[4], labels)
+    # Titles never take a slot: the cut to two comes after the filter.
+    assert graph_module._later_lead_candidates(grounding, frozenset(), labels) == [4, 5]
+
+
+@pytest.mark.asyncio
+async def test_a_first_or_second_pick_returns_at_once_and_never_waits_for_the_later_path(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """Mutation that turns this red: a hung tier B task the result waits on."""
+    _later_seam(monkeypatch, a=("second", 0.0), b=("first", 30.0), check=("stands_alone", 30.0))
+
+    started = time.monotonic()
+    assert await _choose(_grounded(*FOUR)) == 1
+    assert time.monotonic() - started < 0.3
+
+
+@pytest.mark.asyncio
+async def test_each_check_is_read_for_its_own_sentence(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """The checks finish out of order; the pick is the second later sentence.
+    Mutation that turns this red: reading `checks[0]`."""
+    _later_seam(
+        monkeypatch,
+        b=("second", 0.0),
+        check={"Gamma": ("needs_earlier", 0.4), "Delta": ("stands_alone", 0.05)},
+    )
+
+    assert await _choose(_grounded(*FOUR)) == 3
+
+    _later_seam(
+        monkeypatch,
+        b=("first", 0.0),
+        check={"Gamma": ("needs_earlier", 0.4), "Delta": ("stands_alone", 0.05)},
+    )
+    assert await _choose(_grounded(*FOUR)) is None
+
+
+@pytest.mark.asyncio
+async def test_the_pick_and_the_check_share_one_bound(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """A says "neither" at 0.5 s, B picks at 0.6 s, the check lands at 1.05 s:
+    the count line, within the 1 s bound. Mutation that turns this red:
+    giving the check a fresh second."""
+    _later_seam(monkeypatch, a=("neither", 0.5), b=("first", 0.6), check=("stands_alone", 1.05))
+
+    started = time.monotonic()
+    assert await _choose(_grounded(*FOUR)) is None
+    assert time.monotonic() - started <= 1.0 + 0.03
+
+
+@pytest.mark.asyncio
+async def test_a_late_first_pick_leaves_the_count_line_without_reading_the_later_path(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """B finished early with a good pick and a passing check; A is late."""
+    _later_seam(monkeypatch, a=("neither", 1.5), b=("first", 0.0), check=("stands_alone", 0.0))
+
+    assert await _choose(_grounded(*FOUR)) is None
+
+
+def test_tier_a_never_holds_a_sentence_beyond_the_raw_first_two() -> None:
+    """V-111-01. Mutation that turns this red: filter-then-slice restored."""
+    grounding = _grounded(*FOUR)
+
+    assert graph_module._lead_candidates(grounding, frozenset({0})) == [1]
+    assert graph_module._lead_candidates(grounding) == [0, 1]
+
+
+@pytest.mark.asyncio
+async def test_a_sentence_that_slid_out_of_the_first_two_is_offered_only_through_the_later_path(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """Mutation that turns this red: filter-then-slice restored."""
+    asked = _later_seam(monkeypatch, a=("neither", 0.0), b=("first", 0.0))
+
+    assert await _choose(_grounded(*FOUR), skip=frozenset({0})) == 2
+    point_a = next(text for point, text in asked if point == "write.lead_sentence")
+    assert "Gamma three" not in point_a
+    point_b = next(text for point, text in asked if point == "write.lead_later_sentence")
+    assert "Gamma three" in point_b
+
+
+@pytest.mark.asyncio
+async def test_every_started_task_is_done_or_cancelled_on_return(
+    monkeypatch: pytest.MonkeyPatch, jev_on: None
+) -> None:
+    """Mutation that turns this red: the `finally` removed."""
+    _later_seam(monkeypatch, a=("first", 0.0), b=("first", 30.0), check=("stands_alone", 30.0))
+
+    assert await _choose(_grounded(*FOUR)) == 0
+    others = [t for t in asyncio.all_tasks() if t is not asyncio.current_task() and not t.done()]
+    assert others == []

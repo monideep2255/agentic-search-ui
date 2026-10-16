@@ -596,6 +596,10 @@ MAX_LEAD_CANDIDATES: Final[int] = len(LEAD_SENTENCE_PICKS)
 _LEAD_CANDIDATE_MAX_CHARS: Final[int] = 1200
 _LEAD_QUESTION_MAX_CHARS: Final[int] = 1000
 
+#: The most one standalone check reads of a sentence. A check reads one
+#: sentence, so it never shares `state` with another.
+_STANDALONE_SENTENCE_MAX_CHARS: Final[int] = 2000
+
 LEAD_SENTENCE_INSTRUCTIONS: Final[str] = (
     "The state is a question a person typed into a biomedical evidence search "
     "engine, then the first one or two sentences of the written answer, each "
@@ -660,6 +664,54 @@ def lead_sentence_state(question: str, candidates: Sequence[str]) -> str:
         plain = _MARKERS_IN_TEXT.sub("", sentence).strip()[:_LEAD_CANDIDATE_MAX_CHARS]
         parts.append(f"Sentence {number}: {plain}")
     return "\n\n".join(parts)[:_STATE_MAX_CHARS]
+
+
+#: The later path (card 110, second attempt). Asked only when the first two
+#: cited sentences did not answer: the same lead decision over the third and
+#: fourth, under its own point name so the trace tells the two apart.
+LEAD_LATER_POINT: Final[str] = "write.lead_later_sentence"
+
+#: The standalone check. A later pick opens the answer only when this
+#: decision, asked for that one sentence alone, says it needs no sentence
+#: before it.
+LEAD_STANDALONE_POINT: Final[str] = "write.lead_stands_alone"
+LEAD_STANDS_ALONE: Final[str] = "stands_alone"
+LEAD_NEEDS_EARLIER: Final[str] = "needs_earlier"
+LEAD_STANDALONE_OPTIONS: Final[tuple[str, ...]] = (LEAD_STANDS_ALONE, LEAD_NEEDS_EARLIER)
+
+LEAD_STANDALONE_INSTRUCTIONS: Final[str] = (
+    "The state is one sentence taken from inside a written answer, already "
+    "checked word for word against the record it cites. Decide whether a "
+    "reader who has seen nothing before it could open an answer with this "
+    "sentence: it names the things it talks about, and no part of it depends "
+    "on an earlier sentence to be understood."
+)
+
+_LEAD_STANDALONE_CRITERIA: Final[dict[str, str]] = {
+    LEAD_STANDS_ALONE: (
+        "Read alone, every thing the sentence talks about is named in the sentence "
+        "itself, or is given by the sentence itself, such as a list it goes on to "
+        "state, so a reader who has seen nothing else knows what it is about."
+    ),
+    LEAD_NEEDS_EARLIER: (
+        "Read alone, some part of the sentence points to something that is not "
+        "named in it, so a reader would have to read an earlier sentence to know "
+        "what it refers to or what it continues."
+    ),
+}
+
+
+def lead_standalone_criteria() -> dict[str, str]:
+    """The two fixed criteria for the standalone check, as `decide()` requires."""
+    return dict(_LEAD_STANDALONE_CRITERIA)
+
+
+def lead_standalone_state(sentence: str) -> str:
+    """The bounded text the standalone check reads: the sentence alone, with
+    its citation markers removed. Not the question: the check is about the
+    sentence's own wording."""
+    plain = _MARKERS_IN_TEXT.sub("", sentence).strip()[:_STANDALONE_SENTENCE_MAX_CHARS]
+    return f"Sentence: {plain}"
 
 
 def lead_sentence_index(choice: str | None, candidate_count: int) -> int | None:

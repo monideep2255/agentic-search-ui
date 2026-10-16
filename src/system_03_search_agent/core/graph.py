@@ -517,9 +517,15 @@ from system_03_search_agent.harness.coordinator_worker import (
     coordinator_worker_execute,
 )
 from system_03_search_agent.harness.decide import (
+    LEAD_LATER_POINT,
+    LEAD_NEEDS_EARLIER,
     LEAD_SENTENCE_INSTRUCTIONS,
     LEAD_SENTENCE_NEITHER,
     LEAD_SENTENCE_POINT,
+    LEAD_STANDALONE_INSTRUCTIONS,
+    LEAD_STANDALONE_OPTIONS,
+    LEAD_STANDALONE_POINT,
+    LEAD_STANDS_ALONE,
     MAX_LEAD_CANDIDATES,
     decide,
     jev_decides,
@@ -527,6 +533,8 @@ from system_03_search_agent.harness.decide import (
     lead_sentence_index,
     lead_sentence_options,
     lead_sentence_state,
+    lead_standalone_criteria,
+    lead_standalone_state,
 )
 from system_03_search_agent.harness.harness import (
     Harness,
@@ -12697,26 +12705,54 @@ _LEAD_DECISION_MIN_BUDGET_S: Final[float] = 1.5
 _LEAD_DECISION_MAX_WAIT_S: Final[float] = 1.0
 
 
-def _lead_candidates(
-    model_grounding: GroundingResult | None,
-    skip: frozenset[int] = frozenset(),
-) -> list[int]:
-    """Indexes into `model_grounding.sentences` of the first one or two
-    sentences that carry a citation marker.
-
-    Only sentences the grounding pass already accepted exist here: this
-    reads the pass's own output and nothing else, so a sentence it stripped
-    can never be offered, let alone lead. `skip` holds positions the prose
-    leaves out (card 111, `_label_only_positions`): a sentence the answer
-    drops is never offered, so it cannot open the answer either.
-    """
+def _cited_positions(model_grounding: GroundingResult | None) -> list[int]:
+    """Indexes into `model_grounding.sentences` of every sentence that
+    carries a citation marker, in reading order. Only sentences the grounding
+    pass already accepted exist here, so a stripped sentence is never
+    offered, let alone leads."""
     if model_grounding is None:
         return []
     return [
         index
         for index, sentence in enumerate(model_grounding.sentences)
-        if index not in skip and _MARKER_PATTERN.search(sentence)
-    ][:MAX_LEAD_CANDIDATES]
+        if _MARKER_PATTERN.search(sentence)
+    ]
+
+
+def _lead_candidates(
+    model_grounding: GroundingResult | None,
+    skip: frozenset[int] = frozenset(),
+) -> list[int]:
+    """Tier A: the first two cited sentences of the model's prose, minus any
+    the prose leaves out (card 111, `_label_only_positions`).
+
+    Slice first, then drop `skip` (card 110, V-111-01): a sentence the
+    writer put third is never promoted into this window because a repeated
+    title sat first or second. It can only come through
+    `_later_lead_candidates`, with its own checks.
+    """
+    first_two = _cited_positions(model_grounding)[:MAX_LEAD_CANDIDATES]
+    return [index for index in first_two if index not in skip]
+
+
+def _later_lead_candidates(
+    model_grounding: GroundingResult | None,
+    skip: frozenset[int] = frozenset(),
+    label_by_display: Mapping[int, str] | None = None,
+) -> list[int]:
+    """Tier B (card 110): the cited sentences after the raw first two, up to
+    two of them, never a sentence the prose leaves out and never a sentence
+    that is only a cited record's own title (`_repeats_one_label`). The cut
+    to two comes after both filters, so a title never takes a slot."""
+    if model_grounding is None:
+        return []
+    labels = dict(label_by_display or {})
+    later = [
+        index
+        for index in _cited_positions(model_grounding)[MAX_LEAD_CANDIDATES:]
+        if index not in skip and not _repeats_one_label(model_grounding.sentences[index], labels)
+    ]
+    return later[:MAX_LEAD_CANDIDATES]
 
 
 async def _lead_sentence_choice(
@@ -12726,52 +12762,113 @@ async def _lead_sentence_choice(
     model_grounding: GroundingResult | None,
     budget_s: float,
     skip: frozenset[int] = frozenset(),
+    label_by_display: Mapping[int, str] | None = None,
 ) -> int | None:
     """The index of the model sentence that should open the answer, or None
-    for the code-built count line (build phase 8.7, card 2, design C).
+    for the code-built count line (build phase 8.7, card 2, design C; card
+    110, second attempt).
 
-    One decision through the classifier seam (`_decide_point`, so Jev
-    decides and the guard tier steps in only when Jev fails, and the record
-    reaches `done.decisions`). Asked only when Jev is the classifier
-    (`CLASSIFIER_PROVIDER=jev`): with the guard tier deciding alone, the
-    question would wait on a guard call of about 2 s (answer speed report,
-    2026-09-26) on every answer, against Jev's 0.3 to 0.8 s, so the count
-    line leads there as before. Fails closed to None, the count line, when:
-    there is no candidate; less than `_LEAD_DECISION_MIN_BUDGET_S` of the
-    Write budget is left; no pick comes within `_LEAD_DECISION_MAX_WAIT_S`
-    or what is left of the budget; no model made a usable pick; or the pick
-    is "neither". Code reads no word of the question: the question and the
-    candidates are only the decision's bounded `state`.
+    Two paths started together inside one bound. Path A is the lead decision
+    over the first two cited sentences, exactly as before: when it picks, that
+    sentence leads at once and nothing else is read. Only when A says
+    "neither" (or makes no usable pick) is path B read: the same decision over
+    the next two cited sentences that are not a record's own title, and a
+    pick leads only when a stand-alone check of that sentence alone says it
+    needs no sentence before it. Decisions go through the classifier seam
+    (`_decide_point`); code reads no word of the question.
+
+    Asked only when Jev is the classifier (`CLASSIFIER_PROVIDER=jev`). Fails
+    closed to None, the count line, when: there is no candidate; less than
+    `_LEAD_DECISION_MIN_BUDGET_S` of the Write budget is left; A is late
+    (B is then not read); B, its check or both are late, say "neither" or
+    "needs_earlier", or make no usable pick. The whole of it, picks and
+    check, shares `min(_LEAD_DECISION_MAX_WAIT_S, budget_s - 0.5)`.
     """
     candidates = _lead_candidates(model_grounding, skip)
+    later = _later_lead_candidates(model_grounding, skip, label_by_display)
     if (
-        not candidates
+        not (candidates or later)
         or model_grounding is None
         or budget_s < _LEAD_DECISION_MIN_BUDGET_S
         or not _jev_decides()
     ):
         return None
-    options = lead_sentence_options(len(candidates))
-    spec = _DecisionSpec(
-        point=LEAD_SENTENCE_POINT,
-        options=options,
-        instructions=LEAD_SENTENCE_INSTRUCTIONS,
-        criteria=lead_sentence_criteria(options),
-        fail_open=LEAD_SENTENCE_NEITHER,
-    )
-    state_text = lead_sentence_state(
-        question, [model_grounding.sentences[index] for index in candidates]
-    )
+    sentences = model_grounding.sentences
     wait_s = min(_LEAD_DECISION_MAX_WAIT_S, budget_s - 0.5)
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + wait_s
+    tasks: list[asyncio.Task[DecisionRecord | None]] = []
+
+    def _start(spec: _DecisionSpec, text: str) -> asyncio.Task[DecisionRecord | None]:
+        task = asyncio.ensure_future(_decide_point(harness, trace_id, spec, text))
+        tasks.append(task)
+        return task
+
+    async def _within(task: asyncio.Task[DecisionRecord | None]) -> DecisionRecord | None:
+        return await asyncio.wait_for(task, timeout=max(0.0, deadline - loop.time()))
+
     try:
-        record = await asyncio.wait_for(
-            _decide_point(harness, trace_id, spec, state_text), timeout=wait_s
-        )
-    except TimeoutError:
-        logger.warning("lead sentence decision was late (trace %s); the count line leads", trace_id)
-        return None
-    picked = lead_sentence_index(_usable_choice(record), len(candidates))
-    return None if picked is None else candidates[picked]
+        task_a = None
+        if candidates:
+            options = lead_sentence_options(len(candidates))
+            task_a = _start(
+                _DecisionSpec(
+                    point=LEAD_SENTENCE_POINT,
+                    options=options,
+                    instructions=LEAD_SENTENCE_INSTRUCTIONS,
+                    criteria=lead_sentence_criteria(options),
+                    fail_open=LEAD_SENTENCE_NEITHER,
+                ),
+                lead_sentence_state(question, [sentences[index] for index in candidates]),
+            )
+        task_b = None
+        check_tasks: list[asyncio.Task[DecisionRecord | None]] = []
+        if later:
+            later_options = lead_sentence_options(len(later))
+            task_b = _start(
+                _DecisionSpec(
+                    point=LEAD_LATER_POINT,
+                    options=later_options,
+                    instructions=LEAD_SENTENCE_INSTRUCTIONS,
+                    criteria=lead_sentence_criteria(later_options),
+                    fail_open=LEAD_SENTENCE_NEITHER,
+                ),
+                lead_sentence_state(question, [sentences[index] for index in later]),
+            )
+            check_spec = _DecisionSpec(
+                point=LEAD_STANDALONE_POINT,
+                options=LEAD_STANDALONE_OPTIONS,
+                instructions=LEAD_STANDALONE_INSTRUCTIONS,
+                criteria=lead_standalone_criteria(),
+                fail_open=LEAD_NEEDS_EARLIER,
+            )
+            check_tasks = [
+                _start(check_spec, lead_standalone_state(sentences[index])) for index in later
+            ]
+        try:
+            if task_a is not None:
+                picked = lead_sentence_index(
+                    _usable_choice(await _within(task_a)), len(candidates)
+                )
+                if picked is not None:
+                    return candidates[picked]
+            if task_b is None:
+                return None
+            later_pick = lead_sentence_index(_usable_choice(await _within(task_b)), len(later))
+            if later_pick is None:
+                return None
+            check = _usable_choice(await _within(check_tasks[later_pick]))
+        except TimeoutError:
+            logger.warning(
+                "lead sentence decision was late (trace %s); the count line leads", trace_id
+            )
+            return None
+        return later[later_pick] if check == LEAD_STANDS_ALONE else None
+    finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 def _asked_field(
@@ -12836,45 +12933,23 @@ def _answer_tokens(**kwargs: Any) -> list[TokenPayload]:
 _ECHO_END_PUNCTUATION: Final[str] = " .,;:?!"
 
 
-def _is_label_only_sentence(
-    sentence: str,
-    label_by_display: dict[int, str],
-    listed_markers: frozenset[int],
-) -> bool:
-    """True when `sentence` only repeats one title or name, cited to two or
-    more different records, and the listing shown has every one of those
-    records (card 111: "Marfan syndrome and Marfan syndrome.").
+def _repeats_one_label(sentence: str, label_by_display: dict[int, str]) -> bool:
+    """True when `sentence` is nothing but one record's own title or name,
+    said once or more, each time cited to the record that carries it.
 
-    Narrowed on purpose (fix round, 2026-10-15). A sentence is left out only
-    when all of these hold, so it never removes something a reader asked for:
-
-    - it repeats ONE name or title: a list of different names is an answer
-      to "which ...", and a single title can state a finding, so neither is
-      ever matched;
-    - that name is cited to two or more different records (two markers);
-    - every marker it carries is in `listed_markers`, the markers of the
-      listing shown, so the records are named there. With no listing the
-      set is empty and nothing matches.
-
-    Structure only. The sentence splits at its markers; each piece, once the
-    grounding pass's own glue rule (`_clean_claim`: a leading comma or
-    "and") is applied and end punctuation (including "?" and "!") is
-    dropped, must equal the label of the record that marker cites. Any other
-    word, any text after the last marker or a marker that cites no labelled
-    record makes this False. It reads no word of the question and no word
-    list of its own.
-
-    Args:
-        sentence: A grounded sentence with its `[n]` display markers.
-        label_by_display: Display number to the cited record's title or name.
-        listed_markers: Display numbers the listing shown cites.
+    Structure only (card 111, factored out for card 110). The sentence
+    splits at its markers; each piece, once the grounding pass's own glue
+    rule (`_clean_claim`: a leading comma or "and") is applied and end
+    punctuation (including "?" and "!") is dropped, must equal the label of
+    the record that marker cites, one label throughout, with no text after
+    the last marker. A list of different names, any other word, or a marker
+    that cites no labelled record makes this False. It reads no word of the
+    question and no word list of its own.
     """
     pieces = _MARKER_PATTERN.split(sentence)
     # split() alternates text, marker number, text, marker number, ..., text.
     texts, numbers = pieces[0::2], pieces[1::2]
-    if len(set(numbers)) < 2 or texts[-1].strip(_ECHO_END_PUNCTUATION):
-        return False
-    if not all(int(number) in listed_markers for number in numbers):
+    if not numbers or texts[-1].strip(_ECHO_END_PUNCTUATION):
         return False
     shown_label: str | None = None
     seen = False
@@ -12897,6 +12972,58 @@ def _is_label_only_sentence(
     return True
 
 
+def _is_label_only_sentence(
+    sentence: str,
+    label_by_display: dict[int, str],
+    listed_markers: frozenset[int],
+) -> bool:
+    """True when `sentence` only repeats one title or name, cited to two or
+    more different records, and the listing shown has every one of those
+    records (card 111: "Marfan syndrome and Marfan syndrome.").
+
+    Narrowed on purpose (fix round, 2026-10-15). A sentence is left out only
+    when all of these hold, so it never removes something a reader asked for:
+
+    - it repeats ONE name or title: a list of different names is an answer
+      to "which ...", and a single title can state a finding, so neither is
+      ever matched (`_repeats_one_label`);
+    - that name is cited to two or more different records (two markers);
+    - every marker it carries is in `listed_markers`, the markers of the
+      listing shown, so the records are named there. With no listing the
+      set is empty and nothing matches.
+
+    Args:
+        sentence: A grounded sentence with its `[n]` display markers.
+        label_by_display: Display number to the cited record's title or name.
+        listed_markers: Display numbers the listing shown cites.
+    """
+    numbers = _MARKER_PATTERN.findall(sentence)
+    if len(set(numbers)) < 2:
+        return False
+    if not all(int(number) in listed_markers for number in numbers):
+        return False
+    return _repeats_one_label(sentence, label_by_display)
+
+
+def _lead_label_map(
+    citations: Sequence[CitationPayload], synth_findings: Sequence[SynthFinding]
+) -> dict[int, str]:
+    """Display number to the cited record's own title or name: the field
+    `answer_layout.LABEL_FIELDS` names, the list that decides what a listing
+    row shows as its record's name."""
+    finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
+    label_by_display: dict[int, str] = {}
+    for cited in citations:
+        cited_finding = finding_by_citation_id.get(cited.citation_id)
+        if (
+            cited_finding is not None
+            and cited_finding.field in LABEL_FIELDS
+            and cited_finding.field_value.strip()
+        ):
+            label_by_display[cited.display_index] = cited_finding.field_value
+    return label_by_display
+
+
 def _label_only_positions(
     sentences: Sequence[str],
     citations: Sequence[CitationPayload],
@@ -12906,21 +13033,8 @@ def _label_only_positions(
     """Positions in `sentences` that card 111's rule would leave out of the
     prose: see `_is_label_only_sentence`. One function for both readers, the
     prose (`_answer_parts`) and the lead candidates (`_lead_candidates`), so a
-    sentence the prose drops can never open the answer.
-
-    The label fields are `answer_layout.LABEL_FIELDS`, the list that decides
-    what a listing row shows as its record's name."""
-    citation_by_display = {citation.display_index: citation for citation in citations}
-    finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
-    label_by_display: dict[int, str] = {}
-    for display_index, cited in citation_by_display.items():
-        cited_finding = finding_by_citation_id.get(cited.citation_id)
-        if (
-            cited_finding is not None
-            and cited_finding.field in LABEL_FIELDS
-            and cited_finding.field_value.strip()
-        ):
-            label_by_display[display_index] = cited_finding.field_value
+    sentence the prose drops can never open the answer."""
+    label_by_display = _lead_label_map(citations, synth_findings)
     listed_markers = frozenset(
         int(number) for line in listing_sentences for number in _MARKER_PATTERN.findall(line)
     )
@@ -15134,6 +15248,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                     if model_grounding is not None
                     else ()
                 ),
+                label_by_display=_lead_label_map(citations, synth_findings),
             )
             if summary_sentence
             else None
