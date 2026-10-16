@@ -80,11 +80,11 @@ describe("DepthControl, set 9", () => {
 });
 
 /**
- * Card 33 (2026-09-25): the compact status-strip toggle. No "Answer mode"
+ * Card 24 (2026-09-25): the compact status-strip toggle. No "Answer mode"
  * label and no info button, unlike `DepthControl` above, per the transcribed
  * mockup (see the component's own docstring).
  */
-describe("DepthStripToggle, card 33", () => {
+describe("DepthStripToggle, card 24", () => {
   it("offers exactly Plain language and Researcher, with the current value lit", () => {
     render(<DepthStripToggle value="plain_language" />);
     const group = screen.getByRole("group", { name: /answer depth/i });
@@ -92,7 +92,7 @@ describe("DepthStripToggle, card 33", () => {
     expect(buttons.map((b) => b.textContent)).toEqual(["Plain language", "Researcher"]);
     expect(screen.getByRole("button", { name: "Plain language" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Researcher" })).toHaveAttribute("aria-pressed", "false");
-    // Card 33's whole point: no repeat of the pre-ask explainer on this
+    // Card 24's whole point: no repeat of the pre-ask explainer on this
     // surface.
     expect(screen.queryByText(/answer mode/i)).toBeNull();
     expect(screen.queryByRole("button", { name: /about answer modes/i })).toBeNull();

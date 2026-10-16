@@ -249,7 +249,7 @@ export interface DepthStripToggleProps {
 }
 
 /**
- * Card 33 (2026-09-25). The same Plain language / Researcher choice, drawn
+ * Card 24 (2026-09-25). The same Plain language / Researcher choice, drawn
  * where the approved answer-layout mockups draw it: in the answer's own
  * status strip, beside `Show work`
  * (`testing/Developer/reports/2026-09-14_handover_inputs/design/Main.dc.html`

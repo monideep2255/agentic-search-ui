@@ -1013,6 +1013,17 @@ export function App() {
    * docstring in `lib/guestSession.ts`.
    */
   const dailyLimitLine = dailyLimitPhrase(allowance);
+  /**
+   * Card 24. The sentence shown before the answer's mode switch re-runs the
+   * question. A guest, whose searches are counted, is told how many are
+   * left, from the same `allowance` state `dailyLimitPhrase` reads; anyone
+   * else, or anyone before the count has loaded, is told it runs as one new
+   * search and no number is shown.
+   */
+  const depthConfirmCopy = (modeLabel: string): string =>
+    allowance?.counted
+      ? `Ask this question again in ${modeLabel}? It counts as one new search (${Math.max(allowance.total - allowance.used, 0)} left today).`
+      : `Ask this question again in ${modeLabel}? It runs as one new search.`;
 
   /**
    * Whether the rail, its strip and its toggle exist at all (F-4.8-P-03).
@@ -2022,7 +2033,7 @@ export function App() {
             }
             onNewSearch={startNewSearch}
             /*
-             * Card 33 (2026-09-25). Switching the answer's own depth toggle
+             * Card 24 (2026-09-25). Switching the answer's own depth toggle
              * re-runs the SAME question at the OTHER depth, through the same
              * `ask` a typed follow-up uses, `continuesThread=true` so the
              * answer just read folds into the thread instead of vanishing:
@@ -2038,6 +2049,7 @@ export function App() {
              */
             onDepthChange={(next) => void ask(searchView.question, next, true)}
             depthValue={depth}
+            depthConfirmCopy={depthConfirmCopy}
           />
         );
       }

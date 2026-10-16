@@ -1,5 +1,5 @@
 /**
- * Card 33 (2026-09-25): the Plain language / Researcher toggle on the
+ * Card 24 (2026-09-25): the Plain language / Researcher toggle on the
  * answer's own status strip, product-owner decision the same day. The
  * pre-ask control (`DepthControl`, chosen before asking) is unchanged and
  * covered by `components/controls/DepthControl.test.tsx`; this file pins
@@ -30,7 +30,7 @@ const SOURCE: Source = {
 
 const CLAIM: Claim = { text: "BRCA1 is associated with HBOC.", layer: 1, citations: [1] };
 
-describe("AnswerScreen's depth toggle (card 33)", () => {
+describe("AnswerScreen's depth toggle (card 24)", () => {
   it("renders the toggle on the landed answer's status strip when onDepthChange is given", () => {
     render(
       <AnswerScreen
@@ -66,13 +66,7 @@ describe("AnswerScreen's depth toggle (card 33)", () => {
     expect(screen.queryByRole("group", { name: /answer depth/i })).toBeNull();
   });
 
-  it("calls onDepthChange with the OTHER depth, and never re-runs anything itself", async () => {
-    // Mutation this catches: AnswerScreen dispatching its own run, or
-    // calling onDepthChange with the depth already showing, either of
-    // which would burn a question against the daily cap for nothing the
-    // reader asked for.
-    const user = userEvent.setup();
-    const onDepthChange = vi.fn();
+  const renderLanded = (onDepthChange = vi.fn()) => {
     render(
       <AnswerScreen
         question="Which diseases are associated with BRCA1?"
@@ -82,18 +76,61 @@ describe("AnswerScreen's depth toggle (card 33)", () => {
         outcome="Answered"
         onDepthChange={onDepthChange}
         depthValue="plain_language"
+        depthConfirmCopy={(label) => `COPY for ${label}`}
       />,
     );
+    return onDepthChange;
+  };
+
+  it("clicking the other mode shows the cost line and runs nothing", async () => {
+    // Card 24 cost step. Mutation: the toggle's handler also calls
+    // `onDepthChange` (`(m) => { setHeldDepth(m); onDepthChange?.(m); }`).
+    const user = userEvent.setup();
+    const onDepthChange = renderLanded();
+    expect(screen.queryByTestId("answer-depth-confirm")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Researcher" }));
+
+    expect(screen.getByTestId("answer-depth-confirm")).toHaveTextContent("COPY for Researcher");
+    expect(onDepthChange).not.toHaveBeenCalled();
+  });
+
+  it("Ask again runs once with the held mode and closes the line", async () => {
+    // Mutation: Ask again clears the held mode without calling onDepthChange.
+    const user = userEvent.setup();
+    const onDepthChange = renderLanded();
+    await user.click(screen.getByRole("button", { name: "Researcher" }));
+    await user.click(screen.getByRole("button", { name: "Ask again" }));
+
     expect(onDepthChange).toHaveBeenCalledTimes(1);
     expect(onDepthChange).toHaveBeenCalledWith("researcher");
+    expect(screen.queryByTestId("answer-depth-confirm")).toBeNull();
+  });
 
+  it("Cancel closes the line and runs nothing", async () => {
+    // Mutation: Cancel calls onDepthChange with the held mode.
+    const user = userEvent.setup();
+    const onDepthChange = renderLanded();
+    await user.click(screen.getByRole("button", { name: "Researcher" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(onDepthChange).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("answer-depth-confirm")).toBeNull();
+  });
+
+  it("clicking the mode already shown does nothing", async () => {
+    // Mutation: the held setter accepts the shown mode.
+    const user = userEvent.setup();
+    const onDepthChange = renderLanded();
     await user.click(screen.getByRole("button", { name: "Plain language" }));
-    // Still showing plain_language (depthValue is not re-derived from the
-    // click in this harness), so clicking the already-selected option again
-    // must still be a no-op.
-    expect(onDepthChange).toHaveBeenCalledTimes(1);
+
+    expect(screen.queryByTestId("answer-depth-confirm")).toBeNull();
+    expect(onDepthChange).not.toHaveBeenCalled();
+  });
+
+  it("keeps a polite live region mounted before any mode is held", () => {
+    renderLanded();
+    expect(screen.getByTestId("answer-status-strip").querySelector('[aria-live="polite"]')).not.toBeNull();
   });
 
   it("does not appear on the streaming preview while a run is still in flight", () => {
@@ -107,6 +144,8 @@ describe("AnswerScreen's depth toggle (card 33)", () => {
         claims={[CLAIM]}
         sources={[SOURCE]}
         progress={<div data-testid="stub-progress">running</div>}
+        meta="1 tool · 1 source from 1 layer"
+        outcome="Answered"
         onDepthChange={vi.fn()}
         depthValue="plain_language"
       />,

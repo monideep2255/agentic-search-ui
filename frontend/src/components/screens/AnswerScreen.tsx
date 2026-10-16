@@ -29,7 +29,7 @@ import { Component, createRef, Fragment, useEffect, useRef, useState } from "rea
 import { Box, Typography, useMediaQuery } from "@mui/material";
 
 import { designTokens, layerColour } from "../../theme";
-import { DepthStripToggle, type AudienceDepth } from "../controls/DepthControl";
+import { AUDIENCE_MODE_OPTIONS, DepthStripToggle, type AudienceDepth } from "../controls/DepthControl";
 import type { ReasoningStep } from "./RunProgress";
 import { ReasoningLog } from "./ReasoningLog";
 import { RECORDS_PAGE_SIZE, RecordsPaginationBar } from "../answer/RecordsPaginationBar";
@@ -1022,13 +1022,15 @@ export interface AnswerScreenProps extends AnswerBodyContent {
   onFlagSource?: (n: number) => void;
   flaggedSources?: number[];
   /**
-   * Card 33. Present only from the answer screen's caller when a landed
+   * Card 24. Present only from the answer screen's caller when a landed
    * answer's depth can be switched in place, which today is every live turn:
    * a streaming preview has no landed depth to switch yet, and a folded
    * previous turn is a question the reader is no longer looking at.
    */
   onDepthChange?: (value: AudienceDepth) => void;
   depthValue?: AudienceDepth;
+  /** Card 24. See `AnswerBodyProps.depthConfirmCopy`. */
+  depthConfirmCopy?: (modeLabel: string) => string;
 }
 
 /** Monospace marks a string transcribed exactly. Gene symbols are excluded. */
@@ -1279,7 +1281,7 @@ export interface AnswerBodyProps extends AnswerBodyContent {
    */
   question?: string | null;
   /**
-   * Card 33 (2026-09-25). Present only for the live turn: `AnswerScreen`
+   * Card 24 (2026-09-25). Present only for the live turn: `AnswerScreen`
    * passes this to the one `AnswerBody` call that renders the current
    * answer, never to the streaming preview or to a folded previous turn,
    * both of which either have no landed depth to switch or belong to a
@@ -1293,6 +1295,82 @@ export interface AnswerBodyProps extends AnswerBodyContent {
   onDepthChange?: (value: AudienceDepth) => void;
   /** Which button `DepthStripToggle` lights up. Ignored when `onDepthChange` is absent. */
   depthValue?: AudienceDepth;
+  /**
+   * Card 24. The finished sentence for the confirmation line, built by
+   * `App` from the allowance it already holds, so this file never writes a
+   * number of its own. Receives the held mode's label.
+   */
+  depthConfirmCopy?: (modeLabel: string) => string;
+}
+
+/** Card 24. The label `AUDIENCE_MODE_OPTIONS` gives a mode. */
+function depthModeLabel(value: AudienceDepth): string {
+  return AUDIENCE_MODE_OPTIONS.find((o) => o.value === value)?.label ?? value;
+}
+
+/**
+ * Card 24. The cost shown before a mode switch re-runs the question: one
+ * sentence from the caller, then "Ask again" (styled as New search) and
+ * "Cancel" (styled as Show work). No design draws it; named in the report.
+ */
+function DepthConfirmLine({
+  testId,
+  text,
+  onAsk,
+  onCancel,
+}: {
+  testId: string;
+  text: string;
+  onAsk: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Box
+      data-testid={testId}
+      sx={{ mt: 1.75, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1.25 }}
+    >
+      <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
+        {text}
+      </Typography>
+      <Box
+        component="button"
+        type="button"
+        onClick={onAsk}
+        sx={{
+          font: "inherit",
+          fontSize: 12.5,
+          fontWeight: 600,
+          px: 1.6,
+          py: 0.6,
+          flex: "none",
+          borderRadius: 0.5,
+          cursor: "pointer",
+          color: designTokens.surface,
+          bgcolor: designTokens.blue,
+          border: `1px solid ${designTokens.blue}`,
+          "&:hover": { bgcolor: designTokens.navy, borderColor: designTokens.navy },
+        }}
+      >
+        Ask again
+      </Box>
+      <Box
+        component="button"
+        type="button"
+        onClick={onCancel}
+        sx={{
+          font: "inherit",
+          fontSize: 13,
+          border: 0,
+          bgcolor: "transparent",
+          color: designTokens.link,
+          cursor: "pointer",
+          p: 0,
+        }}
+      >
+        Cancel
+      </Box>
+    </Box>
+  );
 }
 
 /**
@@ -1355,9 +1433,20 @@ export function AnswerBody({
   question = null,
   onDepthChange,
   depthValue,
+  depthConfirmCopy,
 }: AnswerBodyProps) {
   /** `Show work` starts closed, as the prototype's `#workPanel` does. */
   const [workOpen, setWorkOpen] = useState(false);
+  /*
+   * Card 24. The mode the person clicked and has not yet confirmed. The
+   * switch only ever sets this; `onDepthChange` (a new run) fires from "Ask
+   * again" alone. Cleared when the answer's own mode or question changes,
+   * so a new answer never opens with a stale prompt.
+   */
+  const [heldDepth, setHeldDepth] = useState<AudienceDepth | null>(null);
+  useEffect(() => {
+    setHeldDepth(null);
+  }, [depthValue, question]);
   /*
    * Source disclosure state, F-4.8-D-01.
    *
@@ -1802,7 +1891,10 @@ export function AnswerBody({
         everything below is this component's.
       */}
       {meta || outcome ? (
-        <Box sx={{ pt: 1.5, pb: 2, mb: 2.5, borderBottom: `1px solid ${designTokens.line}` }}>
+        <Box
+          data-testid={`${testIdPrefix}answer-status-strip`}
+          sx={{ pt: 1.5, pb: 2, mb: 2.5, borderBottom: `1px solid ${designTokens.line}` }}
+        >
           <Box
             sx={{
               display: "flex",
@@ -1863,7 +1955,7 @@ export function AnswerBody({
               {meta}
             </Typography>
             {/*
-              Card 33. `Main.dc.html` and `Researcher.dc.html` draw the depth
+              Card 24. `Main.dc.html` and `Researcher.dc.html` draw the depth
               toggle and `Show work` as one trailing group, `margin-left:
               auto` on the GROUP rather than on `Show work` alone, so a
               status strip carrying only the toggle (no reasoning steps to
@@ -1881,7 +1973,7 @@ export function AnswerBody({
                 }}
               >
                 {onDepthChange ? (
-                  <DepthStripToggle value={depthValue} onChange={onDepthChange} />
+                  <DepthStripToggle value={depthValue} onChange={setHeldDepth} />
                 ) : null}
                 {steps.length > 0 ? (
                   <Box
@@ -1905,6 +1997,26 @@ export function AnswerBody({
               </Box>
             ) : null}
           </Box>
+          {onDepthChange ? (
+            <Box aria-live="polite">
+              {heldDepth ? (
+                <DepthConfirmLine
+                  testId="answer-depth-confirm"
+                  text={
+                    depthConfirmCopy
+                      ? depthConfirmCopy(depthModeLabel(heldDepth))
+                      : `Ask this question again in ${depthModeLabel(heldDepth)}? It runs as one new search.`
+                  }
+                  onAsk={() => {
+                    const next = heldDepth;
+                    setHeldDepth(null);
+                    onDepthChange(next);
+                  }}
+                  onCancel={() => setHeldDepth(null)}
+                />
+              ) : null}
+            </Box>
+          ) : null}
           {workOpen && steps.length > 0 ? (
             <Box sx={{ mt: 1.75 }}>
               <ReasoningLog steps={steps} testId={`${testIdPrefix}work-panel`} />
@@ -2646,6 +2758,7 @@ export function AnswerScreen({
   flaggedSources = [],
   onDepthChange,
   depthValue,
+  depthConfirmCopy,
 }: AnswerScreenProps) {
   /*
    * UI fix set 7 (R22). Bring the new turn's heading into view when a
@@ -2878,6 +2991,7 @@ export function AnswerScreen({
                     systemNotes={systemNotes}
                     onDepthChange={onDepthChange}
                     depthValue={depthValue}
+                    depthConfirmCopy={depthConfirmCopy}
                     onFlagSource={onFlagSource}
                     flaggedSources={flaggedSources}
                   />

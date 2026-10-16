@@ -1,5 +1,5 @@
 /**
- * Card 33 (2026-09-25), product-owner decision the same day: the answer's
+ * Card 24 (2026-09-25), product-owner decision the same day: the answer's
  * own status strip carries the Plain language / Researcher toggle, and
  * switching it re-runs the same question at the other depth.
  *
@@ -128,7 +128,7 @@ function scriptedResponse(body: string): Promise<Response> {
   return Promise.resolve(new Response(stream, { status: 200, headers: { "content-type": "text/event-stream" } }));
 }
 
-describe("card 33: the answer status strip's depth toggle re-runs the question", () => {
+describe("card 24: the answer status strip's depth toggle re-runs the question", () => {
   beforeEach(() => {
     window.localStorage.clear();
     createRunMock.mockReset();
@@ -166,11 +166,18 @@ describe("card 33: the answer status strip's depth toggle re-runs the question",
 
     const group = mainArea().getByRole("group", { name: /answer depth/i });
     await user.click(within(group).getByRole("button", { name: "Researcher" }));
+
+    // Card 24: the click shows the cost and runs nothing. Mutation: the
+    // toggle's handler both holds the mode and calls `ask`.
+    expect(screen.getByTestId("answer-depth-confirm")).toBeInTheDocument();
+    expect(createRunMock).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "Ask again" }));
     await revealNow();
 
     // Mutation this catches: `App` calling `ask` with the SAME depth
     // (a no-op toggle), or with a different question text, or not calling
-    // `ask` at all so the click silently does nothing.
+    // `ask` at all so the confirm silently does nothing.
     expect(createRunMock).toHaveBeenCalledTimes(2);
     expect(createRunMock.mock.calls[1][0]).toMatchObject({
       text: "Which diseases are associated with BRCA1?",
@@ -180,5 +187,45 @@ describe("card 33: the answer status strip's depth toggle re-runs the question",
     // It counts as one new question, the same as any other follow-up: the
     // first answer folds into the thread rather than vanishing.
     await waitFor(() => expect(screen.getByTestId("thread")).toBeInTheDocument());
+  });
+
+  async function landAndClickResearcher(user: ReturnType<typeof userEvent.setup>) {
+    createRunMock.mockResolvedValueOnce({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockImplementationOnce(() => scriptedResponse(landedStream("trace-1", "BRCA1 causes HBOC [1]. ")));
+    render(<App />);
+    await ask(user, "Which diseases are associated with BRCA1?");
+    await revealNow();
+    const group = mainArea().getByRole("group", { name: /answer depth/i });
+    await user.click(within(group).getByRole("button", { name: "Researcher" }));
+    return screen.getByTestId("answer-depth-confirm");
+  }
+
+  it("a counted caller (a guest) sees how many searches are left today", async () => {
+    // Mutation: build the guest form whatever `counted` says.
+    getAllowanceMock.mockResolvedValue({ kind: "guest", used: 2, total: 5, counted: true });
+    const line = await landAndClickResearcher(userEvent.setup());
+    expect(line).toHaveTextContent(
+      "Ask this question again in Researcher? It counts as one new search (3 left today).",
+    );
+  });
+
+  it("an uncounted caller (signed in) sees no number", async () => {
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 0, counted: false });
+    const line = await landAndClickResearcher(userEvent.setup());
+    expect(line).toHaveTextContent("Ask this question again in Researcher? It runs as one new search.");
+    expect(line.textContent).not.toMatch(/\d/);
+  });
+
+  it("the switch is gone while the confirmed run is in flight", async () => {
+    // Mutation: render the switch on the streaming branch too.
+    const user = userEvent.setup();
+    const line = await landAndClickResearcher(user);
+    expect(line).toBeInTheDocument();
+    createRunMock.mockResolvedValueOnce({ run_id: "run-2", persona_name: "Mendel" });
+    openEventStreamMock.mockImplementationOnce(() => new Promise<Response>(() => {}));
+    await user.click(screen.getByRole("button", { name: "Ask again" }));
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole("group", { name: /answer depth/i })).toBeNull();
+    expect(screen.queryByTestId("answer-depth-confirm")).toBeNull();
   });
 });

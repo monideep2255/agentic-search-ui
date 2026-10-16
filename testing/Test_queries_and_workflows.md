@@ -438,6 +438,25 @@ What you should see:
 - Each answer still has written sentences above its records. A plain-language GERD answer shows about two to three sentences; a sentence that drops a limiting word such as "transient" is held back rather than shown.
 - Why it matters: a parent reading about an older child, or a reader told a symptom is GERD's when the paper only suspects it, takes a wider claim as fact. A missing sentence is better than a wider one.
 
+### 112. Switching between Plain language and Researcher on an answer asks first (card 24)
+
+Queries to try:
+
+- `Which diseases are associated with BRCA1?` in Plain language, as a guest. When the answer lands, click Researcher in the switch under the question, on the right.
+- Click Cancel. Click Researcher again, then click Ask again.
+- Sign in, ask the same question, and click Researcher again. Repeat at phone width.
+
+What you should see:
+
+- The switch shows Plain language selected. Clicking Plain language again does nothing.
+- Clicking Researcher shows one line under the question: "Ask this question again in Researcher? It counts as one new search (N left today)." and two buttons, Ask again and Cancel. Nothing runs yet.
+- Cancel closes the line and nothing runs. Ask again runs the question once more: the first answer folds above, the new Researcher answer joins the conversation like a follow-up, and later follow-ups use Researcher.
+- N matches the searches left today that the app shows elsewhere.
+- Signed in, the line reads "It runs as one new search." with no number.
+- While the new answer is being written the switch is gone. At 390 pixels wide the switch drops to its own line.
+- At zero searches left, Ask again still sends the question and the usual daily-limit message appears.
+- Why it matters: a click that spends a search must say so first. Nobody should lose a search to a mode they were only trying out.
+
 ## 2. Follow-up questions and conversation
 
 ### 20. A follow-up carries the gene forward (Product test 2, 7.1 to 7.5)
