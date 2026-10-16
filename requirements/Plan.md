@@ -1050,6 +1050,13 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-16, afternoon. THE UI FIX LOOP: THE BOARD SORTED BY WHO MOVES EACH CARD NEXT; FACTORY BACK ON FOUR SCREEN CARDS; ITS REVIEW LOOP DESIGNED, APPROVED AND PAUSED. What awaits the owner: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
+
+- The board's To do table gains a Next move column (team or Factory now, a design with the owner first, or the owner's own), at the owner's request to make the work easy to manage.
+- Factory works again, on cards 100, 106, 117 and 113; its brief gains sections for the three new cards.
+- The Factory review loop, which would review, fix and merge Factory's pull requests without the owner relaying messages, was approved item by item, built and tested, then paused before review at the owner's call. Its code is saved as a patch on develop; an agent may not widen its own permissions, so its last permission is an owner step.
+- The ten commits only the deleted phase 8.4 tag held are saved as diffs, since cards 8, 18 and 20 still need them; 70 duplicate copies iCloud made were moved to the Trash.
+
 2026-10-16, daytime. THE UI FIX LOOP: CARD 75 REBUILT AND MERGED WITH CARD 118; THE FREEZE COUNT FOR CARDS 84 AND 72 MERGED. What awaits the owner: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
 
 - The owner's two calls of the morning: count server freezes before building the gatekeeper's fix, and ask for `s3 login` only when a sign-in renewal's outcome is truly unknown.

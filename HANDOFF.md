@@ -13,29 +13,27 @@ Last updated: 2026-10-16.
 
 ## What is live
 
-- Develop: `b15038e3`, deployed and healthy. Production: `v0.2.0`, tag `cde4f592`, unchanged. CI is green.
+- Develop: `b15038e3` is the product; documents since then only. Deployed and healthy. Production: `v0.2.0`, tag `cde4f592`, unchanged. CI is green.
 - Merged 2026-10-16, each behind CI and three independent reviews (one checks the code, one hunts for a wrong answer, a third re-checks with fresh eyes):
   - Overnight: cards 115, 17, 94's timeout fix and 24, each checked on deployed develop at desktop and phone width.
   - Today, cards 75 (#252) and 118 (#253): when the command line cannot tell whether its sign-in was renewed, it asks for `s3 login` once, so nobody is signed out of the web app by surprise.
   - Today, the freeze count (#251, cards 84 and 72): the server logs each moment it falls behind.
-- Closed overnight by your rule, each back in To do with its reviews on develop: cards 48, 29, 94's lookup, 110, 101, 20 and 15. Why: `DECISIONS.md`, rows dated 2026-10-15 and 16.
 - Nothing is parked. Locally only `develop`; on GitHub only `develop` and `production`.
-- Factory works again, on cards 100, 106, 117 and 113 (`docs/build/Factory_onboarding.md`). The board's To do column says who moves each card next.
+- The board's To do column has a Next move column: the team or Factory builds it now, a design with you first, or yours.
+- Factory works again, on cards 100, 106, 117 and 113 (`docs/build/Factory_onboarding.md`). The Factory review loop is paused and not installed (`docs/build/Factory_review_loop.md`), so Factory's pull requests come to me through you.
 
 ## What awaits the product owner
 
-- Retests: `testing/Retest_product_owner.md`, newest first. The team checked the overnight four on deployed develop; cards 75 and 118 show only when a sign-in renewal fails, so there is nothing to type.
-- On 23 October, decide whether the safety check's freeze fix is worth building (card 84's row):
-  - Read a week of `event loop lag` lines from develop's log.
-  - Each line is a moment the server fell behind: a freeze, a busy server or a host pause, not freezes alone.
-- Findings the product check flagged for you to look at: `testing/Developer/reports/2026-10-16_product_check/report.md`.
-- The Factory review loop is paused, not installed (`docs/build/Factory_review_loop.md`); Factory's pull requests come to me through you meanwhile.
-- Still open from before: a stronger writer model for develop (card 5), and card 40's hook and rule changes.
+- Retests: `testing/Retest_product_owner.md`, newest first. Cards 75 and 118 show only when a sign-in renewal fails, so there is nothing to type for them.
+- On 23 October, decide whether the safety check's freeze fix is worth building (card 84's row): read a week of `event loop lag` lines from develop's log; each is a moment the server fell behind, not freezes alone.
+- The cards marked "Design with you first" on the board, starting with card 101.
+- The cards marked "Yours" on the board: your decisions (such as card 40's hook and rule changes) and your own architecture work.
+- Findings the product check flagged for you: `testing/Developer/reports/2026-10-16_product_check/report.md`.
 - Every decision taken for you: `DECISIONS.md`, rows dated 2026-10-15 and 16. What broke: `LEARNINGS.md`.
 
 ## The one next action
 
-Retest the night's cards from `testing/Retest_product_owner.md`. After that, the board's To do column top down: each closed card needs a design agreed with you before it is built again, starting with card 101, where a quoted record sentence ends.
+Retest the night's cards from `testing/Retest_product_owner.md`, then pick the first "Design with you first" card on the board (101, where a quoted record sentence ends) to design together.
 
 How to start a session: read this file, then `git status --short` and `git worktree list`, then `testing/Retest_product_owner.md` and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
 

@@ -68,7 +68,7 @@ Last updated: 2026-10-16.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-10-16 that begins "Card 118's pull request #253 merges at the owner's answer once CI passes", the last row at the daytime checkpoint of 2026-10-16. The eight rows read since the morning checkpoint change no registered document's shape or job: they record the owner's calls on cards 75 and 84 and 72, the lead's reading of the renewal rule, and three merges.
+Guarded through the DECISIONS.md row dated 2026-10-16 that begins "The Factory review loop is paused before review, at the owner's call", the last row at the afternoon checkpoint of 2026-10-16. Of the seven rows read since the daytime checkpoint, one changes a registered document's shape: the board's To do table gains a Next move column, cited in the board's row above. The rest record Factory's lane and the Factory review loop, approved and then paused, which change no registered document.
 
 ## Why the registry lives here
 
