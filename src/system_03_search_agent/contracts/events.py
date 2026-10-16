@@ -383,6 +383,14 @@ class ToolResultPayload(ToolStartPayload):
     truncated: bool
 
 
+def _snippet_is_absent(value: object) -> bool:
+    """True when a citation has no abstract sentence, so the key is left
+    out of the serialized payload and a citation without one has exactly
+    the keys it had before card 29 (an older reader that forbids extra
+    keys never meets it)."""
+    return value is None
+
+
 def _placement_is_absent(value: object) -> bool:
     """True when a token carries no placement, so it is left out of the
     serialized payload and a request that did not ask for it gets the
@@ -531,7 +539,7 @@ class CitationPayload(BaseModel):
     # a citation whose `source` IS the paper the sentence was drawn from;
     # it must never be attached to a different citation than the one it
     # was extracted for.
-    snippet: str | None = Field(None, max_length=500)
+    snippet: str | None = Field(None, max_length=500, exclude_if=_snippet_is_absent)
 
 
 class TrustSignalPayload(BaseModel):

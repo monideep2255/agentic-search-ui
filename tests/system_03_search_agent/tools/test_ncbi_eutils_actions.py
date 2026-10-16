@@ -1532,6 +1532,20 @@ class TestParseMedgenClinicalFeatures:
 # ===========================================================================
 
 
+_TYPES_RETRACTED = (
+    "<PublicationTypeList><PublicationType>Journal Article</PublicationType>"
+    + "<PublicationType>Retracted Publication</PublicationType></PublicationTypeList>"
+)
+_TYPES_NOTICE = (
+    "<PublicationTypeList><PublicationType>Retraction of Publication</PublicationType>"
+    + "</PublicationTypeList>"
+)
+_TYPES_PLAIN = (
+    "<PublicationTypeList><PublicationType>Journal Article</PublicationType>"
+    + "</PublicationTypeList>"
+)
+
+
 class TestFetch:
     @pytest.mark.asyncio
     async def test_happy_path_cites_record_host_not_fetch_host(
@@ -1563,6 +1577,66 @@ class TestFetch:
         assert record.fields["abstract"] == "Real abstract text."
         assert record.source_url == "https://pubmed.ncbi.nlm.nih.gov/21376230/"
         assert "eutils.ncbi.nlm.nih.gov" not in record.source_url
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("extra_xml", "expected"),
+        [
+            (_TYPES_RETRACTED, True),
+            (_TYPES_NOTICE, True),
+            (_TYPES_PLAIN, False),
+        ],
+    )
+    async def test_a_record_pubmed_marks_retracted_carries_that_flag(
+        self, monkeypatch: pytest.MonkeyPatch, extra_xml: str, expected: bool
+    ) -> None:
+        """Card 29: the fetched record's own publication types say it was
+        retracted; no further network call is made to learn it."""
+        _install(
+            monkeypatch,
+            [
+                _xml_response(
+                    "<PubmedArticleSet><PubmedArticle><MedlineCitation>"
+                    "<PMID>32205204</PMID>"
+                    "<Article><ArticleTitle>A title</ArticleTitle>"
+                    "<Abstract><AbstractText>Real abstract text.</AbstractText></Abstract>"
+                    f"{extra_xml}"
+                    "</Article></MedlineCitation></PubmedArticle></PubmedArticleSet>"
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.fetch(
+            NcbiEfetchFetchInput(
+                action="fetch", db="pubmed", ids=["32205204"], rettype="abstract", retmode="xml"
+            )
+        )
+        assert output.records[0].fields.get("retracted") is (True if expected else None)
+
+    @pytest.mark.asyncio
+    async def test_a_retraction_comment_marks_the_record_retracted(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install(
+            monkeypatch,
+            [
+                _xml_response(
+                    "<PubmedArticleSet><PubmedArticle><MedlineCitation>"
+                    "<PMID>9500320</PMID>"
+                    "<Article><ArticleTitle>A title</ArticleTitle>"
+                    "<Abstract><AbstractText>Real abstract text.</AbstractText></Abstract>"
+                    "</Article><CommentsCorrectionsList>"
+                    '<CommentsCorrections RefType="RetractionIn"><PMID>20137807</PMID>'
+                    "</CommentsCorrections></CommentsCorrectionsList>"
+                    "</MedlineCitation></PubmedArticle></PubmedArticleSet>"
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.fetch(
+            NcbiEfetchFetchInput(
+                action="fetch", db="pubmed", ids=["9500320"], rettype="abstract", retmode="xml"
+            )
+        )
+        assert output.records[0].fields["retracted"] is True
 
     @pytest.mark.asyncio
     async def test_empty_article_set_fabricates_no_records(

@@ -2207,6 +2207,17 @@ export function AnswerBody({
                   >
                     <Box
                       component="summary"
+                      // Card 29: the quoted sentence sits in the summary so it
+                      // reads while the card is closed, but it is not part of
+                      // the toggle's name: the name is the markers, the title
+                      // and the layer only.
+                      aria-labelledby={
+                        source.snippet
+                          ? [`markers`, `name`, `layers`]
+                              .map((part) => `${testIdPrefix}source-${primaryN}-${part}`)
+                              .join(" ")
+                          : undefined
+                      }
                       onClick={(event: React.MouseEvent) => {
                         event.preventDefault();
                         toggleSource(primaryN);
@@ -2235,6 +2246,7 @@ export function AnswerBody({
                       </Box>
                       <Box
                         component="span"
+                        id={`${testIdPrefix}source-${primaryN}-markers`}
                         data-testid={`${testIdPrefix}source-${primaryN}-markers`}
                         sx={{ ...mono, fontWeight: 700, fontSize: 12 }}
                       >
@@ -2242,6 +2254,7 @@ export function AnswerBody({
                       </Box>
                       <Typography
                         variant="body2"
+                        id={`${testIdPrefix}source-${primaryN}-name`}
                         sx={{ fontWeight: 600, "@media (max-width:720px)": { minWidth: 0, overflowWrap: "anywhere" } }}
                       >
                         {source.name}
@@ -2257,6 +2270,7 @@ export function AnswerBody({
                       */}
                       <Box
                         component="span"
+                        id={`${testIdPrefix}source-${primaryN}-layers`}
                         data-testid={`${testIdPrefix}source-${primaryN}-layers`}
                         sx={{ ...mono, ml: "auto", fontSize: 11.5, color: designTokens.inkMuted }}
                       >
@@ -2279,11 +2293,19 @@ export function AnswerBody({
                         <Typography
                           component="span"
                           data-testid={`${testIdPrefix}source-${primaryN}-snippet`}
+                          // A click, or a drag to select and copy the quote,
+                          // must not open or close the card.
+                          onClick={(event: React.MouseEvent) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                          }}
                           sx={{
                             flexBasis: "100%",
                             fontSize: 13,
                             color: designTokens.inkMuted,
                             overflowWrap: "anywhere",
+                            cursor: "text",
+                            userSelect: "text",
                           }}
                         >
                           {`"${source.snippet}"`}

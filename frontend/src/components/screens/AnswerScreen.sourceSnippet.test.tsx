@@ -136,4 +136,40 @@ describe("AnswerScreen source card: snippet line", () => {
     const card = within(disclosure).getByTestId("source-2");
     expect(within(card).queryByTestId("source-2-snippet")).not.toBeInTheDocument();
   });
+
+  it("keeps the quoted sentence out of the toggle's accessible name", async () => {
+    const { disclosure, user } = await renderAnswer([GENE_WITH_SNIPPET, MEDGEN_NO_SNIPPET]);
+    const l1Group = within(disclosure).getByTestId("sources-group-1");
+    await user.click(within(l1Group).getByText("Knowledge graph"));
+
+    const card = within(disclosure).getByTestId("source-1");
+    const summary = card.querySelector("summary")!;
+    const labelIds = summary.getAttribute("aria-labelledby")!.split(" ");
+    const name = labelIds.map((id) => document.getElementById(id)?.textContent ?? "").join(" ");
+    expect(name).toContain("NCBI Gene 672");
+    expect(name).not.toContain("Carriers of pathogenic");
+    // The sentence is still in the summary, visible while the card is closed.
+    expect(within(summary).getByTestId("source-1-snippet")).toBeVisible();
+    // A card with no sentence keeps its plain name (no labelledby).
+    const l2Group = within(disclosure).getByTestId("sources-group-2");
+    await user.click(within(l2Group).getByText("Live NCBI APIs"));
+    expect(within(disclosure).getByTestId("source-2").querySelector("summary")).not.toHaveAttribute(
+      "aria-labelledby",
+    );
+  });
+
+  it("does not open or close the card when the sentence is clicked", async () => {
+    const { disclosure, user } = await renderAnswer([GENE_WITH_SNIPPET, MEDGEN_NO_SNIPPET]);
+    const l1Group = within(disclosure).getByTestId("sources-group-1");
+    await user.click(within(l1Group).getByText("Knowledge graph"));
+    const card = within(disclosure).getByTestId("source-1");
+    expect(card).not.toHaveAttribute("open");
+
+    await user.click(within(card).getByTestId("source-1-snippet"));
+    expect(card).not.toHaveAttribute("open");
+
+    // The card's own title still toggles it, so the click guard is on the sentence only.
+    await user.click(within(card).getByText("NCBI Gene 672 · BRCA1"));
+    expect(card).toHaveAttribute("open");
+  });
 });

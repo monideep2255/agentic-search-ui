@@ -33,7 +33,7 @@ The card, in the user's words: "Under each of the first five cited papers that h
 
 Files outside the list I was given, each forced by a gate or by the design:
 
-- `src/system_03_search_agent/contracts/token_order.py`: `CITATION_UPDATABLE_FIELDS` gains `snippet`. The CLI, GraphQL fold, MCP and web adapters all read this one rule, so the sentence reaches every surface.
+- `src/system_03_search_agent/contracts/token_order.py`: `CITATION_UPDATABLE_FIELDS` gains `snippet`. The web client and the event stream carry the sentence. MCP leaves it out (its citation keys stay exactly develop's), and the GraphQL and command-line surfaces do not show it.
 - `docs/build/Debugging_guide.md` and `tests/system_03_search_agent/fixtures/debugging_guide_manifest.json`: one row for the new source file. The coverage test fails without it.
 - `tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py`: `snippet` added to the two allowed citation key lists. The MCP answer carries the citation payload through, so the new optional key appears there.
 

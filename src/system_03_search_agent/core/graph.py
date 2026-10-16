@@ -624,7 +624,12 @@ from system_03_search_agent.synthesis.sentence_check import (
     SentenceCheckUnreadable,
     check_reworded_sentences,
 )
-from system_03_search_agent.synthesis.snippets import MAX_SNIPPET_PAPERS, pick_snippets
+from system_03_search_agent.synthesis.snippets import (
+    MAX_SNIPPET_PAPERS,
+    TRIM_LIMIT_CHARS,
+    SnippetPaper,
+    pick_snippets,
+)
 from system_03_search_agent.synthesis.trust import (
     ClaimTrust,
     aggregate,
@@ -7621,7 +7626,7 @@ def _rows_for_citation(rows: list[CypherQueryRow]) -> list[CypherQueryRow]:
 # (the gene's official symbol) over the bare numeric id already present in
 # the question and the CURIE. Mirrors how a Layer 1 row never repeats its
 # own CURIE inside `fields` either.
-_NCBI_EFETCH_ROW_IDENTITY_FIELDS: frozenset[str] = frozenset({"gene_id"})
+_NCBI_EFETCH_ROW_IDENTITY_FIELDS: frozenset[str] = frozenset({"gene_id", "retracted"})
 
 
 #: UI fix 11.21 wiring: per breadth purpose, the record fields that reach
@@ -7775,6 +7780,8 @@ _SRA_RUN_ACCESSION = re.compile(r'acc="([A-Z]{3}\d+(?:\.\d+)?)"')
 #: `_cap_text`, long before this function ever runs).
 _PUBMED_ABSTRACTS_PURPOSE: Final[str] = "pubmed_abstracts"
 _PUBMED_ABSTRACT_FIELD: Final[str] = "abstract"
+#: Set by the PubMed fetch parse on a record PubMed marks retracted.
+_PUBMED_RETRACTED_FIELD: Final[str] = "retracted"
 
 
 def _pubmed_abstract_rows(
@@ -12790,23 +12797,51 @@ async def _lead_sentence_choice(
 
 
 def _snippet_papers(
-    citations: Sequence[CitationPayload], synth_findings: Sequence[SynthFinding]
-) -> list[tuple[str, str]]:
-    """`(source_url, abstract)` for each cited paper that has an abstract, in
-    the order the answer numbers them. The abstract is the retrieved
-    `abstract` field the grounding pass checks claims against."""
+    citations: Sequence[CitationPayload],
+    synth_findings: Sequence[SynthFinding],
+    raw_outputs: Mapping[str, Any] | None = None,
+) -> list[SnippetPaper]:
+    """One `SnippetPaper` for each cited paper that has an abstract, in the
+    order the answer numbers them.
+
+    The abstract is the fullest text held: the fetched record's own, before
+    the findings trim cuts it at 2,000 characters. Only when no record is
+    held does the trimmed finding stand in, marked cut when it ends in the
+    trim's ellipsis or sits at its limit. A paper the fetched record marks
+    retracted (`retracted` field, from its publication types) is flagged.
+    """
+    record_by_url: dict[str, Any] = {}
+    for output in (raw_outputs or {}).values():
+        for record in getattr(output, "records", None) or ():
+            url = getattr(record, "source_url", None)
+            if url and isinstance(getattr(record, "fields", None), dict):
+                record_by_url.setdefault(url, record)
     abstract_by_url: dict[str, str] = {}
     for finding in synth_findings:
         if finding.field == _PUBMED_ABSTRACT_FIELD and finding.source_url and finding.field_value:
             abstract_by_url.setdefault(finding.source_url, finding.field_value)
-    papers: list[tuple[str, str]] = []
+    papers: list[SnippetPaper] = []
     seen: set[str] = set()
     for citation in sorted(citations, key=lambda c: c.display_index):
         url = citation.source_url
         if url in seen or url not in abstract_by_url:
             continue
         seen.add(url)
-        papers.append((url, abstract_by_url[url]))
+        record = record_by_url.get(url)
+        full = record.fields.get(_PUBMED_ABSTRACT_FIELD) if record is not None else None
+        retracted = record is not None and record.fields.get(_PUBMED_RETRACTED_FIELD) is True
+        if isinstance(full, str) and full.strip():
+            papers.append(SnippetPaper(url, full, cut=False, retracted=retracted))
+        else:
+            trimmed = abstract_by_url[url]
+            papers.append(
+                SnippetPaper(
+                    url,
+                    trimmed,
+                    cut=trimmed.endswith("\u2026") or len(trimmed) >= TRIM_LIMIT_CHARS,
+                    retracted=retracted,
+                )
+            )
     return papers
 
 
@@ -12816,19 +12851,23 @@ def _start_snippet_pick(
     question: str,
     citations: Sequence[CitationPayload],
     synth_findings: Sequence[SynthFinding],
+    raw_outputs: Mapping[str, Any] | None = None,
 ) -> None:
-    """Start the batched pick beside the writer, once per run. Asked only
+    """Start the per-paper pick beside the writer, once per run. Asked only
     when Jev is the classifier (`CLASSIFIER_PROVIDER=jev`), as the lead
     sentence is: with the guard tier deciding alone it would wait on a call
-    of about 2 s. Nothing to ask, nothing started."""
+    of about 2 s. Nothing to ask, nothing started. Each paper is its own
+    decision, run together, and each reaches `done.decisions`."""
     if not _jev_decides():
         return
-    papers = _snippet_papers(citations, synth_findings)[:MAX_SNIPPET_PAPERS]
+    papers = _snippet_papers(citations, synth_findings, raw_outputs)[:MAX_SNIPPET_PAPERS]
     if not papers:
         return
     entry = _run_decisions(harness)
     _cancel_if_pending(entry.snippet_task)
-    entry.snippet_task = asyncio.create_task(pick_snippets(harness, trace_id, question, papers))
+    entry.snippet_task = asyncio.create_task(
+        pick_snippets(harness, trace_id, question, papers, entry.records.append)
+    )
 
 
 def _drop_snippet_pick(harness: Any) -> None:
@@ -14211,7 +14250,14 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     if listing_citations and not cap_hit:
         # Card 29: the batched abstract-sentence pick starts here, beside
         # the writer, over the papers the listing cites.
-        _start_snippet_pick(harness, trace_id, query.text, listing_citations, synth_findings)
+        _start_snippet_pick(
+            harness,
+            trace_id,
+            query.text,
+            listing_citations,
+            synth_findings,
+            layer2_raw_outputs,
+        )
     if listing_sent:
         # Its own paragraph: in reading order the summary always precedes it.
         sink.emit_live(

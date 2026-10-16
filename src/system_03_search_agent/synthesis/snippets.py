@@ -40,30 +40,24 @@ Writes:
 WIRED INTO THE LOOP (card 29, 2026-10-15): `core/graph.py`'s Write step
 starts `pick_snippets` once, beside the writer, for the first
 `MAX_SNIPPET_PAPERS` cited papers that have an abstract, and attaches each
-verified sentence to that paper's citation. `pick_snippet` (one paper, one
-`decide()`) is the fallback when the batch call fails.
+verified sentence to that paper's citation. Each paper is its own
+`pick_snippet` decision through `decide()` (Jev first, the guard tier when
+Jev fails), all asked together. A retracted paper is never asked about, and
+a sentence cut short by a trim is never offered or shown.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Final
 
-from system_03_search_agent.harness import cost_control
+from system_03_search_agent.contracts.events import DecisionRecord
 from system_03_search_agent.harness.decide import decide
 from system_03_search_agent.harness.harness import Harness
-from system_03_search_agent.harness.jev_client import (
-    MAX_JEV_COST_USD,
-    JevCallError,
-    JevChoiceQuestion,
-    call_jev_batch,
-)
-from system_03_search_agent.harness.tiers import resolve_jev_model
 
 logger = logging.getLogger(__name__)
 
@@ -264,18 +258,80 @@ _NONE_OPTION: Final[str] = "none"
 
 _INSTRUCTIONS: Final[str] = (
     "The state is a question a person typed into a biomedical evidence search "
-    "engine. Each numbered option is one verbatim sentence from a paper's own "
-    "abstract that the search engine is about to cite for this question. Pick "
-    "the sentence that most directly answers the question, or 'none' if no "
-    "sentence does. Never combine sentences, never reword: pick exactly one "
-    "option as written."
+    "engine. Each numbered option is one verbatim sentence from a single "
+    "paper's own abstract, to be shown under that paper. Pick the one sentence "
+    "that states a finding or result that answers the question and can be read "
+    "on its own, without the sentences before it. Aims, objectives, methods, "
+    "scope, background and sentences saying what a review covers are not "
+    "findings: pick 'none' when no sentence is a finding that answers the "
+    "question. Never combine sentences, never reword: pick exactly one option "
+    "as written."
 )
 
 _NONE_CRITERION: Final[str] = (
-    "No sentence among the options directly answers the question; the closest "
-    "one is still off-topic, too general, or about a different aspect of the "
-    "subject."
+    "No sentence states a finding or result that answers the question and "
+    "reads on its own. The closest ones are an aim, objective, method, scope, "
+    "background or review-coverage sentence, lean on the sentences before "
+    "them, or are about a different aspect of the subject."
 )
+
+#: How a trimmed abstract ends. `ncbi_eutils_actions._cap_text` appends the
+#: first at 4,000 characters; the structured-field cap in
+#: `harness/coordinator_worker.py` ends a 2,000-character trim with the
+#: second. A sentence that reaches either is a fragment, never offered.
+_TRIM_MARKER_TEXT: Final[str] = "[truncated]"
+_TRIM_MARKER_ELLIPSIS: Final[str] = "\u2026"
+
+#: The length at which the findings trim cuts a field value (2,000
+#: characters, `synthesis.findings.MAX_FIELD_VALUE_CHARS`). A value this
+#: long may have been cut without a marker.
+TRIM_LIMIT_CHARS: Final[int] = 2000
+
+#: A retraction or withdrawal NOTICE inside an abstract: the shape of a
+#: publisher's notice about the paper itself ("This article has been
+#: retracted", "Notice of retraction", "Elsevier Policy on Article
+#: Withdrawal"). It reads no topic word of any question; it only recognises
+#: a paper that says of itself that it was retracted. A paper whose
+#: abstract carries one is treated as retracted, whatever its record says.
+_RETRACTION_NOTICE: Final[re.Pattern[str]] = re.compile(
+    r"\b(?:this|the)\s+(?:article|paper|publication|manuscript|study|work|report)\b"
+    r"[^.]{0,60}\b(?:retracted|withdrawn)\b"
+    r"|\bretraction\s+notice\b|\bnotice\s+of\s+retraction\b"
+    r"|\bwithdrawal\s+policy\b|\bpolicy\s+on\s+article\s+withdrawal\b"
+    r"|\bhas\s+been\s+retracted\b",
+    re.IGNORECASE,
+)
+
+
+def has_retraction_notice(text: str) -> bool:
+    """Whether `text` (an abstract) carries a retraction or withdrawal notice."""
+    return bool(text) and _RETRACTION_NOTICE.search(text) is not None
+
+
+def abstract_candidates(abstract: str, *, cut: bool = False) -> list[str]:
+    """The candidate window of `abstract`, with a trimmed tail left out.
+
+    `cut` says the caller knows the text was trimmed. The trim markers are
+    also read from the text itself. When the text was trimmed, its last
+    piece ends mid-sentence, so it is never offered; neither is any
+    sentence that ends in a trim marker.
+    """
+    text = abstract.strip()
+    trimmed = cut
+    if text.endswith(_TRIM_MARKER_TEXT):
+        text = text[: -len(_TRIM_MARKER_TEXT)].rstrip()
+        trimmed = True
+    elif text.endswith(_TRIM_MARKER_ELLIPSIS):
+        trimmed = True
+    sentences = split_abstract_sentences(text)
+    if trimmed and sentences and text.endswith(sentences[-1]):
+        sentences = sentences[:-1]
+    sentences = [
+        sentence
+        for sentence in sentences
+        if not sentence.endswith((_TRIM_MARKER_ELLIPSIS, _TRIM_MARKER_TEXT))
+    ]
+    return candidate_window(sentences)
 
 
 @dataclass(frozen=True)
@@ -325,6 +381,7 @@ async def pick_snippet(
     trace_id: str,
     question: str,
     abstract_sentences: Sequence[str],
+    on_decision: Callable[[DecisionRecord], None] | None = None,
 ) -> Snippet | None:
     """Ask `decide(point="write.snippet", ...)` which sentence, if any, of
     `abstract_sentences` most directly answers `question`.
@@ -367,6 +424,8 @@ async def pick_snippet(
     except Exception:  # noqa: BLE001 - a broken seam must never break the answer
         return None
 
+    if on_decision is not None:
+        on_decision(record)
     if record.chosen == _NONE_OPTION:
         return None
     index = _index_from_option_id(record.chosen, len(candidates))
@@ -376,138 +435,103 @@ async def pick_snippet(
 
 
 # ---------------------------------------------------------------------------
-# pick_snippets: the batched pick, one call for the first few papers.
+# pick_snippets: one decision per paper, all asked together.
 # ---------------------------------------------------------------------------
 
 #: The most papers one answer shows a sentence under (the owner's choice,
 #: DECISIONS.md 2026-10-15): the first five cited papers with an abstract.
 MAX_SNIPPET_PAPERS: Final[int] = 5
 
-_QUESTION_MAX_CHARS: Final[int] = 1000
+
+@dataclass(frozen=True)
+class SnippetPaper:
+    """One cited paper offered to the pick.
+
+    `abstract` is the fullest text the caller holds. `cut` says it was
+    trimmed (the caller knows the limit it came through). `retracted` says
+    the paper's own record marks it retracted. A retracted paper uses its
+    place among the first five and is never asked about.
+    """
+
+    key: str
+    abstract: str
+    cut: bool = False
+    retracted: bool = False
 
 
 def verified_sentence(sentence: str | None, abstract: str) -> str | None:
     """The sentence when it is word for word inside `abstract` and fits the
-    field it is stored in; otherwise None."""
+    field it is stored in, and is not a cut-off piece; otherwise None.
+
+    `abstract` is the untrimmed text the sentence was drawn from, never a
+    shortened copy of it.
+    """
     if not sentence or sentence not in abstract or len(sentence) > MAX_SENTENCE_CHARS:
         return None
+    if sentence.endswith((_TRIM_MARKER_ELLIPSIS, _TRIM_MARKER_TEXT)):
+        return None
     return sentence
-
-
-def _batch_questions(
-    prepared: dict[str, list[str]],
-) -> dict[str, JevChoiceQuestion]:
-    questions: dict[str, JevChoiceQuestion] = {}
-    for key, candidates in prepared.items():
-        options = tuple(_option_id(i) for i in range(len(candidates))) + (_NONE_OPTION,)
-        criteria = {_option_id(i): sentence for i, sentence in enumerate(candidates)}
-        criteria[_NONE_OPTION] = _NONE_CRITERION
-        questions[key] = JevChoiceQuestion(
-            options=options, instructions=_INSTRUCTIONS, criteria=criteria
-        )
-    return questions
-
-
-async def _ask_batch(
-    harness: Harness,
-    trace_id: str,
-    question: str,
-    prepared: dict[str, list[str]],
-) -> dict[str, str]:
-    """One Jev call for every paper: the chosen option id per call key.
-
-    Cap-checked first and charged after, like the reworded-sentence check.
-    Raises `JevCallError` (the caller falls back) or `QueryCapExceededError`.
-    """
-    estimate_usd = cost_control.estimate_call_cost_usd("guard")
-    cost_control.check_per_query_cap(
-        harness,
-        trace_id,
-        "guard",
-        query_cap_usd=cost_control.per_query_cost_cap_usd() - (MAX_JEV_COST_USD - estimate_usd),
-    )
-    jev_key = os.environ.get("OPENROUTER_API_KEY", "")
-    try:
-        result = await call_jev_batch(
-            model=resolve_jev_model(),
-            state=f"Question: {question.strip()[:_QUESTION_MAX_CHARS]}",
-            questions=_batch_questions(prepared),
-            api_key=jev_key,
-        )
-    except JevCallError as exc:
-        if exc.billed_cost_usd:
-            harness.track_cost(trace_id, "guard", exc.billed_cost_usd)  # type: ignore[arg-type]
-        raise
-    harness.track_cost(trace_id, "guard", result.cost_usd)  # type: ignore[arg-type]
-    return {call_key: answer.choice for call_key, answer in result.answers.items()}
 
 
 async def pick_snippets(
     harness: Harness,
     trace_id: str,
     question: str,
-    papers: Sequence[tuple[str, str]],
+    papers: Sequence[SnippetPaper],
+    on_decision: Callable[[DecisionRecord], None] | None = None,
 ) -> dict[str, str]:
     """The sentence that answers `question` for each of the first
     `MAX_SNIPPET_PAPERS` papers, as `{key: sentence}`.
 
-    `papers` is `(key, abstract)` in the order the answer lists them; a
-    paper with no abstract, or none that splits into candidates, is skipped
-    and uses no slot. One Jev call asks every paper at once. When that call
-    fails, each paper is asked through `decide()` instead (Jev, then the
-    guard tier), all together. A paper whose pick is "none", unusable, or
-    not word for word inside its own abstract is left out, and so is every
-    paper when the per-question cost cap is reached. Never raises.
+    `papers` is in the order the answer lists them. A paper with no
+    abstract, or none that splits into candidates, is skipped and uses no
+    place. A retracted paper (its record says so, or its abstract carries a
+    retraction notice) uses a place, is never asked about and shows
+    nothing. Every other paper is asked on its own through `decide()` (Jev
+    first, the guard tier when Jev fails), all together, each passing its
+    record to `on_decision`. A paper whose pick is "none", unusable, cut
+    off, or not word for word inside its own untrimmed abstract is left
+    out. Never raises.
     """
-    prepared: dict[str, list[str]] = {}
-    key_of: dict[str, str] = {}
-    abstract_of: dict[str, str] = {}
-    for key, abstract in papers:
-        if len(prepared) >= MAX_SNIPPET_PAPERS:
+    asked: list[tuple[str, str, list[str]]] = []
+    seen: set[str] = set()
+    placed = 0
+    for paper in papers:
+        if placed >= MAX_SNIPPET_PAPERS:
             break
-        if not abstract or not abstract.strip() or key in key_of.values():
+        if not paper.abstract or not paper.abstract.strip() or paper.key in seen:
             continue
-        candidates = candidate_window(split_abstract_sentences(abstract))
-        if not candidates:
+        candidates = abstract_candidates(paper.abstract, cut=paper.cut)
+        if not candidates and not paper.retracted:
             continue
-        # The batch call's keys are short ids of its own; the caller's key
-        # (a record URL) can be longer than the call allows.
-        call_key = f"p{len(prepared)}"
-        prepared[call_key] = candidates
-        key_of[call_key] = key
-        abstract_of[call_key] = abstract
-    if not prepared:
+        seen.add(paper.key)
+        placed += 1
+        if paper.retracted or has_retraction_notice(paper.abstract):
+            continue
+        asked.append((paper.key, paper.abstract, candidates))
+    if not asked:
         return {}
 
-    chosen: dict[str, str | None] = {}
-    try:
-        answers = await _ask_batch(harness, trace_id, question, prepared)
-        for call_key, option in answers.items():
-            index = _index_from_option_id(option, len(prepared[call_key]))
-            chosen[call_key] = None if index is None else prepared[call_key][index]
-    except cost_control.QueryCapExceededError:
-        return {}
-    except Exception as exc:  # noqa: BLE001 - a broken batch must never break the answer
-        logger.warning(
-            "snippet batch unavailable (trace %s): %s; asking each paper through the seam",
-            trace_id,
-            type(exc).__name__,
-        )
-        picks = await asyncio.gather(
-            *(
-                pick_snippet(harness, trace_id, question, prepared[call_key])
-                for call_key in prepared
-            ),
-            return_exceptions=True,
-        )
-        chosen = {
-            call_key: pick.text if isinstance(pick, Snippet) else None
-            for call_key, pick in zip(prepared, picks, strict=True)
-        }
-
+    picks = await asyncio.gather(
+        *(
+            pick_snippet(harness, trace_id, question, candidates, on_decision)
+            for _key, _abstract, candidates in asked
+        ),
+        return_exceptions=True,
+    )
     shown: dict[str, str] = {}
-    for call_key, sentence in chosen.items():
-        verified = verified_sentence(sentence, abstract_of[call_key])
+    for (key, abstract, _candidates), pick in zip(asked, picks, strict=True):
+        if not isinstance(pick, Snippet):
+            continue
+        verified = verified_sentence(pick.text, _untrimmed(abstract))
         if verified is not None:
-            shown[key_of[call_key]] = verified
+            shown[key] = verified
     return shown
+
+
+def _untrimmed(abstract: str) -> str:
+    """The abstract as the sentence was drawn from it, trim marker removed."""
+    text = abstract.strip()
+    if text.endswith(_TRIM_MARKER_TEXT):
+        text = text[: -len(_TRIM_MARKER_TEXT)].rstrip()
+    return text

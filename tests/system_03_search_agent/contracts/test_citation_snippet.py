@@ -74,3 +74,15 @@ class TestCitationSnippet:
         # `model_config = ConfigDict(extra="forbid")` while adding a field.
         with pytest.raises(ValidationError):
             CitationPayload(**_valid_kwargs(some_field_nobody_declared="x"))
+
+    def test_a_citation_with_no_sentence_has_no_snippet_key(self) -> None:
+        # Develop's reader forbids extra keys and a saved row is read back by
+        # it on a rollback, so an absent sentence leaves the key out.
+        dumped = CitationPayload(**_valid_kwargs()).model_dump()
+        assert "snippet" not in dumped
+        assert "snippet" not in CitationPayload(**_valid_kwargs(snippet=None)).model_dump_json()
+
+    def test_a_citation_with_a_sentence_carries_the_key(self) -> None:
+        sentence = "The gene increases risk of early onset disease across every cohort tested."
+        assert CitationPayload(**_valid_kwargs(snippet=sentence)).model_dump()["snippet"] == sentence
+

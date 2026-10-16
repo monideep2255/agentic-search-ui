@@ -407,6 +407,19 @@ def _reject_control_bytes(value: str) -> str:
     return value
 
 
+def _citations_without_snippet(citations: list[CitationPayload]) -> list[CitationPayload]:
+    """The citations as MCP publishes them, without the abstract sentence.
+
+    Card 29 shows the quoted sentence on the web only. MCP's citation keys
+    stay exactly what they were (`_ALLOWED_RESPONSE_KEYS` is a manual
+    control), so the sentence is cleared here and, being empty,
+    `CitationPayload` leaves the key out when it serializes.
+    """
+    return [
+        c.model_copy(update={"snippet": None}) if c.snippet is not None else c for c in citations
+    ]
+
+
 class AskBiomedicalQuestionOutput(BaseModel):
     """Section 13.2's locked `output_schema`, field for field."""
 
@@ -1320,7 +1333,7 @@ async def _fold_run_to_response(
 
     return AskBiomedicalQuestionOutput(
         answer=answer_text,
-        citations=citations,
+        citations=_citations_without_snippet(citations),
         trust_signal=answer_trust_signal,
         run_id=run_id,
         persona_name=persona_name,
@@ -1665,7 +1678,7 @@ async def reopen_past_answer(
         asked_at=saved.asked_at,
         audience_depth=audience_depth,
         answer_markdown=saved.answer_markdown,
-        citations=citations,
+        citations=_citations_without_snippet(citations),
         citations_omitted=citations_omitted,
         trust_signal=saved.trust_signal,
         trust_line=saved.trust_line,

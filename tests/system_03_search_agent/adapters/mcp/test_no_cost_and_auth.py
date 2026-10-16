@@ -321,7 +321,6 @@ _ALLOWED_RESPONSE_KEYS = {
     "source_url",
     "entity_name",
     "snapshot_date",
-    "snippet",
     "fallback_link",
     "grounded",
     "message",
@@ -356,7 +355,6 @@ _CITATION_KEYS = {
     "source_url",
     "entity_name",
     "snapshot_date",
-    "snippet",
 }
 _ALLOWED_RESPONSE_KEYS_BY_TOOL: dict[str, set[str]] = {
     "list_past_searches": {

@@ -1229,6 +1229,31 @@ async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
 # ---------------------------------------------------------------------------
 
 
+#: Publication types PubMed gives a retracted paper ("Retracted Publication")
+#: or the notice that retracts one ("Retraction of Publication").
+_PUBMED_RETRACTION_TYPES: Final[frozenset[str]] = frozenset(
+    {"retracted publication", "retraction of publication"}
+)
+
+
+def _pubmed_record_is_retracted(article_el: ElementTree.Element) -> bool:
+    """Whether the fetched PubMed record marks the paper retracted.
+
+    Read from XML the efetch call already returned, so it costs no extra
+    network call: a publication type of "Retracted Publication", or a
+    CommentsCorrections entry of type RetractionIn.
+    """
+    for type_el in article_el.findall("MedlineCitation/Article/PublicationTypeList/PublicationType"):
+        if "".join(type_el.itertext()).strip().lower() in _PUBMED_RETRACTION_TYPES:
+            return True
+    for comment_el in article_el.findall(
+        "MedlineCitation/CommentsCorrectionsList/CommentsCorrections"
+    ):
+        if comment_el.get("RefType") == "RetractionIn":
+            return True
+    return False
+
+
 def _extract_pubmed_articles(root: ElementTree.Element) -> list[NcbiEfetchRecord]:
     """Extract one record per <PubmedArticle> from a live-verified PubmedArticleSet.
 
@@ -1267,6 +1292,11 @@ def _extract_pubmed_articles(root: ElementTree.Element) -> list[NcbiEfetchRecord
             fields["title"] = _cap_text(title)
         if abstract:
             fields["abstract"] = _cap_text(abstract)
+        # PubMed marks a retracted paper in the record this call already
+        # fetched: its publication types, or a RetractionIn comment. Set
+        # only when true, so a record that is not retracted is unchanged.
+        if _pubmed_record_is_retracted(article_el):
+            fields["retracted"] = True
 
         records.append(
             NcbiEfetchRecord(
