@@ -582,3 +582,18 @@ def test_separate_records_sharing_one_page_stay_individually_accountable() -> No
     missing = unreported_findings({"c1"}, findings)
 
     assert [finding.field_value for finding in missing] == ["BRCA2", "BARD1"]
+
+
+def test_the_features_directive_asks_for_one_list_with_and_only_before_the_last_name() -> None:
+    """Card 111: the list shape. The writer copied the three-name example in
+    chunks, so 'and' appeared inside the list. The directive now says so in
+    words, and still constrains no name (the dynamic suffix only).
+
+    Mutation that turns this red: remove the 'single list' sentence."""
+    from system_03_search_agent.synthesis.findings import build_clinical_features_directive
+
+    directive = build_clinical_features_directive(_feature_prompt())
+    assert "as a single list" in directive
+    assert 'the word "and" only before the last name' in directive
+    # The names themselves stay the writer's to copy; nothing here limits them.
+    assert "copy each name exactly as written" in directive

@@ -545,6 +545,7 @@ from system_03_search_agent.observability import audit
 from system_03_search_agent.synthesis.answer_layout import (
     IDENTIFIER_COLUMN_LABEL,
     ISOLATE_ENTITY_TYPE,
+    LABEL_FIELDS,
     MAX_HEADINGS,
     PLAIN_SOURCES_HEADING,
     TABLE_COLUMNS,
@@ -606,6 +607,7 @@ from system_03_search_agent.synthesis.grounding import (
     GroundedClaim,
     GroundingResult,
     SynthesisCandidate,
+    _clean_claim,
     display_index_by_citation_id,
     extract_evidence_quotes,
     run_grounding_pass,
@@ -12695,20 +12697,25 @@ _LEAD_DECISION_MIN_BUDGET_S: Final[float] = 1.5
 _LEAD_DECISION_MAX_WAIT_S: Final[float] = 1.0
 
 
-def _lead_candidates(model_grounding: GroundingResult | None) -> list[int]:
+def _lead_candidates(
+    model_grounding: GroundingResult | None,
+    skip: frozenset[int] = frozenset(),
+) -> list[int]:
     """Indexes into `model_grounding.sentences` of the first one or two
     sentences that carry a citation marker.
 
     Only sentences the grounding pass already accepted exist here: this
     reads the pass's own output and nothing else, so a sentence it stripped
-    can never be offered, let alone lead.
+    can never be offered, let alone lead. `skip` holds positions the prose
+    leaves out (card 111, `_label_only_positions`): a sentence the answer
+    drops is never offered, so it cannot open the answer either.
     """
     if model_grounding is None:
         return []
     return [
         index
         for index, sentence in enumerate(model_grounding.sentences)
-        if _MARKER_PATTERN.search(sentence)
+        if index not in skip and _MARKER_PATTERN.search(sentence)
     ][:MAX_LEAD_CANDIDATES]
 
 
@@ -12718,6 +12725,7 @@ async def _lead_sentence_choice(
     question: str,
     model_grounding: GroundingResult | None,
     budget_s: float,
+    skip: frozenset[int] = frozenset(),
 ) -> int | None:
     """The index of the model sentence that should open the answer, or None
     for the code-built count line (build phase 8.7, card 2, design C).
@@ -12735,7 +12743,7 @@ async def _lead_sentence_choice(
     is "neither". Code reads no word of the question: the question and the
     candidates are only the decision's bounded `state`.
     """
-    candidates = _lead_candidates(model_grounding)
+    candidates = _lead_candidates(model_grounding, skip)
     if (
         not candidates
         or model_grounding is None
@@ -12825,6 +12833,104 @@ def _answer_tokens(**kwargs: Any) -> list[TokenPayload]:
     return [*parts.summary, *parts.listing, *parts.notes]
 
 
+_ECHO_END_PUNCTUATION: Final[str] = " .,;:?!"
+
+
+def _is_label_only_sentence(
+    sentence: str,
+    label_by_display: dict[int, str],
+    listed_markers: frozenset[int],
+) -> bool:
+    """True when `sentence` only repeats one title or name, cited to two or
+    more different records, and the listing shown has every one of those
+    records (card 111: "Marfan syndrome and Marfan syndrome.").
+
+    Narrowed on purpose (fix round, 2026-10-15). A sentence is left out only
+    when all of these hold, so it never removes something a reader asked for:
+
+    - it repeats ONE name or title: a list of different names is an answer
+      to "which ...", and a single title can state a finding, so neither is
+      ever matched;
+    - that name is cited to two or more different records (two markers);
+    - every marker it carries is in `listed_markers`, the markers of the
+      listing shown, so the records are named there. With no listing the
+      set is empty and nothing matches.
+
+    Structure only. The sentence splits at its markers; each piece, once the
+    grounding pass's own glue rule (`_clean_claim`: a leading comma or
+    "and") is applied and end punctuation (including "?" and "!") is
+    dropped, must equal the label of the record that marker cites. Any other
+    word, any text after the last marker or a marker that cites no labelled
+    record makes this False. It reads no word of the question and no word
+    list of its own.
+
+    Args:
+        sentence: A grounded sentence with its `[n]` display markers.
+        label_by_display: Display number to the cited record's title or name.
+        listed_markers: Display numbers the listing shown cites.
+    """
+    pieces = _MARKER_PATTERN.split(sentence)
+    # split() alternates text, marker number, text, marker number, ..., text.
+    texts, numbers = pieces[0::2], pieces[1::2]
+    if len(set(numbers)) < 2 or texts[-1].strip(_ECHO_END_PUNCTUATION):
+        return False
+    if not all(int(number) in listed_markers for number in numbers):
+        return False
+    shown_label: str | None = None
+    seen = False
+    for text, number in zip(texts, numbers, strict=False):
+        label = label_by_display.get(int(number))
+        if not label:
+            return False
+        label_key = label.strip(_ECHO_END_PUNCTUATION).casefold()
+        if shown_label is None:
+            shown_label = label_key
+        elif label_key != shown_label:
+            return False
+        shown = _clean_claim(text).strip(_ECHO_END_PUNCTUATION).casefold()
+        if shown:
+            if shown != shown_label:
+                return False
+            seen = True
+        elif not seen:
+            return False
+    return True
+
+
+def _label_only_positions(
+    sentences: Sequence[str],
+    citations: Sequence[CitationPayload],
+    synth_findings: Sequence[SynthFinding],
+    listing_sentences: Sequence[str],
+) -> set[int]:
+    """Positions in `sentences` that card 111's rule would leave out of the
+    prose: see `_is_label_only_sentence`. One function for both readers, the
+    prose (`_answer_parts`) and the lead candidates (`_lead_candidates`), so a
+    sentence the prose drops can never open the answer.
+
+    The label fields are `answer_layout.LABEL_FIELDS`, the list that decides
+    what a listing row shows as its record's name."""
+    citation_by_display = {citation.display_index: citation for citation in citations}
+    finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
+    label_by_display: dict[int, str] = {}
+    for display_index, cited in citation_by_display.items():
+        cited_finding = finding_by_citation_id.get(cited.citation_id)
+        if (
+            cited_finding is not None
+            and cited_finding.field in LABEL_FIELDS
+            and cited_finding.field_value.strip()
+        ):
+            label_by_display[display_index] = cited_finding.field_value
+    listed_markers = frozenset(
+        int(number) for line in listing_sentences for number in _MARKER_PATTERN.findall(line)
+    )
+    return {
+        position
+        for position, candidate in enumerate(sentences)
+        if _is_label_only_sentence(candidate, label_by_display, listed_markers)
+    }
+
+
 def _answer_parts(
     *,
     audience_depth: str,
@@ -12842,6 +12948,7 @@ def _answer_parts(
     summary_sentence: str | None = None,
     condition_names: dict[str, str | None] | None = None,
     lead_index: int | None = None,
+    listing_sentences: tuple[str, ...] = (),
 ) -> _AnswerParts:
     """The answer as typed token chunks, in reading order, in three parts.
 
@@ -13440,10 +13547,24 @@ def _answer_parts(
     if not fallback_sentences and model_grounding is not None:
         headings_shown = 0
         last_paragraph: int | None = None
+        # Card 111 (narrowed, fix round 2026-10-15): a sentence that repeats
+        # one title or name, cited to two or more different records that the
+        # listing shown has, says nothing, so it is left out of the prose.
+        # When that would leave no model sentence in the summary at all and no
+        # lead was picked, every sentence stays: the summary then prints the
+        # repeat as the writer wrote it, after the count line, rather than
+        # print nothing from the writer.
+        echo_positions = _label_only_positions(
+            model_grounding.sentences, citations, synth_findings, listing_sentences
+        )
+        if lead_text is None and len(echo_positions) >= len(model_grounding.sentences):
+            echo_positions = set()
         for position, (sentence, origin) in enumerate(
             zip(model_grounding.sentences, model_grounding.sentence_origins, strict=False)
         ):
             if lead_text is not None and position == lead_index:
+                continue
+            if position in echo_positions:
                 continue
             paragraph = (
                 model_layout.sentence_paragraph[origin]
@@ -14998,6 +15119,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         # sentence of the model's prose answers the question and should
         # open the answer. Asked only when there is a count line it could
         # lead ahead of; every failure leaves the count line leading.
+        listing_shown = tail_sentences if tail_is_listing else ()
         lead_index = (
             await _lead_sentence_choice(
                 harness,
@@ -15005,6 +15127,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 query.text,
                 model_grounding,
                 write_budget_s - (time.monotonic() - write_started_at),
+                skip=frozenset(
+                    _label_only_positions(
+                        model_grounding.sentences, citations, synth_findings, listing_shown
+                    )
+                    if model_grounding is not None
+                    else ()
+                ),
             )
             if summary_sentence
             else None
@@ -15029,6 +15158,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             summary_sentence=summary_sentence,
             condition_names=condition_names,
             lead_index=lead_index,
+            listing_sentences=listing_shown,
         )
         summary_tokens = list(parts.summary)
         note_tokens = list(parts.notes)
