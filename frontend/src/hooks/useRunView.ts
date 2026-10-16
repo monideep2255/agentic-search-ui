@@ -111,7 +111,8 @@ import { citedSourceCounts } from "../components/screens/AnswerScreen";
 /**
  * Whether `later` is `earlier` sent again (F-8.7-A04, card 57): the same
  * citation id and every field equal except `claim_text`, the record words the
- * citation was checked against, which grow once the summary is checked. The
+ * citation was checked against, which grow once the summary is checked, and
+ * `snippet`, the abstract sentence that arrives after the listing. The
  * server's rule, `contracts.token_order.updates_citation`.
  */
 export function updatesCitation(earlier: CitationPayload, later: CitationPayload): boolean {
@@ -120,6 +121,9 @@ export function updatesCitation(earlier: CitationPayload, later: CitationPayload
   const after = later as unknown as Record<string, unknown>;
   const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
   keys.delete("claim_text");
+  // Card 29: the abstract sentence is picked beside the writer, so it arrives
+  // on the second send of a citation the listing already sent without it.
+  keys.delete("snippet");
   for (const key of keys) {
     if ((before[key] ?? null) !== (after[key] ?? null)) return false;
   }
@@ -616,6 +620,10 @@ export function useRunView(events: AgentEvent[]): RunView {
         confidence: payload.assertion_confidence,
         license: payload.license,
         url: payload.source_url,
+        // Build phase 8.8 ("card 44", "answer on top, evidence below"):
+        // undefined, never an empty string, so `Source.snippet`'s "absent
+        // renders nothing" contract holds all the way from the wire.
+        snippet: payload.snippet ?? undefined,
       });
     }
     sources.sort((a, b) => a.n - b.n);

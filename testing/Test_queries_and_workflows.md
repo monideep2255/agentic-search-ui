@@ -438,6 +438,22 @@ What you should see:
 - Each answer still has written sentences above its records. A plain-language GERD answer shows about two to three sentences; a sentence that drops a limiting word such as "transient" is held back rather than shown.
 - Why it matters: a parent reading about an older child, or a reader told a symptom is GERD's when the paper only suspects it, takes a wider claim as fact. A missing sentence is better than a wider one.
 
+### 112. Each of the first five cited papers shows the sentence that answers the question (card 29)
+
+Queries to try:
+
+- `What are the typical symptoms and risk factors of GERD?` in Researcher
+- `papers on the effects of caffeine on exercise performance` in Plain language
+- Both at 1280 and 390 pixels wide, and the sources list opened and closed
+
+What you should see:
+
+- Under the title of each of the first five cited papers that has an abstract, one quoted sentence from that paper's own abstract that bears on the question, readable while the card is closed.
+- Later papers show their title only, as before. A paper with no abstract, or none that answers, shows no sentence and no empty line.
+- The sentence is word for word what the abstract says. The answer above the sources is unchanged and arrives as fast as before.
+- A reopened saved answer does not show these sentences yet.
+- Why it matters: a reader can see why each paper is cited without opening five abstracts.
+
 ## 2. Follow-up questions and conversation
 
 ### 20. A follow-up carries the gene forward (Product test 2, 7.1 to 7.5)
@@ -2051,6 +2067,7 @@ Every feature accounted for, in three tables:
 | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
 | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
 | card 35 | An off-topic follow-up that contains a word such as "cell" or "study" is checked for topic like any other question | Query 111 |
+| card 29 | Each of the first five cited papers with an abstract shows the one sentence of its own abstract that answers the question | Query 112 |
 | cards 84 and 72 | When the check every question passes first cannot finish, the message says nothing was searched, the problem was ours, and to ask again | Query 109 |
 | card 59 | An answer that finished before Stop was pressed stays on screen, in history and in the conversation; a true stop records nothing | Query 56 |
 | card 57, F-8.7-A04 | A citation under a summary sentence carries the record words that sentence was checked against, and each citation is listed once | Query 91 |

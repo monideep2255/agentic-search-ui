@@ -62,12 +62,14 @@ def _text_of(token: Any) -> str:
     return str(getattr(token, "text", "") or "")
 
 
-#: The one field a citation sent again may change (F-8.7-A04, card 57):
-#: its checked record words, which gain the summary sentences' words once
-#: the summary is checked. Its number, record, link and every other field
-#: stay as they were sent, because a chip with that number may already be
-#: on screen.
-CITATION_UPDATABLE_FIELDS = frozenset({"claim_text"})
+#: The fields a citation sent again may change. `claim_text` (F-8.7-A04,
+#: card 57): its checked record words, which gain the summary sentences'
+#: words once the summary is checked. `snippet` (card 29): the sentence of
+#: the paper's own abstract that answers the question, picked beside the
+#: writer and so known only after the listing's citations were sent. Its
+#: number, record, link and every other field stay as they were sent,
+#: because a chip with that number may already be on screen.
+CITATION_UPDATABLE_FIELDS = frozenset({"claim_text", "snippet"})
 
 
 def citation_fields(citation: Any) -> dict[str, Any]:

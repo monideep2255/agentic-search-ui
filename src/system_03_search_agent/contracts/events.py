@@ -518,6 +518,20 @@ class CitationPayload(BaseModel):
     # artifact.
     snapshot_date: str | None = Field(None, max_length=32)
     entity_name: str | None = Field(None, max_length=256)
+    # T-8.8 (build phase 8.8, DECISIONS.md 2026-09-25, "card 44" and "answer
+    # on top, evidence below"): a third additive, optional field, same
+    # pattern as the two above. The ONE sentence of this citation's OWN
+    # paper's abstract that answers the question, quoted VERBATIM
+    # (`synthesis.snippets.pick_snippet` never lets a model reword it) and
+    # capped at 500 characters, matching `synthesis.snippets.
+    # MAX_SENTENCE_CHARS`'s own cap on what is ever offered as a candidate.
+    # `None` when no sentence was picked (the model chose "none", the
+    # decision seam failed, or the citation carries no abstract to split
+    # in the first place), never a guess. This field is meaningful only on
+    # a citation whose `source` IS the paper the sentence was drawn from;
+    # it must never be attached to a different citation than the one it
+    # was extracted for.
+    snippet: str | None = Field(None, max_length=500)
 
 
 class TrustSignalPayload(BaseModel):

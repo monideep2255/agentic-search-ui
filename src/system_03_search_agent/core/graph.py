@@ -624,6 +624,7 @@ from system_03_search_agent.synthesis.sentence_check import (
     SentenceCheckUnreadable,
     check_reworded_sentences,
 )
+from system_03_search_agent.synthesis.snippets import MAX_SNIPPET_PAPERS, pick_snippets
 from system_03_search_agent.synthesis.trust import (
     ClaimTrust,
     aggregate,
@@ -1246,6 +1247,9 @@ class _RunDecisions:
     #: that decides what is said about a condition's clinical features. None
     #: when Think never started it (small talk, or a Write reached directly).
     features_task: asyncio.Task[DecisionRecord | None] | None = None
+    #: The batched abstract-sentence pick (card 29), started by Write beside
+    #: the writer and read once, after it. None until started.
+    snippet_task: asyncio.Task[dict[str, str]] | None = None
 
 
 #: One entry per live run, keyed by the run's `Harness`. `core/run.py`
@@ -12774,6 +12778,105 @@ async def _lead_sentence_choice(
     return None if picked is None else candidates[picked]
 
 
+# ---------------------------------------------------------------------------
+# Card 29 (2026-10-15): under each of the first five cited papers that have
+# an abstract, the one sentence of its own abstract that answers the
+# question. One batched classifier call starts beside the writer, from the
+# papers the listing cites, so it adds no wait. Its picks are attached to
+# those papers' citations once the writer is done. A pick that is late,
+# failed, empty or not word for word in the abstract shows nothing, and the
+# paper looks as it did before.
+# ---------------------------------------------------------------------------
+
+
+def _snippet_papers(
+    citations: Sequence[CitationPayload], synth_findings: Sequence[SynthFinding]
+) -> list[tuple[str, str]]:
+    """`(source_url, abstract)` for each cited paper that has an abstract, in
+    the order the answer numbers them. The abstract is the retrieved
+    `abstract` field the grounding pass checks claims against."""
+    abstract_by_url: dict[str, str] = {}
+    for finding in synth_findings:
+        if finding.field == _PUBMED_ABSTRACT_FIELD and finding.source_url and finding.field_value:
+            abstract_by_url.setdefault(finding.source_url, finding.field_value)
+    papers: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for citation in sorted(citations, key=lambda c: c.display_index):
+        url = citation.source_url
+        if url in seen or url not in abstract_by_url:
+            continue
+        seen.add(url)
+        papers.append((url, abstract_by_url[url]))
+    return papers
+
+
+def _start_snippet_pick(
+    harness: Harness,
+    trace_id: str,
+    question: str,
+    citations: Sequence[CitationPayload],
+    synth_findings: Sequence[SynthFinding],
+) -> None:
+    """Start the batched pick beside the writer, once per run. Asked only
+    when Jev is the classifier (`CLASSIFIER_PROVIDER=jev`), as the lead
+    sentence is: with the guard tier deciding alone it would wait on a call
+    of about 2 s. Nothing to ask, nothing started."""
+    if not _jev_decides():
+        return
+    papers = _snippet_papers(citations, synth_findings)[:MAX_SNIPPET_PAPERS]
+    if not papers:
+        return
+    entry = _run_decisions(harness)
+    _cancel_if_pending(entry.snippet_task)
+    entry.snippet_task = asyncio.create_task(pick_snippets(harness, trace_id, question, papers))
+
+
+def _drop_snippet_pick(harness: Any) -> None:
+    """Stop a pick nobody will read. Never awaits."""
+    entry = _run_decisions(harness)
+    task, entry.snippet_task = entry.snippet_task, None
+    _cancel_if_pending(task)
+
+
+async def _attach_snippets(
+    harness: Harness,
+    citations: list[CitationPayload],
+    deadline: float | None = None,
+) -> list[CitationPayload]:
+    """`citations` with each picked sentence on its paper's abstract
+    citation, or on the paper's first citation when only its title is cited.
+
+    The pick is read with the late-read grace (`_read_late_decision`'s
+    rule): done, it costs nothing; still running past
+    `_LATE_DECISION_GRACE_S`, it is stopped and nothing is attached.
+    """
+    entry = _run_decisions(harness)
+    task, entry.snippet_task = entry.snippet_task, None
+    if task is None:
+        return citations
+    wait_s = _LATE_DECISION_GRACE_S
+    if deadline is not None:
+        wait_s = min(wait_s, deadline - time.monotonic())
+    if not task.done() and wait_s > 0:
+        await asyncio.wait({task}, timeout=wait_s)
+    if not task.done():
+        task.cancel()
+        logger.warning("snippet pick was late; the papers show their titles only")
+        return citations
+    if task.cancelled() or task.exception() is not None:
+        return citations
+    picked = task.result()
+    attached = list(citations)
+    for url, sentence in picked.items():
+        own = [i for i, c in enumerate(attached) if c.source_url == url]
+        if not own:
+            continue
+        abstract_own = [i for i in own if attached[i].field == _PUBMED_ABSTRACT_FIELD]
+        index = (abstract_own or own)[0]
+        attached[index] = attached[index].model_copy(update={"snippet": sentence})
+    return attached
+
+
 def _asked_field(
     clinical_features_asked: bool, failed_searches: list[dict[str, str]]
 ) -> AskedField | None:
@@ -13631,6 +13734,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         return await _write_answer(state)
     finally:
         _drop_features_decision(state["harness"])
+        _drop_snippet_pick(state["harness"])
         # Build phase 8.7, card 50: a second draft started beside the first
         # never outlives the Write step, however it ends.
         await _drop_second_draft(state["harness"])
@@ -14104,6 +14208,10 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             listing_citations, listing_tokens = build_listing(listing_grounding)
     reads_placement = _request_reads_placement(state)
     listing_sent = bool(listing_tokens) and reads_placement
+    if listing_citations and not cap_hit:
+        # Card 29: the batched abstract-sentence pick starts here, beside
+        # the writer, over the papers the listing cites.
+        _start_snippet_pick(harness, trace_id, query.text, listing_citations, synth_findings)
     if listing_sent:
         # Its own paragraph: in reading order the summary always precedes it.
         sink.emit_live(
@@ -14717,6 +14825,10 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 else sent_by_id[c.citation_id]
                 for c in citations
             ]
+        # Card 29: the picked sentence goes on its paper's citation. A
+        # citation already sent without one is sent again with it
+        # (`snippet` is an updatable field, `contracts.token_order`).
+        citations = await _attach_snippets(harness, citations, write_started_at + write_budget_s)
         # T-3.4-07, Section 7.2: floor a conflicted claim's outcome at
         # `flag` AFTER citations exist (it needs their `source_url` for
         # `ConflictResult`) and BEFORE the answer-level aggregate below, so

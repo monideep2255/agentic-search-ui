@@ -241,6 +241,13 @@ export interface CitationPayload {
   // null).
   snapshot_date?: string | null;
   entity_name?: string | null;
+  // T-8.8 (build phase 8.8, DECISIONS.md 2026-09-25, "card 44" and "answer
+  // on top, evidence below"): a third additive, optional field, same
+  // reasoning as the two above. The one sentence of THIS citation's own
+  // paper's abstract that answers the question, quoted verbatim, or null
+  // when no sentence was picked. See `contracts/events.py`'s
+  // `CitationPayload.snippet` docstring for the full account.
+  snippet?: string | null;
 }
 
 export interface TrustSignalPayload {
@@ -569,7 +576,8 @@ function isCitationPayload(value: unknown): value is CitationPayload {
     isNullableString(value.population_ancestry_context) &&
     typeof value.license === "string" &&
     (value.snapshot_date === undefined || isNullableString(value.snapshot_date)) &&
-    (value.entity_name === undefined || isNullableString(value.entity_name))
+    (value.entity_name === undefined || isNullableString(value.entity_name)) &&
+    (value.snippet === undefined || isNullableString(value.snippet))
   );
 }
 

@@ -596,6 +596,12 @@ export interface Source {
   confidence: string;
   license: string;
   url: string;
+  /**
+   * The one sentence of THIS paper's own abstract that answers the
+   * question, quoted word for word (card 29). Undefined when none was
+   * picked; an absent sentence renders nothing, never an empty line.
+   */
+  snippet?: string;
 }
 
 /**
@@ -675,6 +681,12 @@ export interface MergedSource {
   confidence: string;
   license: string;
   url: string;
+  /**
+   * The first non-empty abstract sentence among this page's citations
+   * (card 29). The server puts it on the paper's abstract citation, which
+   * may not be the citation the card's other fields come from.
+   */
+  snippet?: string;
 }
 
 /** One layer group of the Sources list. */
@@ -804,6 +816,7 @@ export function groupSourcesByLayer(sources: Source[]): SourceGroup[] {
       confidence: primary.confidence,
       license: primary.license,
       url: primary.url,
+      snippet: cited.find((source) => source.snippet)?.snippet,
     };
   });
   return ([1, 2, 3] as Layer[])
@@ -2249,6 +2262,33 @@ export function AnswerBody({
                       >
                         {sourceLayerLabel(source.layers)}
                       </Box>
+                      {/*
+                        Card 29: the one sentence of this paper's own abstract
+                        that answers the question, word for word, on a line of
+                        its own under the title. It sits in the summary so it
+                        reads while the card is collapsed. NO SNIPPET STYLE
+                        EXISTS in the design system (checked in
+                        `prototype/app.html`, `components/source-card.html` and
+                        `foundations/`; docs/build/design/README.md's coverage
+                        table does not list it): built from the foundations and
+                        the nearest designed neighbour, `source-card.html`'s
+                        `.card-note` text (13px, ink-muted). Absent: nothing is
+                        rendered, no empty line.
+                      */}
+                      {source.snippet ? (
+                        <Typography
+                          component="span"
+                          data-testid={`${testIdPrefix}source-${primaryN}-snippet`}
+                          sx={{
+                            flexBasis: "100%",
+                            fontSize: 13,
+                            color: designTokens.inkMuted,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {`"${source.snippet}"`}
+                        </Typography>
+                      ) : null}
                     </Box>
 
                     {/*
