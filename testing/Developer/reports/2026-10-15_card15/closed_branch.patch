@@ -1,0 +1,1886 @@
+diff --git a/src/system_03_search_agent/core/graph.py b/src/system_03_search_agent/core/graph.py
+index 5b9ebe88..27d8135d 100644
+--- a/src/system_03_search_agent/core/graph.py
++++ b/src/system_03_search_agent/core/graph.py
+@@ -647,9 +647,16 @@ from system_03_search_agent.tools.cypher_schemas import (
+     CypherQueryRow,
+ )
+ from system_03_search_agent.tools.cypher_templates import (
++    SHAPE_DISEASE_VARIANTS,
++    SHAPE_GENE_IN_PAPER,
++    SHAPE_GENES_VARIANTS_FOR_CONDITION,
++    SHAPE_PAPERS_NAMED,
+     CypherTemplate,
+     gene_go_terms_template,
++    graph_shape_template,
+     matched_shapes,
++    possible_graph_shapes,
++    select_template,
+ )
+ from system_03_search_agent.tools.graph_schema_constants import (
+     CURIE_PREFIXES,
+@@ -1163,6 +1170,69 @@ _PAPER_LINKS: Final = _DecisionSpec(
+     },
+ )
+ 
++#: Card 15 (2026-10-15). Asked only when develop's own template selection
++#: returns None for the planned graph call AND the bound identifiers make at
++#: least one checked shape structurally possible (`possible_graph_shapes`).
++#: A pick forces that shape's checked template, so the search is the checked
++#: one and not one a model writes. "none_of_these", or no usable pick, leaves
++#: the planned call exactly as it was. A classifier decides, never a word
++#: list. The options a question is offered are only the shapes its
++#: identifiers allow, so `_graph_shape_spec` narrows this one.
++_GRAPH_SHAPE_NONE: Final = "none_of_these"
++_GRAPH_SHAPE: Final = _DecisionSpec(
++    point="plan.graph_shape",
++    options=(
++        SHAPE_PAPERS_NAMED,
++        SHAPE_GENE_IN_PAPER,
++        SHAPE_GENES_VARIANTS_FOR_CONDITION,
++        SHAPE_DISEASE_VARIANTS,
++        _GRAPH_SHAPE_NONE,
++    ),
++    fail_open=_GRAPH_SHAPE_NONE,
++    instructions=(
++        "The state is a question a person typed into a biomedical evidence search "
++        "engine. It names specific records by identifier. Decide whether it asks for "
++        "one of the listed kinds of answer from the knowledge graph."
++    ),
++    criteria={
++        SHAPE_PAPERS_NAMED: (
++            "It asks about, for a summary of, or to compare the named papers "
++            "themselves."
++        ),
++        SHAPE_GENE_IN_PAPER: (
++            "It asks whether, or how, the named paper discusses, mentions, studies "
++            "or reports on the named gene."
++        ),
++        SHAPE_GENES_VARIANTS_FOR_CONDITION: (
++            "It asks which variants, mutations or alleles in the named genes are "
++            "linked to, cause, or are reported for the named condition, where the "
++            "condition is named as a condition and not as a sample type or a "
++            "passing word."
++        ),
++        SHAPE_DISEASE_VARIANTS: (
++            "It asks which variants, mutations or alleles are linked to, cause, or "
++            "are reported for the named condition, and names no gene."
++        ),
++        _GRAPH_SHAPE_NONE: (
++            "Anything else. It asks for a number or a count, for something linked to "
++            "the named records other than what another option names, what a named "
++            "record is, or for something the graph does not hold such as prevalence, "
++            "treatment or trials."
++        ),
++    },
++)
++
++
++def _graph_shape_spec(possible: list[str]) -> _DecisionSpec:
++    """`_GRAPH_SHAPE` narrowed to the shapes these identifiers allow."""
++    keep = [shape for shape in _GRAPH_SHAPE.options if shape in possible]
++    return dataclasses.replace(
++        _GRAPH_SHAPE,
++        options=(*keep, _GRAPH_SHAPE_NONE),
++        criteria={name: _GRAPH_SHAPE.criteria[name] for name in (*keep, _GRAPH_SHAPE_NONE)},
++    )
++
++
+ #: The guardrail's injection verdict with Jev switched on (build phase 8.6,
+ #: T-8.6-04; rewired in the fix round for F-8.6-A05, A06, A10, J04, A12).
+ #: Its description lives beside the measured classifier, in
+@@ -6787,6 +6857,44 @@ async def _paper_link_plan(
+     return _PaperLinkPlan(pmid=pmid, targets=targets) if targets else None
+ 
+ 
++async def _checked_graph_shape(
++    harness: Harness,
++    trace_id: str,
++    text: str,
++    planned: _PlannedToolCall,
++    deadline: float,
++) -> _PlannedToolCall:
++    """Card 15: the planned graph call, with a checked template forced onto it
++    when the classifier picks a shape, and the call unchanged in every other case.
++
++    Unchanged, with no decision asked, when the call already carries a template
++    or develop's own `select_template` finds one, and when the bound identifiers
++    make no checked shape possible. Unchanged too on "none_of_these" and on no
++    usable pick. A pick builds the template from the bound parameter names only.
++    """
++    if planned.template is not None:
++        return planned
++    target_entities = list(planned.cypher_input.target_entities)
++    bindings = entity_param_bindings(target_entities)
++    if select_template(planned.cypher_input, bindings) is not None:
++        return planned
++    possible = possible_graph_shapes(bindings)
++    if not possible:
++        return planned
++    spec = _graph_shape_spec(possible)
++    task = asyncio.create_task(_decide_point(harness, trace_id, spec, text))
++    record = await _await_within_step(
++        task, deadline, None, point=spec.point, trace_id=trace_id
++    )
++    choice = _usable_choice(record)
++    if choice is None or choice == _GRAPH_SHAPE_NONE:
++        return planned
++    template = graph_shape_template(choice, bindings)
++    if template is None:
++        return planned
++    return dataclasses.replace(planned, template=template, context_only=False)
++
++
+ async def plan_node(state: GraphState) -> dict[str, Any]:
+     harness = state["harness"]
+     query = state["query"]
+@@ -6947,6 +7055,10 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
+     ) else await _select_planned_tool_call(
+         query.text, query_class, target_curies, unresolved_symbols, _memory_curies(state)
+     )
++    if isinstance(planned, _PlannedToolCall) and state.get("coordinate_window") is None:
++        # Card 15: a checked graph search for a question shape develop has no
++        # template for, chosen by `plan.graph_shape`; otherwise `planned` as is.
++        planned = await _checked_graph_shape(harness, trace_id, query.text, planned, step_deadline)
+     # Fix-plan item 12.7 (2026-09-23): the question named nothing the
+     # product could resolve, so there is no CURIE to bind and the graph has
+     # nothing to answer with. A LITERATURE QUESTION NEEDS NO ENTITY: the
+@@ -6992,7 +7104,14 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
+     # stop a new question about papers reaching the papers.
+     topic_term: str | None = None
+     disease_lookup_failed = False
+-    if isinstance(planned, _PlannedToolCall) and state.get("coordinate_window") is None:
++    # Card 15: a call that carries a checked shape's template is the answer the
++    # classifier picked for these named records, so the topic search never
++    # replaces it. Every call develop plans here has no template.
++    if (
++        isinstance(planned, _PlannedToolCall)
++        and planned.template is None
++        and state.get("coordinate_window") is None
++    ):
+         gene_resolved = _first_gene_curie(target_curies) is not None
+         asks_for_literature = False
+         if not gene_resolved:
+diff --git a/src/system_03_search_agent/tools/cypher_query.py b/src/system_03_search_agent/tools/cypher_query.py
+index ee6f9093..5f2e6b58 100644
+--- a/src/system_03_search_agent/tools/cypher_query.py
++++ b/src/system_03_search_agent/tools/cypher_query.py
+@@ -2084,6 +2084,12 @@ async def _run_pipeline(
+     # non-empty path. Using it closes the direction the row count cannot
+     # see on its own.
+     hit_cap = len(rows) >= effective_limit or returned_total > len(rows)
++    # Card 15: a template that bounds each UNION branch (`branch_row_cap`) hides
++    # rows inside a branch the overall limit never sees, so a result as large as
++    # one branch's cap may be capped. Reported as capped, total unknown.
++    branch_cap = active_template.branch_row_cap if active_template is not None else None
++    if branch_cap is not None and len(rows) >= branch_cap:
++        hit_cap = True
+ 
+     # Finding F-2.1-B04c's fix: to_output_rows can emit more than one
+     # output row per raw graph row, one per RETURN column that decodes to
+diff --git a/src/system_03_search_agent/tools/cypher_templates.py b/src/system_03_search_agent/tools/cypher_templates.py
+index 9af3fa8a..dcd49066 100644
+--- a/src/system_03_search_agent/tools/cypher_templates.py
++++ b/src/system_03_search_agent/tools/cypher_templates.py
+@@ -163,6 +163,13 @@ class CypherTemplate:
+     #: on every other template, so no GO vertex reached any other way is
+     #: ever attributed.
+     go_attribution_param: str | None = None
++    #: Card 15: the most rows ONE UNION branch of this template can return, set
++    #: only on a template that bounds each branch before its `RETURN`. A branch
++    #: that hits its cap hides rows nothing else counts, and the validator's
++    #: overall `LIMIT` does not see it. `cypher_query` therefore reports a
++    #: result of at least this many rows as capped (total unknown), which can
++    #: claim less than is true and never more.
++    branch_row_cap: int | None = None
+ 
+ 
+ # --------------------------------------------------------------------------
+@@ -757,6 +764,168 @@ def _article_links_template(article_param: str) -> CypherTemplate:
+     )
+ 
+ 
++# --------------------------------------------------------------------------
++# Card 15 (2026-10-15): checked searches for question shapes `select_template`
++# has no template for. Nothing here reads question text. A shape is chosen
++# by the classifier decision `plan.graph_shape` in `core.graph`, and only when
++# `possible_graph_shapes` finds the bound identifiers make it structurally
++# possible. `select_template` is unchanged: a question it already templates
++# never reaches this code.
++# --------------------------------------------------------------------------
++
++SHAPE_PAPERS_NAMED: Final[str] = "papers_named"
++SHAPE_GENE_IN_PAPER: Final[str] = "gene_in_paper"
++SHAPE_GENES_VARIANTS_FOR_CONDITION: Final[str] = "genes_variants_for_condition"
++SHAPE_DISEASE_VARIANTS: Final[str] = "disease_variants"
++
++# The rows the several-genes variants shape returns in all, shared equally
++# between the genes' branches (`100 // genes`), so the first gene's rows can
++# never fill the plan's cap and leave the second gene showing nothing.
++SHAPE_ROW_BUDGET: Final[int] = 100
++
++# `mentioned_in`, Gene to Article, anchored inline at BOTH ends. Walked from
++# the gene end only (a gene with thousands of papers takes about 3.5 s);
++# the Article end timed out at 30 s for a paper (see `_article_links_template`).
++_GENE_ARTICLE_EDGE: Final[str] = "mentioned_in"
++_assert_hop_documented(_GENE_ARTICLE_EDGE, "Gene", "Article")
++
++# The most identifiers of one kind a shape accepts; a longer list is a
++# different question (a set the person did not type one by one).
++MAX_SHAPE_IDENTIFIERS: Final[int] = 10
++
++
++def _params_by_label(entity_bindings: dict[str, str]) -> dict[str, list[str]] | None:
++    """Bound parameter names grouped by the vertex label their CURIE prefix
++    belongs to, each group in parameter-name order. None when a prefix
++    belongs to no label this module knows."""
++    grouped: dict[str, list[str]] = {}
++    for name in sorted(entity_bindings):
++        prefix = entity_bindings[name].partition(":")[0]
++        label = next(
++            (lab for lab, prefixes in LABEL_CURIE_PREFIXES.items() if prefix in prefixes), None
++        )
++        if label is None:
++            return None
++        grouped.setdefault(label, []).append(name)
++    return grouped
++
++
++def _gene_article_link_template(gene_param: str, article_param: str) -> CypherTemplate:
++    """Whether the graph links one named gene to one named paper: one Article
++    row, or none. None is the graph's "no such link", never a statement
++    about what the paper discusses."""
++    return CypherTemplate(
++        name="gene_article_link",
++        cypher=(
++            f"MATCH ({_ANCHOR_VAR}:Gene {{id: ${gene_param}}})"
++            f"-[:{_GENE_ARTICLE_EDGE}]->"
++            f"({_OTHER_VAR}:Article {{id: ${article_param}}}) "
++            f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
++        ),
++        edge_label=_GENE_ARTICLE_EDGE,
++    )
++
++
++def _gene_variant_disease_link_many_template(
++    gene_params: list[str], disease_params: list[str]
++) -> CypherTemplate:
++    """Several genes' variants whose ClinVar record asserts one of the bound
++    diseases: one branch per gene, in parameter-name order, joined by UNION ALL.
++
++    Each branch is `_gene_variant_disease_link_template`'s pattern with an equal
++    share of `SHAPE_ROW_BUDGET` taken in variant-id order BEFORE the fold's
++    result is returned (the scoping `LIMIT` after `ORDER BY` in the `WITH`),
++    so each gene shows its own variants. The share is a code constant derived
++    from the number of genes, never caller text. A UNION keeps the count
++    rewrite off, so a capped result reports "more than shown, total unknown".
++    Measured live 2026-10-15: two genes, 4.6 s for 200 matches.
++    """
++    share = SHAPE_ROW_BUDGET // len(gene_params)
++    inline, where = _id_clause(sorted(disease_params), _OTHER_VAR)
++    branches = [
++        (
++            f"MATCH ({_VARIANT_VAR}:SequenceVariant)-[:{_VARIANT_GENE_EDGE}]->"
++            f"({_ANCHOR_VAR}:Gene {{id: ${gene}}}) "
++            f"MATCH ({_VARIANT_VAR})-[:{_VARIANT_DISEASE_EDGE}]->({_OTHER_VAR}:Disease{inline})"
++            f"{where} "
++            f"WITH {_VARIANT_VAR}, collect(DISTINCT {_OTHER_VAR}) AS {_FOLD_ALIAS} "
++            f"ORDER BY {_VARIANT_VAR}.id LIMIT {share} "
++            f"RETURN {_VARIANT_VAR}, {_FOLD_ALIAS} ORDER BY {_VARIANT_VAR}.id"
++        )
++        for gene in sorted(gene_params)
++    ]
++    return CypherTemplate(
++        name="gene_variant_disease_link_many",
++        cypher=" UNION ALL ".join(branches),
++        edge_label=_VARIANT_DISEASE_EDGE,
++        fold=(_VARIANT_VAR, _FOLD_ALIAS, FOLD_FIELD_VARIANT_CONDITIONS),
++        branch_row_cap=share,
++    )
++
++
++def _disease_variants_template(disease_param: str) -> CypherTemplate:
++    """The variants whose ClinVar record names one bound condition, walked
++    from the condition end, in variant-id order. One match, no gene, so the
++    count rewrite applies and a capped result reports its true total.
++
++    Measured live 2026-10-15: 0.7 s and 0.9 s for 100 rows on two common
++    conditions, their counts 0.6 s and 1.0 s."""
++    return CypherTemplate(
++        name="disease_variants_one",
++        cypher=(
++            f"MATCH ({_OTHER_VAR}:SequenceVariant)-[:{_VARIANT_DISEASE_EDGE}]->"
++            f"({_ANCHOR_VAR}:Disease {{id: ${disease_param}}}) "
++            f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
++        ),
++        edge_label=_VARIANT_DISEASE_EDGE,
++    )
++
++
++def possible_graph_shapes(entity_bindings: dict[str, str]) -> list[str]:
++    """The checked shapes the bound identifiers make structurally possible,
++    from their prefixes and counts alone. Empty for most questions."""
++    grouped = _params_by_label(entity_bindings)
++    if grouped is None:
++        return []
++    shapes: list[str] = []
++    articles = grouped.get("Article", [])
++    if set(grouped) == {"Article"} and 2 <= len(articles) <= MAX_SHAPE_IDENTIFIERS:
++        shapes.append(SHAPE_PAPERS_NAMED)
++    if set(grouped) == {"Gene", "Article"} and len(grouped["Gene"]) == 1 and len(articles) == 1:
++        shapes.append(SHAPE_GENE_IN_PAPER)
++    genes = grouped.get("Gene", [])
++    diseases = grouped.get("Disease", [])
++    if set(grouped) == {"Disease"} and len(diseases) == 1:
++        shapes.append(SHAPE_DISEASE_VARIANTS)
++    if (
++        set(grouped) == {"Gene", "Disease"}
++        and 2 <= len(genes) <= MAX_SHAPE_IDENTIFIERS
++        and 1 <= len(diseases) <= MAX_SHAPE_IDENTIFIERS
++    ):
++        shapes.append(SHAPE_GENES_VARIANTS_FOR_CONDITION)
++    return shapes
++
++
++def graph_shape_template(
++    shape: str, entity_bindings: dict[str, str]
++) -> CypherTemplate | None:
++    """The checked template for `shape` over `entity_bindings`, or None when
++    the shape is unknown or the identifiers no longer make it possible (the
++    caller then runs what `select_template` would, unchanged)."""
++    if shape not in possible_graph_shapes(entity_bindings):
++        return None
++    grouped = _params_by_label(entity_bindings) or {}
++    if shape == SHAPE_PAPERS_NAMED:
++        return _record_template("Article", grouped["Article"])
++    if shape == SHAPE_GENE_IN_PAPER:
++        return _gene_article_link_template(grouped["Gene"][0], grouped["Article"][0])
++    if shape == SHAPE_GENES_VARIANTS_FOR_CONDITION:
++        return _gene_variant_disease_link_many_template(grouped["Gene"], grouped["Disease"])
++    if shape == SHAPE_DISEASE_VARIANTS:
++        return _disease_variants_template(grouped["Disease"][0])
++    return None
++
++
+ def select_template(
+     tool_input: CypherQueryInput, entity_bindings: dict[str, str]
+ ) -> CypherTemplate | None:
+@@ -899,6 +1068,9 @@ def all_template_examples() -> list[CypherTemplate]:
+         examples.append(_hop_template(shape, hop, anchor, many, count=False))
+         examples.append(_hop_template(shape, hop, anchor, one, count=True))
+     examples.append(_article_links_template("e_one"))
++    examples.append(_gene_article_link_template("e_one", "e_two"))
++    examples.append(_gene_variant_disease_link_many_template(["e_one", "e_two"], ["e_three"]))
++    examples.append(_disease_variants_template("e_one"))
+     for anchor in _SHAPES_BY_ANCHOR:
+         examples.append(_record_template(anchor, one))
+         examples.append(_record_template(anchor, many))
+diff --git a/testing/Developer/reports/2026-10-15_card15/build.md b/testing/Developer/reports/2026-10-15_card15/build.md
+new file mode 100644
+index 00000000..b99f0330
+--- /dev/null
++++ b/testing/Developer/reports/2026-10-15_card15/build.md
+@@ -0,0 +1,201 @@
++# Card 15 build: four checked graph searches
++
++Built exactly to `design.md`, with the lead's decision of 2026-10-15 (`DECISIONS.md`): four checked graph searches, one per slice, smallest first. Papers' records from typed PMIDs, a gene in one paper, several genes' variants for a condition, and a disease's variants walked from the disease end. The GO-term and MeSH-term shapes are not built.
++
++## Table of contents
++
++- [Base](#base)
++- [Slices at a glance](#slices-at-a-glance)
++- [Slice A: papers named](#slice-a-papers-named)
++- [Slice B: a gene in one paper](#slice-b-a-gene-in-one-paper)
++- [Slice C: several genes' variants for a condition](#slice-c-several-genes-variants-for-a-condition)
++- [Slice D: a disease's variants](#slice-d-a-diseases-variants)
++- [Live budget](#live-budget)
++- [Findings for the lead](#findings-for-the-lead)
++- [Gates](#gates)
++- [Learnings](#learnings)
++
++## Base
++
++- Worktree made by the lead, branch `fix/card15-checked-templates`, HEAD `f78ffda318221224ba3cd3e15a91c2da55ee58ca` (develop `7626fe85` plus the design commit). Working tree was clean at the start.
++- Nothing committed. Each slice's files are staged by name in the index as one cumulative state, and one patch per slice was written outside the repository so the lead can commit them in order.
++
++## Slices at a glance
++
++| Slice | Shape | Template | Decision option | Query |
++|---|---|---|---|---|
++| A | Records of two to ten named papers | `article_record_many` (existing record form) | `papers_named` | 115 |
++| B | Whether one named paper mentions one named gene | `gene_article_link` | `gene_in_paper` | 116 |
++| C | Variants in two to ten genes for one or more conditions | `gene_variant_disease_link_many` | `genes_variants_for_condition` | 117 |
++| D | One condition's variants, walked from the disease end | `disease_variants_one` | `disease_variants` | 118 |
++
++How it works, for all four:
++
++- Plan builds the graph call exactly as develop does. Develop's `select_template` runs first. Any template, no decision is asked and nothing changes.
++- With no template, `possible_graph_shapes` reads the bound identifiers' prefixes and counts only. None possible, no decision.
++- Otherwise one decision, `plan.graph_shape`, is asked with only the possible shapes plus `none_of_these` (fail open `none_of_these`), bounded by Plan's step deadline. A pick forces that shape's template through the existing `template=` seam. `none_of_these`, no usable pick, a failed seam or a timeout leave the planned call as develop has it.
++- Code: `tools/cypher_templates.py` (`possible_graph_shapes`, `graph_shape_template`, the three new templates), `core/graph.py` (`_GRAPH_SHAPE` spec, `_graph_shape_spec`, `_checked_graph_shape`, one call in `plan_node`).
++
++## Slice A: papers named
++
++Files staged for the slice:
++
++- `src/system_03_search_agent/core/graph.py`
++- `src/system_03_search_agent/tools/cypher_templates.py`
++- `tests/system_03_search_agent/core/test_graph_shape_wiring.py` (new)
++- `tests/system_03_search_agent/tools/test_cypher_shape_templates.py` (new)
++- `testing/Test_queries_and_workflows.md` (query 115)
++
++Tests: 21 new (12 on templates and the pipeline, 9 on Plan's decision seam), including `none_of_these`, no usable pick and a failed seam each leave the planned call equal to develop's (cypher input, template, flags), a two-paper lookup that develop already templates never asks, and one paper or a gene question never asks.
++
++A change the live check forced: with a papers pick, Plan's topic search (`plan.literature`) used to replace the graph call anyway. `Compare PMID 11237011 and PMID 11237012` was read as wanting papers and planned a PubMed search for the words "compare, pmid", which showed four unrelated papers. The topic path now skips a call that carries a forced template (`planned.template is None` added to its condition; every call develop plans there has no template, so develop is unchanged). Two tests pin it: a pick survives a "wants literature" decision, and without the pick the literature search is planned as before.
++
++Mutation, one property, red and restored: ignoring the pick (always returning the unforced call) turned `test_a_papers_named_pick_forces_the_checked_record_template` red (1 failed, 6 passed), then 7 passed after restore. A second check on the topic guard: removing it turned the displacement test red.
++
++Held-out phrasings through the real decision seam (classifier provider `jev`, ten shape phrasings and ten near misses written after the criteria and kept out of them): 20 of 20 agree. Near misses covered counts, cited-by, genes mentioned, MeSH terms, sequence data, authors, treatment, trials and variants.
++
++Live check, question `Compare PMID 11237011 and PMID 11237012`, develop's settings, through `run_streaming` with `reads_placement=True`:
++
++| Run | Branch | Seconds | Graph call | Sources |
++|---|---|---|---|---|
++| A1 | first batch, run 1 | 15.2 | guardrail transient error, no answer | 0 |
++| A2 | first batch, run 2 | 7.8 | `article_record_many`, 2 rows | PMID:11237011, PMID:11237012 |
++| A3 | first batch, run 3 | 6.6 | `article_record_many`, 2 rows | same two |
++| A4 | first batch, run 4 | 7.2 | `article_record_many`, 2 rows | same two |
++| A5 | first batch, run 5 | 7.5 | none: Think read it as a lookup, develop's record template applied, then the literature search replaced it | four unrelated papers |
++| A2-1 to A2-5 | second batch | 13.1, 12.9, 6.4, 5.3, 9.7 | `article_record_many`, 2 rows, 5 of 5 | same two, 5 of 5 |
++| Develop 1 to 5 | shape step switched out | 6.1, 7.9, 9.9, 6.1, 6.4 | none, literature search 5 of 5 | four unrelated papers, 5 of 5 |
++
++- Pass: second batch 5 of 5 same two sources under 20 s, no lost-search line. First batch 3 of 5 (one infrastructure error, one lookup-class run, see findings).
++- Reading the answers: no record about an entity the person did not type on the checked runs. Develop's answers name four papers the person never asked for.
++
++## Slice B: a gene in one paper
++
++Files staged for the slice:
++
++- `src/system_03_search_agent/core/graph.py`
++- `src/system_03_search_agent/tools/cypher_templates.py`
++- `tests/system_03_search_agent/core/test_graph_shape_wiring.py`
++- `tests/system_03_search_agent/tools/test_cypher_shape_templates.py`
++- `testing/Test_queries_and_workflows.md` (query 116)
++
++Template: `MATCH (a:Gene {id: $g})-[:mentioned_in]->(x:Article {id: $p}) RETURN x ORDER BY x.id`, both ends inline, walked from the gene end, edge documented at import. Eligible only for exactly one gene and one paper.
++
++Tests: 10 new template and pipeline tests and 5 new wiring tests. Includes eligibility rows, the template text, develop having no template for the pair, an unlinked pair returning status `empty` with no rows and no error (the graph says only that it holds no link), and a linked pair returning the paper cited.
++
++Mutation, one property, red and restored: reversing the edge direction turned `test_the_gene_in_paper_template_anchors_both_ends_inline_from_the_gene_end` red (1 failed, 21 passed), then 22 passed.
++
++Held-out: 19 of 20 agree. Miss: `How many times is BRCA1 cited by PMID 11237011?` picked `gene_in_paper`. The result would be the link row or none, not a record about another entity.
++
++Live check, `Does PMID 11237011 discuss BRCA1?` (the design's example; the graph holds no link for this pair):
++
++| Run | Seconds | Branch graph call | Develop graph call (seconds) |
++|---|---|---|---|
++| 1 | 14.6 | `gene_article_link`, empty | written search, empty (13.1) |
++| 2 | 12.7 | `gene_article_link`, empty | written search, empty (10.6) |
++| 3 | 10.7 | `gene_article_link`, empty | written search, empty (9.6) |
++| 4 | 9.6 | `gene_article_link`, empty | written search, error (11.7) |
++| 5 | 10.3 | `gene_article_link`, empty | written search, empty (10.6) |
++
++- Sources 17 on every run, both sides. No answer says the paper does not discuss BRCA1. The full answers (two runs, read in full) carry the note that the answer does not address PMID 11237011, then BRCA1 records from other databases.
++- A linked pair, `Does PMID 10026184 discuss BRCA1?`, three branch runs (11.8, 15.0, 10.7 seconds): `gene_article_link` returned PMID:10026184 on 3 of 3 and the answer lists it first as Article record [1], cited to its PubMed page.
++
++## Slice C: several genes' variants for a condition
++
++Files staged for the slice:
++
++- `src/system_03_search_agent/core/graph.py`
++- `src/system_03_search_agent/tools/cypher_templates.py`
++- `src/system_03_search_agent/tools/cypher_query.py` (a `branch_row_cap` check, below)
++- `tests/system_03_search_agent/tools/test_cypher_templates.py` (the ordering rule gains a bounded-template case)
++- `tests/system_03_search_agent/core/test_graph_shape_wiring.py`
++- `tests/system_03_search_agent/tools/test_cypher_shape_templates.py`
++- `testing/Test_queries_and_workflows.md` (query 117)
++
++Template: one branch per gene in parameter-name order, joined by `UNION ALL`. Each branch is the one-gene fold pattern with `ORDER BY v.id LIMIT <100 divided by the genes>` taken before its `RETURN`. Several conditions use the `IN` clause the one-gene template uses. Eligible for two to ten genes with one to ten conditions, nothing else.
++
++A defect found while building, fixed in this slice: the design relied on the overall cap to report a capped result. With a per-gene share of 50, one gene with hundreds of variants and another with 30 returns 80 rows, under the overall limit of 100, and `cypher_query` would have said the result was complete. `CypherTemplate` gains `branch_row_cap`; `cypher_query` reports a result of at least that many raw rows as capped with the total unknown (a UNION is never counted). It claims less than is true at most, never more. The existing ordering test now allows a scoping `LIMIT` inside a bounded template and still requires none at the end.
++
++Tests: 15 new template and pipeline tests and 5 new wiring tests. Includes the exact two-gene text and its share of 50, a share of 33 for three genes, the `IN` clause for two conditions, develop returning None only with a variants word, each variant row carrying its condition ids through the fold, 80 rows reporting capped with the total unknown and exactly one statement executed, and 49 rows not reporting capped.
++
++Mutation, one property, red and restored: setting `branch_row_cap=None` turned three tests red, including `test_a_result_as_large_as_one_genes_share_reports_capped_with_the_total_unknown` (3 failed, 34 passed), then 37 passed.
++
++Held-out: 19 of 20 agree. Miss: `How many variants in MLH1 and MSH2 cause Lynch syndrome?` picked the shape; the person gets a capped list, not a number.
++
++Probe of the final template on the live graph (read-only, through the reader helper): 2.28 s, 100 rows, 50 MLH1 and 50 MSH2.
++
++Live check, `Variants in MLH1 and MSH2 causing Lynch syndrome`:
++
++| Run | Branch seconds | Branch graph call | Develop seconds | Develop graph call |
++|---|---|---|---|---|
++| 1 | 13.0 | `gene_variant_disease_link_many`, 100 rows, capped, total unknown | 41.7 | written search errored, no rows |
++| 2 | 13.6 | same | 40.0 | written search errored, no rows |
++| 3 | 10.3 | same | 15.4 | written search, 100 rows, capped |
++| 4 | 11.4 | same | 15.6 | written search, 100 rows, capped |
++| 5 | 12.4 | same | 39.6 | written search, 100 rows, capped |
++
++- Branch: the same 100 graph rows in the same order on 5 of 5, under 20 s on every run, no lost-search line. Develop: 3 of 5 over 20 s and 2 of 5 with no graph rows.
++- The branch answer lists variants of both genes (47 MLH1 and 10 MSH2 names in the displayed part) with the line "this answer was truncated before every matching record could be retrieved, and the exact total ... is not available".
++
++## Slice D: a disease's variants
++
++Files staged for the slice:
++
++- `src/system_03_search_agent/core/graph.py`
++- `src/system_03_search_agent/tools/cypher_templates.py`
++- `tests/system_03_search_agent/core/test_graph_shape_wiring.py`
++- `tests/system_03_search_agent/tools/test_cypher_shape_templates.py`
++- `testing/Test_queries_and_workflows.md` (query 118)
++
++Template: `MATCH (x:SequenceVariant)-[:has_phenotype]->(a:Disease {id: $e}) RETURN x ORDER BY x.id`. Eligible for exactly one condition and nothing else (several MedGen concepts bound from a common noun is a different, riskier question). One match, so the count rewrite applies and a capped result reports its true total.
++
++Probes (read-only, reader helper, written into this report as the lead asked): 100 rows in 0.73 s and its count 0.62 s (5,230) for MedGen:C0010674; 100 rows in 0.93 s and its count 0.96 s (46,028) for MedGen:C0346153.
++
++Tests: 11 new template and pipeline tests and 5 new wiring tests. Includes eligibility rows, the template text, develop having no template on the aggregate, single hop and multi hop classes, and a capped result reporting `total_available` 5,230 through the count query (two statements executed).
++
++Mutation, one property, red and restored: reversing the edge turned `test_the_disease_variants_template_walks_from_the_disease_end_with_one_inline_match` red (1 failed, 47 passed), then 48 passed.
++
++Held-out: 19 of 20 agree. Miss: `Show me the pathogenic changes behind cystic fibrosis.` picked `none_of_these`, which is the safe direction (develop's path).
++
++Live check, `What variants cause cystic fibrosis?`:
++
++| Run | Branch seconds | Think class | Branch graph call | Develop seconds | Develop graph call |
++|---|---|---|---|---|---|
++| 1 | 8.3 | exploratory | `disease_record_one`, 1 row | 6.9 | `disease_record_one`, 1 row |
++| 2 | 7.1 | exploratory | `disease_record_one`, 1 row | 9.8 | written search, 100 rows, capped |
++| 3 | 10.9 | multi_hop | `disease_variants_one`, 100 rows, capped, total 5,831 | 16.7 | written search, 100 rows, capped |
++| 4 | 15.0 | none | guardrail transient error, no answer | 8.8 | `disease_record_one`, 1 row |
++| 5 | 6.9 | exploratory | `disease_record_one`, 1 row | 6.6 | `disease_record_one`, 1 row |
++
++- Honest reading: the shape fired on 1 of 4 usable branch runs. On the exploratory reading develop's own record template applies, so by the decision's rule no decision is asked and the person sees the disease record and live PubMed records, not variants. See the findings.
++
++## Live budget
++
++- Every live run, branch and develop, all four shapes plus the extra checks, summed from the runs' own cost events: $0.37 against the $0.80 allowance.
++- Per run $0.0001 to $0.0164. Classifier calls for the held-out checks (80 decisions) cost cents and are not in that sum.
++- Develop's settings throughout: `CLASSIFIER_PROVIDER=jev`, guard and plan models `deepseek/deepseek-v4-flash`, synth model `z-ai/glm-5.2`, `PER_QUERY_COST_CAP_USD=0.25`. No Opus.
++
++## Findings for the lead
++
++- Develop shows unrelated papers for a named paper. `What is PMID 11237011?` on develop planned a PubMed search for the question's words and answered with five unrelated papers; the same happens to a two-paper question Think reads as a lookup (first-batch run A5). The cause is the topic search replacing develop's own record template. This card fixed it only where a checked shape is forced. A fix for the lookup case is outside the design's fences and the lead's call.
++- Shape D is reached rarely. Think calls "What variants cause cystic fibrosis?" exploratory in most runs, develop's record template then applies, and the decision is never asked. Asking the decision when develop's only candidate is the disease record, and the planned class is open, would reach it. That changes what a plain condition question shows, so it is the owner's call; query 115 says so.
++- Test query numbers collided: the build used 112 to 115, which cards 24, 20 and 17 also used. The lead renumbered card 15's queries to 115 to 118 when committing the slices.
++- A false "does not address" note. For slice C the answer says it does not address MSH2 although MSH2 variants are listed, and for slice B it says it does not address the paper. This is the existing entity coverage note; it is not changed here.
++- Article rows read by id. Slice A's answer lists "Article record PMID:11237011" and not the title. The title is on the source card. Not changed here.
++- No plain "the graph shows no link" sentence for an unlinked gene and paper (slice B). The answer never denies, but it does not say it either. Not changed here.
++- Count questions. A near miss in the held-out checks for slices B and C picked the shape for a "how many" question. The result is a capped list, never a number or a record about another entity.
++- Guardrail transient errors. Two of about 40 live runs ended with the guardrail's transient error (A first batch run 1, D branch run 4). Both are the provider, not these changes.
++- Not written: the `DECISIONS.md` row and any frontend decision list; `plan.graph_shape` is not in `harness/task_tiers.py`, as `plan.paper_links` is not.
++
++## Gates
++
++- `ruff check` (no path): All checks passed.
++- isort gate 2 command (`isort --check-only --diff src tests services tracker alembic .claude .github`): exit 0.
++- `pytest tests/system_03_search_agent -m "not integration" -q`: 7021 passed, 143 skipped, 24 deselected, 1 xfailed, 7 warnings in 260.77 s.
++- `ruff format` was not run.
++
++## Learnings
++
++- A replace on `return shapes` hit `matched_shapes` first and broke 35 tests with a `NameError`. Fixed in under five minutes; edit by a unique anchor, not a common line.
++- The shared machine ran at a load of 10 to 16 while other builders ran suites. Single live runs took 6 to 16 s but a five-run batch took many minutes of wall time. Run batches in the background and wait on the result file.
++- A shell `sed -i` needs an empty backup argument on this machine; use a short Python replace for edits.
+diff --git a/testing/Developer/reports/2026-10-15_card15/design.md b/testing/Developer/reports/2026-10-15_card15/design.md
+new file mode 100644
+index 00000000..f617307c
+--- /dev/null
++++ b/testing/Developer/reports/2026-10-15_card15/design.md
+@@ -0,0 +1,272 @@
++# Card 15 design: five checked graph searches, one question shape at a time
++
++When no checked graph search fits a question, a model writes one, and about one run in ten the written search is malformed, times out, or answers a different question. The 8 October attempt closed that path with one rule for every shape and failed review. This document designs what the 8 October decision row says ends the park: the five checked templates the build note names, built one question shape at a time, each chosen by a classifier and never by a word list, with every other question left exactly as develop has it.
++
++Written 2026-10-15 from develop at `7626fe85`, the parked code at `parked/card15-checked-searches-2026-10-08`, the 8 October build, judge and adversary reports, card 15's diagnosis, the `DECISIONS.md` rows naming the card, and `testing/Test_queries_and_workflows.md`. No source file was changed. Nineteen read-only queries were run against the live graph through `graph_connection.execute_cypher`, the helper the e2e test uses, with the reader credential; their timings are in the appendix and decide most of what follows.
++
++## Table of contents
++
++- [In one minute](#in-one-minute)
++- [1. The five question shapes](#1-the-five-question-shapes)
++- [2. How Plan chooses a template](#2-how-plan-chooses-a-template)
++- [3. The build order](#3-the-build-order)
++- [4. What review found wrong on 8 October, and how each is avoided](#4-what-review-found-wrong-on-8-october-and-how-each-is-avoided)
++- [5. Risks: a confident wrong record](#5-risks-a-confident-wrong-record)
++- [6. What a builder needs before starting](#6-what-a-builder-needs-before-starting)
++- [Appendix: the read-only probes of 2026-10-15](#appendix-the-read-only-probes-of-2026-10-15)
++
++## In one minute
++
++- The five shapes, each a checked, parameterised, read-only Cypher template: the records of several named papers; whether a named paper mentions a named gene; the variants in several named genes linked to a named condition; the genes of a named Gene Ontology term; the papers tagged with a named MeSH term.
++- Measured live today: the first three answer in 0.5 to 4.6 s. The two term shapes as the build note wrote them time out at 30 s or take 18 s, because an `ORDER BY` over every match forces a whole-table plan; a bounded form that takes the first hundred matches and sorts those answers in 0.7 s, and the design uses it with an honest "more than shown" flag.
++- Plan asks one classifier decision, `plan.graph_shape`, only for a question develop's own template selection returns None for today and whose bound identifiers make one of the five shapes structurally possible. A pick forces that template through the existing `template=` seam. "None of these", or no usable pick, leaves the plan byte-identical to develop's. No question that has a template today is touched.
++- One shape per commit, smallest first: papers' records, gene in a paper, genes' variants for a condition, GO term's genes, MeSH term's papers. Each commit carries its unit tests, a mutation check, a new test query entry, and a five-run live check beside develop.
++- None of the 8 October failures can recur by construction: there is no record fallback, no declined-search state, no new word test, and every template returns the anchor the person typed or is anchored at both ends on typed identifiers.
++- The owner is asked one thing: the two term shapes are reached only by a person who types a GO or MeSH identifier, which no test query does. A disease's variants from the disease end, which test queries 20, 66 and 81 reach, measured 1.0 to 1.4 s and could take their place.
++
++## 1. The five question shapes
++
++The build note of 8 October ("Paths kept and why") names five paths a checked template would need. Each is designed here with its example, its template, what it reads and returns, how its rows cite their source, and the test query that proves it.
++
++An honest note on the examples first. The test queries document types none of these five shapes: every graph question in it already has a checked template on develop (queries 1, 2, 5, 7, 10, 12, 19 to 25, 64, 78, 79, 104), or reaches a path that is not one of the five (66, 68, 81, 87). The example under each shape is therefore the wording the 8 October reviewers probed with, quoted from `testing/Developer/reports/2026-10-08_card15/` and the diagnosis, and labelled as such. It is not a prompt string this design invented, and it is not a test query until the owner or the lead writes the entry (section 6).
++
++Conventions shared by all five:
++
++- Every id is a `$e_...` parameter from `cypher_query.entity_param_bindings`; no literal value ever enters the query.
++- Every anchor is an inline `{id: $e}` match, the indexed form; no template uses `WHERE a.id IN [...]`, which the module measured as a whole-table scan (J-15-02).
++- Every template passes `validate_cypher` and `_check_entity_binding` like a generated query, runs under the reader role and the statement timeout, and returns whole vertices so `cypher_provenance.to_output_rows` has `id`, `name` and `source_url`.
++- Several branches are joined with `UNION ALL`, the form `_record_template` and `_article_links_template` already use; AGE rejects edge-label alternation, so a shape over several edges is several branches.
++
++### Shape A: the records of several named papers
++
++| Field | Design |
++|---|---|
++| Example on record | `Compare PMID 11237011 and PMID 11237012` (judge's probe, J-15-01) |
++| What a person wants | Both papers, each cited, so they can compare them; never one paper and never a search that does not finish |
++| Template | `article_record_many`, the existing `_record_template("Article", params)`: one `MATCH (a:Article {id: $e}) RETURN a ORDER BY a.id` per paper, joined by `UNION ALL`, branches in parameter-name order |
++| Reads | `Article` vertices only, no edge |
++| Returns | One row per named paper, or none for an id the graph lacks |
++| Citation | Each row's own `source_url`, measured live: `https://pubmed.ncbi.nlm.nih.gov/<pmid>/` |
++| Structural eligibility | Two to ten `PMID` identifiers bound and nothing else; develop's `select_template` returns None, which today means a hop or aggregate class (a lookup or exploratory class already takes the record) |
++| Measured | 0.53 s for two papers |
++| Proves it | New test query 110 (the number the diagnosis reserved for this card) |
++
++### Shape B: whether a named paper mentions a named gene
++
++| Field | Design |
++|---|---|
++| Example on record | `Does PMID 11237011 discuss BRCA1?` (diagnosis and judge) |
++| What a person wants | A yes with the paper cited when the graph links them, and plain words when it does not; never "the paper does not discuss it", which the graph cannot assert |
++| Template | `gene_article_link`: `MATCH (a:Gene {id: $e_gene})-[:mentioned_in]->(x:Article {id: $e_pmid}) RETURN x ORDER BY x.id`, the form `gene_disease_link` already uses with both ends inline |
++| Reads | `Gene`, `mentioned_in`, `Article` (the pair `EDGE_ENDPOINTS` documents) |
++| Returns | One Article row or none |
++| Citation | The paper's `source_url`, the PubMed page |
++| Structural eligibility | Exactly one `NCBIGene` and exactly one `PMID` bound, nothing else; a label mix develop declines today |
++| Measured | 3.5 s for a linked pair, 3.1 s for an unlinked pair (the edge is walked from the gene end; BRCA1 has thousands of papers) |
++| Proves it | New test query 112 |
++
++An empty result is the graph's "no such link", not the paper's "no". Write's existing empty-graph wording plus the gene's live fan-out is what the person sees; the live check in section 3 reads the answer for any sentence that turns the absence into a denial.
++
++### Shape C: the variants in several named genes linked to a named condition
++
++| Field | Design |
++|---|---|
++| Example on record | `Variants in MLH1 and MSH2 causing Lynch syndrome` (diagnosis; `_mixed_gene_disease_template` returns None for the variants shape with several genes) |
++| What a person wants | Each gene's linked variants side by side, each with the conditions its ClinVar record names, and a plain line when more exist than are shown |
++| Template | `gene_variant_disease_link_many`: one branch per gene, in parameter-name order, joined by `UNION ALL`. Each branch is the existing `_gene_variant_disease_link_template` pattern with an equal share of the plan's 100 rows taken in variant-id order before the fold: `MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(a:Gene {id: $e_gene}) MATCH (v)-[:has_phenotype]->(x:Disease {id: $e_disease}) WITH v, collect(DISTINCT x) AS xs ORDER BY v.id LIMIT <share> RETURN v, xs ORDER BY v.id`, where `<share>` is 100 divided by the number of genes, a code constant per branch count, never caller text. Several conditions use the inline-or-IN clause the one-gene template already uses for its disease end |
++| Reads | `SequenceVariant`, `is_sequence_variant_of`, `Gene`, `has_phenotype`, `Disease` |
++| Returns | Variant rows, each carrying `clinvar_condition_ids` from the fold; the Disease vertices as their own rows, exactly as query 79's one-gene table |
++| Citation | Each variant's ClinVar page; each condition's MedGen page; names resolved live as card 103 does, placeholders worded as card 103 words them |
++| Structural eligibility | Two to ten `NCBIGene` and one to ten `Disease` (`MedGen`, `MONDO`) identifiers bound, nothing else |
++| Measured | 4.6 s for two genes, 200 matches; 2.5 s for a second condition. Without the per-branch share, the first gene's hundred rows filled the cap and the second gene showed nothing, which is why the share exists |
++| Proves it | New test query 113; query 24 is the nearest existing question and is unchanged (no variants word, so `gene_diseases_many` today and tomorrow) |
++
++Truncation is honest for free: `_build_count_cypher` declines a `UNION`, so a capped result reports `truncated=True, total_available=None`, the "more than shown, total unknown" state Write already words.
++
++### Shape D: the genes of a named Gene Ontology term
++
++| Field | Design |
++|---|---|
++| Example on record | `Which genes take part in GO:0006281?` (build note, judge J-15-01, adversary) |
++| What a person wants | The term named in words, then its genes each cited, and a plain line when the term has more genes than are shown |
++| Template | `go_term_genes_one`, six `UNION ALL` branches, two per GO label (`BiologicalProcess` with `participates_in`, `MolecularActivity` with `actively_involved_in`, `CellularComponent` with `located_in`): the term's own record, `MATCH (a:<Label> {id: $e}) RETURN a ORDER BY a.id`, then its genes in the bounded form, `MATCH (x:Gene)-[:<edge>]->(a:<Label> {id: $e}) WITH x LIMIT 100 RETURN x ORDER BY x.id`. Only the label the id belongs to returns rows |
++| Reads | The three GO labels, their three edges, `Gene` |
++| Returns | The term vertex first (its `name`, "DNA repair" for the probed id), then up to 100 genes |
++| Citation | Each gene's NCBI Gene page. The term row itself is uncited by rule: a GO vertex is cited only on a caller's explicit say-so (`cypher_provenance._go_attribution_curie`, review F-01), and here it is the anchor, not a finding |
++| Structural eligibility | Exactly one `GO` identifier bound, nothing else. `anchor_label_for` returns None for it today, so develop writes the search |
++| Measured | The build note's form, `RETURN x ORDER BY x.id`: 30 s timeout for GO:0006281, 18 s for a small term and for the count. The join itself: 0.7 s. The bounded form: 0.74 s for the large term, 0.67 s for the small one. The record branch: 0.42 s |
++| Proves it | New test query 114 |
++
++Why the bounded form is honest: the `WITH x LIMIT 100` is a scoping limit the validator already recognises (`_CLAUSE_CONTINUATION_KEYWORDS`, F-2.1-A8) and the live service accepted it; the `UNION` keeps the count rewrite off, so a term with more than a hundred genes reports `truncated=True` with the total unknown, and the answer says "the first 100 genes the graph lists" rather than claiming the set is complete. A term with fewer than a hundred genes returns them all, sorted by id, the same set every run. The one corner is a term with exactly 100 genes, reported as truncated though complete: it claims less, never more.
++
++### Shape E: the papers tagged with a named MeSH term
++
++| Field | Design |
++|---|---|
++| Example on record | `Which papers are tagged with MeSH D001943?` (judge J-15-01) |
++| What a person wants | The term in words, then papers each cited, and a plain line when there are more |
++| Template | `mesh_term_articles_one`, two `UNION ALL` branches: the term's record, `MATCH (a:OntologyClass {id: $e}) RETURN a ORDER BY a.id`, then `MATCH (x:Article)-[:has_mesh_annotation]->(a:OntologyClass {id: $e}) WITH x LIMIT 100 RETURN x ORDER BY x.id` |
++| Reads | `OntologyClass`, `has_mesh_annotation`, `Article` |
++| Returns | The term vertex, then up to 100 papers |
++| Citation | Each paper's PubMed page; the term row cited to its NCBI MeSH page through `cypher_provenance`'s MeSH mapping. The graph names the term `[MeSH] D001943`; query 64's live name resolution turns that into words |
++| Structural eligibility | Exactly one `MeSH` identifier bound, nothing else |
++| Measured | The build note's form: timeout at 30 s for every term probed, the count too. The bounded form: 0.69 s. The record: 0.47 s |
++| Proves it | New test query 115 |
++
++### What the five cost a person in time
++
++| Shape | Measured worst case | Against the 20 s answer guide |
++|---|---|---|
++| A, papers' records | 0.53 s | Well inside |
++| B, gene in a paper | 3.5 s | Inside |
++| C, genes' variants for a condition | 4.6 s | Inside |
++| D, GO term's genes, bounded | About 3 s for six branches, each 0.4 to 0.7 s (the builder measures the joined form) | Inside |
++| E, MeSH term's papers, bounded | 1.2 s for two branches | Inside |
++
++## 2. How Plan chooses a template
++
++The owner's rule: a decision point goes to a classifier model; code keeps structural facts, schema bounds and a fail-safe, and verifies. The 8 October build routed by Think's class and a count regex; this design routes by one decision through the seam every other decision in `core/graph.py` uses (`_DecisionSpec`, `_decide_point`, `_usable_choice`).
++
++```mermaid
++flowchart TD
++    T[Think binds identifiers] --> P[Plan builds the graph call]
++    P --> S{select_template on develop}
++    S -->|a template| R[Run it, unchanged]
++    S -->|None| E{A shape structurally possible?}
++    E -->|no| M[Develop's path, unchanged]
++    E -->|yes| D[decide plan.graph_shape]
++    D -->|a shape picked| F[Force that template]
++    D -->|none of these| M
++    D -->|no usable pick| M
++    F --> V[Validator and binding gate]
++    V --> R
++```
++
++The decision, step by step:
++
++1. Plan builds `_PlannedToolCall` exactly as today (`_select_planned_tool_call`, the `CypherQueryInput` with Think's identifiers, or the remembered antecedent).
++2. Code calls develop's own `select_template(cypher_input, entity_param_bindings(target_entities))`. Anything but None: nothing changes, no decision is asked. This is the guarantee that no question with a checked search today is touched, and it costs no call.
++3. Code computes which of the five shapes the bound identifiers make structurally possible, from their prefixes and counts only (the eligibility rows in section 1). Nothing possible: develop's path, no decision asked. Today's bindings make at most one shape possible for any set, so the decision is in practice two options.
++4. Plan asks `decide(point="plan.graph_shape")` with the question text as the state, the possible shape names plus `none_of_these` as the options, `fail_open="none_of_these"`, bounded by Plan's step deadline through `_await_within_step` as `plan.paper_links` is. The decision is started after Think because it needs Think's identifiers; it runs in parallel with nothing else Plan waits on, and a guard-tier pick measured 0.3 to 1.5 s on this seam.
++5. A usable pick naming a shape: the template is built from the bound parameter names and set on `_PlannedToolCall.template`, the `template=` seam `plan_node` already uses for the GO context call, with `context_only=False` so the rows are the answer's findings. `cypher_query` then runs the validator and the binding gate on it like every template.
++6. `none_of_these`, or no usable pick (seam failure, timeout, cost cap): the planned call is byte-identical to develop's and runs develop's path.
++
++The decision's description, code-authored, neutral, with no test question in it. Draft text for the builder, to be measured on held-out phrasings before merge:
++
++| Option | When to choose it |
++|---|---|
++| `papers_named` | The question asks about, for a summary of, or to compare the named papers themselves |
++| `gene_in_paper` | The question asks whether, or how, the named paper discusses, mentions, studies or reports on the named gene |
++| `genes_variants_for_condition` | The question asks which variants, mutations or alleles in the named genes are linked to, cause, or are reported for the named condition, where the condition is named as a condition and not as a sample type or a passing word |
++| `term_genes` | The question asks which genes take part in, carry out, are involved in, or are located in the named Gene Ontology term |
++| `term_papers` | The question asks which papers, articles or publications are tagged with, indexed under, or about the named MeSH term |
++| `none_of_these` | Anything else: it asks for a number or a count, for something linked to the named records other than what the option names, what a named record is, or for something the graph does not hold such as prevalence, treatment or trials |
++
++What this design does not do to develop:
++
++- `select_template`'s existing keyword tests are not extended and not removed; the five shapes add no word to code.
++- `written_search_allowed`, `_record_fallback` and `NO_CHECKED_SEARCH_MESSAGE` from the parked branch are not brought back. There is no declined-search state.
++- `_LABEL_BY_PREFIX` keeps Gene, Disease and Article. The five templates are built by name from the bound parameters, so `anchor_label_for` is untouched and no new label enters develop's own selection.
++- `core/graph.py` gains one `_DecisionSpec`, one eligibility function, and one branch in `plan_node` after the planned call is built. `_MAX_DONE_DECISIONS` is 16; a run makes at most seven decisions after this.
++
++## 3. The build order
++
++One shape per commit, smallest first. Every commit is independently revertible: reverting it removes one option and one template, and the questions it served return to develop's path.
++
++Common to every commit:
++
++- File fence: `src/system_03_search_agent/tools/cypher_templates.py` (the template and its entry in `all_template_examples`), `src/system_03_search_agent/core/graph.py` (the first commit adds the decision spec, the eligibility function and the `plan_node` branch; later commits add one option and one eligibility row), `tests/system_03_search_agent/tools/test_cypher_templates.py`, `tests/system_03_search_agent/tools/test_cypher_query_templates.py`, the core plan tests beside the `plan.paper_links` ones, `testing/Test_queries_and_workflows.md` (one entry), `DECISIONS.md` (one row). Not touched: `cypher_query.py`'s pipeline, `cypher_validator.py`, `graph_connection.py`, `synthesis/`, the frontend.
++- Tests on every commit: the template builds, passes `validate_cypher` with its `ORDER BY` before the injected cap, binds only its parameter names, and is in the example set; through the pipeline with the fake `execute_cypher`, a forced template returns cited rows; in Plan, a question develop templates today never asks the decision (assert the seam is not called), an eligible question asks it with exactly the possible options, a pick forces the template, and `none_of_these` or a None record leaves `_PlannedToolCall` equal to develop's. Mutation checks as the house practice: the eligibility inverted, the pick ignored, the fail-open changed, each must turn a test red.
++- A held-out check before merge: ten phrasings of the shape and ten near misses, written by the builder after the criteria and kept out of the criteria and the tests, through the real decision seam; the pick rate is reported in the build note, with the misses named.
++- The live check, five runs: the shape's test question five times on the branch and five times on deployed develop, in Plain language. Recorded per run: the template name from the tool frame, the sources' identifiers, the time to answer, and any line saying a search did not finish. Pass: the branch returns the same sources on five of five, under 20 s on every run, with no lost-search line, and a reviewer reading the answers finds no record about an entity the person did not type and no sentence that turns an empty result into a denial. Develop's five runs are the comparison, not a bar.
++- The test query entry is written after the live check, from what the runs showed, never before (the J-15-01 lesson: query 110's third bullet promised live answers the plan never made).
++
++| Commit | Shape | Acceptance, in the user's words | Specific tests and checks |
++|---|---|---|---|
++| 1 | A, papers' records, with the decision point | A question naming two or more papers by their PubMed ids shows each paper's record, cited to its PubMed page, the same records every time | The template is the existing record form, so the commit is the decision seam itself; the Plan tests above are its weight |
++| 2 | B, gene in a paper | A question asking whether a paper discusses a gene shows the paper's record when the graph links the two, and says plainly that the graph shows no link when it does not, never that the paper does not discuss the gene | The five-run check reads every empty answer for a denial; a pipeline test for the zero-row case |
++| 3 | C, genes' variants for a condition | A question asking which variants in two or more named genes are linked to a named condition shows each gene's linked variants side by side, each with the conditions its ClinVar record names, and says when more exist than are shown | A test that each branch carries its share and its `ORDER BY` before the scoping limit; a pipeline test that a capped result reports truncated with the total unknown and that no count query runs; the fold field on every variant row |
++| 4 | D, GO term's genes | A question naming a Gene Ontology term by its id shows the term in words, then its genes each cited to NCBI, and says "the first 100 genes the graph lists" when it has more | The ordering test gains a bounded-template rule (a scoping `LIMIT` inside the query, none at the end); a test that the six branches name only documented edge pairs (`_assert_hop_documented`); the live check on a term with under a hundred genes and one with more, the first set identical on five of five |
++| 5 | E, MeSH term's papers | A question naming a MeSH term by its id shows the term in words, then papers each cited to PubMed, and says when there are more | As commit 4; the live check confirms the term's name arrives in words through query 64's resolution |
++
++Commits 4 and 5 wait on the owner's answer in section 6. Commits 1 to 3 need nothing from anyone.
++
++## 4. What review found wrong on 8 October, and how each is avoided
++
++| Finding | What went wrong | What this design does |
++|---|---|---|
++| A-15-02, major | A disease question asking for variants, papers or phenotypes showed the disease's own record as the graph's answer, including the "What variants cause it?" chip | No record fallback exists. A template runs only when the classifier picked the shape that template answers; otherwise develop's path runs unchanged |
++| A-15-05, major | A declined search was shown as "searching the knowledge graph, 0 results" | No declined-search state exists. Every question either runs a checked template or runs what develop runs today |
++| A-15-14, major | A mistyped ClinVar id returned another variant's conditions and nothing shown named the variant | Shapes D and E return the anchor record first, so the answer names the term the rows belong to; shapes A and B return the paper record with its title; shape C's variant names carry the gene symbol in their HGVS form and the gene is live-confirmed by symbol before it is bound |
++| J-15-01, major | A graph-only question (GO, MeSH, two papers) refused with "could not find grounded evidence" though nothing was searched, and the test query promised live answers the plan never made | Those three shapes are the ones that now run a real search (A, D, E). An empty result reaches Write as develop's empty-graph state. Test entries are written after the live runs |
++| A-15-01, A-15-07, A-15-12, J-15-04 | A count regex gated the written search: counts in other words lost it, "how many people" kept it | No new word test. A count is `none_of_these` by the classifier's criteria and keeps develop's path, whatever develop does with it |
++| A-15-03, A-15-04, A-15-08 | New anchor labels and a label-mix rule routed organism and variant questions to records or to no search | No new label enters `select_template`. Label sets outside the five eligibilities go to develop's path |
++| A-15-06, A-15-09 | Variant conditions showed vocabulary tokens as names and counted placeholders | Shape C's conditions reach Write through the same fold path query 79 uses, with card 103's placeholder wording; no count form is built for any of the five |
++| A-15-10, major | Several variants' shared conditions were lost under a completeness claim | Shape C keeps each variant's conditions on the variant row through the fold, as the one-gene template does; the Disease rows deduped across variants are not the pairing. Branch shares cap each gene's rows in id order, and a capped result says so |
++| A-15-11, minor | An accession or zero-padded id found nothing and read as "no conditions" | Unchanged risk, narrowed: an id form the graph does not hold returns no anchor row, so the answer shows no record for it rather than another record's rows |
++| A-15-15, minor | A test paired an rs id with an unrelated ClinVar id | Tests use ids and pairings from the appendix's probes, and neutral ids where the pairing does not matter |
++| J-15-02, minor | The several-variant form used the `IN` list the module documents as a scan | Every template is inline matches joined by `UNION ALL` |
++| J-15-03, J-15-05, minor | A declined search's reason reached no log; comments still said None means the model path | No declined state to log. None still means develop's path, so the comments stay true |
++
++## 5. Risks: a confident wrong record
++
++The owner's line: a confident wrong record is worse than a missing one. Where this design could produce one, and what stops it.
++
++| Risk | How it would show | Prevention |
++|---|---|---|
++| The classifier picks a shape for a question that wants something else | A person asking what two papers have in common gets both papers' records as the graph's answer | Every template is anchored on the identifiers the person typed, so the worst case is a right record for a narrower question, never a record about a different entity. `none_of_these` is the fail-open and the criteria name the near misses. The held-out check measures the pick rate before merge; the five-run check reads the answers |
++| A shape matches the wrong question through Think's bindings, not the words | "tumour samples" bound to several MedGen concepts beside two genes makes shape C eligible | The criteria ask for a condition named as a condition; decision D3's disclosure already names every disease record an answer used; query 25's wording is in the live check for commit 3 |
++| A mistyped identifier | The genes of a different GO term, the papers of a different MeSH term, a different paper's record | The anchor record is returned first and named in the answer, so the person sees what the rows belong to. A paper's title, a term's name |
++| The bounded set is not stable for a large term | Two runs show different hundreds | The five-run check compares the sets; a term under a hundred genes is complete and sorted. If the sets differ for a large term, the answer's "first 100 the graph lists" wording is the honest statement and the owner decides whether that is acceptable |
++| An empty link reads as a denial (shape B) | "This paper does not discuss BRCA1" | The template cannot assert that and Write's empty-graph wording does not; the live check reads for it, and a sentence that does is a finding against the commit |
++| The GO term row is uncited | A row with a name and no link | By rule (F-01); the genes under it are each cited. The builder confirms Write shows the name and never invents a link |
++| A count question reaches a list template | "How many genes in GO:0006281" answered by a list | `none_of_these` by criteria; develop's own count handling applies |
++| Time | A six-branch union slower than its parts | Measured parts total about 3 s; the builder measures the joined form before commit 4 and declines the shape if it passes 10 s |
++
++## 6. What a builder needs before starting
++
++From the lead:
++
++- The test query numbers. This design proposes 110 for shape A (the number the diagnosis reserved and the document does not use) and 112 to 115 for B to E; the lead confirms, and the builder writes each entry after its live check.
++- The card's worktree on `fix/card15-checked-templates` at `7626fe85`, as the lead set it up, and the graph reader credential in the local `.env` for the live checks (the probes in the appendix used it read-only).
++- Confirmation that one pull request carries the five commits, or one per commit; the design works either way, and each commit reverts alone.
++
++From the owner, one decision, asked now rather than held:
++
++- Shapes D and E are reached only by a person who types a GO or MeSH identifier, which no test query does and which a researcher rarely does. A disease's variants walked from the disease end (`MATCH (x:SequenceVariant)-[:has_phenotype]->(a:Disease {id: $e}) RETURN x ORDER BY x.id`) measured 1.4 s for cystic fibrosis and 0.95 s for breast cancer, with its count at 0.55 s; the "What variants cause it?" chip with a condition remembered, and queries 66 and 81's disease questions, reach that path today and get a written search. Recommendation, from the chair of the person typing: build A, B and C as designed, then build the disease's variants shape in place of D, and ask whether E is wanted at all. Cost of the recommendation: the build note's five become four plus one, and the design for the disease shape is a short addendum to this document. Cost of keeping D and E: two shapes almost nobody reaches, built before one that test queries reach.
++
++Nothing else waits on anyone. The examples' wording is the only open content question, and the owner's own words for each entry are better than the reviewers' probes.
++
++## Appendix: the read-only probes of 2026-10-15
++
++Run through `graph_connection.execute_cypher` with the reader credential and parameterised ids, timeout 30 s, from the worktree at `7626fe85`. Nothing was written; the credential cannot write.
++
++| Probe | Cypher shape | Rows, total | Time |
++|---|---|---|---|
++| D, build note form, GO:0006281 | `MATCH (x:Gene)-[:participates_in]->(a:BiologicalProcess {id: $e}) RETURN x ORDER BY x.id LIMIT 100` | timeout | 30.7 s |
++| D, count, GO:0006281 | `... RETURN count(DISTINCT x)` | 1 | 18.6 s |
++| D, build note form, GO:0006289 | as above, small term | 100 | 18.2 s |
++| D, term record, GO:0006281 | `MATCH (a:BiologicalProcess {id: $e}) RETURN a` | 1, name "DNA repair" | 0.42 s |
++| D, no sort, GO:0006289 | `... RETURN x LIMIT 100` | 100 | 0.76 s |
++| D, no sort, GO:0006281 | as above, large term | 100 | 0.67 s |
++| D, bounded, GO:0006281 | `... WITH x LIMIT 100 RETURN x ORDER BY x.id` | 100 | 0.74 s |
++| D, bounded, GO:0006289 | as above | 100 | 0.67 s |
++| E, build note form, MeSH:D001943 | `MATCH (x:Article)-[:has_mesh_annotation]->(a:OntologyClass {id: $e}) RETURN x ORDER BY x.id LIMIT 100` | timeout | 30.4 s |
++| E, count, MeSH:D001943 | `... RETURN count(DISTINCT x)` | timeout | 30.6 s |
++| E, build note form, MeSH:D002874 | as above, smaller term | timeout | 30.5 s |
++| E, term record, MeSH:D001943 | `MATCH (a:OntologyClass {id: $e}) RETURN a` | 1, name "[MeSH] D001943" | 0.47 s |
++| E, no sort, MeSH:D002874 | `... RETURN x LIMIT 100` | 100 | 0.67 s |
++| E, bounded, MeSH:D002874 | `... WITH x LIMIT 100 RETURN x ORDER BY x.id` | 100 | 0.69 s |
++| A, two papers | two inline `Article` matches, `UNION ALL` | 2, both titles and PubMed links | 0.53 s |
++| B, a paper BRCA1 is in | `MATCH (a:Gene {id: $g})-[:mentioned_in]->(x:Article) RETURN x ORDER BY x.id LIMIT 1` | 1 | 6.75 s |
++| B, linked pair | `MATCH (a:Gene {id: $g})-[:mentioned_in]->(x:Article {id: $p}) RETURN x` | 1 | 3.48 s |
++| B, unlinked pair | as above, PMID:11237011 | 0 | 3.05 s |
++| C, one gene, BRCA1 and MedGen:C0346153 | the existing fold link branch | 100 | 3.75 s |
++| C, two genes, `UNION ALL` of fold branches | BRCA1, BRCA2, MedGen:C0346153 | 100 of 200 | 4.63 s |
++| C, two genes, MedGen:C0006142 | as above | 100 of 200 | 2.50 s |
++| Replacement candidate, a disease's variants | `MATCH (x:SequenceVariant)-[:has_phenotype]->(a:Disease {id: $e}) RETURN x ORDER BY x.id LIMIT 100`, cystic fibrosis | 100 | 1.40 s |
++| Same, count | `... RETURN count(DISTINCT x)` | 1 | 0.55 s |
++| Same, breast cancer | as above | 100 | 0.95 s |
++| A variant's conditions, ClinVar:17661 | `MATCH (a:SequenceVariant {id: $e})-[:has_phenotype]->(x:Disease) RETURN x ORDER BY x.id` | 13 | 0.47 s |
++
++Two things the probes settled that the 8 October reports could not: the term-end joins are fast and the sort over every match is what times out; and `UNION ALL` of branches that carry `WITH ... collect(...)` runs on AGE and passes the service's validator.
+diff --git a/testing/Test_queries_and_workflows.md b/testing/Test_queries_and_workflows.md
+index c66f034c..a83c2719 100644
+--- a/testing/Test_queries_and_workflows.md
++++ b/testing/Test_queries_and_workflows.md
+@@ -606,6 +606,69 @@ What you should see:
+ - Known: the arachnodactyly answer can name only Haim-Munk syndrome, from a paper's title, and not Marfan syndrome (F-8.6-V08, an answer-quality note for the product owner).
+ - Why it matters: a sentence about a record the person never asked about reads as part of the answer. In the phase 8.1 product review's words: "It told me twice that a nurse visit has no clinical features, and never told me how many genes."
+ 
++### 115. Two papers named by their PubMed ids are both shown (card 15)
++
++Queries to try:
++
++- `Compare PMID 11237011 and PMID 11237012`
++
++What you should see:
++
++- Both papers are listed, each with a citation that opens its own PubMed page, and the SOURCES list holds exactly those two.
++- No other paper appears. A search of the literature for the words "compare" and "PMID" would show unrelated papers, and that is the wrong answer.
++- The same two papers come back every time you ask.
++- A question that wants something other than the papers themselves, such as `How many papers cite PMID 11237011 and PMID 11237012?`, is not answered with the two records.
++- Known: the records are listed by PubMed id, not by title. Open a source card for the paper's title.
++- Known: when the question is understood as a plain lookup, a PubMed search for the words of the question can still replace the two records (the same happens today for `What is PMID 11237011?`). This card does not change that.
++- Why it matters: a person who types two paper ids wants those two papers, not a graph query a model wrote that finishes about nine times in ten.
++
++### 116. Whether a paper mentions a gene is checked in the graph (card 15)
++
++Queries to try:
++
++- `Does PMID 10026184 discuss BRCA1?`
++- `Does PMID 11237011 discuss BRCA1?`
++
++What you should see:
++
++- For the first, the paper is the first record in the answer, cited to its PubMed page, because the graph links BRCA1 to it.
++- For the second, the graph holds no link between BRCA1 and that paper, so no paper record is shown for it, and the answer never says the paper does not discuss BRCA1. The graph can only say it holds no link, and the answer does not claim more.
++- The second answer carries the note that it does not address PMID 11237011, and then BRCA1 records from other databases, as before this card.
++- Both answers come back the same way every time. Before this card, a model wrote the search for the second question, and a written search can fail.
++- Known: the second answer does not yet say in one plain sentence that the graph shows no link between the paper and the gene.
++- Why it matters: a yes backed by a cited paper is useful, and a no that sounds sure when it only means "not in the graph" would be a confident wrong answer.
++
++### 117. Variants in several genes for one condition, each gene shown (card 15)
++
++Queries to try:
++
++- `Variants in MLH1 and MSH2 causing Lynch syndrome`
++
++What you should see:
++
++- Variants of both genes appear, MLH1 and MSH2, each a ClinVar record with its own citation, and Lynch syndrome appears as a disease record with its MedGen citation.
++- Each variant is listed with the condition its ClinVar record names.
++- The answer says the list was cut short and the exact total is not known. The graph search takes up to 50 variants from each gene, so the second gene is never crowded out by the first.
++- The same variants come back every time you ask, and the answer arrives in about 10 to 15 seconds. Before this card the search was written by a model and took 15 to 40 seconds, and the variants it found changed from run to run.
++- A question that wants something else of the same genes, such as how many variants there are, is not answered with this list.
++- Known: the answer shows only part of the 100 variants it holds, and a note can say the answer does not address MSH2 although MSH2 variants are in the list.
++- Why it matters: someone comparing two genes wants to see each gene's variants side by side, not one gene's variants and nothing of the other.
++
++### 118. The variants of one condition, from a checked graph search (card 15)
++
++Queries to try:
++
++- `What variants cause cystic fibrosis?`, five times.
++
++What you should see:
++
++- When the question is read as a connected question about the condition, the answer lists ClinVar variants, each cited to its own ClinVar page, with the disease record, and says the list is cut short and gives the true total (5,831 in the 2026-10-15 run).
++- When the question is read as an open question, the answer opens on the cystic fibrosis record and live PubMed and MedGen records, as it did before this card. That reading came up in most of the 2026-10-15 runs, so expect to see this often.
++- The variants, when shown, come in ClinVar id order, so the first hundred are the same every time.
++- A question that wants something else of the condition, such as how many variants there are or which genes carry them, is not answered with this list.
++- Known: the open reading still shows the condition and no variants. Whether to send that reading to the same search is the owner's call, because it changes what a plain "tell me about this condition" question shows.
++- Why it matters: someone asking what variants cause a condition wants variants, not the condition's own record.
++
+ ## 4. Chromosome windows and accessions
+ 
+ ### 26. A copy number variant window, before the coordinate range feature
+@@ -2070,6 +2133,10 @@ Every feature accounted for, in three tables:
+ 
+ | Item | The feature, in plain words | Where to try it |
+ |---|---|---|
++| card 15, papers named | Two papers named by PubMed id are shown as two cited records from a checked graph search | Query 115 |
++| card 15, gene in a paper | A question asking whether one paper discusses one gene shows the paper when the graph links them, and never says the paper does not discuss the gene when it does not | Query 116 |
++| card 15, genes' variants | A question asking which variants in two or more genes are linked to a condition shows each gene's variants side by side with the conditions their records name, from a checked graph search | Query 117 |
++| card 15, a condition's variants | A question asking which variants cause one condition lists its ClinVar variants with the true total, from a checked graph search, when the question is read as a connected one | Query 118 |
+ | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
+ | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
+ | card 17 | A written sentence that moves to a different paper on one shared title word opens with the name of that paper | Query 113 |
+diff --git a/tests/system_03_search_agent/core/test_graph_shape_wiring.py b/tests/system_03_search_agent/core/test_graph_shape_wiring.py
+new file mode 100644
+index 00000000..c4cb7a90
+--- /dev/null
++++ b/tests/system_03_search_agent/core/test_graph_shape_wiring.py
+@@ -0,0 +1,377 @@
++"""Card 15 (2026-10-15): Plan's decision `plan.graph_shape` forces a checked
++graph search for a question develop has no template for.
++
++Drives the real `plan_node` with only the classifier faked. No network.
++
++Coverage statement, per `goal-contracts`: a question develop's own selection
++templates today never asks the decision; a question whose identifiers allow no
++shape never asks it; an eligible question asks it with exactly the shapes its
++identifiers allow plus "none_of_these"; a pick forces the shape's template; and
++"none_of_these", no usable pick, a failed seam and a stalled decision each leave
++the planned call equal to develop's. What this file does NOT exercise: the live
++classifier and the live graph (the card's build report has both).
++
++Mutations each arm was shown to fail under (restored after each):
++
++- Papers named: ignoring the pick (always returning `planned`) turned the
++  forcing arm red; inverting the eligibility turned the never-asked arms red.
++"""
++
++from __future__ import annotations
++
++from typing import Any
++
++import pytest
++
++from system_03_search_agent.contracts.events import DecisionRecord
++from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
++from system_03_search_agent.contracts.query import Query
++from system_03_search_agent.core import graph as graph_module
++from system_03_search_agent.harness import harness as harness_module
++
++POINT = "plan.graph_shape"
++PMID_A = EventResolvedEntity(text="PMID 11237011", curie="PMID:11237011", confidence=1.0)
++PMID_B = EventResolvedEntity(text="PMID 11237012", curie="PMID:11237012", confidence=1.0)
++BRCA1 = EventResolvedEntity(text="BRCA1", curie="NCBIGene:672", confidence=1.0)
++
++TWO_PAPERS = "Compare PMID 11237011 and PMID 11237012"
++
++
++def _stub_decisions(
++    monkeypatch: pytest.MonkeyPatch,
++    pick: str | None,
++    *,
++    raises: bool = False,
++    literature: str | None = None,
++) -> list[dict[str, Any]]:
++    """`plan.graph_shape` answers `pick` (None: no usable pick). Returns what was asked."""
++    asked: list[dict[str, Any]] = []
++
++    async def _decide(
++        harness: Any, trace_id: str, point: str, state: str, options: Any, **kwargs: Any
++    ) -> Any:
++        if point == POINT:
++            asked.append({"state": state, "options": tuple(options), "kwargs": kwargs})
++            if raises:
++                raise RuntimeError("seam down")
++        if point == "plan.literature" and literature is not None:
++            return DecisionRecord(
++                name=point, options=list(options), chosen=literature, decided_by="jev",
++                jev_choice=literature, guard_choice=literature, agreed=True,
++            )
++        if point != POINT or pick is None:
++            return DecisionRecord(
++                name=point, options=list(options), chosen=next(iter(options)),
++                decided_by="guard", fallback_reason="timeout",
++            )
++        assert pick in options
++        return DecisionRecord(
++            name=point, options=list(options), chosen=pick, decided_by="jev",
++            jev_choice=pick, guard_choice=pick, agreed=True,
++        )
++
++    monkeypatch.setattr(graph_module, "decide", _decide)
++    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
++    return asked
++
++
++def _state(
++    text: str, entities: list[EventResolvedEntity], query_class: str = "single_hop"
++) -> dict[str, Any]:
++    query = Query(text=text, session_id="s-gs", trace_id="t-gs", user_id=None)
++    return {
++        "query": query,
++        "harness": harness_module.Harness(trace_id="t-gs"),
++        "seq": 0,
++        "findings": [],
++        "findings_count": 0,
++        "resolved_entities": entities,
++        "query_class": query_class,
++    }
++
++
++def _graph_call(result: dict[str, Any]) -> graph_module._PlannedToolCall:
++    calls = [c for c in result["tool_calls"] if isinstance(c, graph_module._PlannedToolCall) and not c.context_only]
++    assert len(calls) == 1
++    return calls[0]
++
++
++def _same_call_as_develop(call: graph_module._PlannedToolCall, develop: graph_module._PlannedToolCall) -> None:
++    """Everything but the per-call random id is equal."""
++    assert call.cypher_input == develop.cypher_input
++    assert call.template == develop.template
++    assert call.context_only == develop.context_only
++    assert call.memory_bound == develop.memory_bound
++    assert call.tool_call.tool == develop.tool_call.tool
++    assert call.tool_call.layer == develop.tool_call.layer
++
++
++async def _develop_call(
++    monkeypatch: pytest.MonkeyPatch, text: str, entities: list[EventResolvedEntity]
++) -> graph_module._PlannedToolCall:
++    """What develop plans: the same plan with the shape step switched out."""
++
++    async def _identity(harness: Any, trace_id: str, text: str, planned: Any, deadline: float) -> Any:
++        return planned
++
++    with monkeypatch.context() as patch:
++        _stub_decisions(patch, None)
++        patch.setattr(graph_module, "_checked_graph_shape", _identity)
++        return _graph_call(await graph_module.plan_node(_state(text, entities)))
++
++
++# ---------------------------------------------------------------------------
++# Papers named
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_two_named_papers_ask_the_decision_with_only_the_shapes_they_allow(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    asked = _stub_decisions(monkeypatch, "papers_named")
++    await graph_module.plan_node(_state(TWO_PAPERS, [PMID_A, PMID_B]))
++    assert len(asked) == 1
++    assert asked[0]["options"] == ("papers_named", "none_of_these")
++    assert asked[0]["kwargs"]["default"] == "none_of_these"
++    assert asked[0]["state"] == TWO_PAPERS
++
++
++@pytest.mark.asyncio
++async def test_a_papers_named_pick_forces_the_checked_record_template(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _stub_decisions(monkeypatch, "papers_named")
++    call = _graph_call(await graph_module.plan_node(_state(TWO_PAPERS, [PMID_A, PMID_B])))
++    assert call.template is not None
++    assert call.template.name == "article_record_many"
++    assert call.context_only is False
++    assert call.cypher_input.target_entities == ["PMID:11237011", "PMID:11237012"]
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("pick", ["none_of_these", None])
++async def test_none_of_these_or_no_usable_pick_leaves_develops_call_unchanged(
++    monkeypatch: pytest.MonkeyPatch, pick: str | None
++) -> None:
++    develop = await _develop_call(monkeypatch, TWO_PAPERS, [PMID_A, PMID_B])
++    asked = _stub_decisions(monkeypatch, pick)
++    call = _graph_call(await graph_module.plan_node(_state(TWO_PAPERS, [PMID_A, PMID_B])))
++    assert asked, "the decision must have been asked for the populate check to mean anything"
++    assert call.template is None
++    _same_call_as_develop(call, develop)
++
++
++@pytest.mark.asyncio
++async def test_a_failed_decision_seam_leaves_develops_call_unchanged(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    develop = await _develop_call(monkeypatch, TWO_PAPERS, [PMID_A, PMID_B])
++    asked = _stub_decisions(monkeypatch, "papers_named", raises=True)
++    call = _graph_call(await graph_module.plan_node(_state(TWO_PAPERS, [PMID_A, PMID_B])))
++    assert asked
++    _same_call_as_develop(call, develop)
++
++
++@pytest.mark.asyncio
++async def test_one_paper_and_a_gene_question_never_ask_the_decision(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    asked = _stub_decisions(monkeypatch, "papers_named")
++    one = await graph_module.plan_node(_state("What MeSH terms are assigned to PMID 11237011?", [PMID_A]))
++    gene = await graph_module.plan_node(_state("Which diseases are associated with BRCA1?", [BRCA1]))
++    assert asked == []
++    assert _graph_call(one).template is None or _graph_call(one).template.name != "article_record_many"
++    assert _graph_call(gene).template is None
++
++
++@pytest.mark.asyncio
++async def test_two_papers_develop_already_templates_never_ask_the_decision(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """A lookup question about two papers already takes develop's record template."""
++    asked = _stub_decisions(monkeypatch, "papers_named")
++    result = await graph_module.plan_node(
++        _state("What are PMID 11237011 and PMID 11237012?", [PMID_A, PMID_B], query_class="lookup")
++    )
++    assert asked == []
++    assert _graph_call(result).template is None
++
++
++def _has_literature_search(result: dict[str, Any]) -> bool:
++    return any(
++        isinstance(c, graph_module._PlannedNcbiEfetchToolCall) for c in result["tool_calls"]
++    )
++
++
++@pytest.mark.asyncio
++async def test_a_picked_shape_is_not_displaced_by_the_literature_search(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """Live finding: "Compare PMID ... and PMID ..." was read as wanting papers and
++    planned a PubMed search for the words "compare, pmid", showing unrelated papers."""
++    _stub_decisions(monkeypatch, "papers_named", literature="wants_literature")
++    result = await graph_module.plan_node(_state(TWO_PAPERS, [PMID_A, PMID_B]))
++    assert _graph_call(result).template is not None
++    assert not _has_literature_search(result)
++
++
++@pytest.mark.asyncio
++async def test_without_a_pick_the_literature_search_is_planned_as_it_is_on_develop(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """Populate check for the arm above: only the shape pick differs."""
++    _stub_decisions(monkeypatch, "none_of_these", literature="wants_literature")
++    result = await graph_module.plan_node(_state(TWO_PAPERS, [PMID_A, PMID_B]))
++    assert _has_literature_search(result)
++
++
++# ---------------------------------------------------------------------------
++# Gene in a paper
++# ---------------------------------------------------------------------------
++
++GENE_IN_PAPER = "Does PMID 11237011 discuss BRCA1?"
++
++
++@pytest.mark.asyncio
++async def test_a_gene_and_a_paper_ask_the_decision_with_only_their_shape(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    asked = _stub_decisions(monkeypatch, "gene_in_paper")
++    await graph_module.plan_node(_state(GENE_IN_PAPER, [PMID_A, BRCA1]))
++    assert [a["options"] for a in asked] == [("gene_in_paper", "none_of_these")]
++
++
++@pytest.mark.asyncio
++async def test_a_gene_in_paper_pick_forces_the_checked_link_template(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _stub_decisions(monkeypatch, "gene_in_paper")
++    call = _graph_call(await graph_module.plan_node(_state(GENE_IN_PAPER, [PMID_A, BRCA1])))
++    assert call.template is not None and call.template.name == "gene_article_link"
++    assert call.context_only is False
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("pick", ["none_of_these", None])
++async def test_gene_and_paper_none_of_these_leaves_develops_call_unchanged(
++    monkeypatch: pytest.MonkeyPatch, pick: str | None
++) -> None:
++    develop = await _develop_call(monkeypatch, GENE_IN_PAPER, [PMID_A, BRCA1])
++    asked = _stub_decisions(monkeypatch, pick)
++    call = _graph_call(await graph_module.plan_node(_state(GENE_IN_PAPER, [PMID_A, BRCA1])))
++    assert asked
++    assert call.template is None
++    _same_call_as_develop(call, develop)
++
++
++@pytest.mark.asyncio
++async def test_two_genes_and_a_paper_ask_no_decision(monkeypatch: pytest.MonkeyPatch) -> None:
++    asked = _stub_decisions(monkeypatch, "gene_in_paper")
++    brca2 = EventResolvedEntity(text="BRCA2", curie="NCBIGene:675", confidence=1.0)
++    await graph_module.plan_node(_state(GENE_IN_PAPER, [PMID_A, BRCA1, brca2]))
++    assert asked == []
++
++
++# ---------------------------------------------------------------------------
++# Several genes' variants for a condition
++# ---------------------------------------------------------------------------
++
++MLH1 = EventResolvedEntity(text="MLH1", curie="NCBIGene:4292", confidence=1.0)
++MSH2 = EventResolvedEntity(text="MSH2", curie="NCBIGene:4436", confidence=1.0)
++LYNCH = EventResolvedEntity(text="Lynch syndrome", curie="MedGen:C1333990", confidence=1.0)
++LYNCH_VARIANTS = "Variants in MLH1 and MSH2 causing Lynch syndrome"
++
++
++@pytest.mark.asyncio
++async def test_genes_and_a_condition_ask_the_decision_with_only_their_shape(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    asked = _stub_decisions(monkeypatch, "genes_variants_for_condition")
++    await graph_module.plan_node(_state(LYNCH_VARIANTS, [MLH1, MSH2, LYNCH]))
++    assert [a["options"] for a in asked] == [("genes_variants_for_condition", "none_of_these")]
++
++
++@pytest.mark.asyncio
++async def test_a_genes_variants_pick_forces_the_checked_union_template(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _stub_decisions(monkeypatch, "genes_variants_for_condition")
++    call = _graph_call(await graph_module.plan_node(_state(LYNCH_VARIANTS, [MLH1, MSH2, LYNCH])))
++    assert call.template is not None and call.template.name == "gene_variant_disease_link_many"
++    assert call.template.branch_row_cap == 50
++    assert call.context_only is False
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("pick", ["none_of_these", None])
++async def test_genes_and_a_condition_none_of_these_leaves_develops_call_unchanged(
++    monkeypatch: pytest.MonkeyPatch, pick: str | None
++) -> None:
++    develop = await _develop_call(monkeypatch, LYNCH_VARIANTS, [MLH1, MSH2, LYNCH])
++    asked = _stub_decisions(monkeypatch, pick)
++    call = _graph_call(await graph_module.plan_node(_state(LYNCH_VARIANTS, [MLH1, MSH2, LYNCH])))
++    assert asked
++    assert call.template is None
++    _same_call_as_develop(call, develop)
++
++
++@pytest.mark.asyncio
++async def test_two_genes_and_a_condition_develop_already_templates_never_ask(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """With no variants word, develop's own `gene_diseases_many` runs."""
++    asked = _stub_decisions(monkeypatch, "genes_variants_for_condition")
++    await graph_module.plan_node(_state("MLH1 and MSH2 in Lynch syndrome", [MLH1, MSH2, LYNCH]))
++    assert asked == []
++
++
++# ---------------------------------------------------------------------------
++# A disease's variants, walked from the disease end
++# ---------------------------------------------------------------------------
++
++CF = EventResolvedEntity(text="cystic fibrosis", curie="MedGen:C0010674", confidence=1.0)
++CF_VARIANTS = "What variants cause cystic fibrosis?"
++
++
++@pytest.mark.asyncio
++async def test_one_condition_asks_the_decision_with_only_its_shape(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    asked = _stub_decisions(monkeypatch, "disease_variants")
++    await graph_module.plan_node(_state(CF_VARIANTS, [CF]))
++    assert [a["options"] for a in asked] == [("disease_variants", "none_of_these")]
++
++
++@pytest.mark.asyncio
++async def test_a_disease_variants_pick_forces_the_checked_template(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _stub_decisions(monkeypatch, "disease_variants")
++    call = _graph_call(await graph_module.plan_node(_state(CF_VARIANTS, [CF])))
++    assert call.template is not None and call.template.name == "disease_variants_one"
++    assert call.context_only is False
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("pick", ["none_of_these", None])
++async def test_one_condition_none_of_these_leaves_develops_call_unchanged(
++    monkeypatch: pytest.MonkeyPatch, pick: str | None
++) -> None:
++    develop = await _develop_call(monkeypatch, CF_VARIANTS, [CF])
++    asked = _stub_decisions(monkeypatch, pick)
++    call = _graph_call(await graph_module.plan_node(_state(CF_VARIANTS, [CF])))
++    assert asked
++    assert call.template is None
++    _same_call_as_develop(call, develop)
++
++
++@pytest.mark.asyncio
++async def test_a_condition_lookup_develop_already_templates_never_asks(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """A lookup about one condition takes develop's own record template."""
++    asked = _stub_decisions(monkeypatch, "disease_variants")
++    result = await graph_module.plan_node(_state("What is cystic fibrosis?", [CF], query_class="lookup"))
++    assert asked == []
++    assert _graph_call(result).template is None
+diff --git a/tests/system_03_search_agent/tools/test_cypher_shape_templates.py b/tests/system_03_search_agent/tools/test_cypher_shape_templates.py
+new file mode 100644
+index 00000000..82140cec
+--- /dev/null
++++ b/tests/system_03_search_agent/tools/test_cypher_shape_templates.py
+@@ -0,0 +1,520 @@
++"""Card 15 (2026-10-15): the checked graph searches for question shapes
++`select_template` has no template for, as pure functions and through the
++`cypher_query` pipeline with a fake graph. No model, no network.
++
++The classifier decision that picks a shape is tested in
++`core/test_graph_shape_wiring.py`; this file tests what a pick builds.
++
++Mutations each arm was shown to fail under (restored after each):
++
++- Papers named: making `possible_graph_shapes` accept one paper turned the
++  count arm red.
++- Gene in a paper: swapping the template's edge direction turned the
++  template-text arm red.
++- Disease's variants: reversing the template's edge direction turned the
++  template-text arm red.
++- Genes' variants: dropping the template's `branch_row_cap` turned the
++  capped-result arm red.
++"""
++
++from __future__ import annotations
++
++import json
++from typing import Any
++
++import pytest
++
++from system_03_search_agent.tools import cypher_query as cypher_query_module
++from system_03_search_agent.tools.cypher_query import (
++    _bound_param_names,
++    _unanchored_returned_variables,
++    _unknown_param_names,
++    cypher_query,
++    entity_param_bindings,
++)
++from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
++from system_03_search_agent.tools.cypher_templates import (
++    SHAPE_DISEASE_VARIANTS,
++    SHAPE_GENE_IN_PAPER,
++    SHAPE_GENES_VARIANTS_FOR_CONDITION,
++    SHAPE_PAPERS_NAMED,
++    graph_shape_template,
++    possible_graph_shapes,
++    select_template,
++)
++from system_03_search_agent.tools.cypher_validator import validate_cypher
++
++PMID_A = "PMID:11237011"
++PMID_B = "PMID:11237012"
++BRCA1 = "NCBIGene:672"
++
++
++def _bindings(*curies: str) -> dict[str, str]:
++    return entity_param_bindings(list(curies))
++
++
++def _assert_checked(cypher: str, bindings: dict[str, str]) -> str:
++    result = validate_cypher(cypher, 100)
++    assert result.ok, f"{result.reason} {result.message}"
++    normalized = result.normalized_cypher or ""
++    assert _unknown_param_names(normalized, bindings) == []
++    assert _bound_param_names(normalized, bindings)
++    assert _unanchored_returned_variables(normalized, bindings) == []
++    return normalized
++
++
++# ---------------------------------------------------------------------------
++# Papers named
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.parametrize(
++    ("curies", "expected"),
++    [
++        ([PMID_A, PMID_B], [SHAPE_PAPERS_NAMED]),
++        ([f"PMID:{n}" for n in range(1, 11)], [SHAPE_PAPERS_NAMED]),
++        ([PMID_A], []),
++        ([f"PMID:{n}" for n in range(1, 12)], []),
++        ([PMID_A, PMID_B, BRCA1], []),
++        ([], []),
++        (["Unknown:1", "Unknown:2"], []),
++    ],
++)
++def test_papers_named_is_possible_only_for_two_to_ten_papers_and_nothing_else(
++    curies: list[str], expected: list[str]
++) -> None:
++    assert possible_graph_shapes(_bindings(*curies)) == expected
++
++
++def test_the_papers_named_template_is_one_inline_match_per_paper_in_name_order() -> None:
++    bindings = _bindings(PMID_B, PMID_A)
++    template = graph_shape_template(SHAPE_PAPERS_NAMED, bindings)
++    assert template is not None
++    assert template.name == "article_record_many"
++    names = sorted(bindings)
++    assert template.cypher == " UNION ALL ".join(
++        f"MATCH (a:Article {{id: ${name}}}) RETURN a ORDER BY a.id" for name in names
++    )
++    assert "WHERE" not in template.cypher and " IN " not in template.cypher
++    _assert_checked(template.cypher, bindings)
++
++
++def test_the_same_papers_in_either_order_build_the_same_query() -> None:
++    one = graph_shape_template(SHAPE_PAPERS_NAMED, _bindings(PMID_A, PMID_B))
++    two = graph_shape_template(SHAPE_PAPERS_NAMED, _bindings(PMID_B, PMID_A))
++    assert one is not None and two is not None
++    assert one.cypher == two.cypher
++
++
++def test_a_shape_the_identifiers_do_not_allow_builds_nothing() -> None:
++    assert graph_shape_template(SHAPE_PAPERS_NAMED, _bindings(PMID_A)) is None
++    assert graph_shape_template("not_a_shape", _bindings(PMID_A, PMID_B)) is None
++
++
++def test_develop_has_no_template_for_two_papers_on_a_hop_class() -> None:
++    """The precondition the decision rests on: this is a question develop's
++    own selection leaves to a written search today."""
++    bindings = _bindings(PMID_A, PMID_B)
++    intent = CypherQueryInput(
++        query_intent="Compare PMID 11237011 and PMID 11237012",
++        query_class="single_hop",
++        target_entities=[PMID_A, PMID_B],
++    )
++    assert select_template(intent, bindings) is None
++
++
++def _vertex(label: str, curie: str, name: str, url: str) -> str:
++    payload = {
++        "id": 844424930131969,
++        "label": label,
++        "properties": {"id": curie, "name": name, "source_url": url},
++    }
++    return json.dumps(payload) + "::vertex"
++
++
++class _RefusingHarness:
++    trace_id = "shape-trace"
++
++    def get_query_cost_usd(self, trace_id: str) -> float:
++        return 0.0
++
++    async def call_tier(self, tier: str, messages: Any, **_: Any) -> Any:
++        raise AssertionError("plan tier called on the checked path")
++
++
++@pytest.mark.asyncio
++async def test_a_forced_papers_template_returns_each_paper_cited_and_writes_no_query(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    executed: list[tuple[str, Any]] = []
++
++    def _fake(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
++        executed.append((cypher, params))
++        return [
++            {"c0": _vertex("Article", c, f"Paper {c[5:]}", f"https://pubmed.ncbi.nlm.nih.gov/{c[5:]}/")}
++            for c in (PMID_A, PMID_B)
++        ], 2
++
++    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake)
++    bindings = _bindings(PMID_A, PMID_B)
++    template = graph_shape_template(SHAPE_PAPERS_NAMED, bindings)
++    output = await cypher_query(
++        _RefusingHarness(),
++        CypherQueryInput(
++            query_intent="Compare PMID 11237011 and PMID 11237012",
++            query_class="single_hop",
++            target_entities=[PMID_A, PMID_B],
++        ),
++        template=template,
++    )
++    assert output.status == "ok"
++    assert output.template == "article_record_many"
++    assert [row.curie for row in output.rows] == [PMID_A, PMID_B]
++    assert all(row.source_url.startswith("https://pubmed.ncbi.nlm.nih.gov/") for row in output.rows)
++    assert executed[0][1] == bindings
++
++
++# ---------------------------------------------------------------------------
++# Gene in a paper
++# ---------------------------------------------------------------------------
++
++LINKED_PAPER = "PMID:10026184"
++
++
++@pytest.mark.parametrize(
++    ("curies", "expected"),
++    [
++        ([BRCA1, PMID_A], [SHAPE_GENE_IN_PAPER]),
++        ([PMID_A, BRCA1], [SHAPE_GENE_IN_PAPER]),
++        ([BRCA1, "NCBIGene:675", PMID_A], []),
++        ([BRCA1, PMID_A, PMID_B], []),
++        ([BRCA1], []),
++        ([BRCA1, PMID_A, "MedGen:C0346153"], []),
++    ],
++)
++def test_gene_in_paper_is_possible_only_for_one_gene_and_one_paper_and_nothing_else(
++    curies: list[str], expected: list[str]
++) -> None:
++    assert possible_graph_shapes(_bindings(*curies)) == expected
++
++
++def test_the_gene_in_paper_template_anchors_both_ends_inline_from_the_gene_end() -> None:
++    bindings = _bindings(BRCA1, PMID_A)
++    template = graph_shape_template(SHAPE_GENE_IN_PAPER, bindings)
++    assert template is not None
++    assert template.name == "gene_article_link"
++    assert template.edge_label == "mentioned_in"
++    assert template.cypher == (
++        "MATCH (a:Gene {id: $e_NCBIGene_672})-[:mentioned_in]->"
++        "(x:Article {id: $e_PMID_11237011}) RETURN x ORDER BY x.id"
++    )
++    _assert_checked(template.cypher, bindings)
++
++
++def test_develop_has_no_template_for_a_gene_and_a_paper() -> None:
++    intent = CypherQueryInput(
++        query_intent="Does PMID 11237011 discuss BRCA1?",
++        query_class="single_hop",
++        target_entities=[BRCA1, PMID_A],
++    )
++    assert select_template(intent, _bindings(BRCA1, PMID_A)) is None
++
++
++@pytest.mark.asyncio
++async def test_an_unlinked_gene_and_paper_return_no_row_and_no_claim_about_the_paper(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """The graph can say it holds no link. It cannot say what the paper discusses."""
++    monkeypatch.setattr(
++        cypher_query_module, "execute_cypher", lambda *a, **k: ([], 0)
++    )
++    bindings = _bindings(BRCA1, PMID_A)
++    output = await cypher_query(
++        _RefusingHarness(),
++        CypherQueryInput(
++            query_intent="Does PMID 11237011 discuss BRCA1?",
++            query_class="single_hop",
++            target_entities=[BRCA1, PMID_A],
++        ),
++        template=graph_shape_template(SHAPE_GENE_IN_PAPER, bindings),
++    )
++    assert output.template == "gene_article_link"
++    assert output.status == "empty"
++    assert output.rows == []
++    assert output.error is None
++
++
++@pytest.mark.asyncio
++async def test_a_linked_gene_and_paper_return_the_paper_cited(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    monkeypatch.setattr(
++        cypher_query_module,
++        "execute_cypher",
++        lambda *a, **k: (
++            [{"c0": _vertex("Article", LINKED_PAPER, "Mapping BRCA1 domains", "https://pubmed.ncbi.nlm.nih.gov/10026184/")}],
++            1,
++        ),
++    )
++    bindings = _bindings(BRCA1, LINKED_PAPER)
++    output = await cypher_query(
++        _RefusingHarness(),
++        CypherQueryInput(
++            query_intent="Does PMID 10026184 discuss BRCA1?",
++            query_class="single_hop",
++            target_entities=[BRCA1, LINKED_PAPER],
++        ),
++        template=graph_shape_template(SHAPE_GENE_IN_PAPER, bindings),
++    )
++    assert [row.curie for row in output.rows] == [LINKED_PAPER]
++    assert output.rows[0].source_url == "https://pubmed.ncbi.nlm.nih.gov/10026184/"
++    assert {row.traversed_edge_type for row in output.rows} == {"mentioned_in"}
++
++
++# ---------------------------------------------------------------------------
++# Several genes' variants for a condition
++# ---------------------------------------------------------------------------
++
++MLH1 = "NCBIGene:4292"
++MSH2 = "NCBIGene:4436"
++MSH6 = "NCBIGene:2956"
++LYNCH = "MedGen:C1333990"
++LYNCH_2 = "MedGen:C4552100"
++
++
++@pytest.mark.parametrize(
++    ("curies", "expected"),
++    [
++        ([MLH1, MSH2, LYNCH], [SHAPE_GENES_VARIANTS_FOR_CONDITION]),
++        ([MLH1, MSH2, LYNCH, LYNCH_2], [SHAPE_GENES_VARIANTS_FOR_CONDITION]),
++        ([MLH1, MSH2, MSH6, "MONDO:0005835"], [SHAPE_GENES_VARIANTS_FOR_CONDITION]),
++        ([MLH1, LYNCH], []),
++        ([MLH1, MSH2], []),
++        ([LYNCH, LYNCH_2], []),
++        ([MLH1, MSH2, LYNCH, PMID_A], []),
++        ([f"NCBIGene:{n}" for n in range(1, 12)] + [LYNCH], []),
++    ],
++)
++def test_genes_variants_is_possible_only_for_several_genes_and_a_condition_and_nothing_else(
++    curies: list[str], expected: list[str]
++) -> None:
++    assert possible_graph_shapes(_bindings(*curies)) == expected
++
++
++def test_the_several_genes_template_gives_each_gene_an_equal_share_before_its_return() -> None:
++    bindings = _bindings(MSH2, MLH1, LYNCH)
++    template = graph_shape_template(SHAPE_GENES_VARIANTS_FOR_CONDITION, bindings)
++    assert template is not None
++    assert template.name == "gene_variant_disease_link_many"
++    branches = template.cypher.split(" UNION ALL ")
++    assert len(branches) == 2
++    gene_names = sorted(n for n, c in bindings.items() if c.startswith("NCBIGene"))
++    disease_name = next(n for n, c in bindings.items() if c.startswith("MedGen"))
++    for branch, gene in zip(branches, gene_names, strict=True):
++        assert branch == (
++            f"MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(a:Gene {{id: ${gene}}}) "
++            f"MATCH (v)-[:has_phenotype]->(x:Disease {{id: ${disease_name}}}) "
++            "WITH v, collect(DISTINCT x) AS xs ORDER BY v.id LIMIT 50 "
++            "RETURN v, xs ORDER BY v.id"
++        )
++    assert template.branch_row_cap == 50
++    assert template.fold == ("v", "xs", "clinvar_condition_ids")
++    _assert_checked(template.cypher, bindings)
++
++
++def test_the_share_is_the_budget_divided_by_the_genes() -> None:
++    three = graph_shape_template(SHAPE_GENES_VARIANTS_FOR_CONDITION, _bindings(MLH1, MSH2, MSH6, LYNCH))
++    assert three is not None
++    assert three.cypher.count("LIMIT 33 ") == 3 and three.branch_row_cap == 33
++
++
++def test_several_conditions_use_the_in_clause_the_one_gene_template_uses() -> None:
++    bindings = _bindings(MLH1, MSH2, LYNCH, LYNCH_2)
++    template = graph_shape_template(SHAPE_GENES_VARIANTS_FOR_CONDITION, bindings)
++    assert template is not None
++    assert template.cypher.count("WHERE x.id IN [") == 2
++    _assert_checked(template.cypher, bindings)
++
++
++def test_develop_leaves_several_genes_and_a_condition_to_a_written_search_only_with_a_variants_word() -> None:
++    bindings = _bindings(MLH1, MSH2, LYNCH)
++    entities = [MLH1, MSH2, LYNCH]
++    variants = CypherQueryInput(
++        query_intent="Variants in MLH1 and MSH2 causing Lynch syndrome",
++        query_class="single_hop",
++        target_entities=entities,
++    )
++    assert select_template(variants, bindings) is None
++    no_word = CypherQueryInput(
++        query_intent="MLH1 and MSH2 in Lynch syndrome", query_class="single_hop", target_entities=entities
++    )
++    kept = select_template(no_word, bindings)
++    assert kept is not None and kept.name == "gene_diseases_many"
++
++
++def _variant(curie: str, gene: str, internal: int) -> str:
++    local = curie.split(":")[1]
++    return _vertex(
++        "SequenceVariant", curie, f"NM_000249.4({gene}):c.{local}G>A",
++        f"https://www.ncbi.nlm.nih.gov/clinvar/variation/{local}",
++    ).replace("844424930131969", str(internal))
++
++
++def _disease(curie: str) -> str:
++    return _vertex("Disease", curie, "Lynch syndrome", f"https://www.ncbi.nlm.nih.gov/medgen/{curie[7:]}")
++
++
++def _variant_rows(count: int) -> list[dict[str, str]]:
++    return [
++        {"c0": _variant(f"ClinVar:{1000 + i}", "MLH1" if i % 2 else "MSH2", 100 + i), "c1": "[" + _disease(LYNCH) + "]"}
++        for i in range(count)
++    ]
++
++
++def _many_input() -> CypherQueryInput:
++    return CypherQueryInput(
++        query_intent="Variants in MLH1 and MSH2 causing Lynch syndrome",
++        query_class="single_hop",
++        target_entities=[MLH1, MSH2, LYNCH],
++    )
++
++
++async def _run_many(monkeypatch: pytest.MonkeyPatch, rows: list[dict[str, str]]) -> tuple[Any, list[str]]:
++    executed: list[str] = []
++
++    def _fake(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
++        executed.append(cypher)
++        return rows, len(rows)
++
++    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake)
++    template = graph_shape_template(
++        SHAPE_GENES_VARIANTS_FOR_CONDITION, _bindings(MLH1, MSH2, LYNCH)
++    )
++    output = await cypher_query(_RefusingHarness(), _many_input(), template=template)
++    return output, executed
++
++
++@pytest.mark.asyncio
++async def test_each_variant_row_carries_the_conditions_its_clinvar_record_names(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    output, executed = await _run_many(monkeypatch, _variant_rows(6))
++    variants = [r for r in output.rows if r.node_or_edge_type == "SequenceVariant"]
++    assert len(variants) == 6
++    assert all(r.fields["clinvar_condition_ids"] == [LYNCH] for r in variants)
++    assert all(r.source_url and "clinvar" in r.source_url for r in variants)
++    assert output.truncated is False
++    assert len(executed) == 1
++
++
++@pytest.mark.asyncio
++async def test_a_result_as_large_as_one_genes_share_reports_capped_with_the_total_unknown(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """One gene with hundreds of variants fills its share of 50 and the other has
++    30, so 80 rows come back, under the overall limit of 100. The answer must still
++    say there are more, and no count query may run (a UNION cannot be counted)."""
++    output, executed = await _run_many(monkeypatch, _variant_rows(80))
++    assert output.truncated is True
++    assert output.total_available is None
++    assert len(executed) == 1, "a count query ran for a UNION"
++
++
++@pytest.mark.asyncio
++async def test_a_result_smaller_than_one_share_is_not_reported_capped(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    output, _ = await _run_many(monkeypatch, _variant_rows(49))
++    assert output.truncated is False
++
++
++# ---------------------------------------------------------------------------
++# A disease's variants, walked from the disease end
++# ---------------------------------------------------------------------------
++
++CYSTIC_FIBROSIS = "MedGen:C0010674"
++
++
++@pytest.mark.parametrize(
++    ("curies", "expected"),
++    [
++        ([CYSTIC_FIBROSIS], [SHAPE_DISEASE_VARIANTS]),
++        (["MONDO:0009061"], [SHAPE_DISEASE_VARIANTS]),
++        ([CYSTIC_FIBROSIS, LYNCH], []),
++        ([CYSTIC_FIBROSIS, BRCA1], []),
++        ([BRCA1], []),
++        ([CYSTIC_FIBROSIS, PMID_A], []),
++    ],
++)
++def test_disease_variants_is_possible_only_for_exactly_one_condition_and_nothing_else(
++    curies: list[str], expected: list[str]
++) -> None:
++    assert possible_graph_shapes(_bindings(*curies)) == expected
++
++
++def test_the_disease_variants_template_walks_from_the_disease_end_with_one_inline_match() -> None:
++    bindings = _bindings(CYSTIC_FIBROSIS)
++    template = graph_shape_template(SHAPE_DISEASE_VARIANTS, bindings)
++    assert template is not None
++    assert template.name == "disease_variants_one"
++    assert template.edge_label == "has_phenotype"
++    assert template.cypher == (
++        "MATCH (x:SequenceVariant)-[:has_phenotype]->(a:Disease {id: $e_MedGen_C0010674}) "
++        "RETURN x ORDER BY x.id"
++    )
++    assert template.branch_row_cap is None
++    _assert_checked(template.cypher, bindings)
++
++
++@pytest.mark.parametrize(
++    ("intent", "query_class"),
++    [
++        ("How many variants cause cystic fibrosis?", "aggregate"),
++        ("What variants cause cystic fibrosis?", "single_hop"),
++        ("What variants cause cystic fibrosis?", "multi_hop"),
++    ],
++)
++def test_develop_has_no_template_for_one_condition_on_these_classes(
++    intent: str, query_class: str
++) -> None:
++    """The precondition: these are the questions develop leaves to a written search."""
++    entities = [CYSTIC_FIBROSIS]
++    chosen = select_template(
++        CypherQueryInput(query_intent=intent, query_class=query_class, target_entities=entities),
++        _bindings(*entities),
++    )
++    assert chosen is None
++
++
++@pytest.mark.asyncio
++async def test_a_capped_disease_variants_result_reports_its_true_total(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    executed: list[str] = []
++
++    def _fake(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
++        executed.append(cypher)
++        if "count(" in cypher:
++            return [{"total_count": "5230"}], 1
++        return [
++            {"c0": _vertex("SequenceVariant", f"ClinVar:{i}", f"NM_000492.4(CFTR):c.{i}G>A",
++                           f"https://www.ncbi.nlm.nih.gov/clinvar/variation/{i}")}
++            for i in range(100)
++        ], 100
++
++    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake)
++    template = graph_shape_template(SHAPE_DISEASE_VARIANTS, _bindings(CYSTIC_FIBROSIS))
++    output = await cypher_query(
++        _RefusingHarness(),
++        CypherQueryInput(
++            query_intent="What variants cause cystic fibrosis?",
++            query_class="single_hop",
++            target_entities=[CYSTIC_FIBROSIS],
++        ),
++        template=template,
++    )
++    assert output.template == "disease_variants_one"
++    assert output.truncated is True and output.total_available == 5230
++    assert len(output.rows) == 100
++    assert all(row.source_url and "clinvar" in row.source_url for row in output.rows)
++    assert len(executed) == 2
+diff --git a/tests/system_03_search_agent/tools/test_cypher_templates.py b/tests/system_03_search_agent/tools/test_cypher_templates.py
+index 6e6ad848..fddbd4c5 100644
+--- a/tests/system_03_search_agent/tools/test_cypher_templates.py
++++ b/tests/system_03_search_agent/tools/test_cypher_templates.py
+@@ -482,6 +482,10 @@ def test_every_template_passes_the_validator_and_binds_only_its_names() -> None:
+         assert normalized.rstrip().endswith("LIMIT 100"), template.name
+ 
+ 
++#: Templates that take a bounded share per branch (card 15).
++_BOUNDED_TEMPLATES = {"gene_variant_disease_link_many"}
++
++
+ def test_every_record_template_orders_by_the_record_id_before_its_limit() -> None:
+     for template in all_template_examples():
+         if template.name.endswith("_count") or template.name.endswith("_record_one"):
+@@ -491,6 +495,14 @@ def test_every_record_template_orders_by_the_record_id_before_its_limit() -> Non
+         normalized = validate_cypher(template.cypher, 25).normalized_cypher or ""
+         order = re.search(r"ORDER BY ((?:[axv]\.id(?:, )?)+) LIMIT 25$", normalized)
+         assert order is not None, f"{template.name}: {normalized}"
++        if template.name in _BOUNDED_TEMPLATES:
++            # Card 15: a template that bounds each branch carries its scoping
++            # `LIMIT <share>` INSIDE the query, after its `ORDER BY` and before
++            # its `RETURN`, and none at the end, where the validator's goes.
++            assert template.cypher.rstrip().endswith("ORDER BY v.id"), template.name
++            branches = template.cypher.split(" UNION ALL ")
++            assert all(re.search(r"ORDER BY v\.id LIMIT \d+ RETURN ", b) for b in branches), template.name
++            continue
+         assert "LIMIT" not in template.cypher, template.name
+ 
+ 

@@ -2,7 +2,7 @@
 
 The live ledger of the night: where each card stands, which agent holds it, and the next step. The lead rewrites a row the moment a card moves, so a session that stops at a usage limit resumes from this file, not from memory. The plan and the owner's rules: `plan.md` beside this file.
 
-Last updated: 2026-10-16 05:45. A usage limit stopped six agents at about 01:08; all six were resumed at 05:10 with a deadline before the 07:00 close.
+Last updated: 2026-10-16 05:50. A usage limit stopped six agents at about 01:08; all six were resumed at 05:10 with a deadline before the 07:00 close.
 
 ## Table of contents
 
@@ -29,7 +29,7 @@ Last updated: 2026-10-16 05:45. A usage limit stopped six agents at about 01:08;
 | 17 | none (merged #241, 2903ce43) | Merged; in the retest file | none | Product check at the close |
 | 110 | none (removed) | Closed: verifier HOLD (titles joined by other words still open); #242 closed; parked 110/111 branch deleted | none | A filter that reads any joining words, later |
 | 101 | none (removed) | Closed: judge FIX FIRST and adversary FAIL (sentences develop shows are dropped); #248 closed, branch and tag deleted, reports on the docs branch | none | Pair quote marks by the record, later |
-| 15 | card15, fix/card15-checked-templates, #249 | Built, four slices committed, queries renumbered 115 to 118; judge and adversary running since 05:30 | judge-15, adversary-15 | One fix round if needed, verifier, merge before 07:00 |
+| 15 | none (removed) | Closed: judge FIX FIRST and adversary FAIL (a remembered condition's variants shown for a new subject); #249 closed, branch and tag deleted, reports on the docs branch | none | Skip the shape decision for a remembered subject, later |
 | 84 and 72 | none (removed) | Design on develop; not built: needs the owner's yes on the guardrail rule | none | The owner's answer in the morning |
 | 24 | card24, fix/card24-answer-depth-switch, #245 | Fresh verifier PASS (V-24-02 and V-24-03 minor, named open as card 117); develop merged in; CI running | none | Merge on green; then delete tag phase-8.4 |
 | 20 | none (removed) | Closed: adversary FAIL (a Georgia question counted every USA isolate; postal-code states dropped under an exact-looking count); #247 closed, branch deleted, reports on the docs branch | none | A design for matching a place to how the file writes it, later |
