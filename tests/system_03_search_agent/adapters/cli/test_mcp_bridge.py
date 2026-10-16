@@ -164,6 +164,40 @@ class Harness:
         return b"".join(self.lines).decode("ascii") + self.stderr.getvalue()
 
 
+def _refresh_harness(
+    stand_in: StandIn, creds: credentials.Credentials, answer: Callable[[httpx.Request], Any]
+) -> tuple[Harness, list[int]]:
+    """A harness whose `/auth/refresh` is answered by `answer(request)` (it
+    may return None to fall through to the stand-in). The list counts calls."""
+    calls: list[int] = []
+
+    async def wrapper(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth/refresh":
+            calls.append(1)
+            result = answer(request)
+            if asyncio.iscoroutine(result):
+                result = await result
+            if result is not None:
+                return result
+        return await stand_in.handler(request)
+
+    harness = Harness(stand_in, creds)
+    harness.http = httpx.AsyncClient(transport=httpx.MockTransport(wrapper), base_url=BASE)
+    harness.bridge._http = harness.http
+    return harness, calls
+
+
+def _unreadable(_request: httpx.Request) -> httpx.Response:
+    return httpx.Response(
+        200, content=b"not gzip", headers={"content-type": "application/json", "content-encoding": "gzip"}
+    )
+
+
+def _assert_no_secret(harness: Harness, *tokens: str) -> None:
+    for token in (*tokens, "refresh-1"):
+        assert token not in harness.output()
+
+
 @pytest.fixture
 def signed_in(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """Stores a sign-in in a private credential file and returns a factory
@@ -331,7 +365,7 @@ class TestRenewal:
         replies = await harness.send(CALL())
 
         assert stand_in.mcp_requests == [], "a failed renewal never forwards the request"
-        assert replies[0]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE
+        assert replies[0]["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED
         assert "Could not read System 3's sign-in renewal reply" in replies[0]["error"]["message"]
         assert "s3 login" in replies[0]["error"]["message"]
         assert "Try again" not in replies[0]["error"]["message"]
@@ -370,7 +404,7 @@ class TestRenewal:
         assert len(lines) == 1
         assert refresh_calls == 1
         assert stand_in.mcp_requests == []
-        assert response["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE
+        assert response["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED
         assert "s3 login" in response["error"]["message"]
         assert "Try again" not in response["error"]["message"]
         assert "s3 login" in err.getvalue()
@@ -407,6 +441,174 @@ class TestRenewal:
         assert stand_in.refresh_calls == 1
         assert sorted(r["id"] for r in harness.replies()) == [11, 12]
         assert all("result" in r for r in harness.replies())
+
+    # -- Card 75: a renewal that cannot be read must never be replayed -----
+
+    @pytest.mark.asyncio
+    async def test_unreadable_reply_latches_two_requests_in_turn(self, signed_in) -> None:
+        # Mutation: drop `httpx.DecodingError` from `_latch_if_spent` -> the
+        # second request renews again with the spent token.
+        expired = jwt(-5, "latch-gzip")
+        stand_in = StandIn(valid_tokens={expired})
+        harness, calls = _refresh_harness(stand_in, signed_in(expired), _unreadable)
+        replies = await harness.send(CALL(11), CALL(12))
+
+        assert len(calls) == 1
+        assert stand_in.mcp_requests == []
+        assert [r["error"]["code"] for r in replies] == [mcp_bridge.SIGN_IN_NEEDED] * 2
+        assert "s3 login" in replies[0]["error"]["message"]
+        assert replies[1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        _assert_no_secret(harness, expired)
+
+    @pytest.mark.asyncio
+    async def test_unreadable_reply_latches_a_request_waiting_on_the_lock(self, signed_in) -> None:
+        # Mutation: drop the latch check inside `_renew`'s lock -> the waiting
+        # request renews a second time.
+        expired = jwt(-5, "latch-wait")
+        stand_in = StandIn(valid_tokens={expired})
+
+        async def slow_unreadable(request: httpx.Request) -> httpx.Response:
+            await asyncio.sleep(0.02)
+            return _unreadable(request)
+
+        harness, calls = _refresh_harness(stand_in, signed_in(expired), slow_unreadable)
+        for request_id in (11, 12):
+            await harness.bridge.handle_line(json.dumps(CALL(request_id)).encode())
+        await harness.bridge.drain()
+
+        assert len(calls) == 1
+        assert stand_in.mcp_requests == []
+        assert sorted(r["id"] for r in harness.replies()) == [11, 12]
+        assert all(r["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED for r in harness.replies())
+        _assert_no_secret(harness, expired)
+
+    @pytest.mark.asyncio
+    async def test_a_200_that_is_not_json_latches(self, signed_in) -> None:
+        # Mutation: drop `credentials.RefreshError` from `_latch_if_spent`.
+        expired = jwt(-5, "latch-html")
+        stand_in = StandIn(valid_tokens={expired})
+        harness, calls = _refresh_harness(
+            stand_in,
+            signed_in(expired),
+            lambda _r: httpx.Response(200, content=b"<html></html>", headers={"content-type": "text/html"}),
+        )
+        replies = await harness.send(CALL(11), CALL(12))
+
+        assert len(calls) == 1
+        assert stand_in.mcp_requests == []
+        assert replies[1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        _assert_no_secret(harness, expired)
+
+    @pytest.mark.asyncio
+    async def test_a_refused_renewal_latches(self, signed_in) -> None:
+        # Mutation: drop `credentials.RefreshError` from `_latch_if_spent`.
+        expired = jwt(-5, "latch-refused")
+        stand_in = StandIn(valid_tokens={expired})
+        stand_in.valid_refresh_tokens = set()
+        harness = Harness(stand_in, signed_in(expired))
+        replies = await harness.send(CALL(11), CALL(12))
+
+        assert stand_in.refresh_calls == 1
+        assert stand_in.mcp_requests == []
+        assert replies[0]["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED
+        assert replies[1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        _assert_no_secret(harness, expired)
+
+    @pytest.mark.asyncio
+    async def test_a_server_error_on_renewal_latches(self, signed_in) -> None:
+        # The five-xx choice: the bridge cannot tell whether the server
+        # rotated the token before the proxy answered. Mutation: as above.
+        expired = jwt(-5, "latch-5xx")
+        stand_in = StandIn(valid_tokens={expired})
+        harness, calls = _refresh_harness(stand_in, signed_in(expired), lambda _r: httpx.Response(503))
+        replies = await harness.send(CALL(11), CALL(12))
+
+        assert len(calls) == 1
+        assert stand_in.mcp_requests == []
+        assert replies[1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        _assert_no_secret(harness, expired)
+
+    @pytest.mark.asyncio
+    async def test_nothing_is_sent_after_the_latch(self, signed_in) -> None:
+        # Mutation: drop the check at the top of `_exchange` -> the second
+        # request reaches `/mcp/`.
+        stand_in = StandIn(valid_tokens=set())
+        stand_in.valid_refresh_tokens = set()
+        harness = Harness(stand_in, signed_in("opaque"))
+        replies = await harness.send(CALL(11), CALL(12))
+
+        assert len(stand_in.mcp_requests) == 1
+        assert stand_in.refresh_calls == 1
+        assert replies[1]["error"]["message"] == mcp_bridge._SIGN_IN_SPENT
+        _assert_no_secret(harness, "opaque")
+
+    @pytest.mark.asyncio
+    async def test_a_renewal_that_fails_after_its_request_was_cancelled_still_latches(
+        self, signed_in, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Mutation: set the latch in the `except` branches of `_renew` instead
+        # of the done callback -> the cancelled request never reaches them and
+        # the second request renews with the spent token.
+        monkeypatch.setattr(mcp_bridge, "REQUEST_DEADLINE_SECONDS", 0.2)
+        expired = jwt(-5, "latch-cancel")
+        stand_in = StandIn(valid_tokens={expired})
+
+        async def slow_unreadable(request: httpx.Request) -> httpx.Response:
+            await asyncio.sleep(0.5)
+            return _unreadable(request)
+
+        harness, calls = _refresh_harness(stand_in, signed_in(expired), slow_unreadable)
+        first = await harness.send(CALL(1))
+        assert first[0]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE, "populate check: the deadline hit"
+        await asyncio.sleep(0.8)
+        monkeypatch.setattr(mcp_bridge, "REQUEST_DEADLINE_SECONDS", 30.0)
+        second = await harness.send(CALL(2))
+
+        assert second[-1]["id"] == 2
+        assert second[-1]["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED
+        assert len(calls) == 1
+        assert stand_in.mcp_requests == []
+        _assert_no_secret(harness, expired)
+
+    @pytest.mark.asyncio
+    async def test_a_network_failure_does_not_latch(self, signed_in) -> None:
+        # Mutation: latch on every failure (`if exc is not None`) -> the
+        # second request is refused without renewing.
+        expired = jwt(-5, "no-latch-net")
+        stand_in = StandIn(valid_tokens={expired})
+
+        def fail_once(request: httpx.Request) -> httpx.Response | None:
+            if len(calls) == 1:
+                raise httpx.ConnectError("down", request=request)
+            return None
+
+        harness, calls = _refresh_harness(stand_in, signed_in(expired), fail_once)
+        first = await harness.send(CALL(11))
+        assert first[0]["error"]["code"] == mcp_bridge.REMOTE_UNREACHABLE
+        second = await harness.send(CALL(12))
+
+        assert len(calls) == 2
+        assert second[-1]["id"] == 12
+        assert second[-1]["result"]["isError"] is False
+        _assert_no_secret(harness, expired)
+
+    @pytest.mark.asyncio
+    async def test_a_missing_credential_file_does_not_latch(self, signed_in) -> None:
+        # Mutation: latch on every failure -> the second request is refused
+        # with the "earlier in this MCP server" sentence.
+        expired = jwt(-5, "no-latch-file")
+        stand_in = StandIn(valid_tokens={expired})
+        creds = signed_in(expired)
+        harness = Harness(stand_in, creds)
+        credentials.CREDENTIALS_PATH.unlink()
+        first = await harness.send(CALL(11))
+        assert first[0]["error"]["code"] == mcp_bridge.SIGN_IN_NEEDED
+        assert "not signed in" in first[0]["error"]["message"]
+        signed_in(expired)
+        second = await harness.send(CALL(12))
+
+        assert second[-1]["result"]["isError"] is False
+        _assert_no_secret(harness, expired)
 
 
 class TestAccessTokenExpiry:

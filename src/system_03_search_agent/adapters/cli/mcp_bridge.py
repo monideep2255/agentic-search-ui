@@ -134,6 +134,10 @@ REMOTE_UNREACHABLE = -32002
 REMOTE_FAILED = -32003
 
 _SIGN_IN_AGAIN = "In a terminal, run: s3 login, then restart this MCP server."
+_SIGN_IN_SPENT = (
+    "Your System 3 sign-in could not be renewed earlier in this MCP server, "
+    f"so this request was not sent. {_SIGN_IN_AGAIN}"
+)
 
 # What the agent is told when something this module did not foresee goes
 # wrong while it handles a request (build phase 8.10's fix round, F-8.10-J01
@@ -312,6 +316,10 @@ class McpBridge:
         self._session_id: str | None = None
         self._tasks: set[asyncio.Task[None]] = set()
         self._in_flight: dict[str, asyncio.Task[None]] = {}
+        # Set once a renewal fails with an unreadable reply or a refusal: the
+        # stored refresh token is then dead or spent, and sending it again
+        # would sign the person out everywhere.
+        self._sign_in_spent = False
 
     # ------------------------------------------------------------------
     # Output
@@ -581,6 +589,8 @@ class McpBridge:
         return kept
 
     async def _exchange(self, message: Any, request_id: Any) -> list[Any]:
+        if self._sign_in_spent:
+            raise BridgeError(SIGN_IN_NEEDED, _SIGN_IN_SPENT)
         if isinstance(message, dict) and message.get("method") == "initialize":
             # A new conversation starts with no session and no version.
             self._session_id = None
@@ -777,6 +787,8 @@ class McpBridge:
         """Renew the access token once, however many requests notice at the
         same moment. Fails closed: on any failure the request is not sent."""
         async with self._renew_lock:
+            if self._sign_in_spent:
+                raise BridgeError(SIGN_IN_NEEDED, _SIGN_IN_SPENT)
             if self._creds.access_token != stale_token and not self._token_is_expiring():
                 return  # another request renewed it while this one waited
             # Shielded, so a renewal the server has made always reaches the
@@ -792,6 +804,9 @@ class McpBridge:
                 credentials_module.refresh_locked(self._http, self._creds)
             )
             refresh.add_done_callback(_retrieve_quietly)
+            # The one place the latch is set: it runs even when the request
+            # waiting on this shielded renewal was cancelled.
+            refresh.add_done_callback(self._latch_if_spent)
             self._tasks.add(refresh)  # type: ignore[arg-type]
             refresh.add_done_callback(self._tasks.discard)  # type: ignore[arg-type]
             try:
@@ -809,7 +824,7 @@ class McpBridge:
             except httpx.DecodingError as exc:
                 self.log(f"could not decode the sign-in renewal reply; {_SIGN_IN_AGAIN}")
                 raise BridgeError(
-                    REMOTE_UNREACHABLE,
+                    SIGN_IN_NEEDED,
                     "Could not read System 3's sign-in renewal reply. The server "
                     "may have rotated your sign-in, so this request was not sent. "
                     f"{_SIGN_IN_AGAIN}",
@@ -821,6 +836,16 @@ class McpBridge:
                     "Check the network connection, then try again.",
                 ) from exc
             self.log("renewed the sign-in")
+
+    def _latch_if_spent(self, task: asyncio.Future[Any]) -> None:
+        """Remember a renewal whose refresh token is dead or may be spent: an
+        unreadable reply, or any refusal (`RefreshError`, a 5xx included).
+        Network failures and local credential errors do not latch."""
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if isinstance(exc, (httpx.DecodingError, credentials_module.RefreshError)):
+            self._sign_in_spent = True
 
 
 # A sentinel for "this message expects no reply", distinct from a JSON null
