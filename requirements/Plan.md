@@ -1050,6 +1050,12 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-16, daytime. THE UI FIX LOOP: CARD 75 REBUILT AND MERGED WITH CARD 118; THE FREEZE COUNT FOR CARDS 84 AND 72 MERGED. What awaits the owner: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
+
+- The owner's two calls of the morning: count server freezes before building the gatekeeper's fix, and ask for `s3 login` only when a sign-in renewal's outcome is truly unknown.
+- What landed, each behind CI, a judge, an adversary, one fix round and a fresh verifier: card 75 (#252), so nobody is signed out of the web app by a resent renewal; card 118 (#253), its two rare follow-ups; and the freeze count (#251), one `event loop lag` line each time the server's timers run 0.25 s or more late.
+- Cards 75 and 118 merged on narrow verifier HOLDs at the owner's answer, with the open cases recorded in `DECISIONS.md`. The freeze count's line was caught by its judge: under develop's startup migration it would have been dropped, reading as zero freezes.
+
 2026-10-16. THE UI FIX LOOP, OVERNIGHT OF 2026-10-15 TO 16: CARDS 115, 17, 94'S TIMEOUT FIX AND 24 MERGED; EIGHT CARDS CLOSED BY THE OWNER'S RULE; NOTHING LEFT PARKED. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history. The night's plan and ledger: `testing/Developer/reports/2026-10-15_overnight/`.
 
 - What landed, by what a person notices, each behind green CI, a judge, an adversary and a fresh verifier, under the owner's overnight rule (merge when nothing is worse than develop):
