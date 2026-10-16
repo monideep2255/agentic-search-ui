@@ -31,7 +31,9 @@ export type AudienceDepth = "plain_language" | "researcher" | "clinical_brief" |
 /** The web UI's default mode, decision A3. */
 export const DEFAULT_ANSWER_MODE: AudienceDepth = "plain_language";
 
-const OPTIONS: { value: "plain_language" | "researcher"; label: string }[] = [
+/** Exported so `DepthStripToggle` below reads the same two options and
+ *  labels: one list of choices, never two that could drift apart. */
+export const AUDIENCE_MODE_OPTIONS: { value: "plain_language" | "researcher"; label: string }[] = [
   { value: "plain_language", label: "Plain language" },
   { value: "researcher", label: "Researcher" },
 ];
@@ -175,7 +177,7 @@ export function DepthControl({
           bgcolor: designTokens.surface,
         }}
       >
-        {OPTIONS.map(({ value: option, label }, index) => {
+        {AUDIENCE_MODE_OPTIONS.map(({ value: option, label }, index) => {
           const selected = option === shown;
           return (
             <Box
@@ -235,6 +237,102 @@ export function DepthControl({
           Locked while this search runs
         </Typography>
       ) : null}
+    </Box>
+  );
+}
+
+export interface DepthStripToggleProps {
+  value?: AudienceDepth;
+  onChange?: (value: AudienceDepth) => void;
+  /**
+   * Called when the mode already shown is clicked. Nothing is asked and no
+   * run starts; the caller uses it to close an open cost line, so clicking
+   * back reads as "never mind" (J-24-04, A-24-03).
+   */
+  onSelectCurrent?: () => void;
+  /** True while a run is in flight. Item 9.12's lock, applied here too. */
+  locked?: boolean;
+}
+
+/**
+ * Card 24 (2026-09-25). The same Plain language / Researcher choice, drawn
+ * where the approved answer-layout mockups draw it: in the answer's own
+ * status strip, beside `Show work`
+ * (`testing/Developer/reports/2026-09-14_handover_inputs/design/Main.dc.html`
+ * and `Researcher.dc.html`, the trailing group of the "Answered 6.2s · 4
+ * tools · 11 sources from 2 layers" line). The 2026-09-14 answer-layout
+ * report named this exact gap: "not built... mode is still chosen before
+ * asking."
+ *
+ * TRANSCRIBED RATHER THAN REUSING `DepthControl` WHOLE, per
+ * `design-consistency`: the mockups draw a bare two-button pill with no
+ * "Answer mode" label and no info affordance, both of which belong to the
+ * pre-ask placement and would repeat the explainer a reader already saw
+ * once. Same tokens as `DepthControl`'s own buttons (`layer1Wash`, `layer1`,
+ * `inkMuted`, `line`), same lock treatment (`opacity: .5`, `disabled`), same
+ * `AUDIENCE_MODE_OPTIONS` list, so this is one visual language rendered
+ * twice rather than a second one invented beside it.
+ *
+ * Clicking the already-selected option is a no-op: `AnswerScreen` re-runs
+ * the question at the chosen depth as a fresh dispatch, so firing that for a
+ * depth the reader is already reading would burn a run and a cap slot for
+ * nothing the reader asked for.
+ */
+export function DepthStripToggle({ value = DEFAULT_ANSWER_MODE, onChange, onSelectCurrent, locked = false }: DepthStripToggleProps) {
+  const shown = displayedMode(value);
+  return (
+    <Box
+      role="group"
+      // J-24-08: one name for one control, the home page's.
+      aria-label="Answer mode, audience-level depth"
+      sx={{
+        display: "inline-flex",
+        flexShrink: 0,
+        border: `1px solid ${designTokens.line}`,
+        // J-24-07: 0.5 x the theme's 8px = the design's 4px (`--r-sm`).
+        borderRadius: 0.5,
+        overflow: "hidden",
+        bgcolor: designTokens.surface,
+      }}
+    >
+      {AUDIENCE_MODE_OPTIONS.map(({ value: option, label }, index) => {
+        const selected = option === shown;
+        return (
+          <Box
+            key={option}
+            component="button"
+            type="button"
+            data-testid={`answer-depth-toggle-${option}`}
+            aria-pressed={selected}
+            disabled={locked}
+            onClick={() => {
+              if (locked) return;
+              if (option === shown) {
+                onSelectCurrent?.();
+                return;
+              }
+              onChange?.(option);
+            }}
+            sx={{
+              font: "inherit",
+              fontSize: 12.5,
+              fontWeight: selected ? 700 : 400,
+              px: 1.25,
+              py: 0.5,
+              border: 0,
+              borderLeft: index === 0 ? 0 : `1px solid ${designTokens.line}`,
+              cursor: locked ? "not-allowed" : "pointer",
+              opacity: locked ? 0.5 : 1,
+              bgcolor: selected ? designTokens.layer1Wash : "transparent",
+              color: selected ? designTokens.layer1 : designTokens.inkMuted,
+              whiteSpace: "nowrap",
+              "&:hover": { color: locked ? undefined : designTokens.ink },
+            }}
+          >
+            {label}
+          </Box>
+        );
+      })}
     </Box>
   );
 }

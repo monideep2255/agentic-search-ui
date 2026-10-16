@@ -486,6 +486,14 @@ export function App() {
   // UI fix set 9, item 9.1: Plain language is the default mode (decision A3).
   const [depth, setDepth] = useState<AudienceDepth>("plain_language");
   /**
+   * Card 24. The mode the answer on screen was asked at: the `chosenDepth`
+   * of the last `ask`, which is also the request's `audience_depth`. Kept
+   * apart from `depth` because the profile seed rewrites `depth` on every
+   * session refresh (J-24-05, A-24-04).
+   */
+  const [answerDepth, setAnswerDepth] = useState<AudienceDepth | null>(null);
+
+  /**
    * Monotonic ask counter, for request sequencing (F-4.8-A-02).
    *
    * The J-03 fix gated the view on `runId`, which closes the null window but
@@ -864,6 +872,7 @@ export function App() {
     // not treated as read by the next.
     setAccepted(false);
     setDepth("plain_language");
+    setAnswerDepth(null);
     // P-03: the next person at this workstation did not collapse the
     // rail, so they do not inherit a collapsed one.
     setRailOpen(railOpenByDefault());
@@ -1013,7 +1022,6 @@ export function App() {
    * docstring in `lib/guestSession.ts`.
    */
   const dailyLimitLine = dailyLimitPhrase(allowance);
-
   /**
    * Whether the rail, its strip and its toggle exist at all (F-4.8-P-03).
    *
@@ -1369,6 +1377,7 @@ export function App() {
       continuesThread = false,
     ) => {
       setDepth(chosenDepth);
+      setAnswerDepth(chosenDepth);
       // Set 1 (R1 to R3, 2026-09-12): there is no guest allowance and no
       // sign-in wall any more. A browser whose guest session was moved into
       // an account simply mints a fresh guest identity on its next signed-out
@@ -1476,6 +1485,7 @@ export function App() {
           {
             question: finished,
             meta: view.meta,
+            depth: answerDepth ?? undefined,
             claims: view.claims,
             sources: view.sources,
             trust: view.trust,
@@ -1648,7 +1658,7 @@ export function App() {
     // `view` and `searchView` joined the list when T-4.16-02 made `ask`
     // archive the turn on screen: a stale closure here would file away the
     // PREVIOUS conversation's last turn under this one's question.
-    [signedIn, token, guestToken, sessionId, view, searchView],
+    [signedIn, token, guestToken, sessionId, view, searchView, answerDepth],
   );
 
   /**
@@ -1909,7 +1919,7 @@ export function App() {
               // conversation rather than throwing the thread away. Nothing
               // is archived by it, because `ask` only archives a run that
               // LANDED and a stopped one never did.
-              void ask(searchView.question, depth, true);
+              void ask(searchView.question, answerDepth ?? depth, true);
             }}
           />
         ) : null;
@@ -2011,7 +2021,7 @@ export function App() {
                 // reads, so the two can never disagree about which run they
                 // describe.
                 clarifyingOptions={view.clarificationOptions}
-                onAsk={(next) => void ask(next, depth, true)}
+                onAsk={(next) => void ask(next, answerDepth ?? depth, true)}
               />
             }
             flaggedSources={flagged}
@@ -2021,6 +2031,22 @@ export function App() {
               )
             }
             onNewSearch={startNewSearch}
+            /*
+             * Card 24. Switching the answer's own depth switch re-runs the
+             * SAME question at the OTHER depth, through the same `ask` a
+             * typed follow-up uses, `continuesThread=true` so the answer
+             * just read folds into the thread, labelled with its mode.
+             *
+             * `depthValue` is `answerDepth`, the mode the run on screen was
+             * ASKED at (set inside `ask`, from the same value the request
+             * carries as `audience_depth`), not `depth`: `depth` is also
+             * written by the profile seed on every session refresh, so it
+             * can name a mode this answer was never asked at. Follow-ups
+             * below use the same value, so the next question after a switch
+             * runs in the switched mode.
+             */
+            onDepthChange={(next) => void ask(searchView.question, next, true)}
+            depthValue={answerDepth ?? depth}
           />
         );
       }
