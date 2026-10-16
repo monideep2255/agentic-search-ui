@@ -49,7 +49,7 @@ dependencies = [
     # trusted from documentation. `cross-web>=0.6.0` arrives as a required
     # (non-extra) transitive dependency; see requirements.txt for the full
     # note, not restated here.
-    "strawberry-graphql==0.324.0",
+    "strawberry-graphql==0.327.7",
 ]
 
 [project.optional-dependencies]

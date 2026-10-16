@@ -254,7 +254,7 @@ class TestGetContext:
         # caller once T-4.3-07 wires this as GraphQLRouter's
         # context_getter. Since context_getter runs as a FastAPI
         # dependency resolved strictly before the route body executes
-        # (verified against the installed strawberry-graphql==0.324.0
+        # (verified against the installed strawberry-graphql==0.327.7, re-verified 2026-10-15
         # router source, see this module's own docstring), raising here is
         # what makes "auth precedes execution" true for the whole surface.
         with pytest.raises(HTTPException) as exc_info:
