@@ -1195,7 +1195,7 @@ THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not b
 1. The product owner retests what went live overnight on 16 October, then 15 October, then 8 and 9 October, newest first.
 2. On 23 October, a week of the new freeze count decides whether the gatekeeper's freeze fix is worth building.
 3. New designs for the changes taken back: reading a year and a place for isolate questions in a way that matches how the records write places; looking up one named isolate; the checked database searches; where a quoted record sentence ends; the answer's first sentence; the one-sentence paper quotes; and asking which aspect a broad subject means.
-4. Two small marks on the new mode switch: an old saved mode shown by its raw name, and a little blank space above the answer.
+4. Factory, the second building agent, works again on four small screen fixes, including the two small marks on the new mode switch and a top bar that runs off the screen with a long email address.
 5. Finish the coronavirus question: the unusual spellings and the follow-up cases the first fix left open.
 6. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
 7. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting.
