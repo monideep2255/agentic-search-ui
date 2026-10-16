@@ -69,6 +69,7 @@ import threading
 import time
 from collections.abc import Callable
 from typing import Any, TextIO
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
@@ -134,6 +135,22 @@ REMOTE_UNREACHABLE = -32002
 REMOTE_FAILED = -32003
 
 _SIGN_IN_AGAIN = "In a terminal, run: s3 login, then restart this MCP server."
+# A bridge that stopped renewing picks a new sign-in up from the credential
+# file by itself, so after `s3 login` no restart is needed.
+_SIGN_IN_NOW = "In a terminal, run: s3 login. This MCP server picks up the new sign-in by itself."
+_UNREADABLE_RENEWAL = (
+    "Could not read System 3's sign-in renewal reply. The server may have "
+    f"rotated your sign-in, so this request was not sent. {_SIGN_IN_NOW}"
+)
+_OTHER_SERVER = (
+    "A System 3 sign-in was saved for a different server address than the one "
+    "this MCP server uses, so this request was not sent. Restart this MCP "
+    "server to use it."
+)
+_SIGN_IN_SPENT = (
+    "Your System 3 sign-in could not be renewed earlier in this MCP server, "
+    f"so this request was not sent. {_SIGN_IN_NOW}"
+)
 
 # What the agent is told when something this module did not foresee goes
 # wrong while it handles a request (build phase 8.10's fix round, F-8.10-J01
@@ -274,7 +291,7 @@ def _message_from_credentials_error(exc: Exception) -> str:
     if isinstance(exc, credentials_module.RefreshError):
         return (
             "Your System 3 sign-in has expired or was signed out, so this "
-            f"request was not sent. {_SIGN_IN_AGAIN}"
+            f"request was not sent. {_SIGN_IN_NOW}"
         )
     if isinstance(exc, credentials_module.InsecureCredentialsError):
         return (
@@ -312,6 +329,16 @@ class McpBridge:
         self._session_id: str | None = None
         self._tasks: set[asyncio.Task[None]] = set()
         self._in_flight: dict[str, asyncio.Task[None]] = {}
+        # Set once a renewal fails with an unreadable reply or a refusal: the
+        # stored refresh token is then dead or spent, and sending it again
+        # would sign the person out everywhere.
+        self._sign_in_spent = False
+        # Every refresh token this process has put on the wire to
+        # `/auth/refresh` whose outcome could have rotated it: the spent
+        # ones, held in memory only and never printed. None is ever sent
+        # twice (`_RenewalClient` enforces that at the moment of the POST),
+        # and a latched bridge resumes only on a token that is not among them.
+        self._wired: set[str] = set()
 
     # ------------------------------------------------------------------
     # Output
@@ -581,6 +608,7 @@ class McpBridge:
         return kept
 
     async def _exchange(self, message: Any, request_id: Any) -> list[Any]:
+        await self._refuse_if_spent()
         if isinstance(message, dict) and message.get("method") == "initialize":
             # A new conversation starts with no session and no version.
             self._session_id = None
@@ -777,6 +805,7 @@ class McpBridge:
         """Renew the access token once, however many requests notice at the
         same moment. Fails closed: on any failure the request is not sent."""
         async with self._renew_lock:
+            await self._refuse_if_spent()
             if self._creds.access_token != stale_token and not self._token_is_expiring():
                 return  # another request renewed it while this one waited
             # Shielded, so a renewal the server has made always reaches the
@@ -788,15 +817,69 @@ class McpBridge:
             # everywhere. The next renewal finds the new token on disk
             # (`refresh_locked` re-reads it), so nothing is refreshed twice.
             # `drain` waits for it too, so closing stdin cannot cut it off.
+            # The renewal goes through `_RenewalClient`, which checks the
+            # latch at the moment of the POST: a second renewal that was
+            # started while the first was still in flight (its request
+            # cancelled or timed out) can never put the same token on the wire.
+            # The outcome of this renewal is kept on its own client, so a
+            # renewal abandoned earlier cannot change this one's message.
+            client = _RenewalClient(self)
+            started_with = self._creds.refresh_token
             refresh = asyncio.ensure_future(
-                credentials_module.refresh_locked(self._http, self._creds)
+                credentials_module.refresh_locked(client, self._creds)
             )
             refresh.add_done_callback(_retrieve_quietly)
+            # Where the latch is set: it runs even when the request waiting
+            # on this shielded renewal was cancelled.
+            refresh.add_done_callback(lambda task: self._latch_if_spent(task, started_with))
             self._tasks.add(refresh)  # type: ignore[arg-type]
             refresh.add_done_callback(self._tasks.discard)  # type: ignore[arg-type]
             try:
                 self._creds = await asyncio.shield(refresh)
+            except _SpentTokenRefused as exc:
+                self._wired.add(started_with)
+                self._sign_in_spent = True
+                raise BridgeError(SIGN_IN_NEEDED, _SIGN_IN_SPENT) from exc
             except credentials_module.CredentialsError as exc:
+                status = client.status
+                if isinstance(exc, credentials_module.SessionLostError):
+                    self.log("could not renew the sign-in: the renewed sign-in could not be saved")
+                    raise BridgeError(
+                        SIGN_IN_NEEDED,
+                        "System 3 renewed your sign-in, but it could not be saved on "
+                        f"this computer, so this request was not sent. {_SIGN_IN_NOW}",
+                    ) from exc
+                if isinstance(exc, credentials_module.RefreshError) and client.quiet:
+                    # The renewal failed with an answer that cannot have
+                    # rotated the token (see `_RenewalClient`): a proxy, a
+                    # maintenance page or a brief server error. Asking again
+                    # is safe. Nothing is said about the sign-in itself, which
+                    # the bridge cannot know. Our own words: the credential
+                    # module's say "expired or revoked".
+                    if client.not_json:
+                        self.log(
+                            "could not renew the sign-in: POST /auth/refresh answered with "
+                            "a page that is not JSON (a proxy or maintenance page)"
+                        )
+                        said = "a page that is not a sign-in reply"
+                    elif client.empty:
+                        self.log("could not renew the sign-in: POST /auth/refresh answered empty")
+                        said = "an empty reply"
+                    else:
+                        self.log(
+                            f"could not renew the sign-in: POST /auth/refresh returned {status}"
+                        )
+                        said = str(status)
+                    raise BridgeError(
+                        REMOTE_UNREACHABLE,
+                        f"System 3 could not renew your sign-in right now (it answered {said}), "
+                        "so this request was not sent. Try again in a moment.",
+                    ) from exc
+                if isinstance(exc, credentials_module.RefreshError) and status == 200:
+                    # A JSON reply that could not be read: the server may have
+                    # rotated the token, so the outcome is unknown.
+                    self.log(f"could not read the sign-in renewal reply; {_SIGN_IN_NOW}")
+                    raise BridgeError(SIGN_IN_NEEDED, _UNREADABLE_RENEWAL) from exc
                 # The module's text never holds a token, but it can quote a
                 # response header, so it is sanitized like any server text
                 # before it reaches a terminal or a host's log.
@@ -807,20 +890,162 @@ class McpBridge:
                     SIGN_IN_NEEDED, f"You are not signed in to System 3. {_SIGN_IN_AGAIN}"
                 ) from exc
             except httpx.DecodingError as exc:
-                self.log(f"could not decode the sign-in renewal reply; {_SIGN_IN_AGAIN}")
-                raise BridgeError(
-                    REMOTE_UNREACHABLE,
-                    "Could not read System 3's sign-in renewal reply. The server "
-                    "may have rotated your sign-in, so this request was not sent. "
-                    f"{_SIGN_IN_AGAIN}",
-                ) from exc
+                self.log(f"could not decode the sign-in renewal reply; {_SIGN_IN_NOW}")
+                raise BridgeError(SIGN_IN_NEEDED, _UNREADABLE_RENEWAL) from exc
             except httpx.HTTPError as exc:
+                if started_with in self._wired:
+                    # The renewal was fully sent and no readable answer came
+                    # back, so the server may have rotated the token. The
+                    # bridge cannot tell, so it asks for one sign-in rather
+                    # than resend a token that may be spent.
+                    self.log(
+                        f"could not confirm the sign-in renewal ({type(exc).__name__}); "
+                        f"{_SIGN_IN_NOW}"
+                    )
+                    raise BridgeError(
+                        REMOTE_UNREACHABLE,
+                        "Could not confirm that System 3 renewed your sign-in "
+                        f"({type(exc).__name__}), so this request was not sent. "
+                        f"{_SIGN_IN_NOW}",
+                    ) from exc
                 raise BridgeError(
                     REMOTE_UNREACHABLE,
                     f"Could not reach System 3 to renew your sign-in ({type(exc).__name__}). "
                     "Check the network connection, then try again.",
                 ) from exc
             self.log("renewed the sign-in")
+
+    def _latch_if_spent(self, task: asyncio.Future[Any], started_with: str) -> None:
+        """Remember a renewal whose refresh token is dead or may be spent: an
+        unreadable reply, a refusal such as a 401, and any outcome the bridge
+        cannot know (cancelled, timed out, or its reply lost after the
+        request was sent). A renewal that is known not to have rotated the
+        token does not latch: a connection that was not made or a request
+        that was not fully written, a proxy 429, any 5xx, and a 200 that is
+        not JSON. Nor do local credential errors, because `_RenewalClient`
+        never counted their token as sent."""
+        if task.cancelled():
+            exc: BaseException | None = None
+        else:
+            exc = task.exception()
+            if exc is None:
+                return
+        if started_with in self._wired or isinstance(exc, httpx.DecodingError):
+            self._wired.add(started_with)
+            self._sign_in_spent = True
+
+    async def _refuse_if_spent(self) -> None:
+        """Raise unless the bridge may send. A latched bridge re-reads the
+        credential file first: a refresh token that differs from the spent
+        one (after `s3 login`, or a saved recovery copy) was never sent, so
+        the bridge resumes with it and no restart is needed. The read takes
+        the credential refresh lock: `load()` may promote a recovery copy by
+        writing, and that must not race another process's renewal."""
+        if not self._sign_in_spent:
+            return
+        outcome = await self._resume_from_file()
+        if outcome == "resumed":
+            return
+        if outcome == "other_server":
+            raise BridgeError(SIGN_IN_NEEDED, _OTHER_SERVER)
+        raise BridgeError(SIGN_IN_NEEDED, _SIGN_IN_SPENT)
+
+    async def _resume_from_file(self) -> str | None:
+        """"resumed", "other_server" (a new sign-in for another server
+        address), or None (nothing new to use)."""
+        try:
+            async with credentials_module._CredentialFileLock(credentials_module._lock_path()):
+                current = credentials_module.load()
+        except (credentials_module.CredentialsError, OSError):
+            return None
+        if current.refresh_token in self._wired:
+            return None
+        if _normalised_address(current.base_url) != _normalised_address(self._creds.base_url):
+            return "other_server"
+        self._creds = current
+        self._sign_in_spent = False
+        self.log("picked up a new sign-in from the credential file")
+        return "resumed"
+
+
+def _normalised_address(base_url: str) -> str:
+    """A server address with the scheme and host in lower case and no
+    trailing slash, so `https://host` and `https://host/` are one server."""
+    parts = urlsplit(base_url.strip())
+    return urlunsplit(
+        (parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"), parts.query, "")
+    )
+
+
+class _SpentTokenRefused(Exception):
+    """A renewal was about to send a refresh token this process already sent."""
+
+
+# Failures that happen before the whole renewal request is on the wire. The
+# server never saw a complete request, so the refresh token is still live.
+_NEVER_SENT = (
+    httpx.ConnectError,
+    httpx.ConnectTimeout,
+    httpx.PoolTimeout,
+    httpx.ProxyError,
+    httpx.WriteError,
+    httpx.WriteTimeout,
+    httpx.UnsupportedProtocol,
+)
+
+
+class _RenewalClient:
+    """The client `refresh_locked` renews through, one per renewal. It checks,
+    immediately before the POST, that this refresh token was never sent
+    before, and it records every token it sends. Outcomes known not to have
+    rotated the token take it back and mark the renewal `quiet`: a request
+    that was not fully sent, and an answer the app cannot give after
+    renewing (an empty 200, a 200 that is not the auth service's JSON, and
+    every status except 200, 401 and 504). The app's refresh route answers
+    only 200, 401, 422 or a 5xx, so a 3xx or 4xx comes from a proxy in front
+    of it, and a 500, 502 or 503 is a definite failure. What stays counted
+    as sent is a truly unknown outcome: a 504 (a gateway stopped waiting for
+    a server that may have renewed), a 401, a 200 whose body cannot be read,
+    and a request that was fully sent with no answer back. The reply's
+    status and kind are kept here, not on the bridge, so a late answer to an
+    abandoned renewal cannot change another renewal's message."""
+
+    def __init__(self, bridge: McpBridge) -> None:
+        self._bridge = bridge
+        self._http = bridge._http
+        self.status: int | None = None
+        self.not_json = False
+        self.empty = False
+        self.quiet = False
+
+    async def post(self, url: str, **kwargs: Any) -> httpx.Response:
+        body = kwargs.get("json")
+        sent = body.get("refresh_token") if isinstance(body, dict) else None
+        wired = self._bridge._wired
+        if isinstance(sent, str):
+            if sent in wired:
+                raise _SpentTokenRefused
+            wired.add(sent)
+        try:
+            response = await self._http.post(url, **kwargs)
+        except _NEVER_SENT:
+            wired.discard(sent)  # type: ignore[arg-type]
+            raise
+        status = response.status_code
+        self.status = status
+        content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if status == 200:
+            if content_type != "application/json":
+                self.not_json = True
+                self.quiet = True
+            elif not response.content:
+                self.empty = True
+                self.quiet = True
+        elif status not in (401, 504) and 300 <= status < 600:
+            self.quiet = True
+        if self.quiet:
+            wired.discard(sent)  # type: ignore[arg-type]
+        return response
 
 
 # A sentinel for "this message expects no reply", distinct from a JSON null
