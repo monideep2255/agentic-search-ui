@@ -9,7 +9,7 @@ Introspection/No-IDE-GET-WS/Errors-are-masked rows, which this module exists
 to satisfy.
 
 Every Strawberry and graphql-core name this module imports was probed
-directly against the INSTALLED `strawberry-graphql==0.324.0` (and its
+directly against the INSTALLED `strawberry-graphql==0.327.7` (re-verified 2026-10-15, and its
 `graphql-core` dependency) rather than trusted from documentation, per the
 same discipline `types.py` and `fold.py` already followed: signatures,
 default values, and the extension-instantiation contract below were all

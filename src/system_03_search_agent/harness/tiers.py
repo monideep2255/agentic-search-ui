@@ -61,11 +61,13 @@ _ENV_VAR_BY_TIER: dict[Tier, str] = {
 # `none`, which it refuses: see `_REASONING_EFFORT_BY_MODEL` below. The
 # previous default, z-ai/glm-5.2, is the one-setting rollback
 # (`SYNTH_MODEL=z-ai/glm-5.2`), priced by `_FALLBACK_PRICES_USD_PER_TOKEN`
-# below, because litellm's map no longer carries it.
+# below, because the price map litellm holds at run time carries no
+# openrouter/z-ai/glm-5.2 entry (see the table's comment).
 #
-# Develop sets no `SYNTH_MODEL`, so this default reaches develop when the
-# phase merges. Production reaches it only at a release, and only if
-# production sets no `SYNTH_MODEL` of its own.
+# Develop's API sets `SYNTH_MODEL=z-ai/glm-5.2`, so develop's writer is
+# glm-5.2 and this default does not reach develop while that setting stays.
+# Production reaches this default only at a release, and only if production
+# sets no `SYNTH_MODEL` of its own.
 _DEFAULT_MODELS: dict[Tier, str] = {
     "guard": "deepseek/deepseek-v4-flash",
     "plan": "moonshotai/kimi-k2.6",
@@ -79,10 +81,11 @@ _DEFAULT_MODELS: dict[Tier, str] = {
 # the only caller. Its default model id still lives in `_DEFAULT_MODELS`
 # above, keyed `"jev"` rather than a `Tier`, because
 # `test_no_model_id_shaped_string_outside_the_default_table` scans this
-# repository for exactly one allowed table of model-id-shaped literals and
-# `_DEFAULT_MODELS` is it (system-design-patterns.md pattern 11): a second
-# table, even one this file also owns, would be a second place a model id
-# is allowed to appear, which is the thing pattern 11 forbids. The `# type:
+# repository for model-id-shaped literals and allows two tables, both in
+# this file (system-design-patterns.md pattern 11): `_DEFAULT_MODELS` for
+# which model runs, and the keys of `_FALLBACK_PRICES_USD_PER_TOKEN` for
+# what a model costs. The price keys are allowed by their position as keys
+# of that one dict literal, not as strings anywhere in this file. The `# type:
 # ignore` documents the one place this dict's `Tier`-keyed annotation is
 # knowingly widened for that reason.
 _DEFAULT_MODELS["jev"] = "typesafe/jev-1.13"  # type: ignore[index]
@@ -105,9 +108,12 @@ def resolve_jev_model() -> str:
 
 
 # Fallback OpenRouter per-model pricing, (input_price_per_token,
-# output_price_per_token) in USD, for models litellm's own static map does
-# not yet carry. `harness.harness._price_per_token` tries litellm first and
-# falls back to this table.
+# output_price_per_token) in USD, for models whose price litellm cannot be
+# trusted to give. `harness.harness._price_per_token` tries litellm first and
+# falls back to this table when litellm has no entry for the model, and, for
+# a model this table names, when litellm's price on EITHER side is zero,
+# negative, NaN, infinite or not a number: the table's price then replaces
+# both sides. A model this table does not name keeps litellm's figure.
 #
 # It lives here rather than in harness.py for the same reason _DEFAULT_MODELS
 # does: its keys are literal model ids, and system-design-patterns.md
@@ -133,25 +139,37 @@ def resolve_jev_model() -> str:
 # Build phase 8.7, T-8.7-02: Opus 5.5 at $4 and $20 per million tokens, the
 # synth default. Source: OpenRouter's catalogue read by writer bench 3 on
 # 2026-09-26 (`testing/Developer/reports/2026-09-26_writer_bench_3/results.md`,
-# "Candidates and prices"), the same figures litellm 1.93.0's own map
-# carries. The bench's metering at this price matched OpenRouter's bill to
-# the cent (G-001 run 1: 17,432 prompt and 878 output tokens, $0.087288 both
-# ways). It is here although litellm prices it today because
-# `requirements.txt` asks for `litellm>=1.40`, not an exact version, so the
-# installed map can differ from the tested one, and the writer must stay
-# priced before it is called (T-8.6-08) whatever that map holds.
+# "Candidates and prices"). The bench's metering at this price matched
+# OpenRouter's bill to the cent (G-001 run 1: 17,432 prompt and 878 output
+# tokens, $0.087288 both ways). The table is the price that counts for it
+# because litellm 1.93.0, the version in the project venv, maps Opus at zero
+# for both prices, and `requirements.txt` asks for `litellm>=1.40`, not an
+# exact version, so the installed map can differ from the tested one. The
+# writer must stay priced before it is called (T-8.6-08) whatever that map
+# holds.
+#
+# Root cause of the whole table (CI repair, 2026-10-15): litellm replaces its
+# bundled price map at process start with one fetched from its main branch
+# on GitHub, and that fetched map currently has no OpenRouter entries at all.
+# So the price a model gets depends on whether that fetch succeeds. The
+# bundled map of the installed package does carry OpenRouter entries, which
+# is why a process whose fetch fails would price by litellm and never read
+# this table. The table is what keeps the price stable.
 #
 # z-ai/glm-5.2 is back in this table (CI repair, 2026-10-15). Phase 8.7
-# removed it on the belief that litellm's map prices it, but litellm no
-# longer has any openrouter/z-ai/glm-5.x entry, so `_price_per_token` raised
-# and the writer failed. The entry is the price for the one-setting rollback
+# removed it on the belief that litellm's map prices it, but the fetched map
+# has no openrouter/z-ai/glm-5.x entry, so `_price_per_token` raised and the
+# writer failed. The entry is the price for the one-setting rollback
 # (`SYNTH_MODEL=z-ai/glm-5.2`) and for develop's current writer, which sets
-# that model in its API environment. Values are the ones production carries.
+# that model in its API environment. Its values were re-read on 2026-10-15
+# from OpenRouter's public catalogue (`pricing.prompt` 0.000000037 and
+# `pricing.completion` 0.000007, USD per token), replacing the production
+# table's older figures (0.0000007182 and 0.0000022572).
 _FALLBACK_PRICES_USD_PER_TOKEN: dict[str, tuple[float, float]] = {
     "deepseek/deepseek-v4-flash": (0.00000014, 0.00000028),
     "moonshotai/kimi-k2.6": (0.000000646, 0.00000272),
     "anthropic/claude-opus-5.5": (0.000004, 0.00002),
-    "z-ai/glm-5.2": (0.0000007182, 0.0000022572),
+    "z-ai/glm-5.2": (0.000000037, 0.000007),
 }
 
 # Per-model reasoning effort, for a model whose tier's effort it refuses

@@ -65,6 +65,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import threading
 import time
 from collections.abc import Awaitable
@@ -228,15 +229,13 @@ def _refuses_reasoning_block(exc: BaseException) -> bool:
 
 
 # Fallback OpenRouter per-model pricing, (input_price_per_token,
-# output_price_per_token) in USD. Primary pricing comes from litellm's own
-# maintained static map (litellm.get_model_info); this table exists only
-# for the gap where a resolved tier's model id (including the
-# tiers.py._DEFAULT_MODELS placeholders, themselves pending the Phase 6
-# model-bench) is not yet present in litellm's map. OpenRouter's live
-# catalog is larger than the ~96 "openrouter/*" entries litellm ships, so
-# this gap is real, not hypothetical. Extend this table, or wait for
-# litellm to add the model upstream, whichever lands first; never invent a
-# price for a model missing from both sources (see _price_per_token below).
+# output_price_per_token) in USD. Primary pricing comes from litellm's map
+# (litellm.get_model_info); this table stands in when litellm has no entry
+# for a resolved tier's model id, and when litellm maps a model the table
+# names at a price that is not a real one on either side (zero, negative,
+# NaN, infinite or not a number). Extend this table, or wait for litellm to
+# add the model upstream, whichever lands first; never invent a price for a
+# model missing from both sources (see _price_per_token below).
 # Fallback OpenRouter per-model pricing, re-exported from tiers.py.
 #
 # The table itself lives in tiers.py, not here, because its keys are model
@@ -245,6 +244,15 @@ def _refuses_reasoning_block(exc: BaseException) -> bool:
 # model identity it prices. This name is kept so existing callers and tests
 # that patch harness._FALLBACK_PRICES_USD_PER_TOKEN keep working.
 _FALLBACK_PRICES_USD_PER_TOKEN = _TIER_FALLBACK_PRICES
+
+
+def _is_real_price(value: object) -> bool:
+    """True for a finite number above zero; False for zero, negative, NaN, infinite or non-numeric."""
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(number) and number > 0.0
 
 
 def _price_per_token(model_id: str) -> tuple[float, float]:
@@ -258,7 +266,11 @@ def _price_per_token(model_id: str) -> tuple[float, float]:
     litellm updates its map upstream.
 
     Fallback: `_FALLBACK_PRICES_USD_PER_TOKEN`, for a model litellm does not
-    map, or maps at zero for both prices.
+    map, or, when the table names the model, when litellm's price on EITHER
+    side is zero, negative, NaN, infinite or not a number. In that case the
+    table's price is used for both sides. When the table does not name the
+    model, litellm's figure is returned as it is (a ":free" model still
+    returns zeros) and a missing price still raises.
 
     Raises:
         HarnessCallError: error_class="unexpected", if neither source has a
@@ -270,14 +282,21 @@ def _price_per_token(model_id: str) -> tuple[float, float]:
         info = litellm.get_model_info(model=target)
         input_price = info.get("input_cost_per_token")
         output_price = info.get("output_cost_per_token")
-        if input_price is not None and output_price is not None:
-            # litellm can map a model at zero (anthropic/claude-opus-5.5 is
-            # one). A zero there is a gap, not a free model: when the local
-            # table names the model, its price wins, so the per-question cost
-            # cap counts the real price.
-            is_zero = float(input_price) == 0.0 and float(output_price) == 0.0
-            if not (is_zero and model_id in _FALLBACK_PRICES_USD_PER_TOKEN):
-                return float(input_price), float(output_price)
+        # litellm can map a model at zero (anthropic/claude-opus-5.5 is
+        # one). A bad price there is a gap, not a free model: when the
+        # local table names the model, a litellm price that is not a
+        # real one on either side sends both sides to the table, so the
+        # per-question cost cap counts the real price. A model the table
+        # does not name keeps litellm's figure exactly as it was.
+        if (
+            input_price is not None
+            and output_price is not None
+            and (
+                model_id not in _FALLBACK_PRICES_USD_PER_TOKEN
+                or (_is_real_price(input_price) and _is_real_price(output_price))
+            )
+        ):
+            return float(input_price), float(output_price)
     except Exception:  # noqa: BLE001, S110 - fall through to the local table below; no data is lost, the fallback path is exercised next
         pass
 

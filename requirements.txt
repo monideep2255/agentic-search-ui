@@ -77,8 +77,9 @@ httpx2>=2.0
 # Checked first under the same rule: no compromise report for 0.327.7 (the
 # one malware record, MAL-2026-4771, names 0.315.6 and is withdrawn); wheel
 # uploaded 2026-09-07; required dependencies identical to 0.324.0 (cross-web
-# was already required), only the libcst floor of the unused cli and debug
-# extras widened; pip-audit clean; the GraphQL unit tests pass unchanged.
+# was already required), only the libcst requirement of the unused cli and debug
+# extras changed, from no floor to `libcst>=1.9.0` (a narrowing, per PyPI's
+# metadata); pip-audit clean; the GraphQL unit tests pass unchanged.
 strawberry-graphql==0.327.7
 # graphql-core, the engine under strawberry, which allows anything from 3.2.0
 # up to 3.4.0. Pinned on 2026-09-27: version 3.3.0 was published at 14:50 UTC
