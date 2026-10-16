@@ -483,14 +483,14 @@ What you should see:
 Queries to try:
 
 - With `s3 mcp` running in an AI app, leave it idle until your sign-in is about to expire (about 14 minutes), then ask `Which diseases are associated with BRCA1?`. Do this on a day when System 3 answers normally.
-- Repeat while System 3 is briefly down or behind a maintenance page (a 502 or 503 from the server, or a web page instead of a reply), then ask the same question again a few seconds later.
-- Repeat when the network drops after the renewal was sent, so no reply comes back (a timeout), then ask again.
+- Repeat while System 3 is briefly down or behind a maintenance page (a 500, 502 or 503 from the server, or a web page instead of a reply), then ask the same question again a few seconds later.
+- Repeat when the network drops after the renewal was sent, so no reply comes back (a timeout, a dropped connection, or a gateway timeout, 504), then ask again.
 
 What you should see:
 
 - On a normal day the answer arrives and the sign-in renews without a word.
-- A brief server error, a maintenance page, a busy message or a connection that was refused: the first question is answered with "System 3 could not renew your sign-in right now ... try again in a moment", and says your sign-in is still good. Asking again a moment later is answered with no sign-in step. Nothing is asked of you and nobody is signed out.
-- A renewal that was sent and got no readable answer (a timeout, a dropped connection, a reply that cannot be read): you are told once to run `s3 login` in a terminal. You do not need to restart the AI app; the next question after `s3 login` is answered. Until then every question gets the same one instruction, and nothing is sent to System 3.
+- A brief server error (500, 502, 503), a busy message, a maintenance page, an empty reply, a refusal from something in front of the server (403, 404, 408, a redirect) or a connection that was refused: the first question is answered with "System 3 could not renew your sign-in right now ... Try again in a moment". It says what happened and nothing about your sign-in. Asking again a moment later is answered with no sign-in step. Nothing is asked of you.
+- A renewal that was sent and got no readable answer (a timeout, a dropped connection, a gateway timeout, a reply that cannot be read): you are told once to run `s3 login` in a terminal. A dropped connection counts here: the program cannot tell it from a lost reply, so it does not promise recovery. You do not need to restart the AI app; the next question after `s3 login` is answered. Until then every question gets the same one instruction, and nothing is sent to System 3.
 - You are never signed out of the web app by surprise because a renewal was repeated.
 - Cost, in the owner's words: an occasional extra command, in return for nobody being signed out of the web app by surprise.
 - Why it matters: a renewal whose outcome the program cannot know must not be sent twice, because the server then treats the sign-in as stolen and signs you out everywhere. A clear error is different: asking again is safe, so it recovers by itself.
