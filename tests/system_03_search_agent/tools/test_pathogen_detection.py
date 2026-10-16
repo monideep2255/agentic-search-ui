@@ -417,6 +417,53 @@ async def test_isolate_lookup_ok_parses_amr_and_ast_correctly(monkeypatch: pytes
 
 
 @pytest.mark.asyncio
+async def test_isolate_lookup_that_skips_the_snp_distance_scan_never_reads_that_file(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 94 (owner, 2026-10-15): the single-isolate lookup the app plans skips
+    the SNP-distance scan, which took 18 of 20 seconds and shows nothing. The
+    isolate still comes back whole. The populate check is the sibling above,
+    where the same inputs without the flag read the file."""
+    _install_snapshot(monkeypatch)
+    cluster_row = {"biosample_acc": "SAMN02147118", "PDS_acc": "PDS000012345.1"}
+    reads = _install_reads(monkeypatch, [TsvScanResult([_metadata_row()]), TsvScanResult([cluster_row])])
+
+    output = await pathogen_detection(
+        PathogenDetectionInput(
+            mode="isolate_lookup", taxon="Salmonella", biosample_acc="SAMN02147118",
+            skip_snp_distance=True,
+        )
+    )
+
+    assert output.status == "ok", output.error
+    isolate = output.isolates[0]
+    assert isolate.strain == "SL1344" and isolate.amr_genotypes == ["ant(2'')-Ia", "aph(3')-Ia", "blaTEM-1"]
+    assert isolate.snp_distance is None
+    assert not any("SNP_distances" in call["url"] for call in reads.calls), reads.calls
+    assert len(reads.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_cluster_snp_neighbors_still_reads_the_snp_distances_file(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 94: the skip is the single-isolate lookup's alone. A cluster call
+    (and F-3.5-A-05's partial scan, covered above) read it as before."""
+    _install_snapshot(monkeypatch)
+    members = [{"biosample_acc": "SAMN00000001", "PDS_acc": "PDS000012345.1"}]
+    snp_rows = [
+        {"PDS_acc": "PDS000012345.1", "biosample_acc_1": "SAMN00000001",
+         "biosample_acc_2": "SAMN00000002", "compatible_distance": "2"},
+    ]
+    reads = _install_reads(
+        monkeypatch,
+        [TsvScanResult(members), TsvScanResult(snp_rows), TsvScanResult([_metadata_row("SAMN00000001")])],
+    )
+    await pathogen_detection(_cluster_input())
+    assert any("SNP_distances" in call["url"] for call in reads.calls)
+
+
+@pytest.mark.asyncio
 async def test_isolate_lookup_snp_distance_populated_even_when_scan_truncated(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

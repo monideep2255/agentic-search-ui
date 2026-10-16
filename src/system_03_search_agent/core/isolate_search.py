@@ -425,3 +425,61 @@ def count_sentence(organism_label: str, shown: int, total: int, complete: bool) 
         f"Pathogen Detection lists {total_words} {organism_label} {noun} with these genes; "
         f"the first {shown:,} in the snapshot are shown."
     )
+
+
+# ---------------------------------------------------------------------------
+# Card 94 (2026-10-15): the lookup of ONE named isolate.
+# ---------------------------------------------------------------------------
+
+
+def names_an_isolate(text: str) -> bool:
+    """Whether the question uses an isolate word ("isolate", "Pathogen Detection").
+
+    The trigger for the single-isolate lookup, beside a BioSample accession.
+    It does not look for an organism: the organism is read from the
+    BioSample record, because the question's words can name the wrong one.
+    """
+    return bool(text) and _ISOLATE_WORDS.search(text) is not None
+
+
+def organism_of_record(name: str | None) -> Organism | None:
+    """The covered organism a BioSample record's own organism name belongs to.
+
+    `name` is the record's `organism` field ("Salmonella enterica"), never
+    the question. None when the record names none or names one this table
+    does not cover (a human sample, a metagenome).
+    """
+    if not name or not name.strip():
+        return None
+    return _find_organism(name)
+
+
+#: The four sentences that stand beside the BioSample record when the
+#: single-isolate lookup shows no isolate. Owner wording, 2026-10-15.
+LOOKUP_NOT_FOUND: Final[str] = (
+    "{acc} was not found in NCBI Pathogen Detection's {organism} data, so only its BioSample record is shown."
+)
+LOOKUP_TIMED_OUT: Final[str] = (
+    "The Pathogen Detection lookup took too long and was stopped, so only the BioSample record of {acc} is shown."
+)
+LOOKUP_FAILED: Final[str] = (
+    "The Pathogen Detection lookup of {acc} did not complete, so only its BioSample record is shown."
+)
+LOOKUP_NO_ORGANISM: Final[str] = (
+    "Pathogen Detection was not looked up for {acc}: its BioSample record names no organism that "
+    "Pathogen Detection covers here, so only the BioSample record is shown."
+)
+
+
+def lookup_line(kind: str, accession: str, organism_label: str | None = None) -> str:
+    """The one plain line for a single-isolate lookup that showed no isolate.
+
+    `kind` is one of `not_found`, `timed_out`, `failed`, `no_organism`.
+    """
+    template = {
+        "not_found": LOOKUP_NOT_FOUND,
+        "timed_out": LOOKUP_TIMED_OUT,
+        "failed": LOOKUP_FAILED,
+        "no_organism": LOOKUP_NO_ORGANISM,
+    }[kind]
+    return template.format(acc=accession, organism=organism_label or "")

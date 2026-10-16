@@ -906,7 +906,10 @@ async def _isolate_lookup(
         except Exception:  # noqa: BLE001 - deliberately broad, see comment above
             cluster_id = None
 
-    if cluster_id and _remaining(enrichment_deadline) > 0:
+    # Card 94 (owner, 2026-10-15): the single-isolate lookup the app plans skips
+    # this scan (`skip_snp_distance`); F-3.5-A-05 still holds for the scan when
+    # it runs, and for every other mode.
+    if cluster_id and not action.skip_snp_distance and _remaining(enrichment_deadline) > 0:
         try:
             snp_scan = await pathogen_ftp_transport.stream_filtered_tsv_rows(
                 _snp_distances_url(taxon, snapshot),

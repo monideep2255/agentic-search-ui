@@ -519,3 +519,284 @@ def test_a_place_too_long_for_the_cell_ends_with_a_mark_that_it_was_cut() -> Non
     # A place that fits is shown whole, with no mark.
     fits = "X" * MAX_IDENTIFIER_CHARS
     assert isolate_place("Pathogen Detection isolate", {"geo_loc_name": fits}) == fits
+
+
+# ---------------------------------------------------------------------------
+# Card 94 (2026-10-15): "naming one isolate gets that isolate's details, or one
+# plain line saying why not." The lookup runs after the BioSample record is
+# fetched, because the organism is read from that record, not the question.
+# Each arm below was shown red by one mutation before it was kept
+# (`testing/Developer/reports/2026-10-15_card94/build.md`).
+# ---------------------------------------------------------------------------
+
+ONE_ISOLATE_QUESTION = "What is known about Salmonella isolate SAMN02147118 in Pathogen Detection?"
+WRONG_ORGANISM_QUESTION = "What is known about E. coli isolate SAMN02147118 in Pathogen Detection?"
+PLAIN_BIOSAMPLE_QUESTION = "What is BioSample SAMN02147118 and which SRA runs come from it?"
+
+
+def _biosample_plan(question: str) -> Any:
+    from system_03_search_agent.core import accession as accession_module
+
+    record = accession_module.parse_accession(question)
+    assert record is not None and record.kind == "biosample"
+    return graph_module._AccessionPlan(record=record, uid="2147118", linked={"sra": ["111"]})
+
+
+async def _plan(monkeypatch: pytest.MonkeyPatch, question: str) -> list[Any]:
+    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
+    state = _state(
+        question, resolved_entities=[], query_class="lookup", accession_plan=_biosample_plan(question)
+    )
+    return (await graph_module.plan_node(state))["tool_calls"]
+
+
+def _install_biosample_fetch(
+    monkeypatch: pytest.MonkeyPatch, organism: str | None, *, status: str = "ok"
+) -> None:
+    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchOutput, NcbiEfetchRecord
+
+    async def _efetch(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
+        root = tool_input.root
+        if root.db != "biosample":
+            return NcbiEfetchOutput(
+                status="ok", action="summary", record_count=1, total_available=1, truncated=False,
+                records=[
+                    NcbiEfetchRecord(
+                        id="111", db=root.db, fields={"runs": "SRR1", "organism": "Homo sapiens"},
+                        source_url=f"https://www.ncbi.nlm.nih.gov/{root.db}/111",
+                    )
+                ],
+            )
+        fields: dict[str, Any] = {"accession": "SAMN02147118", "title": "Pathogen sample"}
+        if organism is not None:
+            fields["organism"] = organism
+        return NcbiEfetchOutput(
+            status=status, action="summary", record_count=1, total_available=1, truncated=False,
+            records=[
+                NcbiEfetchRecord(
+                    id="2147118", db="biosample", fields=fields,
+                    source_url="https://www.ncbi.nlm.nih.gov/biosample/2147118",
+                )
+            ],
+        )
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _efetch)
+
+
+def _install_pathogen(monkeypatch: pytest.MonkeyPatch, output: PathogenDetectionOutput | None,
+                      *, sleep: float = 0.0) -> list[Any]:
+    import asyncio
+
+    seen: list[Any] = []
+
+    async def _pd(tool_input: Any, **kwargs: Any) -> PathogenDetectionOutput:
+        seen.append(tool_input.root)
+        if sleep:
+            await asyncio.sleep(sleep)
+        assert output is not None
+        return output
+
+    monkeypatch.setattr(graph_module, "pathogen_detection", _pd)
+    return seen
+
+
+def _lookup_output(status: str) -> PathogenDetectionOutput:
+    isolates = [_isolate("SAMN02147118", "SQ0227", ["sul1", "blaTEM-1"])] if status == "ok" else []
+    return PathogenDetectionOutput(
+        status=status, mode="isolate_lookup", pdg_snapshot="PDG000000002.1", isolates=isolates,
+        isolate_count=len(isolates), total_available=len(isolates), truncated=status == "timeout",
+    )
+
+
+async def _plan_and_act(monkeypatch: pytest.MonkeyPatch, question: str) -> tuple[list[Any], dict[str, Any]]:
+    calls = await _plan(monkeypatch, question)
+    state = _state(
+        question, resolved_entities=[], query_class="lookup", tool_calls=calls,
+        accession_plan=_biosample_plan(question),
+    )
+    return calls, await graph_module.act_node(state)
+
+
+def _note(question: str, act: dict[str, Any]) -> str | None:
+    state = _state(
+        question, accession_plan=_biosample_plan(question),
+        layer2_raw_outputs=act["layer2_raw_outputs"], layer3_raw_outputs=act["layer3_raw_outputs"],
+    )
+    return graph_module._isolate_lookup_note(state)
+
+
+@pytest.mark.asyncio
+async def test_naming_one_isolate_plans_the_lookup_first_and_a_plain_biosample_question_does_not(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = await _plan(monkeypatch, ONE_ISOLATE_QUESTION)
+    lookup = calls[0]
+    assert isinstance(lookup, graph_module._PlannedFollowUpCall)
+    assert lookup.tool_call.tool == "pathogen_detection" and lookup.purpose == "isolate_lookup"
+    assert lookup.source_purpose == "biosample_summary" and lookup.biosample_acc == "SAMN02147118"
+    assert [c.purpose for c in calls[1:]] == ["biosample_summary", "sra_summary"]
+    assert not any(isinstance(c, graph_module._PlannedToolCall) for c in calls), "no graph call"
+    # Populate check: no isolate word, no lookup.
+    plain = await _plan(monkeypatch, PLAIN_BIOSAMPLE_QUESTION)
+    assert [c.tool_call.tool for c in plain] == ["ncbi_efetch", "ncbi_efetch"]
+
+
+@pytest.mark.asyncio
+async def test_the_lookup_skips_the_snp_distance_scan_and_reads_the_organism_from_the_record(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The question names E. coli; the BioSample record says Salmonella. The
+    tool is asked for the Salmonella data, with the SNP-distance scan off."""
+    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
+    seen = _install_pathogen(monkeypatch, _lookup_output("ok"))
+    _, act = await _plan_and_act(monkeypatch, WRONG_ORGANISM_QUESTION)
+    assert len(seen) == 1
+    assert seen[0].mode == "isolate_lookup" and seen[0].taxon == "Salmonella"
+    assert seen[0].biosample_acc == "SAMN02147118" and seen[0].skip_snp_distance is True
+    assert [o.mode for o in act["layer3_raw_outputs"].values()] == ["isolate_lookup"]
+    assert _note(WRONG_ORGANISM_QUESTION, act) is None, "an isolate that was found has no line"
+
+
+@pytest.mark.asyncio
+async def test_a_record_with_no_organism_is_not_looked_up_and_says_so(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for organism in (None, "   ", "Homo sapiens"):
+        _install_biosample_fetch(monkeypatch, organism)
+        seen = _install_pathogen(monkeypatch, _lookup_output("ok"))
+        _, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
+        assert seen == [], f"organism {organism!r}: nothing is looked up"
+        note = _note(ONE_ISOLATE_QUESTION, act)
+        assert note is not None and "SAMN02147118" in note and "names no organism" in note, note
+        assert act["failed_searches"] == []
+    # Populate check: a record that names one is looked up.
+    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
+    seen = _install_pathogen(monkeypatch, _lookup_output("ok"))
+    await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
+    assert len(seen) == 1
+
+
+@pytest.mark.asyncio
+async def test_an_isolate_pathogen_detection_does_not_hold_gets_the_not_found_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
+    _install_pathogen(monkeypatch, _lookup_output("empty"))
+    _, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
+    assert _note(ONE_ISOLATE_QUESTION, act) == (
+        "SAMN02147118 was not found in NCBI Pathogen Detection's Salmonella data, "
+        "so only its BioSample record is shown."
+    )
+    assert act["failed_searches"] == [], "not being in the file is not an unfinished search"
+    assert not any(f.tool == "pathogen_detection" for f in act["findings"])
+
+
+@pytest.mark.asyncio
+async def test_the_tools_timeout_status_is_an_error_result_and_act_keeps_the_biosample_record(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RED before: the tool's "timeout" status reached the result event, which
+    carries only ok, empty or error, and Act raised, so the person lost the
+    BioSample record too."""
+    shaped = graph_module._layer_tool_output_to_structured_fields(
+        "pathogen_detection", _lookup_output("timeout")
+    )
+    assert shaped["status"] == "error"
+    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
+    _install_pathogen(monkeypatch, _lookup_output("timeout"))
+    _, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
+    biosample = [
+        row for f in act["findings"] for row in (f.structured_fields or {}).get("rows", [])
+        if row["source_url"].endswith("/biosample/2147118")
+    ]
+    assert biosample, "the BioSample record stands"
+    note = _note(ONE_ISOLATE_QUESTION, act)
+    assert note is not None and "took too long and was stopped" in note, note
+    assert act["failed_searches"] == []
+    assert not any(f.tool == "pathogen_detection" for f in act["findings"]), (
+        "a failed lookup is not evidence for the writer: with it there the model's "
+        "summary failed grounding live and the answer fell back to the code-built list"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_lookup_that_outruns_its_bound_is_stopped_and_says_so(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The bound is `_ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS`, not the 150 seconds
+    the other isolate modes get; a lookup past it is cut and the answer still
+    arrives with the BioSample record."""
+    import time
+
+    assert graph_module._ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS <= 12
+    assert graph_module._LAYER_TOOL_ACT_TIMEOUT_SECONDS["pathogen_detection"] == 150.0
+    monkeypatch.setattr(graph_module, "_ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS", 0.2)
+    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
+    _install_pathogen(monkeypatch, _lookup_output("ok"), sleep=5.0)
+    started = time.monotonic()
+    _, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
+    assert time.monotonic() - started < 3.0
+    note = _note(ONE_ISOLATE_QUESTION, act)
+    assert note is not None and "took too long and was stopped" in note, note
+    assert act["failed_searches"] == []
+    # Populate check: inside the bound the same fake returns its isolate.
+    _install_pathogen(monkeypatch, _lookup_output("ok"), sleep=0.0)
+    monkeypatch.setattr(graph_module, "_ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS", 5.0)
+    _, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
+    assert _note(ONE_ISOLATE_QUESTION, act) is None
+
+
+@pytest.mark.asyncio
+async def test_the_line_stands_beside_the_biosample_record_in_the_written_answer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tests.system_03_search_agent.core.test_write_answer_structure import _install, _no_prose
+    from tests.system_03_search_agent.core.test_write_answer_structure import _state as _write_state
+
+    _install(monkeypatch, _no_prose)
+    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
+    _install_pathogen(monkeypatch, _lookup_output("empty"))
+    calls, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
+    state = _write_state("researcher")
+    state["query"] = Query(text=ONE_ISOLATE_QUESTION, session_id="s-iso", trace_id="t-iso", user_id=None)
+    state.update(
+        tool_calls=calls, accession_plan=_biosample_plan(ONE_ISOLATE_QUESTION),
+        layer2_raw_outputs=act["layer2_raw_outputs"], layer3_raw_outputs=act["layer3_raw_outputs"],
+        findings=act["findings"], findings_count=len(act["findings"]), failed_searches=[],
+    )
+    result = await graph_module.write_node(state)
+    text = " ".join(e.payload["text"] for e in result["events"] if e.type == "token")
+    assert "was not found in NCBI Pathogen Detection's Salmonella data" in text, text
+    assert any(e.type == "citation" and "/biosample/2147118" in e.payload["source_url"]
+               for e in result["events"]), "the BioSample record is still cited"
+
+
+@pytest.mark.asyncio
+async def test_one_isolates_answer_shows_its_details_with_no_sample_note(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The lookup's one isolate reaches the answer as one row: strain,
+    BioSample accession, genes, place and year, cited to its Pathogen
+    Detection page, with no "first 20" count and no lookup line under it."""
+    from tests.system_03_search_agent.core.test_write_answer_structure import _install, _no_prose
+    from tests.system_03_search_agent.core.test_write_answer_structure import _state as _write_state
+
+    _install(monkeypatch, _no_prose)
+    _install_biosample_fetch(monkeypatch, "Salmonella enterica")
+    _install_pathogen(monkeypatch, _lookup_output("ok"))
+    calls, act = await _plan_and_act(monkeypatch, ONE_ISOLATE_QUESTION)
+    state = _write_state("researcher")
+    state["query"] = Query(text=ONE_ISOLATE_QUESTION, session_id="s-iso", trace_id="t-iso", user_id=None)
+    state.update(
+        tool_calls=calls, accession_plan=_biosample_plan(ONE_ISOLATE_QUESTION),
+        layer2_raw_outputs=act["layer2_raw_outputs"], layer3_raw_outputs=act["layer3_raw_outputs"],
+        findings=act["findings"], findings_count=len(act["findings"]), failed_searches=[],
+    )
+    result = await graph_module.write_node(state)
+    tokens = [e.payload for e in result["events"] if e.type == "token"]
+    rows = [t["cells"] for t in tokens if t.get("kind") == "table_row"]
+    assert ["SQ0227", "SAMN02147118", "sul1, blaTEM-1", "2013, USA:AZ"] in rows, rows
+    assert not any("Pathogen Detection lists" in t["text"] for t in tokens), tokens
+    assert not any("was not found in NCBI Pathogen Detection" in t["text"] for t in tokens)
+    citations = [e.payload for e in result["events"] if e.type == "citation"]
+    assert any("pathogens/isolates" in c["source_url"] for c in citations), citations

@@ -863,8 +863,12 @@ Queries to try:
 What you should see:
 
 - The older, single-isolate mode of this tool is not broken by adding isolate search.
-- A single isolate's details: its strain, where and when it was collected, its resistance genes, and a link to its Pathogen Detection page.
+- A single isolate's details in one row: its strain, its BioSample accession, its resistance genes, and when and where it was collected, with a link to its Pathogen Detection page (card 94). The BioSample's own NCBI record and its sequencing runs are listed beside it.
+- The answer arrives in about 20 seconds.
 - No mention of "showing the first 20" or a count of isolates, since this is a single-record lookup, not a search.
+- The organism is read from the BioSample record, not from your words: `What is known about E. coli isolate SAMN02147118 in Pathogen Detection?` still finds the Salmonella isolate.
+- When Pathogen Detection does not hold the isolate, or the lookup runs out of time, you still see the BioSample record and one plain line saying so: "<accession> was not found in NCBI Pathogen Detection's <organism> data" or "The Pathogen Detection lookup took too long and was stopped".
+- A question with no isolate word (`What is BioSample SAMN02147118?`) still shows only the BioSample record.
 - Why it matters: adding a new search mode should never break the lookup someone was already relying on.
 
 ### 43. The wait feels alive (isolate query 11)

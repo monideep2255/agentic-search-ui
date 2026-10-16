@@ -202,6 +202,15 @@ class PathogenIsolateLookupInput(BaseModel):
         ),
     ]
     biosample_acc: Annotated[str, Field(min_length=1, max_length=30)]
+    skip_snp_distance: bool = Field(
+        default=False,
+        description=(
+            "Card 94 (owner, 2026-10-15): when true the lookup does not scan the "
+            "SNP-distances file for this isolate's nearest neighbour, which took "
+            "about 18 of the 20 seconds and which the answer does not show. "
+            "False keeps the original best-effort scan; no other mode has this field."
+        ),
+    )
 
 
 class PathogenClusterSnpNeighborsInput(BaseModel):

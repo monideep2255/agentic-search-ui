@@ -674,7 +674,10 @@ from system_03_search_agent.tools.pathogen_detection import (
     build_citation as pathogen_build_citation,
 )
 from system_03_search_agent.tools.pathogen_detection import pathogen_detection
-from system_03_search_agent.tools.pathogen_detection_schemas import PathogenDetectionOutput
+from system_03_search_agent.tools.pathogen_detection_schemas import (
+    PathogenDetectionInput,
+    PathogenDetectionOutput,
+)
 from system_03_search_agent.tools.pubtator_annotate import build_citation as pubtator_build_citation
 from system_03_search_agent.tools.pubtator_annotate import pubtator_annotate
 from system_03_search_agent.tools.pubtator_annotate_schemas import (
@@ -4791,6 +4794,10 @@ class _PlannedFollowUpCall:
     #: the filter runs against the symbol the question resolved rather
     #: than anything read back out of the OMIM response itself.
     gene_symbol: str | None = None
+    #: Card 94 (2026-10-15): the BioSample accession a single-isolate lookup
+    #: (`purpose="isolate_lookup"`) is for. The organism is not known at Plan;
+    #: Act reads it from the BioSample record the first stage fetched.
+    biosample_acc: str | None = None
 
 
 #: Per-tool Act timeouts for the four tools above, in seconds. Each is the
@@ -4827,6 +4834,16 @@ _LAYER_TOOL_ACT_TIMEOUT_SECONDS: Final[dict[str, float]] = {
     # a slow day, not the expected wait.
     "pathogen_detection": 150.0,
 }
+
+#: Card 94 (2026-10-15): the bound on the lookup of ONE named isolate, so the
+#: whole answer arrives in about 20 seconds. Measured live the same day with
+#: the SNP-distance scan skipped: an isolate near the start of the organism's
+#: Metadata file is found in about 3 seconds, and a BioSample the file does
+#: not hold takes about 30 seconds, because the tool reads the file to its
+#: end before it can say "not there". The lookup is stopped at this bound and
+#: the answer says so in one line beside the BioSample record. The other
+#: isolate modes keep `_LAYER_TOOL_ACT_TIMEOUT_SECONDS`.
+_ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS: Final[float] = 8.0
 
 #: The isolate search shows more rows than the five-row layer cap, since
 #: the rows ARE the answer rather than context beside a graph result. The
@@ -5106,9 +5123,14 @@ def _layer_tool_output_to_structured_fields(
             )
         rows.sort(key=lambda row: str(row["fields"].get("biosample_acc", "")))
         rows = rows[:_ISOLATE_ROW_CAP]
-        status = isolates.status
+        status: str = isolates.status
         if status == "ok" and not rows:
             status = "empty"
+        if status == "timeout":
+            # Card 94: the tool's deadline cutoff is a fifth status the result
+            # event cannot carry ("ok", "empty" or "error"); it crashed Act and
+            # the whole answer with it. It is a failed search, so "error".
+            status = "error"
         return {
             "status": status,
             "row_count": len(rows),
@@ -7061,6 +7083,27 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
                     accession_plan.record, accession_plan.uid, accession_plan.linked
                 )
             ]
+            if accession_plan.record.kind == "biosample" and isolate_search.names_an_isolate(
+                query.text
+            ):
+                # Card 94 (2026-10-15): "naming one isolate gets that isolate's
+                # details." The lookup is planned FIRST, so under the Section
+                # 21.3 ceiling it is never the call admission skips, but its
+                # input is built at Act: the organism comes from the BioSample
+                # record the first stage fetches, never from the question.
+                planned_tool_calls = [
+                    _PlannedFollowUpCall(
+                        tool_call=ToolCall(
+                            tool="pathogen_detection",
+                            call_id=f"pd-{uuid.uuid4().hex[:12]}",
+                            layer="layer_2_api",
+                        ),
+                        purpose="isolate_lookup",
+                        source_purpose="biosample_summary",
+                        biosample_acc=accession_plan.record.value,
+                    ),
+                    *planned_tool_calls,
+                ]
             lead_name = persona_for_session(session_id=query.session_id, user_id=query.user_id)
             planned_tool_calls = _assign_helpers(planned_tool_calls, lead_name=lead_name)
             plan_payload = PlanPayload(
@@ -8422,11 +8465,15 @@ async def _execute_planned_call(
         # dispatch shape. The executor is looked up at call time so a test
         # can fake it by module attribute; the timeout is the tool's own.
         executor = _layer_tool_executor(call.tool)
-        timeout_s = _LAYER_TOOL_ACT_TIMEOUT_SECONDS[call.tool]
+        timeout_s = (
+            _ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS
+            if planned.purpose == "isolate_lookup"
+            else _LAYER_TOOL_ACT_TIMEOUT_SECONDS[call.tool]
+        )
         try:
             output = await harness.enforce_timeout("act", executor(planned.tool_input), timeout_s)
         except HarnessCallError:
-            return _error_outcome(
+            outcome = _error_outcome(
                 call,
                 f"call did not complete within its {timeout_s:g}s budget",
                 (
@@ -8435,6 +8482,24 @@ async def _execute_planned_call(
                 ),
                 failure_kind="timed_out",
             )
+            if planned.purpose == "isolate_lookup":
+                # Card 94: kept as a typed timeout so Write can say, beside the
+                # BioSample record, that the lookup was stopped.
+                outcome = dataclasses.replace(
+                    outcome,
+                    # No pair: the writer reads only what the lookup found.
+                    # A failed lookup in its evidence sent the whole answer to
+                    # the code-built list (measured live, 2026-10-15).
+                    pairs=[],
+                    layer_raw_output=PathogenDetectionOutput(
+                        status="timeout",
+                        mode="isolate_lookup",
+                        isolate_count=0,
+                        total_available=0,
+                        truncated=True,
+                    ),
+                )
+            return outcome
         except call_budget.CallBudgetExceededError:
             return _error_outcome(
                 call,
@@ -8466,11 +8531,16 @@ async def _execute_planned_call(
                 f"{call.tool} call failed unexpectedly; the other layers' results stand",
             )
         shaped = _layer_tool_output_to_structured_fields(call.tool, output, planned.tool_input)
-        return _CallOutcome(
+        outcome = _CallOutcome(
             status=str(shaped["status"]),
             summary=f"{shaped['status']}: {shaped['row_count']} record(s)",
             result_count=int(shaped["row_count"]),
             truncated=False,
+            # Card 94: the tool's own "timeout" is shaped as an error, and
+            # says so in the failure kind rather than as "other".
+            failure_kind=(
+                "timed_out" if getattr(output, "status", None) == "timeout" else None
+            ),
             pairs=[
                 (
                     call,
@@ -8485,6 +8555,14 @@ async def _execute_planned_call(
             # branch (approved 2026-09-14, sequenced behind set 9).
             layer_raw_output=output,
         )
+        if planned.purpose == "isolate_lookup" and int(shaped["row_count"]) == 0:
+            # Card 94: a lookup that showed no isolate says so in one line
+            # beside the BioSample record (`_isolate_lookup_note`). Its empty
+            # or failed result is not evidence for the writer: with it in the
+            # evidence the model's summary failed grounding live and the
+            # whole answer fell back to the code-built list.
+            outcome = dataclasses.replace(outcome, pairs=[])
+        return outcome
 
     # The Layer 1 graph call.
     try:
@@ -8667,6 +8745,111 @@ def _follow_up_planned_call(
             tool_call=follow_up.tool_call, tool_input=call.tool_input, purpose=call.purpose
         )
     return None
+
+
+def _biosample_record_fields(output: Any, accession: str) -> dict[str, Any] | None:
+    """The fields of the BioSample record a fetch returned for `accession`, or None.
+
+    Card 94 (2026-10-15): the organism of a single-isolate lookup is read from
+    this record, the one the answer shows, never from the question's words.
+    Only the record whose own `accession` is the asked one counts, so a linked
+    record (an assembly, a run) never supplies it. None when the fetch did
+    not finish or returned no such record.
+    """
+    if getattr(output, "status", None) != "ok":
+        return None
+    for record in getattr(output, "records", None) or []:
+        fields = getattr(record, "fields", None) or {}
+        if str(fields.get("accession", "")).upper() == accession.upper():
+            return dict(fields)
+    return None
+
+
+def _biosample_organism_name(output: Any, accession: str) -> str | None:
+    """The organism name in the BioSample record for `accession`, or None."""
+    fields = _biosample_record_fields(output, accession)
+    name = fields.get("organism") if fields else None
+    return name.strip() or None if isinstance(name, str) else None
+
+
+def _isolate_lookup_planned_call(
+    follow_up: _PlannedFollowUpCall, source: _CallOutcome | None
+) -> _PlannedLayerToolCall | None:
+    """The single-isolate lookup, built from the BioSample record's organism.
+
+    None when the first-stage BioSample summary did not finish, or its record
+    names no organism the Pathogen Detection tool covers: nothing is looked
+    up, and Write says so beside the BioSample record. The lookup skips the
+    SNP-distance scan (owner, 2026-10-15) and runs under
+    `_ISOLATE_LOOKUP_ACT_TIMEOUT_SECONDS`.
+    """
+    if source is None or source.raw_output is None or follow_up.biosample_acc is None:
+        return None
+    organism = isolate_search.organism_of_record(
+        _biosample_organism_name(source.raw_output, follow_up.biosample_acc)
+    )
+    if organism is None:
+        return None
+    return _PlannedLayerToolCall(
+        tool_call=follow_up.tool_call,
+        tool_input=PathogenDetectionInput.model_validate(
+            {
+                "mode": "isolate_lookup",
+                "taxon": organism.taxon_folder,
+                "biosample_acc": follow_up.biosample_acc,
+                "skip_snp_distance": True,
+            }
+        ),
+        purpose="isolate_lookup",
+    )
+
+
+def _isolate_lookup_note(state: GraphState) -> str | None:
+    """Card 94 (2026-10-15): the one plain line beside the BioSample record when
+    the single-isolate lookup showed no isolate, or None.
+
+    Says which: the isolate is not in that organism's Pathogen Detection data,
+    the lookup was stopped for time, it failed, or the BioSample record names
+    no organism to look it up under. Read from what Act kept (the lookup's
+    typed output and the BioSample record), so it holds on every surface.
+    """
+    plan = state.get("accession_plan")
+    query = state.get("query")
+    if (
+        plan is None
+        or plan.record.kind != "biosample"
+        or query is None
+        or not isolate_search.names_an_isolate(query.text)
+    ):
+        return None
+    acc = plan.record.value
+    lookups = [
+        out
+        for out in (state.get("layer3_raw_outputs") or {}).values()
+        if isinstance(out, PathogenDetectionOutput) and out.mode == "isolate_lookup"
+    ]
+    record_found = False
+    organism_name: str | None = None
+    for out in (state.get("layer2_raw_outputs") or {}).values():
+        if _biosample_record_fields(out, acc) is not None:
+            record_found = True
+            organism_name = _biosample_organism_name(out, acc)
+            break
+    organism = isolate_search.organism_of_record(organism_name)
+    if not lookups:
+        if record_found and organism is None:
+            return isolate_search.lookup_line("no_organism", acc)
+        return None
+    lookup = lookups[0]
+    if lookup.status == "ok" and lookup.isolates:
+        return None
+    if lookup.status == "timeout":
+        return isolate_search.lookup_line("timed_out", acc)
+    if lookup.status == "error":
+        return isolate_search.lookup_line("failed", acc)
+    return isolate_search.lookup_line(
+        "not_found", acc, organism.label if organism is not None else None
+    )
 
 
 def _empty_follow_up_outcome(follow_up: _PlannedFollowUpCall, reason: str) -> _CallOutcome:
@@ -8935,6 +9118,17 @@ async def act_node(state: GraphState) -> dict[str, Any]:
     second_stage: list[Any] = []
     for follow_up in follow_ups:
         source = outcome_by_purpose.get(follow_up.source_purpose)
+        if follow_up.purpose == "isolate_lookup":
+            lookup = _isolate_lookup_planned_call(follow_up, source)
+            if lookup is None:
+                outcome = _empty_follow_up_outcome(
+                    follow_up, "no Pathogen Detection organism in the BioSample record"
+                )
+                outcomes[follow_up.tool_call.call_id] = outcome
+                _close_tool_call(follow_up.tool_call, outcome)
+            else:
+                second_stage.append(lookup)
+            continue
         if source is None or source.raw_output is None or source.status != "ok":
             reason = (
                 f"the {follow_up.source_purpose} search did not complete"
@@ -9075,6 +9269,9 @@ async def act_node(state: GraphState) -> dict[str, Any]:
         }
         for _, planned in ordered
         if outcomes[planned.tool_call.call_id].status == "error"
+        # Card 94: a failed single-isolate lookup has its own line beside the
+        # BioSample record, which is complete; it is not an unfinished search.
+        and getattr(planned, "purpose", "") != "isolate_lookup"
     ]
     # A5/F-02 fix: the real Finding list now survives into GraphState
     # (not just its length), so write_node can read what Act actually
@@ -15051,6 +15248,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 _isolate_count_note(state),
                 *_paper_link_notes(state),
                 _isolate_disclosure_note(state),
+                _isolate_lookup_note(state),
                 _disease_lookup_failed_note(state),
                 structured_fallback_note,
                 partial_answer_note,
