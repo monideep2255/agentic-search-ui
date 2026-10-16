@@ -13,18 +13,23 @@ Last updated: 2026-10-16.
 
 ## What is live
 
-- Develop: `de53c6aa`, deployed, `/health` reads develop. Production: `v0.2.0`, tag `cde4f592`, unchanged. CI is green.
-- Merged overnight, each behind CI, a judge, an adversary and a fresh verifier: card 115 (#240), card 17 (#241), card 94's timeout fix (#246) and card 24 (#245). All four passed the product check on deployed develop at 1280 and 390 (`testing/Developer/reports/2026-10-16_product_check/` and `2026-10-16_product_check_card24/`).
-- Closed overnight by your rule, each back in To do with its reviews and final diff on develop: cards 48, 75, 29, 94's lookup, 110, 101, 20 and 15. Why, one row each: `DECISIONS.md`, 2026-10-16.
-- Nothing is parked. Locally only `develop`; on GitHub only `develop` and `production`; no parked tag, no leftover worktree.
-- Develop's API sets `SYNTH_MODEL=z-ai/glm-5.2`, `GUARD_MODEL` and `PLAN_MODEL=deepseek/deepseek-v4-flash`, `CLASSIFIER_PROVIDER=jev` and `PER_QUERY_COST_CAP_USD=0.25`. Factory is paused; its brief lists cards 75 and 100.
+- Develop: `de53c6aa`, deployed and healthy. Production: `v0.2.0`, tag `cde4f592`, unchanged. CI is green.
+- Merged overnight: cards 115 (#240), 17 (#241), 94's timeout fix (#246) and 24 (#245).
+  - Each passed CI and three independent reviews: one checks the code, one hunts for a wrong answer, a third re-checks with fresh eyes.
+  - Each passed the product check on deployed develop at 1280 and 390 (`testing/Developer/reports/2026-10-16_product_check/` and `2026-10-16_product_check_card24/`).
+- Closed overnight by your rule, each back in To do with its reviews and final diff on develop: cards 48, 75, 29, 94's lookup, 110, 101, 20 and 15. Why, one row each: `DECISIONS.md`, rows dated 2026-10-15 and 16.
+- Nothing is parked. Locally only `develop`; on GitHub only `develop` and `production`.
+- Factory is paused; its brief lists cards 75 and 100. Develop's model settings: `docs/architecture/Model_architecture.md`.
 
 ## What awaits the product owner
 
-- Retests: `testing/Retest_product_owner.md`, newest first, the night's cards 24, 94's timeout fix, 17 and 115 on top. The team checked all four on deployed develop.
-- Two rules only you can set: whether a question after a long server pause is checked like any other (cards 84 and 72, step 3b, `testing/Developer/reports/2026-10-15_card84_72/design.md`), and what a failed sign-in renewal does (card 75).
-- The product check's "needs your eye" findings, PR-1016-01 to 05 (`testing/Developer/reports/2026-10-16_product_check/report.md`).
-- Still open from before: whether develop's writer becomes Opus 5.5 (card 5), card 40's 27 items. Every decision taken for you overnight: `DECISIONS.md`, rows dated 2026-10-15 and 16; what broke: `LEARNINGS.md`.
+- Retests: `testing/Retest_product_owner.md`, newest first, the night's four cards on top. The team checked all four on deployed develop.
+- Two rules only you can set:
+  - Should a question asked after a long server pause be checked like any other? Today develop refuses some of them (cards 84 and 72, `testing/Developer/reports/2026-10-15_card84_72/design.md`).
+  - When a sign-in renewal reply cannot be read, should the person stay signed in? (card 75)
+- The product check's "needs your eye" findings: `testing/Developer/reports/2026-10-16_product_check/report.md`.
+- Still open from before: a stronger writer model for develop (card 5), and card 40's hook and rule changes.
+- Every decision taken for you overnight: `DECISIONS.md`, rows dated 2026-10-15 and 16. What broke: `LEARNINGS.md`.
 
 ## The one next action
 
