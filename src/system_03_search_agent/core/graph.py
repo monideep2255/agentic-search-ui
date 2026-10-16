@@ -2324,6 +2324,17 @@ async def _guardrail_after_prefilter(
             # case when the allowlist cleared the question, so it gets its own
             # short bound, counted from when it began.
             follow_up_only = prefilter.clears_biomedical_allowlist(query.text)
+            if follow_up_only:
+                # Card 115 (V2-35-02): a request to change the graph keeps
+                # its read-only reply, as on develop, and does not wait on
+                # the topic check card 35 added. That check can only turn
+                # this refusal into an off-topic one; the refusal is certain.
+                early_forbidden = forbidden.screen(query.text)
+                if early_forbidden is not None and early_forbidden.category == "write_seeking":
+                    _cancel_if_pending(relevancy_task)
+                    return _decline_for_guardrail(
+                        state, sink, early_forbidden, charged=True
+                    )
             follow_up_deadline = min(
                 step_deadline,
                 (relevancy_started[0] if relevancy_started else time.monotonic())
