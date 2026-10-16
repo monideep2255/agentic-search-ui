@@ -202,6 +202,7 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 114 | Develop's writer is priced again, so answers keep their written summary after a deploy; every pull request's checks pass again | Live, awaiting your retest | 1, 66 |
 | card 35 | An off-topic follow-up with a biomedical word in it is checked for topic and refused | Live, awaiting your retest | 111 |
 | card 111 | A summary never ends on a sentence that only repeats one paper title | Live, awaiting your retest | 66 |
+| card 115 | A follow-up asking to change the graph gets the read-only reply | Live, awaiting your retest | 111 |
 
 ## What is done, in summary
 
