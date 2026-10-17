@@ -13,30 +13,22 @@ Last updated: 2026-10-17.
 
 ## What is live
 
-- Develop: `cf9be15d` is the product; documents since then only. Deployed and healthy. Production: `v0.2.0`, tag `cde4f592`, unchanged. CI is green.
-- Merged overnight 2026-10-16 to 17, each behind CI, its reviews and a fresh verifier, then checked on deployed develop at desktop and phone width:
-  - Card 30, step 1 (#261): a gene's variant list says it is not a list of pathogenic variants.
-  - Card 37, slice A1 (#262): rs334 is named by its id, with its gene and significance.
-  - Card 8 (#266): the line under an answer names the databases it rests on.
-  - Card 38, slices B (#265) and C (#267): orthologs show their species; graph papers show their titles.
-  - Card 105 (#268): a picked "How far back" window leaves out the graph's undated papers.
-- Closed by your rule, back in To do with their reviews: card 18, card 37's slice A2 and card 30's step 2b. Three more (8, 105, 38 C) closed once and were rebuilt and merged. Why: `DECISIONS.md`, rows dated 2026-10-16 and 17.
-- A usage limit stopped the session from 01:40 to 11:32, so the 07:00 close ran late (`LEARNINGS.md`, 2026-10-17).
+- Develop: `6935a0a3` is the product (card 125, #271); documents since then only. Deployed and healthy. Production: `v0.2.0`, tag `cde4f592`, unchanged. CI is green.
+- Merged today, behind CI, a judge and an adversary, then checked on deployed develop at 1280 and 390: card 125, no paper's title or abstract can pose as the answer writer's instructions, and records read exactly as PubMed writes them. Its third attempt; three small items merged open by your call (`testing/Future.md`, row 61).
+- Closed today, never pushed, each back in To do as "Design with you first": card 126 (the disagreement line fired where nothing disagreed) and card 56's first slice (a single NCBI fit trusted for an acronym, "HEV" read as a pig virus). Why: `DECISIONS.md`, rows dated 2026-10-17.
 - Nothing is parked. Locally only `develop`; on GitHub only `develop` and `production`.
 
 ## What awaits the product owner
 
-- Retests: the night's rows at the top of `testing/Retest_product_owner.md`, each checked by the team on deployed develop.
-- Two calls on card 8's row: MedGen counted under "other databases" when databases tie, and the rare case where two databases disagree.
-- One security call on card 38 slice C's row: whether every paper title path, live ones included, gets a stricter cleaning.
-- Designs: cards 18 and 37 (slice A2) now say "Design with you first"; card 30's step 2b says what its next attempt needs.
-- New cards from the night's checks, 119 to 124, at the bottom of To do.
-- On 23 October, card 84's row: the night's checks saw two more safety-check timeouts on develop.
-- Every decision taken for you: `DECISIONS.md`, rows dated 2026-10-16 and 17. What broke: `LEARNINGS.md`.
+- Retests: the rows at the top of `testing/Retest_product_owner.md`, card 125 first, then the night of 16 to 17 October; each checked by the team on deployed develop.
+- Designs: card 56's next slice (the design and the first slice's reviews: `testing/Developer/reports/2026-10-17_card56/`), card 126, and the other "Design with you first" cards on the board.
+- New cards: 127 (a remembered organism never reaches its sequencing records) and 128 (a CFTR answer with no summary and no note), both buildable.
+- On 23 October, card 84's row: a week of the server's lag lines decides the freeze fix.
+- Every decision taken today: `DECISIONS.md`, rows dated 2026-10-17. What broke: `LEARNINGS.md`.
 
 ## The one next action
 
-Retest the night's cards from the top of `testing/Retest_product_owner.md`, then choose the first "Design with you first" card on the board to design together.
+Retest card 125 and the night's cards from the top of `testing/Retest_product_owner.md`, then redesign card 56's first slice with the lead: when a single NCBI match can be trusted for a short name, and which replies the second model call fires on (the reviews' reasons are in the card's board row).
 
 How to start a session: read this file, then `git status --short` and `git worktree list`, then `testing/Retest_product_owner.md` and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
 
@@ -46,7 +38,7 @@ How to start a session: read this file, then `git status --short` and `git workt
 - Retests: `testing/Retest_product_owner.md`
 - The cutoff and closed items: `testing/UI_fixes_done.md`; older: `testing/UI_fixes_archive.md`
 - Queries to type: `testing/Test_queries_and_workflows.md`
-- Each card's reviews: `testing/Developer/reports/<date>_card*`; the night's plan and ledger: `testing/Developer/reports/2026-10-16_overnight/`
+- Each card's reviews: `testing/Developer/reports/<date>_card*`; today's: `testing/Developer/reports/2026-10-17_card56/`, `_card125/`, `_card126/`
 - Factory's brief: `docs/build/Factory_onboarding.md`; other work: `testing/Future.md`
 - Models: `docs/architecture/Model_architecture.md`
 - Why, and what broke: `DECISIONS.md`, `LEARNINGS.md`; the narrative: `requirements/Plan.md`

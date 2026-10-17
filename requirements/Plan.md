@@ -1050,6 +1050,12 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-17. THE UI FIX LOOP, DAY SESSION OF 2026-10-17: CARD 125 MERGED ON ITS THIRD ATTEMPT; CARD 126 AND CARD 56'S FIRST SLICE CLOSED BY THEIR REVIEWERS; CARD 56 DESIGNED WITH THE OWNER. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history. Decisions: `DECISIONS.md`, rows dated 2026-10-17 from "Every path that brings a PubMed paper title" on.
+
+- What landed: no paper's title or abstract can pose as the answer writer's instructions, and records read exactly as PubMed writes them (card 125, #271), behind green CI, a judge and an adversary, and checked on deployed develop at 1280 and 390. Three small items merged open by the owner's call under Rule 4 (`testing/Future.md`, row 61).
+- What was closed, never pushed, each back in To do as "Design with you first": card 125's first two attempts (cleaning tag shapes changed real records; a fix sentence called retrieved text an instruction), card 126 (a disagreement line that fired where nothing disagreed) and card 56's first slice (a single NCBI fit trusted for an acronym).
+- Designed with the owner: card 56, nine calls (`testing/Developer/reports/2026-10-17_card56/design.md`). Filed: cards 127 and 128. Live spend about $1.6. Nothing is parked.
+
 2026-10-17. THE UI FIX LOOP, OVERNIGHT OF 2026-10-16 TO 17: CARDS 30 (STEP 1), 37 (SLICE A1), 8, 38 (SLICES B AND C) AND 105 MERGED; CARDS 18, 30 (STEP 2B) AND 37 (SLICE A2) CLOSED BY THE OWNER'S RULE; SIX NEW CARDS FILED. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history. Decisions taken under the owner's rules: `DECISIONS.md`, rows dated 2026-10-16 and 2026-10-17.
 
 - What landed, by what a person notices, each behind green CI, its reviews and a fresh verifier, then checked on deployed develop at 1280 and 390:

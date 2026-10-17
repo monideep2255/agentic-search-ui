@@ -2155,6 +2155,7 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 125 | No paper's title or abstract can pose as the answer writer's instructions, and records read exactly as PubMed writes them; nothing new shows in an ordinary answer | Queries 117 and 1 |
 | card 38, slice C | A gene's papers in the knowledge graph are listed by their PubMed titles, never as bare numbers | Query 117 |
 | card 105 | After picking a "How far back" window, the knowledge graph's undated papers are left out and the windowed PubMed papers lead; a line says when none were found | Query 108 |
 | card 38, slice B | A gene's orthologs name their species | Query 116 |

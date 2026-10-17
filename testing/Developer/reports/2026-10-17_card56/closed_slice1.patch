@@ -1,0 +1,2344 @@
+diff --git a/docs/build/Debugging_guide.md b/docs/build/Debugging_guide.md
+index 7626e839..1c4fec78 100644
+--- a/docs/build/Debugging_guide.md
++++ b/docs/build/Debugging_guide.md
+@@ -270,6 +270,7 @@ Where the agent loop lives. Everything a query touches from `run()` through the
+ | `src/system_03_search_agent/core/accession.py` | Deterministic parsing and call planning for an NCBI accession (golden question G-007): `parse_accession` finds the first BioProject, BioSample, SRA or assembly accession in a question's text with a fixed rule, never the model; `search_input` builds the plain-term ESearch that resolves it to a uid (never the `[ACCN]`-scoped term, which probed live as a zero-hit trap for a record that exists); `link_inputs` plans the ELink fan-out `LINK_TARGETS` names; `plan_summary_calls` plans the ESummary calls once linked ids are known, sorted and capped with `breadth_plan.select_ids`; `disclosure` renders the one-sentence count-first narrative. No network, no model. Not yet wired into `think_node` or `plan_node`. | An accession is not recognised or the wrong one is picked from text naming two, `search_input` sends a scoped term that silently finds nothing, `link_inputs` misses a target or sends the wrong `dbfrom`/`db`, a linked target's ids are not deduplicated or capped correctly, or the disclosure sentence mis-pluralises or misreports a count |
+ | `src/system_03_search_agent/core/isolate_search.py` | Deterministic recognition and call planning for a Pathogen Detection isolate question (golden question G-035): `parse_isolate_question` recognises an isolate word plus an organism from the live-verified `ORGANISMS` table (taxon folder and NCBI Taxonomy id) and a gene family from `GENE_FAMILIES` or an explicit gene token, with a fixed rule, never the model; `plan_calls` plans the `pathogen_detection` `isolate_search` call then the organism's Taxonomy summary, no graph call; `disclosure` names the prefixes searched and the ones deliberately left out (ESBL searches `blaCTX-M` only); `count_sentence` states the count and the cut, exact or "at least". No network, no model. Wired into `think_node`, `plan_node` and `write_node`. | An isolate question is asked for a gene symbol instead of searched, "ESBL" matches blaTEM-1 carriers, the wrong organism or taxon folder is picked from a species and genus both named, an organism or gene family a person names is not recognised, or the count under the answer is wrong or missing |
+ | `src/system_03_search_agent/core/paper_links.py` | Call planning for the data records one PubMed paper links to (card 74, golden G-006): `single_pmid` takes the one paper a question resolved, `targets_for` turns the classifier's pick into explicit ELink target databases, `link_calls` plans one ELink from `pubmed` per target with `db` always named, `plan_summary_follow_up` plans the ESummary for the linked ids so each record is cited to its own NCBI page, and `none_linked_message`, `empty_target_note` and `count_note` word what NCBI lists. No network, no model. Wired into `plan_node` and `write_node`. | A paper question plans no link calls or the wrong kinds, an ELink goes out without an explicit target, linked ids are not sorted and capped, or the sentence about no linked records or about how many NCBI lists is wrong |
++| `src/system_03_search_agent/core/phrase_lookup.py` | The whole-phrase lookup for a name Think could not place (card 56, slice 1): `look_up` reads a phrase the model tagged as a disease MedGen bound nothing for, or as an organism NCBI Taxonomy did not know, or a word-fallback candidate that confirmed as nothing, whole in Taxonomy (`<phrase>[All Names]`), Gene (the phrase as an official symbol in the question's organism) and MedGen (exact title only), using exactly one fit and saying which (`reading_line`), offering several as choices (`several_question`) and saying what to type when none fits on a records question (`none_question`); `LookupBudget` caps it at two phrases and ten NCBI calls a question, apart from the question's own ceiling of twenty; `name_runs` and `is_candidate_name` are the pure text rule the guarded word fallback draws whole words from, never a piece of a hyphen-joined word. Called from `think_node`; never on the window, accession or isolate paths. | A name such as "SARS CoV-2" is answered about a different subject or asked about when it should be read, a piece of a word ("SARS" out of "SARS-CoV-2") reaches a lookup, a question asks back when one record fits, the plan line does not say which record a phrase was read as, or a lookup squeezes out a gene question's own NCBI calls |
+ | `src/system_03_search_agent/core/clarify.py` | The words of a question asked back (fix-plan item 12.3; the decision split out on 2026-09-25, build phase 8.2): `build_clarify_messages` wraps a one-to-three-word opening question in an unguessable delimiter tag behind `CLARIFY_SYSTEM_INSTRUCTION`, and `parse_clarify_reply` strictly validates the guard tier's reply into `ClarifyChoices` (a `question` and 2 to 4 subject-tailored `options`, each bounded and each ending in "?"), raising `ClarifyUnavailableError` on anything else. `recent_window_choices` writes the three fixed windows (the last 12 months, 5 years, 10 years) in the person's own words. Whether to ask is NOT decided here: `core/graph.py`'s `think_node` asks `decide(point="think.ask_back")` and `decide(point="think.recent_years")` and shows these choices only on those picks; the 1-to-3-word trigger and the fail-open rule live there too. | A short question is asked back when it should search or answered when it should ask (read the `think.ask_back` or `think.recent_years` record on the `done` event first), the offered options do not fit the subject or are not real questions, or a broken or slow writer reply blocks a question instead of falling through to search |
+ | `src/system_03_search_agent/core/graph.py` | The largest source file by a wide margin, 5947 of the package's 63102 lines, about a tenth. Its own docstring still says stub nodes and is stale. The five-node LangGraph loop with real node logic (`guardrail_node`, `think_node`, `plan_node`, `act_node`, `write_node`), plus the module-level `compiled_graph`. | Any Guardrail, Think, Plan, Act, or Write behavior needs tracing |
+ | `src/system_03_search_agent/core/next_step.py` | The go-deeper follow-up: the query an accepted next-step offer sends (`build_next_step_query`, built in code from the omitted findings' record type and the turn's entity) and how the next turn recognises it (`is_go_deeper_query`), one template and one pattern side by side. | "Yes, go deeper" refuses, re-shows the same records, or sends the offer text as the question |
+diff --git a/src/system_03_search_agent/core/graph.py b/src/system_03_search_agent/core/graph.py
+index f4bf0a39..5c037947 100644
+--- a/src/system_03_search_agent/core/graph.py
++++ b/src/system_03_search_agent/core/graph.py
+@@ -456,7 +456,6 @@ import os
+ import re
+ import secrets
+ import time
+-import unicodedata
+ import uuid
+ import weakref
+ from collections import defaultdict
+@@ -496,6 +495,7 @@ from system_03_search_agent.core import (
+     coordinate_window,
+     isolate_search,
+     paper_links,
++    phrase_lookup,
+ )
+ from system_03_search_agent.core.next_step import (
+     build_next_step_query,
+@@ -3164,6 +3164,31 @@ async def _organism_spans_not_rejected(entities: list[_ThinkExtractedEntity]) ->
+     return kept
+ 
+ 
++async def _organism_spans_rejected(entities: list[_ThinkExtractedEntity]) -> list[str]:
++    """The organism spans the model tagged that NCBI Taxonomy answered with
++    zero records for (card 56, slice 1, code map B2): the other half of
++    what `_organism_spans_not_rejected` keeps, read from the same cached
++    lookup, so it costs no call. Before this, such a span was dropped
++    without trace; now it goes to the whole-phrase lookup. A span whose
++    check could not run is in neither list."""
++    rejected: list[str] = []
++    seen: set[str] = set()
++    checked = 0
++    for entity in entities:
++        if entity.entity_type != "organism":
++            continue
++        span = entity.text.strip()
++        if not span or span.casefold() in seen:
++            continue
++        seen.add(span.casefold())
++        if checked >= _MAX_LIVE_SYMBOL_LOOKUPS:
++            break
++        checked += 1
++        if await _organism_is_known(span) is False:
++            rejected.append(span)
++    return rejected
++
++
+ @dataclass(frozen=True)
+ class ResolvedOrganism:
+     """An organism the question named, confirmed by NCBI Taxonomy (card 56).
+@@ -3292,8 +3317,14 @@ _GENERIC_DISEASE_WORDS = frozenset(
+     }
+ )
+ #: Cache per case-folded mention, the same discipline as `_SYMBOL_CURIE_CACHE`:
+-#: only a completed lookup is cached, never a failed transport.
+-_DISEASE_CURIE_CACHE: dict[str, tuple[tuple[str, ...], int]] = {}
++#: only a completed lookup is cached, never a failed transport. The value is
++#: the bound CURIEs, the count the name index matched, and (card 56, slice
++#: 1) the `(concept id, title)` pairs whose title IS the mention, which the
++#: whole-phrase lookup reads (`medgen_exact_title_records`) so it never pays
++#: a second MedGen search for a phrase the disease check already asked about.
++_DISEASE_CURIE_CACHE: dict[
++    str, tuple[tuple[str, ...], int, tuple[tuple[str, str], ...]]
++] = {}
+ 
+ 
+ def _is_generic_disease_mention(cleaned: str) -> bool:
+@@ -3423,6 +3454,9 @@ async def resolve_disease_mention_to_curies(mention: str) -> tuple[list[str], in
+ 
+     matched = len({cid for cid, _ in titles})
+     exact = sorted({cid for cid, title in titles if title.casefold() == key})
++    exact_records = tuple(
++        sorted({(cid, title) for cid, title in titles if title.casefold() == key})
++    )
+     if exact:
+         curies = [f"MedGen:{cid}" for cid in exact]
+     else:
+@@ -3435,10 +3469,51 @@ async def resolve_disease_mention_to_curies(mention: str) -> tuple[list[str], in
+         curies = [
+             f"MedGen:{cid}" for cid in (in_title + by_name)[:_MAX_DISEASE_CURIES_PER_MENTION]
+         ]
+-    _DISEASE_CURIE_CACHE[key] = (tuple(curies), matched)
++    _DISEASE_CURIE_CACHE[key] = (tuple(curies), matched, exact_records)
+     return curies, matched
+ 
+ 
++def _disease_lookup_key(mention: str) -> str | None:
++    """The `_DISEASE_CURIE_CACHE` key `resolve_disease_mention_to_curies`
++    files `mention` under, or None when that function searches nothing for
++    it: shorter than three characters, only generic disease vocabulary, or
++    no word long enough for the term. The same cleaning, in the same order."""
++    cleaned = " ".join(_DISEASE_MENTION_CHARS.sub(" ", mention).split())[:120]
++    if len(cleaned) < 3 or _is_generic_disease_mention(cleaned):
++        return None
++    if not any(
++        len(word) >= 2 and word.casefold() not in _DISEASE_TERM_STOPWORDS
++        for word in re.split(r"[\s-]+", cleaned)
++    ):
++        return None
++    return cleaned.casefold()
++
++
++async def medgen_exact_title_records(mention: str) -> tuple[tuple[str, str], ...] | None:
++    """The MedGen records whose title is `mention`, case-folded, as
++    `(concept id, title)` pairs: the exact-title rule of
++    `resolve_disease_mention_to_curies` and nothing looser (card 56, slice
++    1). The containment and synonym tiers that function binds by are left
++    out, because they are "several" for almost any phrase (code map P5:
++    "Mycobacterium tuberculosis" 61, TP53 92).
++
++    Shares that function's search, summary and cache, so a phrase the
++    disease check already asked about costs no call here. Empty when MedGen
++    has no such title or the mention names nothing to search; None when the
++    search could not run, which is never cached.
++    """
++    key = _disease_lookup_key(mention)
++    if key is None:
++        return ()
++    cached = _DISEASE_CURIE_CACHE.get(key)
++    if cached is None:
++        await resolve_disease_mention_to_curies(mention)
++        cached = _DISEASE_CURIE_CACHE.get(key)
++        if cached is None:
++            return None
++    return cached[2]
++
++
+ async def _confirm_extracted_entities(
+     entities: list[_ThinkExtractedEntity],
+ ) -> _EntityResolution:
+@@ -3539,6 +3614,7 @@ async def _confirm_extracted_entities(
+         if text and text.casefold() not in {m.casefold() for m in disease_mentions}:
+             disease_mentions.append(text)
+     disclosures: list[str] = []
++    unconfirmed: list[str] = []
+     for mention in disease_mentions[:_MAX_LIVE_DISEASE_LOOKUPS]:
+         bound, matched = await resolve_disease_mention_to_curies(mention)
+         for curie in bound:
+@@ -3548,6 +3624,8 @@ async def _confirm_extracted_entities(
+                 confirmed.append((mention, curie))
+         if bound:
+             disclosures.append(_disease_binding_disclosure(mention, len(bound), matched))
++        else:
++            unconfirmed.append(mention)
+ 
+     # A span the model called a gene that NO live gene lookup confirms,
+     # when nothing else resolved, is tried as a disease mention (measured
+@@ -3576,6 +3654,7 @@ async def _confirm_extracted_entities(
+         unresolved_symbols=unresolved,
+         confirmed=tuple(confirmed),
+         disclosures=tuple(disclosures),
++        unconfirmed=tuple(unconfirmed),
+     )
+ 
+ 
+@@ -3592,12 +3671,10 @@ def _disease_binding_disclosure(mention: str, bound: int, matched: int) -> str:
+     return f"{mention}: {bound} {records} matched by name"
+ 
+ 
+-#: A word-bounded run of 2 to 8 letters and digits: the shape of a human
+-#: gene symbol (`GCK`, `BRCA1`, `C9orf72`), and also of a great many
+-#: ordinary words, which is why the shape alone admits nothing (see
+-#: `_gene_shaped_fallback_candidates`).
+-_GENE_SHAPED_TOKEN_PATTERN = re.compile(r"\b[A-Za-z0-9]{2,8}\b")
+-
++#: The shape of a human gene symbol (`GCK`, `BRCA1`, `C9orf72`), 2 to 8
++#: letters and digits, is `phrase_lookup.admits_token_shape`; it is also the
++#: shape of a great many ordinary words, which is why the shape alone
++#: admits nothing (see `_gene_shaped_fallback_candidates`).
+ #: How many fallback candidates a question may spend live lookups on.
+ _MAX_FALLBACK_CANDIDATES = 3
+ 
+@@ -3607,7 +3684,7 @@ def _gene_shaped_fallback_candidates(
+     exact_matches: list[EventResolvedEntity],
+     organism_spans: Sequence[str] = (),
+ ) -> list[str]:
+-    """Gene-shaped tokens worth ONE live lookup each, when the model found none.
++    """Whole words worth ONE live lookup each, when the model found none.
+ 
+     UI fix set 8 (2026-09-13), the GCK fallback. "Variants in GCK causing
+     MODY" resolved no gene on 2 runs of 5 because the Think model's
+@@ -3655,6 +3732,20 @@ def _gene_shaped_fallback_candidates(
+     the disease SARS, which the person never asked about. A token cut out
+     of an organism's name is a piece of that name, never a gene or a
+     disease of its own.
++
++    Card 56, slice 1 (2026-10-17, the product owner's call 4): a candidate
++    is a WHOLE word, on every record type, never a piece. A hyphen-joined
++    word is one candidate ("SARS-CoV-2", "COVID-19"), and words that read as
++    parts of one name are one candidate ("SARS CoV-2", "SARS CoV 2"), by
++    `phrase_lookup.name_runs`, a text rule with no word list. A run of two
++    or more words is then checked against NCBI Taxonomy before it is used
++    (`phrase_lookup.split_unplaced_runs`), so "BRCA1 ClinVar" still offers
++    BRCA1. A candidate qualifies when one of its pieces passes the shape
++    rule above. The gene fallback still tries only a single word of that
++    shape as a symbol (`phrase_lookup.is_single_token`); the disease
++    fallback and the whole-phrase lookup take the whole candidate. Stated
++    cost: on a reply that names nothing twice, "BRCA1-mutant" offers
++    "BRCA1-mutant", never BRCA1.
+     """
+     claimed: list[tuple[int, int]] = []
+     for entity in exact_matches:
+@@ -3668,68 +3759,22 @@ def _gene_shaped_fallback_candidates(
+ 
+     candidates: list[str] = []
+     seen: set[str] = set()
+-    for match in _GENE_SHAPED_TOKEN_PATTERN.finditer(query_text):
+-        token = match.group(0)
+-        if _span_overlaps_any((match.start(), match.end()), claimed):
+-            continue
+-        if token.isdigit():
++    for start, end, _ in phrase_lookup.name_runs(query_text):
++        if _span_overlaps_any((start, end), claimed):
+             continue
+-        has_digit = any(ch.isdigit() for ch in token)
+-        all_upper_letters = token.isalpha() and token.isupper()
+-        if not (has_digit or all_upper_letters):
++        candidate = query_text[start:end]
++        if not phrase_lookup.is_candidate_name(candidate):
+             continue
+-        key = token.upper()
++        key = candidate.upper()
+         if key in seen:
+             continue
+         seen.add(key)
+-        candidates.append(token)
++        candidates.append(candidate)
+         if len(candidates) >= _MAX_FALLBACK_CANDIDATES:
+             break
+     return candidates
+ 
+ 
+-def _is_name_joiner(char: str) -> bool:
+-    """A hyphen or dash that joins two parts of one name: the ASCII hyphen,
+-    any Unicode dash punctuation (category Pd: U+2010 hyphen, U+2011
+-    non-breaking hyphen, the figure, en and em dashes, U+FF0D) and the
+-    minus sign U+2212, which pasted text sometimes carries in their place."""
+-    return unicodedata.category(char) == "Pd" or char == "\u2212"
+-
+-
+-def _only_a_piece_of_a_joined_name(query_text: str, token: str) -> bool:
+-    """True when every place `token` stands in the question as a word is a
+-    piece of a hyphen-joined name: a letter or digit, then a hyphen or dash,
+-    on either side of it ("SARS" in "SARS-CoV-2", typed with an ASCII
+-    hyphen or a Unicode one).
+-
+-    False when the token also stands anywhere as a whole word ("MODY" in
+-    "SRA runs from MODY patients"), and False when it is not found at all,
+-    so a caller that skips on True never drops a token it cannot place.
+-    Occurrences are `_GENE_SHAPED_TOKEN_PATTERN` matches compared after
+-    upper-casing, the same comparison the candidates were de-duplicated by.
+-    """
+-    wanted = token.upper()
+-    found = False
+-    for match in _GENE_SHAPED_TOKEN_PATTERN.finditer(query_text):
+-        if match.group(0).upper() != wanted:
+-            continue
+-        found = True
+-        start, end = match.start(), match.end()
+-        joined_before = (
+-            start >= 2
+-            and _is_name_joiner(query_text[start - 1])
+-            and query_text[start - 2].isalnum()
+-        )
+-        joined_after = (
+-            end + 1 < len(query_text)
+-            and _is_name_joiner(query_text[end])
+-            and query_text[end + 1].isalnum()
+-        )
+-        if not (joined_before or joined_after):
+-            return False
+-    return found
+-
+-
+ async def _confirm_fallback_candidates(
+     candidates: list[str], taxon: str
+ ) -> list[tuple[str, str]]:
+@@ -3959,7 +4004,8 @@ def _ask_back(sink: _EventSink, question: str, options: list[str], narrative: st
+ 
+     Item 7.5's machinery, reused: `clarification_needed` makes Plan select
+     no tool and Write publish the question, and the options reach the
+-    person as chips they can click to ask one of them.
++    person as chips they can click to ask one of them. No options (card 56's
++    "nothing fits" question) sends none, never an empty list.
+     """
+     sink.emit(
+         "think",
+@@ -3968,7 +4014,7 @@ def _ask_back(sink: _EventSink, question: str, options: list[str], narrative: st
+             query_class="lookup",
+             resolved_entities=[],
+             clarifying_question=question,
+-            clarifying_options=options,
++            clarifying_options=options or None,
+         ),
+     )
+     return sink.result(
+@@ -4155,6 +4201,96 @@ async def _run_think_classification(
+     return classification
+ 
+ 
++#: Card 56, slice 1: why a Think reply is read a second time. "nothing":
++#: the reply named no gene, disease or organism (5 of 26 live runs of the
++#: SARS-CoV-2 SRA question, `2026-10-06_card56/findings.md`). "records": it
++#: asked for SRA runs or assemblies and named no organism and no disease,
++#: so nothing in it can say whose records are wanted.
++_ContentRetryReason = Literal["nothing", "records"]
++_SUBJECT_ENTITY_TYPES: Final[frozenset[str]] = frozenset({"gene", "disease", "organism"})
++
++
++def _content_retry_reason(classification: _ThinkClassification) -> _ContentRetryReason | None:
++    """Whether a parsed Think reply is asked for once more, and why. A
++    reply that names a gene, disease or organism pays nothing, unless it
++    asks for an organism's records and names only genes."""
++    named = {entity.entity_type for entity in classification.entities}
++    if not named & _SUBJECT_ENTITY_TYPES:
++        return "nothing"
++    if classification.record_type in breadth_plan.ORGANISM_RECORD_DBS and not (
++        named & {"organism", "disease"}
++    ):
++        return "records"
++    return None
++
++
++def _content_retry_message(reason: _ContentRetryReason, record_type: str) -> str:
++    """The second request's own words: what was missing from the reply,
++    never a hint at which span to report. Fixed text plus the schema's key
++    list and the reply's own record type, nothing from the question."""
++    if reason == "records":
++        missing = (
++            f'That reply set "record_type" to "{record_type}" but named no '
++            "organism or disease whose records are wanted."
++        )
++    else:
++        missing = "That reply named no gene, disease or organism."
++    return (
++        f"{missing} Read the query again. If it names a gene, a disease or "
++        "condition, or an organism (a species, strain or virus, however it "
++        "is spelled, spaced or hyphenated), list each such span exactly as "
++        "written. Leave \"entities\" empty only if the query names none of "
++        "these. Reply again with a single JSON object using exactly these "
++        f"keys: {_THINK_RETRY_KEY_LIST}."
++    )
++
++
++async def _run_think_content_retry(
++    harness: Harness,
++    trace_id: str,
++    think_messages: list[Message],
++    first: _ThinkClassification,
++    reason: _ContentRetryReason,
++) -> _ThinkClassification | None:
++    """Think asked once more when its reply named nothing (card 56, slice
++    1, the product owner's call 4). The parse retry's exchange, reused: the
++    first reply echoed back, bounded, then what was missing. Through the
++    same harness, so the cost cap and the step budget hold. None, and the
++    first reply stands, on any failure: a call error, the cost cap, or a
++    second reply that does not parse. Never a third call."""
++    call_messages = think_messages + [
++        {
++            "role": "assistant",
++            "content": first.model_dump_json()[:_THINK_RETRY_ECHO_CHARS],
++        },
++        {"role": "user", "content": _content_retry_message(reason, first.record_type)},
++    ]
++    try:
++        response = await _dispatch_tier_call(
++            harness,
++            trace_id,
++            "plan",
++            "think",
++            call_messages,
++            budget_s=budget_for_step("think", "lookup"),
++            cache_prefix=None,
++        )
++    except (cost_control.QueryCapExceededError, HarnessCallError) as exc:
++        logger.warning(
++            "think content retry not made (trace %s): %s", trace_id, type(exc).__name__
++        )
++        return None
++    try:
++        return _parse_think_classification(response.content)
++    except ThinkClassificationUnavailableError as exc:
++        logger.warning(
++            "think content retry reply unusable (trace %s): %s",
++            trace_id,
++            _think_error_text(exc),
++        )
++        return None
++
++
+ async def think_node(state: GraphState) -> dict[str, Any]:
+     """The Think step (Section 3.2), and where its own decisions start.
+ 
+@@ -4375,6 +4511,41 @@ async def _think(
+         return outcome
+     classification = outcome
+ 
++    # Card 56, slice 1 (2026-10-17), the product owner's call 4: a reply
++    # that names no gene, disease or organism, or asks for an organism's
++    # records and names only genes, is asked for once more
++    # (`_run_think_content_retry`), within Think's own budget. A reply that
++    # names something pays nothing, and a question whose subject a fixed
++    # rule already read (a typed identifier, a window, an accession, an
++    # isolate question) or that plans no search is never asked again.
++    retry_reason = (
++        _content_retry_reason(classification)
++        if not exact_matches
++        and window is None
++        and accession_plan is None
++        and isolate_question is None
++        and not _is_small_talk(query.text)
++        else None
++    )
++    if retry_reason is not None:
++        retry_task = asyncio.create_task(
++            _run_think_content_retry(
++                harness, trace_id, think_messages, classification, retry_reason
++            )
++        )
++        try:
++            second_reading = await _await_within_step(
++                retry_task,
++                step_deadline,
++                None,
++                point="think.content_retry",
++                trace_id=trace_id,
++            )
++        finally:
++            _cancel_if_pending(retry_task)
++        if second_reading is not None:
++            classification = second_reading
++
+     # T-4.7-05: confirm the model's gene-type spans live, never fabricate.
+     if (
+         (window_genes is not None and window_genes.genes)
+@@ -4434,6 +4605,125 @@ async def _think(
+             + (isolate_search.disclosure(isolate_question),),
+         )
+ 
++    # Card 56, slice 1 (2026-10-17), the product owner's call 1: a name the
++    # model tagged that did not confirm as its tagged type (a disease MedGen
++    # bound nothing for, an organism Taxonomy has no record of) is looked
++    # up WHOLE in NCBI Taxonomy, Gene and MedGen (`phrase_lookup.look_up`).
++    # Exactly one record across the three is used and the plan line says
++    # which; several, or none on a question asking for an organism's
++    # records, are asked about at the end of Think, once every fallback has
++    # had its turn, so a phrase that fits nothing never stops a question the
++    # fallbacks still answer ("MODY" tagged as an organism on an SRA
++    # question binds MODY by the disease fallback, as before). Never on the
++    # window, accession or isolate paths, which read no model span, and
++    # never once anything resolved, so a question that answers today
++    # answers the same way. At most two phrases and ten NCBI calls a
++    # question, counted apart from the question's own ceiling.
++    lookup_allowed = window is None and accession_plan is None and isolate_question is None
++    lookup_budget = phrase_lookup.LookupBudget(classification.query_class)
++    looked_up: dict[str, phrase_lookup.PhraseLookup] = {}
++    placed_organisms: list[_ThinkExtractedEntity] = []
++    reading_lines: dict[str, str] = {}
++    several_fits: list[phrase_lookup.PhraseLookup] = []
++    unplaced_model_phrases: list[str] = []
++
++    async def _read_whole_phrases(phrases: Sequence[str], *, from_model: bool) -> None:
++        nonlocal model_resolution
++        gene_taxon = await _confirmed_taxon_for_extraction(classification.entities)
++        for phrase in phrases:
++            key = phrase.strip().casefold()
++            if not key or key in looked_up:
++                continue
++            found = await phrase_lookup.look_up(phrase.strip(), gene_taxon, lookup_budget)
++            if found is None:
++                logger.info(
++                    "phrase lookup cap reached (trace %s); %r not looked up", trace_id, phrase
++                )
++                break
++            looked_up[key] = found
++            outcome = found.outcome
++            if outcome == "one":
++                fit = found.fits[0]
++                line = phrase_lookup.reading_line(found.phrase, fit)
++                if fit.kind == "organism":
++                    # Read as an organism: it protects its words from the
++                    # fallbacks below and is bound by the organism anchor,
++                    # exactly as a span the model tagged as one would be.
++                    placed_organisms.append(
++                        _ThinkExtractedEntity(text=found.phrase[:200], entity_type="organism")
++                    )
++                    organism_spans.append(found.phrase)
++                    reading_lines[key] = line
++                else:
++                    model_resolution = _EntityResolution(
++                        curies=list(model_resolution.curies) + [fit.curie],
++                        unresolved_symbols=list(model_resolution.unresolved_symbols),
++                        confirmed=tuple(model_resolution.confirmed) + ((found.phrase, fit.curie),),
++                        disclosures=tuple(model_resolution.disclosures) + (line,),
++                    )
++            elif outcome == "several":
++                several_fits.append(found)
++            elif outcome == "none" and from_model:
++                unplaced_model_phrases.append(found.phrase)
++
++    # A records question whose organism the model named and Taxonomy knows
++    # goes to the organism anchor below; its other unplaced spans are the
++    # search's conditions ("Illumina", "clinical respiratory samples", 3 of
++    # 29 live runs on 2026-10-17), and looking them up would only cost time.
++    organism_route_ahead = bool(organism_spans) and (
++        classification.record_type in breadth_plan.ORGANISM_RECORD_DBS
++    )
++    if (
++        lookup_allowed
++        and not organism_route_ahead
++        and not model_resolution.curies
++        and not model_resolution.unresolved_symbols
++        and not exact_matches
++    ):
++        model_phrases = list(model_resolution.unconfirmed) + await _organism_spans_rejected(
++            classification.entities
++        )
++        if model_phrases:
++            await _read_whole_phrases(model_phrases, from_model=True)
++
++    # The guarded word fallback's candidates, read once: whole words only
++    # (`_gene_shaped_fallback_candidates`), a run of words kept whole when
++    # NCBI Taxonomy knows it as one name. Each is `(text, kind)`:
++    # - "whole": tried as a gene symbol when it has the symbol shape, as a
++    #   disease, and through the whole-phrase lookup;
++    # - "split": a word split out of a run Taxonomy does not know, tried as
++    #   an exact gene symbol only (`phrase_lookup.split_unplaced_runs`);
++    # - "digit_piece": the owner's one exception to "never cut a word"
++    #   (2026-10-17), a piece of a hyphen-joined word that carries a digit
++    #   ("BRCA1" in "BRCA1-mutant"), tried ONLY as an exact official human
++    #   gene symbol (`phrase_lookup.digit_pieces`). In a question that names
++    #   another organism it is not tried at all, so it can never answer
++    #   about the human gene in a mouse question (F-4.7-A-03).
++    fallback_candidates: list[tuple[str, str]] | None = None
++
++    async def _fallback_candidates() -> list[tuple[str, str]]:
++        nonlocal fallback_candidates
++        if fallback_candidates is None:
++            # A phrase the lookup found several records for is the person's
++            # to choose, so no fallback picks one of them in their place.
++            claimed = list(organism_spans) + [found.phrase for found in several_fits]
++            words = _gene_shaped_fallback_candidates(query.text, exact_matches, claimed)
++            if lookup_allowed:
++                read = await phrase_lookup.split_unplaced_runs(words, lookup_budget)
++            else:
++                read = [(word, False) for word in words]
++            expanded: list[tuple[str, str]] = []
++            seen: set[str] = set()
++            for text, split_out in read:
++                for item in [(text, "split" if split_out else "whole")] + [
++                    (piece, "digit_piece") for piece in phrase_lookup.digit_pieces(text)
++                ]:
++                    if item[0].upper() not in seen:
++                        seen.add(item[0].upper())
++                        expanded.append(item)
++            fallback_candidates = expanded[:_MAX_FALLBACK_CANDIDATES]
++        return fallback_candidates
++
+     # UI fix set 8 (2026-09-13), the GCK fallback. Originally gated on the
+     # model having extracted NO gene span at all, and always on every
+     # candidate confirming live; see `_gene_shaped_fallback_candidates` for
+@@ -4446,11 +4736,18 @@ async def _think(
+     # tokens, live-confirmed and capped at three; a candidate that fails
+     # is dropped, so a lone mistyped symbol (BRCA9) keeps its refusal by
+     # name through `unresolved_symbols`, which this branch never clears.
++    # Card 56, slice 1: only a candidate that is one word of the symbol
++    # shape is tried as a symbol, exactly the tokens tried before.
+     if not model_resolution.curies and accession_plan is None and isolate_question is None:
+         fallback_taxon = await _confirmed_taxon_for_extraction(classification.entities)
+         if fallback_taxon is not None:
+             fallback_confirmed = await _confirm_fallback_candidates(
+-                _gene_shaped_fallback_candidates(query.text, exact_matches, organism_spans),
++                [
++                    candidate
++                    for candidate, kind in await _fallback_candidates()
++                    if phrase_lookup.is_single_token(candidate)
++                    and (kind != "digit_piece" or fallback_taxon.casefold() == _DEFAULT_TAXON)
++                ],
+                 fallback_taxon,
+             )
+             if fallback_confirmed:
+@@ -4478,29 +4775,40 @@ async def _think(
+     # question's entity, cited to its Taxonomy record, and Plan searches its
+     # records. A gene question never reaches here, so its plan is unchanged,
+     # and the disease fallback below does not run once this resolves.
++    # Card 56, slice 1: an organism the whole-phrase lookup placed counts as
++    # one the model named, and its reading line joins the disclosure.
+     organism_records: _OrganismRecords | None = None
+-    if (
+-        classification.record_type in breadth_plan.ORGANISM_RECORD_DBS
+-        and organism_spans
+-        and not model_resolution.curies
+-        and not model_resolution.unresolved_symbols
+-        and not exact_matches
+-        and window is None
+-        and accession_plan is None
+-        and isolate_question is None
+-    ):
+-        organism = await resolve_organism(classification.entities)
+-        if organism is not None:
+-            organism_records = _OrganismRecords(
+-                organism=organism, record_type=classification.record_type
+-            )
+-            model_resolution = _EntityResolution(
+-                curies=[organism.curie],
+-                unresolved_symbols=[],
+-                confirmed=((organism.mention, organism.curie),),
+-                disclosures=tuple(model_resolution.disclosures)
+-                + (_organism_records_disclosure(organism_records),),
+-            )
++
++    async def _anchor_organism() -> None:
++        nonlocal model_resolution, organism_records
++        if not (
++            classification.record_type in breadth_plan.ORGANISM_RECORD_DBS
++            and organism_spans
++            and not model_resolution.curies
++            and not model_resolution.unresolved_symbols
++            and not exact_matches
++            and window is None
++            and accession_plan is None
++            and isolate_question is None
++        ):
++            return
++        organism = await resolve_organism(list(classification.entities) + placed_organisms)
++        if organism is None:
++            return
++        organism_records = _OrganismRecords(
++            organism=organism, record_type=classification.record_type
++        )
++        reading = reading_lines.get(organism.mention.strip().casefold())
++        model_resolution = _EntityResolution(
++            curies=[organism.curie],
++            unresolved_symbols=[],
++            confirmed=((organism.mention, organism.curie),),
++            disclosures=tuple(model_resolution.disclosures)
++            + ((reading,) if reading else ())
++            + (_organism_records_disclosure(organism_records),),
++        )
++
++    await _anchor_organism()
+ 
+     # Decision D3 (2026-09-14), the disease half of the fallback: when
+     # NOTHING resolved, neither a typed identifier, a model span, nor a
+@@ -4510,6 +4818,13 @@ async def _think(
+     # `resolve_symbol_to_curie("MODY")` is None, and the acronym is in the
+     # titles of the MODY subtype records. An unconfirmed candidate is
+     # dropped silently, exactly as the gene-shaped fallback drops its own.
++    # Card 56, slice 1: the candidates are whole words on every record type
++    # (`_gene_shaped_fallback_candidates`), so "SARS" is never tried out of
++    # "SARS-CoV-2", "SARS CoV-2" or "SARS CoV 2", nor "COVID" out of
++    # "COVID-19"; the whole word is tried instead. This replaces #186's
++    # skip, which held for hyphens on SRA and assembly questions only.
++    # A candidate that binds nothing goes on to the whole-phrase lookup.
++    unbound_candidates: list[str] = []
+     if (
+         not model_resolution.curies
+         and not model_resolution.unresolved_symbols
+@@ -4519,28 +4834,10 @@ async def _think(
+     ):
+         disease_fallback: list[tuple[str, str]] = []
+         fallback_disclosures: list[str] = []
+-        # Card 56 follow-up (2026-10-06): on a question that asks for SRA
+-        # runs or genome assemblies, a token that stands in the question
+-        # only as a piece of a hyphen-joined name is never tried as a
+-        # disease. Measured live on develop's plan model (findings.md):
+-        # 5 of 26 valid runs of "Find SRA runs of SARS-CoV-2 sequenced on
+-        # Illumina ..." came back with no entity at all, so #173's organism
+-        # exclusion above had no span to protect, the token rule cut "SARS"
+-        # out of "SARS-CoV-2", and MedGen bound three records about the
+-        # disease SARS. With the piece skipped nothing binds, and the run
+-        # goes on as develop's does when nothing resolved (on that question,
+-        # `CLARIFICATION_QUESTION` is asked back).
+-        # A whole word is still tried ("MODY" in "SRA runs from MODY
+-        # patients" binds as before), and every other record type, "none"
+-        # included, is untouched, so a paper question keeps develop's
+-        # behaviour exactly. No retry, no organism matching, no word list:
+-        # the product owner's smallest safe fix after two review rounds.
+-        skip_name_pieces = classification.record_type in breadth_plan.ORGANISM_RECORD_DBS
+-        for candidate in _gene_shaped_fallback_candidates(
+-            query.text, exact_matches, organism_spans
+-        )[:_MAX_LIVE_DISEASE_LOOKUPS]:
+-            if skip_name_pieces and _only_a_piece_of_a_joined_name(query.text, candidate):
+-                continue
++        whole_candidates = [
++            candidate for candidate, kind in await _fallback_candidates() if kind == "whole"
++        ]
++        for candidate in whole_candidates[:_MAX_LIVE_DISEASE_LOOKUPS]:
+             bound, matched = await resolve_disease_mention_to_curies(candidate)
+             for curie in bound:
+                 if curie not in {c for _, c in disease_fallback}:
+@@ -4549,6 +4846,8 @@ async def _think(
+                 fallback_disclosures.append(
+                     _disease_binding_disclosure(candidate, len(bound), matched)
+                 )
++            else:
++                unbound_candidates.append(candidate)
+         if disease_fallback:
+             model_resolution = _EntityResolution(
+                 curies=[curie for _, curie in disease_fallback],
+@@ -4557,6 +4856,67 @@ async def _think(
+                 disclosures=tuple(fallback_disclosures),
+             )
+ 
++    # Card 56, slice 1, the product owner's call 4: a fallback candidate
++    # that confirmed as neither a gene nor a disease goes through the same
++    # whole-phrase lookup, within the same cap. "SARS CoV-2" on a reply that
++    # named nothing twice is read as its Taxonomy record here. A candidate
++    # that fits nothing is dropped, as before: it is a word the model never
++    # named, so it is not asked about ("SRA" in "What SRA runs are there for
++    # it?" must leave the remembered subject to Plan).
++    if (
++        lookup_allowed
++        and unbound_candidates
++        and not model_resolution.curies
++        and not model_resolution.unresolved_symbols
++        and not exact_matches
++    ):
++        await _read_whole_phrases(unbound_candidates, from_model=False)
++        if not model_resolution.curies and placed_organisms:
++            await _anchor_organism()
++
++    # Card 56, slice 1: what is asked when the whole-phrase lookup could not
++    # settle the question's subject and nothing else resolved. Several
++    # records: the person picks, from buttons. None, on a question that asks
++    # for an organism's SRA runs or assemblies: the person is told what was
++    # not found and what to type. None on any other question goes on as
++    # before (a topic search reads the words as written).
++    if (
++        lookup_allowed
++        and not model_resolution.curies
++        and not model_resolution.unresolved_symbols
++        and not exact_matches
++    ):
++        if several_fits:
++            question, options = phrase_lookup.several_question(several_fits[0], query.text)
++            return _ask_back(
++                sink,
++                question,
++                options,
++                narrative=(
++                    "the question names a phrase NCBI files under more than one "
++                    "record, so the answer asks which one is meant before any search"
++                ),
++            )
++        if (
++            unplaced_model_phrases
++            and classification.record_type in breadth_plan.ORGANISM_RECORD_DBS
++        ):
++            return _ask_back(
++                sink,
++                phrase_lookup.none_question(
++                    unplaced_model_phrases,
++                    _ORGANISM_RECORD_WORDS.get(
++                        classification.record_type, classification.record_type
++                    ),
++                ),
++                [],
++                narrative=(
++                    "the question asks for an organism's records and names no "
++                    "organism, gene or condition NCBI has, so the answer asks "
++                    "which organism is meant before any search"
++                ),
++            )
++
+     # F-4.7-A-04, the trust asymmetry filed alongside F-4.7-A-01. The
+     # exact-ID pre-pass is a PATTERN MATCH over text the caller typed: it
+     # proves the string is CURIE-shaped and nothing more. The model-
+@@ -4680,9 +5040,11 @@ async def _think(
+         # records themselves reach the answer as cited MedGen findings; this
+         # clause states how many a mention bound and, when the cap cut the
+         # set, how many the name index matched in all.
+-        think_narrative = (
+-            f"{think_narrative} ({'; '.join(model_resolution.disclosures)})"
+-        )[:500]
++        # Card 56, slice 1: when the two do not fit in 500 characters, the
++        # model's own narrative is shortened, never the clause, so the line
++        # saying which record a phrase was read as always reaches the person.
++        clause = f" ({'; '.join(model_resolution.disclosures)})"
++        think_narrative = (think_narrative[: max(500 - len(clause), 0)] + clause)[:500]
+     if model_resolution.unresolved_symbols and resolved_entities:
+         # UI fix set 8: a span the model tagged as a gene that the live
+         # lookup rejected, beside one that resolved, is named here rather
+@@ -6321,6 +6683,12 @@ class _EntityResolution:
+     # Decision D3 (2026-09-14): one clause per disease mention that bound
+     # MedGen records, for the Think narrative. Empty when none did.
+     disclosures: tuple[str, ...] = ()
++    #: Card 56, slice 1 (code map B2): the disease spans the model tagged
++    #: that MedGen was asked about and bound nothing for. Before this field
++    #: they were dropped without trace; now they go to the whole-phrase
++    #: lookup (`phrase_lookup.look_up`), and only they, beside the organism
++    #: spans Taxonomy rejected.
++    unconfirmed: tuple[str, ...] = ()
+ 
+ 
+ @dataclass(frozen=True)
+diff --git a/src/system_03_search_agent/core/phrase_lookup.py b/src/system_03_search_agent/core/phrase_lookup.py
+new file mode 100644
+index 00000000..5ff0acbc
+--- /dev/null
++++ b/src/system_03_search_agent/core/phrase_lookup.py
+@@ -0,0 +1,524 @@
++"""Whole-phrase lookup for a name Think could not place (card 56, slice 1).
++
++A name the question-reading model tagged as a disease that MedGen did not
++bind, or as an organism that NCBI Taxonomy did not know, used to be dropped
++without trace, and the word fallback then cut a piece out of it ("SARS" out
++of "SARS CoV-2") and answered about a different subject. The product
++owner's call of 2026-10-17 (`DECISIONS.md`): look the whole phrase up in
++NCBI, use it when exactly one record fits and say which, otherwise ask the
++person with the choices found, and never cut a word into pieces.
++
++What "fits" means, per database, reusing the cached primitives in
++`core.graph` (code map B2, `testing/Developer/reports/2026-10-17_card56/`):
++
++- Taxonomy: the phrase as a name, `<phrase>[All Names]`
++  (`graph._organism_taxids`, which reads two ids so one search tells one
++  record from several).
++- Gene: the phrase as an official symbol in the question's organism, human
++  when none is named (`graph.resolve_symbol_to_curie`, which confirms the
++  record's own symbol, so an alias never fits).
++- MedGen: a record whose title IS the phrase (`graph.medgen_exact_title_records`,
++  the exact-title rule of `resolve_disease_mention_to_curies`), never the
++  loose title search, which is "several" for almost any phrase.
++
++Exactly one record across the three is used; two or more are offered as
++choices; none is said. Every NCBI call made here runs under a budget of its
++own (`LookupBudget`), at most `MAX_PHRASES` phrases and `MAX_CALLS` calls
++per question, kept apart from the per-question ceiling of
++`call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY` so a gene question's own
++searches are never squeezed out.
++
++Also here, pure text with no network: `name_runs`, the whole-word reading
++of a question the guarded word fallback (`graph._gene_shaped_fallback_candidates`)
++draws its candidates from, so a candidate is never a piece of a
++hyphen-joined word.
++
++Depends on:
++    - system_03_search_agent.core.graph (`_organism_taxids`,
++      `resolve_symbol_to_curie`, `medgen_exact_title_records`,
++      `_MAX_ORGANISM_LOOKUP_CHARS`), imported at call time because `graph`
++      imports this module, and so a test's stand-in for a primitive applies
++    - system_03_search_agent.harness.call_budget (the lookup's own budget)
++    - system_03_search_agent.tools.ncbi_eutils_actions (`summary`, the
++      Taxonomy names a reading line and a choice are written with)
++
++Reads:
++    - Nothing from the environment.
++
++Writes:
++    - Nothing. NCBI calls go through the repository's transport and its
++      audit hook, as every other lookup does.
++"""
++
++from __future__ import annotations
++
++import logging
++import re
++import unicodedata
++from collections.abc import Iterator, Sequence
++from contextlib import contextmanager
++from dataclasses import dataclass
++from typing import TYPE_CHECKING, Final, Literal
++
++from system_03_search_agent.harness import call_budget
++
++if TYPE_CHECKING:  # pragma: no cover - typing only
++    from system_03_search_agent.harness.harness import QueryClass
++
++logger = logging.getLogger(__name__)
++
++#: The owner's cap, proposed by the lead (design.md, Part 1): at most two
++#: phrases looked up per question.
++MAX_PHRASES: Final[int] = 2
++#: At most ten NCBI calls for those lookups, counted apart from the
++#: per-question ceiling of twenty. A lookup takes up to six: one Taxonomy
++#: search, up to three for the gene (Datasets, ESearch, ESummary), two for
++#: MedGen (search and summary, shared with the disease check that ran before
++#: it), and one Taxonomy summary for the name it is read as.
++MAX_CALLS: Final[int] = 10
++#: The longest phrase quoted back to the person in a question or a line.
++_MAX_QUOTED_CHARS: Final[int] = 60
++#: The longest choice offered as a button (`ThinkPayload.clarifying_options`
++#: allows 220 characters per item and four items).
++_MAX_OPTION_CHARS: Final[int] = 220
++_MAX_OPTIONS: Final[int] = 4
++#: The tool name the budget's reserved slots are charged under. Never a
++#: network call: see `LookupBudget.calls`.
++_RESERVED_TOOL: Final[str] = "phrase_lookup:reserved"
++#: A gene symbol as the Datasets and ESearch inputs accept it: one word of
++#: letters, digits, dots and hyphens, at most 30 characters
++#: (`NcbiEfetchInput.symbol`'s own bound).
++_SYMBOL_SHAPE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.\-]{0,29}")
++
++FitKind = Literal["organism", "gene", "condition"]
++Outcome = Literal["one", "several", "none", "unknown"]
++
++
++# ---------------------------------------------------------------------------
++# Whole words, never pieces (pure text)
++# ---------------------------------------------------------------------------
++
++
++def is_name_joiner(char: str) -> bool:
++    """A hyphen or dash that joins two parts of one name: the ASCII hyphen,
++    any Unicode dash punctuation (category Pd: U+2010 hyphen, U+2011
++    non-breaking hyphen, the figure, en and em dashes, U+FF0D) and the minus
++    sign U+2212, which pasted text sometimes carries in their place."""
++    return unicodedata.category(char) == "Pd" or char == "−"
++
++
++@dataclass(frozen=True)
++class NameWord:
++    """One whole word of a question: letters and digits, with any pieces
++    joined by a single hyphen or dash kept together ("SARS-CoV-2" is one
++    word, never "SARS", "CoV" and "2")."""
++
++    start: int
++    end: int
++    pieces: tuple[str, ...]
++
++
++_ALNUM_RUN = re.compile(r"[A-Za-z0-9]+")
++#: Characters that may sit between two words of one name: spaces, a hyphen
++#: or dash, a slash, a full stop with no space ("SARS.CoV.2") and the soft
++#: hyphen U+00AD that text pasted from a web page or PDF carries invisibly.
++_NAME_GAP_CHARS: Final[str] = "/.­"
++_MAX_NAME_GAP_CHARS: Final[int] = 3
++
++
++def name_words(text: str) -> list[NameWord]:
++    """Every whole word in `text`, in order."""
++    runs = [(m.start(), m.end()) for m in _ALNUM_RUN.finditer(text)]
++    words: list[NameWord] = []
++    index = 0
++    while index < len(runs):
++        start, end = runs[index]
++        pieces = [text[start:end]]
++        while (
++            index + 1 < len(runs)
++            and runs[index + 1][0] == end + 1
++            and is_name_joiner(text[end])
++        ):
++            index += 1
++            end = runs[index][1]
++            pieces.append(text[runs[index][0] : end])
++        words.append(NameWord(start=start, end=end, pieces=tuple(pieces)))
++        index += 1
++    return words
++
++
++def admits_token_shape(token: str) -> bool:
++    """The word fallback's shape rule, unchanged since UI fix set 8: 2 to 8
++    letters and digits, not a bare number, and either carrying a digit
++    (`brca1`, `tp53`) or all capitals (`GCK`, `MODY`). Nothing else tells a
++    symbol from an English word without a word list."""
++    if not (2 <= len(token) <= 8) or not token.isalnum() or not token.isascii():
++        return False
++    if token.isdigit():
++        return False
++    return any(ch.isdigit() for ch in token) or (token.isalpha() and token.isupper())
++
++
++def _continues_a_name(previous: NameWord, word: NameWord) -> bool:
++    """Whether `word` reads as a further part of the name `previous` is part
++    of: a mixed-case part such as "CoV" or "CoV-2", a number after a word
++    with no digit ("CoV 2", "COVID 19"), a hyphen-joined part ending in a
++    number ("COV-2"), or a word the shape rule admits on its own ("SARS
++    COV"). Text cannot tell "SARS CoV-2" from "BRCA1 ClinVar", so a run of
++    two or more words is checked against NCBI Taxonomy before it is used
++    (`split_unplaced_runs`); this rule only proposes it."""
++    first = word.pieces[0]
++    if len(word.pieces) == 1 and first.isdigit():
++        return not any(ch.isdigit() for ch in previous.pieces[-1])
++    if _is_mixed_case(word):
++        return True
++    if len(word.pieces) > 1 and word.pieces[-1].isdigit() and not any(
++        ch.isdigit() for ch in first
++    ):
++        return any(ch.isalpha() for ch in first)
++    return any(admits_token_shape(piece) for piece in word.pieces)
++
++
++def _gap_joins(text: str, previous: NameWord, word: NameWord) -> bool:
++    gap = text[previous.end : word.start]
++    if not gap or len(gap) > _MAX_NAME_GAP_CHARS:
++        return False
++    if "." in gap and any(ch.isspace() for ch in gap):
++        return False
++    return all(ch.isspace() or is_name_joiner(ch) or ch in _NAME_GAP_CHARS for ch in gap)
++
++
++def name_runs(text: str) -> list[tuple[int, int, int]]:
++    """The question's names as `(start, end, word_count)`: each whole word,
++    with the words after it that `_continues_a_name` reads as parts of the
++    same name joined to it. A word is never split, and a word that begins a
++    run is the run's first word, so no piece of a name is ever returned on
++    its own."""
++    words = name_words(text)
++    runs: list[tuple[int, int, int]] = []
++    index = 0
++    while index < len(words):
++        first = words[index]
++        last_index = index
++        if any(admits_token_shape(piece) for piece in first.pieces) or _is_mixed_case(first):
++            while (
++                last_index + 1 < len(words)
++                and _gap_joins(text, words[last_index], words[last_index + 1])
++                and _continues_a_name(words[last_index], words[last_index + 1])
++            ):
++                last_index += 1
++        runs.append((first.start, words[last_index].end, last_index - index + 1))
++        index = last_index + 1
++    return runs
++
++
++def _is_mixed_case(word: NameWord) -> bool:
++    """A capital, then a small letter followed by a capital, as in "CoV"."""
++    first = word.pieces[0]
++    return bool(first[:1].isupper() and re.search(r"[a-z][A-Z]", first))
++
++
++def is_candidate_name(text: str) -> bool:
++    """Whether a whole word or run may be a fallback candidate: one of its
++    pieces passes the shape rule. "SARS-CoV-2" may ("SARS"), "follow-up"
++    may not."""
++    return any(admits_token_shape(piece) for word in name_words(text) for piece in word.pieces)
++
++
++def digit_pieces(text: str) -> list[str]:
++    """The owner's one exception to "never cut a word" (2026-10-17): the
++    pieces of a hyphen-joined word that carry a digit and pass the shape
++    rule ("BRCA1" in "BRCA1-mutant", "TP53" in "TP53-null"). The caller
++    may try such a piece ONLY as an exact official human gene symbol, never
++    as a disease, an organism or through the phrase lookup. A piece with no
++    digit ("SARS" in "SARS-CoV-2", "COVID" in "COVID-19") is never one, and
++    neither is a bare number ("2", "19")."""
++    pieces: list[str] = []
++    for word in name_words(text):
++        if len(word.pieces) < 2:
++            continue
++        for piece in word.pieces:
++            if any(ch.isdigit() for ch in piece) and admits_token_shape(piece):
++                pieces.append(piece)
++    return pieces
++
++
++def is_single_token(text: str) -> bool:
++    """A candidate the gene fallback may try as a symbol, exactly as before
++    this card: one word, no hyphen, passing the shape rule."""
++    return admits_token_shape(text)
++
++
++# ---------------------------------------------------------------------------
++# The budget
++# ---------------------------------------------------------------------------
++
++
++class LookupBudget:
++    """At most `max_phrases` phrases and `max_calls` NCBI calls for one
++    question's lookups, counted apart from the per-question ceiling.
++
++    `calls()` binds a fresh call-budget scope for the duration of one batch
++    of lookups, so a call made inside it charges that scope and never the
++    question's own. The scope's ceiling is the module constant
++    `call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY`; the slots this budget may
++    not spend are charged up front under `_RESERVED_TOOL`, which reaches no
++    network, so the transport refuses the call after the last one this
++    budget allows, before it goes out. A refused call reads to every
++    primitive as a failed lookup, which is never cached and never binds.
++    """
++
++    def __init__(
++        self,
++        query_class: QueryClass,
++        *,
++        max_phrases: int = MAX_PHRASES,
++        max_calls: int = MAX_CALLS,
++    ) -> None:
++        self.query_class = query_class
++        self.max_phrases = max_phrases
++        self.max_calls = max_calls
++        self.phrases_used = 0
++        self.calls_used = 0
++
++    def take_phrase(self) -> bool:
++        if self.phrases_used >= self.max_phrases:
++            return False
++        self.phrases_used += 1
++        return True
++
++    @contextmanager
++    def calls(self) -> Iterator[None]:
++        remaining = max(self.max_calls - self.calls_used, 0)
++        reserved = max(call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY - remaining, 0)
++        token = call_budget.set_query_budget(self.query_class)
++        try:
++            for _ in range(reserved):
++                call_budget.charge_one_call(tool=_RESERVED_TOOL, layer=2)
++            yield
++        finally:
++            made = call_budget.calls_made() or 0
++            self.calls_used += max(made - reserved, 0)
++            call_budget.reset_query_budget(token)
++
++
++# ---------------------------------------------------------------------------
++# The lookup
++# ---------------------------------------------------------------------------
++
++
++@dataclass(frozen=True)
++class PhraseFit:
++    """One NCBI record a whole phrase fits under."""
++
++    kind: FitKind
++    record_id: str
++    #: The record's own name: a Taxonomy scientific name, a gene's official
++    #: symbol, a MedGen title. Empty when NCBI did not say.
++    name: str
++    #: For a gene, the organism it was looked up in.
++    organism: str = ""
++
++    @property
++    def curie(self) -> str:
++        prefix = {"organism": "NCBITaxon", "gene": "NCBIGene", "condition": "MedGen"}[self.kind]
++        return f"{prefix}:{self.record_id}"
++
++    def describe(self) -> str:
++        """The record in words a person reads, with its NCBI identifier."""
++        if self.kind == "organism":
++            name = f" {self.name}" if self.name else ""
++            return f"the organism{name} (NCBI Taxonomy {self.record_id})"
++        if self.kind == "gene":
++            organism = f"{self.organism} " if self.organism else ""
++            return f"the {organism}gene {self.name} (NCBI Gene {self.record_id})"
++        return f"the condition {self.name} (MedGen {self.record_id})"
++
++    def label(self) -> str:
++        """What replaces the phrase in a choice offered as a button."""
++        if self.kind == "organism":
++            return self.name or f"the organism NCBI Taxonomy {self.record_id}"
++        if self.kind == "gene":
++            return f"the gene {self.name}"
++        return self.name
++
++
++@dataclass(frozen=True)
++class PhraseLookup:
++    """What NCBI answered for one whole phrase."""
++
++    phrase: str
++    fits: tuple[PhraseFit, ...]
++    #: False when Taxonomy or MedGen could not be asked (a transport failure
++    #: or the lookup's own cap), so "none" or "one" is not proven.
++    complete: bool
++
++    @property
++    def outcome(self) -> Outcome:
++        if len(self.fits) >= 2:
++            return "several"
++        if not self.complete:
++            return "unknown"
++        return "one" if self.fits else "none"
++
++
++def _symbol_shaped(phrase: str) -> bool:
++    return bool(_SYMBOL_SHAPE.fullmatch(phrase.strip()))
++
++
++async def _taxonomy_names(taxids: Sequence[str]) -> dict[str, str]:
++    """Taxonomy scientific names for `taxids`, one ESummary, or {} when NCBI
++    did not answer. Only ever a label: a missing name never changes what
++    binds."""
++    from system_03_search_agent.tools import ncbi_eutils_actions
++    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchSummaryInput
++
++    try:
++        found = await ncbi_eutils_actions.summary(
++            NcbiEfetchSummaryInput(action="summary", db="taxonomy", ids=list(taxids))
++        )
++    except Exception as exc:  # noqa: BLE001
++        logger.warning("Taxonomy name lookup failed: %s", type(exc).__name__)
++        return {}
++    if getattr(found, "status", None) != "ok":
++        return {}
++    names: dict[str, str] = {}
++    for record in found.records:
++        taxid = str(record.fields.get("taxid") or getattr(record, "id", "") or "").strip()
++        name = record.fields.get("scientificname")
++        if taxid and isinstance(name, str) and name.strip():
++            names[taxid] = " ".join(name.split())[:_MAX_OPTION_CHARS]
++    return names
++
++
++async def look_up(
++    phrase: str, gene_taxon: str | None, budget: LookupBudget
++) -> PhraseLookup | None:
++    """The whole phrase in Taxonomy, Gene and MedGen, or None when the
++    question has used its `MAX_PHRASES`. Never raises; never cuts the phrase.
++    """
++    from system_03_search_agent.core import graph
++
++    if not budget.take_phrase():
++        return None
++    with budget.calls():
++        taxids = await graph._organism_taxids(phrase, graph._MAX_ORGANISM_LOOKUP_CHARS)
++        gene_curie: str | None = None
++        if gene_taxon and _symbol_shaped(phrase):
++            gene_curie = await graph.resolve_symbol_to_curie(phrase.strip(), taxon=gene_taxon)
++        medgen = await graph.medgen_exact_title_records(phrase)
++        names = await _taxonomy_names(taxids) if taxids else {}
++    fits: list[PhraseFit] = [
++        PhraseFit(kind="organism", record_id=taxid, name=names.get(taxid, ""))
++        for taxid in taxids or ()
++    ]
++    if gene_curie is not None:
++        fits.append(
++            PhraseFit(
++                kind="gene",
++                record_id=gene_curie.split(":", 1)[1],
++                name=phrase.strip().upper(),
++                organism=gene_taxon or "",
++            )
++        )
++    fits.extend(
++        PhraseFit(kind="condition", record_id=concept_id, name=title)
++        for concept_id, title in medgen or ()
++    )
++    return PhraseLookup(
++        phrase=phrase,
++        fits=tuple(fits),
++        complete=taxids is not None and medgen is not None,
++    )
++
++
++async def split_unplaced_runs(
++    candidates: Sequence[str], budget: LookupBudget
++) -> list[tuple[str, bool]]:
++    """Each candidate as `(text, split_out)`. A multi-word candidate is kept
++    whole when NCBI Taxonomy knows it as a name ("SARS CoV-2"), and when the
++    check could not run, so a name is never cut on a guess. When Taxonomy
++    answers that it knows no such name ("BRCA1 ClinVar"), its whole words
++    are returned with `split_out` True: the caller may try such a word only
++    as an exact gene symbol, never as a disease or in the whole-phrase
++    lookup, because a word split out of a name Taxonomy did not recognise
++    ("SARS" out of "SARS.CoV.2") may still be a piece of that name. One
++    cached Taxonomy search per run, charged to `budget`'s calls but not to
++    its phrases."""
++    from system_03_search_agent.core import graph
++
++    out: list[tuple[str, bool]] = []
++    for candidate in candidates:
++        words = name_words(candidate)
++        if len(words) < 2:
++            # A single word, hyphen-joined or not, is never split.
++            out.append((candidate, False))
++            continue
++        with budget.calls():
++            taxids = await graph._organism_taxids(candidate, graph._MAX_ORGANISM_LOOKUP_CHARS)
++        if taxids is None or taxids:
++            out.append((candidate, False))
++            continue
++        for word in words:
++            text = candidate[word.start : word.end]
++            if is_candidate_name(text):
++                out.append((text, True))
++    return out
++
++
++# ---------------------------------------------------------------------------
++# What the person reads
++# ---------------------------------------------------------------------------
++
++
++def _quoted(phrase: str) -> str:
++    printable = "".join(ch if ch.isprintable() else " " for ch in phrase)
++    text = " ".join(printable.replace("'", "").split())
++    if len(text) > _MAX_QUOTED_CHARS:
++        text = text[:_MAX_QUOTED_CHARS].rstrip() + "..."
++    return text or "this name"
++
++
++def reading_line(phrase: str, fit: PhraseFit) -> str:
++    """The plan line naming the record a phrase was read as."""
++    return f"Read '{_quoted(phrase)}' as {fit.describe()}"
++
++
++def several_question(lookup: PhraseLookup, question_text: str) -> tuple[str, list[str]]:
++    """The question asked back when a phrase fits several NCBI records, and
++    the choices offered as buttons: the person's own question with the
++    phrase replaced by each record's name, so a click asks it again without
++    the doubt, or the record's name alone when that would be too long."""
++    phrase = _quoted(lookup.phrase)
++    question = (
++        f"'{phrase}' matches more than one NCBI record, so I have not picked one "
++        "for you. Choose the one you mean below, or ask again using its full "
++        "name."
++    )
++    pattern = re.compile(re.escape(lookup.phrase.strip()), re.IGNORECASE)
++    options: list[str] = []
++    for fit in lookup.fits:
++        label = fit.label()
++        rewritten = pattern.sub(lambda _match, label=label: label, question_text.strip(), count=1)
++        option = rewritten if rewritten != question_text.strip() else label
++        if len(option) > _MAX_OPTION_CHARS:
++            option = label[:_MAX_OPTION_CHARS]
++        option = " ".join("".join(ch if ch.isprintable() else " " for ch in option).split())
++        if option and option not in options:
++            options.append(option)
++        if len(options) >= _MAX_OPTIONS:
++            break
++    return question, options
++
++
++def none_question(phrases: Sequence[str], records: str) -> str:
++    """The question asked back when a question asks for an organism's
++    records and no phrase the model named fits any NCBI record. It says
++    what was looked up and what to type next."""
++    quoted = " or ".join(f"'{_quoted(phrase)}'" for phrase in phrases[:MAX_PHRASES])
++    return (
++        f"I could not find {quoted} as an organism, gene or condition in NCBI, "
++        f"so I cannot tell which organism's {records} you want. Ask again "
++        "naming the organism as NCBI spells it, for example "
++        f"\"{records} of Escherichia coli\"."
++    )
+diff --git a/tests/system_03_search_agent/core/test_think_organisms.py b/tests/system_03_search_agent/core/test_think_organisms.py
+index 43465377..5cb17caf 100644
+--- a/tests/system_03_search_agent/core/test_think_organisms.py
++++ b/tests/system_03_search_agent/core/test_think_organisms.py
+@@ -27,7 +27,8 @@ Each arm was run against the old code and went red there:
+   `record_type`, and no organism route in Plan (red).
+ 
+ Populate checks, so no arm passes on an empty result: the same question
+-with no organism span still yields "SARS"; a span Taxonomy rejects
++with no organism span still yields "SARS-CoV-2" (the whole word since card
++56's slice 1; "SARS" before it); a span Taxonomy rejects
+ ("MODY", the 2-of-20 GCK runs) still yields its token; a question with no
+ organism still gets the gene question; a name Taxonomy files under two taxa,
+ or two organisms, resolves nothing; a gene question with the same record
+@@ -148,10 +149,12 @@ def _state(text: str, **extra: Any) -> dict[str, Any]:
+ 
+ def test_a_token_inside_an_organism_span_is_never_a_candidate() -> None:
+     with_span = graph_module._gene_shaped_fallback_candidates(SRA_QUESTION, [], ["SARS-CoV-2"])
+-    assert "SARS" not in with_span, with_span
+-    # Populate check: the same question with no organism span still yields it.
++    assert "SARS" not in with_span and "SARS-CoV-2" not in with_span, with_span
++    # Populate check: the same question with no organism span still yields
++    # the name. Card 56, slice 1: as the whole word, never the piece "SARS"
++    # this check used to expect (`test_think_phrase_lookup.py`).
+     without = graph_module._gene_shaped_fallback_candidates(SRA_QUESTION, [])
+-    assert "SARS" in without, without
++    assert "SARS-CoV-2" in without and "SARS" not in without, without
+     # Matched whatever case the model wrote the span in.
+     assert "SARS" not in graph_module._gene_shaped_fallback_candidates(
+         SRA_QUESTION, [], ["sars-cov-2"]
+diff --git a/tests/system_03_search_agent/core/test_think_phrase_lookup.py b/tests/system_03_search_agent/core/test_think_phrase_lookup.py
+new file mode 100644
+index 00000000..6f2113db
+--- /dev/null
++++ b/tests/system_03_search_agent/core/test_think_phrase_lookup.py
+@@ -0,0 +1,855 @@
++"""Card 56, slice 1 (2026-10-17): a name Think cannot place is looked up
++whole, never cut into pieces.
++
++What a person gets, in the product owner's words (`DECISIONS.md`,
++2026-10-17, and `testing/Developer/reports/2026-10-17_card56/design.md`):
++
++- A question naming "SARS CoV-2" with a space, "SARS CoV 2" or "COVID-19
++  virus" is read as the virus, NCBI Taxonomy 2697049, and the plan line says
++  so in words, whether the question-reading model tagged the phrase as a
++  disease, as nothing (then asked once more), or as an organism.
++- "SARS" is never taken out of "SARS CoV-2", "SARS CoV 2" or "SARS-CoV-2",
++  nor "COVID" out of "COVID-19".
++- A phrase that confirms as the type the model gave it is never looked up
++  again, so every question that answers today answers the same way.
++- Several fits are asked about with the choices as buttons; nothing found,
++  on a question that asks for an organism's records, says what to type.
++- At most two phrases and ten NCBI calls a question, apart from the
++  question's own ceiling; never on the isolate path.
++
++Drives the real `think_node` with the Plan-tier model, NCBI's `search` and
++`summary` actions and the gene resolver faked, from values measured live on
++2026-10-17 (`code_map.md`, E1, and `build_slice1.md`). No network.
++
++The mutation each arm guards, recorded with its result in `build_slice1.md`:
++the fallback cutting a hyphen piece; a confirmed span reaching the lookup;
++MedGen's loose title search in the lookup; no content retry; no cap.
++"""
++
++from __future__ import annotations
++
++import json
++from types import SimpleNamespace
++from typing import Any
++
++import pytest
++
++from system_03_search_agent.contracts.query import Query
++from system_03_search_agent.core import graph as graph_module
++from system_03_search_agent.core import phrase_lookup
++from system_03_search_agent.harness import call_budget
++from system_03_search_agent.harness import harness as harness_module
++from system_03_search_agent.harness.harness import HarnessCallError
++from system_03_search_agent.tools import ncbi_eutils_actions
++
++SARS2 = "NCBITaxon:2697049"
++SARS2_NAME = "Severe acute respiratory syndrome coronavirus 2"
++SRA_QUESTION = "Find SRA runs of {} sequenced on Illumina from clinical respiratory samples"
++THE_FOUR = ["SARS CoV-2", "SARS-CoV-2", "sars cov 2", "COVID-19 virus"]
++
++#: NCBI Taxonomy `<name>[All Names]`, after `_organism_taxids`'s cleaning,
++#: as answered live on 2026-10-17.
++TAXONOMY: dict[str, list[str]] = {
++    "sars cov-2": ["2697049"],
++    "sars-cov-2": ["2697049"],
++    "sars cov 2": ["2697049"],
++    "sars cov2": ["2697049"],
++    "covid-19 virus": ["2697049"],
++    "covid-19": ["2697049"],
++    "sars": ["694009"],
++    "mycobacterium tuberculosis": ["1773"],
++    "salmonella": ["590"],
++    "human": ["9606"],
++}
++TAXON_NAMES = {
++    "2697049": SARS2_NAME,
++    "694009": "Severe acute respiratory syndrome-related coronavirus",
++    "1773": "Mycobacterium tuberculosis",
++}
++#: MedGen as answered live: "SARS[title]" three records, "MODY[title]" one
++#: here, "GERD[title]" one; "SARS[title] AND CoV[title]",
++#: "COVID[title] AND 19[title]" and "SRA[title]" none.
++MEDGEN = {
++    "SARS[title]": ["1001", "1002", "1003"],
++    "MODY[title]": ["2001"],
++    "gerd[title]": ["3001"],
++    "Mycobacterium[title] AND tuberculosis[title]": ["4001", "4002"],
++}
++MEDGEN_TITLES = {
++    "1001": ("C1519126", "SARS Coronavirus Protease Pathway"),
++    "1002": ("C4302012", "Probable SARS"),
++    "1003": ("C4302019", "SARS (severe acute respiratory syndrome) confirmed"),
++    "2001": ("C1833382", "Impaired glucose tolerance in MODY"),
++    "3001": ("C0017168", "Gastroesophageal reflux disease"),
++    "4001": ("C0041296", "Tuberculosis"),
++    "4002": ("C0275921", "Mycobacterium tuberculosis infection"),
++}
++GENES = {"BRCA1": "NCBIGene:672", "GCK": "NCBIGene:2645", "TP53": "NCBIGene:7157"}
++
++
++class _Record:
++    def __init__(self, fields: dict[str, Any]) -> None:
++        self.fields = fields
++
++
++class _Ncbi:
++    """Fake ESearch, ESummary and gene resolver; every call is recorded and,
++    like the real transport, charged to whatever call budget is bound."""
++
++    def __init__(self, monkeypatch: pytest.MonkeyPatch, genes: dict[str, str] | None = None):
++        self.searched: list[tuple[str, str]] = []
++        self.summaries: list[tuple[str, tuple[str, ...]]] = []
++        self.genes_asked: list[str] = []
++        genes = GENES if genes is None else genes
++
++        def _charge() -> bool:
++            try:
++                call_budget.charge_one_call(tool="ncbi_transport:fake", layer=2)
++            except call_budget.CallBudgetExceededError:
++                return False
++            return True
++
++        async def _search(params: Any) -> Any:
++            if not _charge():
++                raise call_budget.CallBudgetExceededError(tool="fake", calls_made=0, limit=0)
++            self.searched.append((params.db, params.term))
++            if params.db == "taxonomy":
++                ids = TAXONOMY.get(params.term.split("[")[0].strip().casefold(), [])
++            elif params.db == "medgen":
++                ids = MEDGEN.get(params.term, [])
++            else:
++                ids = []
++            return SimpleNamespace(
++                status="ok" if ids else "empty",
++                records=[_Record({"idlist": ids})] if ids else [],
++            )
++
++        async def _summary(params: Any) -> Any:
++            if not _charge():
++                raise call_budget.CallBudgetExceededError(tool="fake", calls_made=0, limit=0)
++            self.summaries.append((params.db, tuple(params.ids)))
++            if params.db == "taxonomy":
++                records = [
++                    _Record({"taxid": uid, "scientificname": TAXON_NAMES[uid]})
++                    for uid in params.ids
++                    if uid in TAXON_NAMES
++                ]
++            else:
++                records = [
++                    _Record({"conceptid": MEDGEN_TITLES[uid][0], "title": MEDGEN_TITLES[uid][1]})
++                    for uid in params.ids
++                    if uid in MEDGEN_TITLES
++                ]
++            return SimpleNamespace(status="ok", records=records)
++
++        async def _gene(symbol: str, *, taxon: str = "human") -> str | None:
++            self.genes_asked.append(symbol)
++            return genes.get(symbol.strip().upper())
++
++        monkeypatch.setattr(ncbi_eutils_actions, "search", _search)
++        monkeypatch.setattr(ncbi_eutils_actions, "summary", _summary)
++        monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _gene)
++        graph_module._DISEASE_CURIE_CACHE.clear()
++        graph_module._ORGANISM_KNOWN_CACHE.clear()
++
++    def taxonomy_terms(self) -> list[str]:
++        return [term for db, term in self.searched if db == "taxonomy"]
++
++    def medgen_terms(self) -> list[str]:
++        return [term for db, term in self.searched if db == "medgen"]
++
++
++def _reply(entities: list[tuple[str, str]], record_type: str = "sra") -> str:
++    return graph_module._ThinkClassification(
++        query_class="exploratory",
++        entities=[graph_module._ThinkExtractedEntity(text=t, entity_type=k) for t, k in entities],
++        narrative="Asks for records.",
++        record_type=record_type,
++    ).model_dump_json()
++
++
++class _Model:
++    """Think's model: the replies in order, the last one repeated; every
++    message list it was sent is kept."""
++
++    def __init__(self, monkeypatch: pytest.MonkeyPatch, *replies: str, fail_after: int = 0):
++        self.sent: list[list[dict[str, Any]]] = []
++        self.replies = list(replies)
++
++        async def _dispatch(*args: Any, **kwargs: Any) -> Any:
++            messages = list(args[4])
++            if messages[0].get("content") != graph_module._THINK_SYSTEM_INSTRUCTION:
++                return SimpleNamespace(content="{}")
++            self.sent.append(messages)
++            if fail_after and len(self.sent) > fail_after:
++                raise HarnessCallError("plan tier unavailable", error_class="transient")
++            index = min(len(self.sent), len(self.replies)) - 1
++            return SimpleNamespace(content=self.replies[index])
++
++        monkeypatch.setattr(graph_module, "_dispatch_tier_call", _dispatch)
++        monkeypatch.setenv("GUARD_MODEL", "test-provider/guard-model")
++        monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
++        monkeypatch.setenv("SYNTH_MODEL", "test-provider/synth-model")
++
++
++def _state(text: str) -> dict[str, Any]:
++    return {
++        "query": Query(text=text, session_id="s-phrase", trace_id="t-phrase", user_id=None),
++        "harness": harness_module.Harness(trace_id="t-phrase"),
++        "seq": 0,
++        "findings": [],
++        "findings_count": 0,
++    }
++
++
++async def _think(text: str) -> dict[str, Any]:
++    return await graph_module.think_node(_state(text))
++
++
++def _think_payload(result: dict[str, Any]) -> Any:
++    event = next(e for e in result["events"] if e.type == "think")
++    return event.payload
++
++
++def _narrative(result: dict[str, Any]) -> str:
++    return _field(result, "narrative")
++
++
++def _field(result: dict[str, Any], name: str) -> Any:
++    payload = _think_payload(result)
++    return payload[name] if isinstance(payload, dict) else getattr(payload, name)
++
++
++def _outcome(result: dict[str, Any]) -> dict[str, Any]:
++    organism_records = result.get("organism_records")
++    return {
++        "resolved": [(e.text, e.curie) for e in result.get("resolved_entities") or []],
++        "clarification": result.get("clarification_needed"),
++        "organism_records": (
++            (organism_records.organism.curie, organism_records.record_type)
++            if organism_records is not None
++            else None
++        ),
++        "unresolved": result.get("unresolved_entity_symbols"),
++    }
++
++
++def _reading(phrase: str) -> str:
++    return f"Read '{phrase}' as the organism {SARS2_NAME} (NCBI Taxonomy 2697049)"
++
++
++# ---------------------------------------------------------------------------
++# The four ways of writing the virus read as the virus
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("phrase", THE_FOUR)
++async def test_a_name_tagged_as_a_disease_is_read_as_its_taxonomy_record(
++    monkeypatch: pytest.MonkeyPatch, phrase: str
++) -> None:
++    """Adversary round 3, A3-56-03: "SARS CoV-2" tagged as a disease bound
++    nothing in MedGen, the fallback cut "SARS" out and the answer was about
++    the disease SARS."""
++    ncbi = _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply([(phrase, "disease")]))
++    result = await _think(SRA_QUESTION.format(phrase))
++    assert _outcome(result) == {
++        "resolved": [(phrase, SARS2)],
++        "clarification": None,
++        "organism_records": (SARS2, "sra"),
++        "unresolved": None,
++    }
++    assert _reading(phrase) in _narrative(result), _narrative(result)
++    assert "SARS[title]" not in ncbi.medgen_terms() and "COVID[title]" not in ncbi.medgen_terms()
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("phrase", THE_FOUR)
++async def test_a_reply_naming_nothing_is_asked_again_and_the_name_is_read(
++    monkeypatch: pytest.MonkeyPatch, phrase: str
++) -> None:
++    """The model names nothing (5 of 26 live runs); asked once more, it tags
++    the phrase, here as a disease, and the whole phrase is read."""
++    _Ncbi(monkeypatch)
++    model = _Model(monkeypatch, _reply([]), _reply([(phrase, "disease")]))
++    result = await _think(SRA_QUESTION.format(phrase))
++    assert len(model.sent) == 2
++    assert _outcome(result)["organism_records"] == (SARS2, "sra")
++    assert _outcome(result)["resolved"] == [(phrase, SARS2)]
++    assert _reading(phrase) in _narrative(result)
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("phrase", THE_FOUR)
++async def test_a_name_tagged_as_an_organism_takes_the_organism_route_as_today(
++    monkeypatch: pytest.MonkeyPatch, phrase: str
++) -> None:
++    """Confirmed as tagged: never looked up again, no extra call, the
++    organism disclosure names the Taxonomy record as before."""
++    ncbi = _Ncbi(monkeypatch)
++    model = _Model(monkeypatch, _reply([(phrase, "organism")]))
++    result = await _think(SRA_QUESTION.format(phrase))
++    assert len(model.sent) == 1
++    assert _outcome(result)["organism_records"] == (SARS2, "sra")
++    assert f"{phrase}: NCBI Taxonomy 2697049" in _narrative(result)
++    assert not [db for db, _ in ncbi.summaries if db == "taxonomy"], "no lookup for a confirmed span"
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize(
++    ("phrase", "mention"),
++    [
++        ("SARS CoV-2", "SARS CoV-2"),
++        ("SARS-CoV-2", "SARS-CoV-2"),
++        ("SARS CoV 2", "SARS CoV 2"),
++        ("COVID-19 virus", "COVID-19"),
++    ],
++)
++async def test_a_reply_naming_nothing_twice_reads_the_whole_word(
++    monkeypatch: pytest.MonkeyPatch, phrase: str, mention: str
++) -> None:
++    """The guarded fallback offers the whole name, never "SARS" or "COVID",
++    and the lookup reads it."""
++    ncbi = _Ncbi(monkeypatch)
++    model = _Model(monkeypatch, _reply([]))
++    result = await _think(SRA_QUESTION.format(phrase))
++    assert len(model.sent) == 2
++    assert _outcome(result)["resolved"] == [(mention, SARS2)]
++    assert _outcome(result)["organism_records"] == (SARS2, "sra")
++    assert _reading(mention) in _narrative(result)
++    assert "SARS[title]" not in ncbi.medgen_terms() and "COVID[title]" not in ncbi.medgen_terms()
++
++
++@pytest.mark.asyncio
++async def test_a_lower_case_name_with_no_candidate_binds_nothing(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """Stated residual: "sars cov 2" named by nobody twice has no whole word
++    of the symbol shape, so nothing is read and nothing wrong is bound."""
++    ncbi = _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply([]))
++    result = await _think(SRA_QUESTION.format("sars cov 2"))
++    assert _outcome(result)["resolved"] == []
++    assert not [t for t in ncbi.medgen_terms() if t.startswith("sars")]
++
++
++# ---------------------------------------------------------------------------
++# No answer is ever about a piece of a word
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.parametrize(
++    ("question", "whole"),
++    [
++        ("SRA runs of SARS CoV-2", "SARS CoV-2"),
++        ("SRA runs of SARS CoV 2", "SARS CoV 2"),
++        ("SRA runs of SARS-CoV-2", "SARS-CoV-2"),
++        ("SRA runs of SARS‐CoV‐2", "SARS‐CoV‐2"),
++        ("SRA runs of SARS­CoV­2", "SARS­CoV­2"),
++        ("SRA runs of SARS/CoV-2", "SARS/CoV-2"),
++        ("papers on COVID-19", "COVID-19"),
++        ("SRA runs from AML-derived cell lines", "AML-derived"),
++        ("SRA runs of BRCA1-mutant tumours", "BRCA1-mutant"),
++        ("papers on TP53-null mice", "TP53-null"),
++        ("SRA runs of MERS-CoV", "MERS-CoV"),
++    ],
++)
++def test_the_fallback_never_offers_a_piece_of_a_name(question: str, whole: str) -> None:
++    candidates = graph_module._gene_shaped_fallback_candidates(question, [])
++    assert whole in candidates, candidates
++    for piece in ("SARS", "COVID", "AML", "CoV", "BRCA1", "TP53", "MERS"):
++        assert piece not in candidates, candidates
++
++
++def test_a_whole_word_is_still_a_candidate() -> None:
++    """Populate check: words standing alone are offered as before."""
++    assert graph_module._gene_shaped_fallback_candidates("SRA runs from MODY patients", []) == [
++        "SRA",
++        "MODY",
++    ]
++    assert "SARS" in graph_module._gene_shaped_fallback_candidates("SARS patients", [])
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("record_type", ["sra", "assembly", "none"])
++@pytest.mark.parametrize(
++    "question",
++    [
++        "SRA runs of SARS CoV-2",
++        "SRA runs of SARS CoV 2",
++        "SARS-CoV-2 genome assemblies",
++        "papers on SARS-CoV-2",
++        "papers on COVID-19",
++    ],
++)
++async def test_no_record_type_binds_a_piece_of_a_name(
++    monkeypatch: pytest.MonkeyPatch, question: str, record_type: str
++) -> None:
++    ncbi = _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply([], record_type))
++    result = await _think(question)
++    assert not any(c.startswith("MedGen:") for _, c in _outcome(result)["resolved"]), result
++    assert "SARS[title]" not in ncbi.medgen_terms()
++    assert "COVID[title]" not in ncbi.medgen_terms()
++
++
++@pytest.mark.asyncio
++async def test_a_name_taxonomy_does_not_know_is_never_cut_into_a_disease(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """"SARS.CoV.2" is no Taxonomy name, so the run is split, but "SARS"
++    split out of it is tried only as a gene symbol, never as a disease."""
++    ncbi = _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply([]))
++    result = await _think("SRA runs of SARS.CoV.2")
++    assert "SARS.CoV.2[All Names]" in ncbi.taxonomy_terms(), "populate check: the run was checked"
++    assert "SARS[title]" not in ncbi.medgen_terms()
++    assert "SARS[All Names]" not in ncbi.taxonomy_terms()
++    assert not any(c.startswith("MedGen:") for _, c in _outcome(result)["resolved"])
++
++
++@pytest.mark.asyncio
++async def test_brca1_in_a_run_with_a_database_name_still_resolves(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """Taxonomy knows no "BRCA1 ClinVar", so the run is split into its
++    whole words and BRCA1 resolves as before."""
++    ncbi = _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply([], "none"))
++    result = await _think("BRCA1 ClinVar variants")
++    assert _outcome(result)["resolved"] == [("BRCA1", "NCBIGene:672")]
++    assert "BRCA1 ClinVar[All Names]" in ncbi.taxonomy_terms()
++
++
++# ---------------------------------------------------------------------------
++# A phrase that confirms as its type is never looked up again
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize(
++    ("question", "entities", "record_type", "expected"),
++    [
++        ("Which diseases are associated with BRCA1?", [("BRCA1", "gene")], "none",
++         [("BRCA1", "NCBIGene:672")]),
++        ("what diseases are linked to brca1?", [("brca1", "gene")], "none",
++         [("brca1", "NCBIGene:672")]),
++        ("Which diseases are associated with GCK?", [("GCK", "gene")], "none",
++         [("GCK", "NCBIGene:2645")]),
++        ("What genes are associated with MODY?", [("MODY", "disease")], "none",
++         [("MODY", "MedGen:C1833382")]),
++        ("any trials for gerd?", [("gerd", "disease")], "none",
++         [("gerd", "MedGen:C0017168")]),
++        ("SRA runs from MODY patients", [("MODY", "disease")], "sra",
++         [("MODY", "MedGen:C1833382")]),
++        ("SARS patients", [("SARS", "disease")], "none",
++         [("SARS", "MedGen:C1519126"), ("SARS", "MedGen:C4302012"),
++          ("SARS", "MedGen:C4302019")]),
++        ("Variants in GCK causing MODY", [], "none", [("GCK", "NCBIGene:2645")]),
++        ("What is dbSNP rs334?", [], "none", None),
++    ],
++    ids=["BRCA1", "brca1", "GCK", "MODY", "gerd", "MODY-sra", "SARS-disease", "GCK-empty", "rs334"],
++)
++async def test_a_confirmed_or_fixed_rule_question_never_reaches_the_lookup(
++    monkeypatch: pytest.MonkeyPatch,
++    question: str,
++    entities: list[tuple[str, str]],
++    record_type: str,
++    expected: list[tuple[str, str]] | None,
++) -> None:
++    _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply(entities, record_type))
++    calls: list[str] = []
++    real = phrase_lookup.look_up
++
++    async def _spy(phrase: str, *args: Any, **kwargs: Any) -> Any:
++        calls.append(phrase)
++        return await real(phrase, *args, **kwargs)
++
++    monkeypatch.setattr(phrase_lookup, "look_up", _spy)
++    result = await _think(question)
++    assert calls == [], calls
++    if expected is not None:
++        assert _outcome(result)["resolved"] == expected
++    else:
++        # A typed rs number is read by the exact-identifier rule, as before.
++        assert [text for text, _ in _outcome(result)["resolved"]] == ["rs334"]
++
++
++@pytest.mark.asyncio
++async def test_a_records_question_with_a_known_organism_looks_up_nothing_more(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """Live shape, 3 of 29 runs: the organism tagged and known, the search
++    conditions tagged as diseases MedGen does not know. The organism route
++    answers; the conditions are not looked up."""
++    _Ncbi(monkeypatch)
++    _Model(
++        monkeypatch,
++        _reply(
++            [
++                ("SARS-CoV-2", "organism"),
++                ("Illumina", "disease"),
++                ("clinical respiratory samples", "disease"),
++            ]
++        ),
++    )
++    calls: list[str] = []
++
++    async def _spy(*args: Any, **kwargs: Any) -> Any:
++        calls.append(args[0])
++        return None
++
++    monkeypatch.setattr(phrase_lookup, "look_up", _spy)
++    result = await _think(SRA_QUESTION.format("SARS-CoV-2"))
++    assert calls == []
++    assert _outcome(result)["organism_records"] == (SARS2, "sra")
++
++
++@pytest.mark.asyncio
++async def test_the_isolate_question_never_reaches_the_lookup(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """Query 34: the isolate path reads its organism from its own table."""
++    _Ncbi(monkeypatch)
++    model = _Model(monkeypatch, _reply([("Salmonella", "disease")], "none"))
++    calls: list[str] = []
++
++    async def _spy(*args: Any, **kwargs: Any) -> Any:
++        calls.append(args[0])
++        return None
++
++    monkeypatch.setattr(phrase_lookup, "look_up", _spy)
++    result = await _think("Which Salmonella isolates in Pathogen Detection carry ESBL genes?")
++    assert calls == []
++    assert len(model.sent) == 1, "no content retry on the isolate path"
++    assert result.get("isolate_question") is not None
++
++
++# ---------------------------------------------------------------------------
++# Several fits are asked about; nothing found on a records question says
++# what to type
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_sars_alone_that_fails_its_type_is_looked_up_and_asked_as_several(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """"SARS" typed alone, tagged as a disease MedGen binds nothing for in
++    this fake: Taxonomy 694009 and, here, a human gene whose own symbol is
++    SARS fit, so the person picks. Live, MedGen binds "SARS" as a disease
++    first and no human gene's official symbol is SARS (build_slice1.md)."""
++    monkeypatch.setitem(MEDGEN, "SARS[title]", [])
++    _Ncbi(monkeypatch, genes={"SARS": "NCBIGene:6301"})
++    _Model(monkeypatch, _reply([("SARS", "disease")]))
++    question = "Find SRA runs of SARS sequenced on Illumina"
++    result = await _think(question)
++    assert _outcome(result)["resolved"] == []
++    asked = result["clarification_needed"]
++    assert asked.startswith("'SARS' matches more than one NCBI record"), asked
++    assert "ask again" in asked
++    options = _field(result, "clarifying_options")
++    assert options == [
++        "Find SRA runs of Severe acute respiratory syndrome-related coronavirus sequenced on Illumina",
++        "Find SRA runs of the gene SARS sequenced on Illumina",
++    ]
++
++
++@pytest.mark.asyncio
++async def test_a_tagged_name_nothing_fits_on_a_records_question_says_what_to_type(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply([("Xyzzyvirus", "disease")]))
++    result = await _think("Find SRA runs of Xyzzyvirus")
++    asked = result["clarification_needed"]
++    assert "'Xyzzyvirus'" in asked
++    assert "Ask again naming the organism" in asked
++    assert "SRA sequencing records of Escherichia coli" in asked
++    assert _field(result, "clarifying_options") is None
++
++
++@pytest.mark.asyncio
++async def test_a_tagged_name_nothing_fits_on_a_papers_question_searches_as_before(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply([("Xyzzy syndrome", "disease")], "none"))
++    result = await _think("papers on Xyzzy syndrome")
++    assert _outcome(result) == {
++        "resolved": [],
++        "clarification": None,
++        "organism_records": None,
++        "unresolved": None,
++    }
++
++
++@pytest.mark.asyncio
++async def test_a_follow_up_naming_nothing_is_left_to_memory(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """"SRA" from the fallback fits nothing and is not asked about: the
++    model never named it. With no memory the question refers back to
++    nothing, so develop's own question is asked, as before; with memory,
++    Plan binds the remembered subject (slice 3's ground, pinned in
++    `test_think_sra_disease_fallback.py`)."""
++    ncbi = _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply([]))
++    result = await _think("What SRA runs are there for it?")
++    assert result["clarification_needed"] == graph_module.CLARIFICATION_QUESTION
++    assert "SRA[All Names]" in ncbi.taxonomy_terms(), "populate check: SRA was looked up"
++
++
++# ---------------------------------------------------------------------------
++# The content retry
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize(
++    ("first", "record_type", "retried"),
++    [
++        ([], "none", True),
++        ([], "sra", True),
++        ([("Illumina", "gene")], "sra", True),
++        ([("BRCA1", "gene")], "none", False),
++        ([("MODY", "disease")], "sra", False),
++        ([("Mycobacterium tuberculosis", "organism")], "assembly", False),
++    ],
++    ids=["empty", "empty-sra", "gene-only-sra", "gene", "disease-sra", "organism"],
++)
++async def test_the_content_retry_fires_only_on_an_empty_or_self_contradicting_reply(
++    monkeypatch: pytest.MonkeyPatch,
++    first: list[tuple[str, str]],
++    record_type: str,
++    retried: bool,
++) -> None:
++    _Ncbi(monkeypatch)
++    model = _Model(monkeypatch, _reply(first, record_type))
++    await _think("Find records about this subject for me")
++    assert len(model.sent) == (2 if retried else 1), len(model.sent)
++    if retried:
++        exchange = model.sent[1]
++        assert exchange[-2]["role"] == "assistant"
++        assert exchange[-1]["role"] == "user"
++        for key in graph_module._ThinkClassification.model_fields:
++            assert f'"{key}"' in exchange[-1]["content"]
++        # Content-free: nothing from the question rides in the request.
++        assert "subject" not in exchange[-1]["content"]
++
++
++@pytest.mark.asyncio
++async def test_a_failed_content_retry_keeps_the_first_reply(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _Ncbi(monkeypatch)
++    model = _Model(monkeypatch, _reply([], "none"), fail_after=1)
++    result = await _think("Variants in GCK causing MODY")
++    assert len(model.sent) == 2
++    assert "step_error" not in result
++    assert _outcome(result)["resolved"] == [("GCK", "NCBIGene:2645")]
++
++
++@pytest.mark.asyncio
++async def test_a_second_empty_reply_runs_the_guarded_fallback(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """GCK still answers when the model names nothing twice."""
++    ncbi = _Ncbi(monkeypatch)
++    model = _Model(monkeypatch, _reply([], "none"))
++    result = await _think("Variants in GCK causing MODY")
++    assert len(model.sent) == 2
++    assert _outcome(result)["resolved"] == [("GCK", "NCBIGene:2645")]
++    assert "GCK" in ncbi.genes_asked
++
++
++@pytest.mark.asyncio
++async def test_a_small_talk_question_is_never_asked_again(monkeypatch: pytest.MonkeyPatch) -> None:
++    _Ncbi(monkeypatch)
++    model = _Model(monkeypatch, _reply([], "none"))
++    await _think("hello")
++    assert len(model.sent) == 1
++
++
++# ---------------------------------------------------------------------------
++# The cap
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_at_most_two_phrases_are_looked_up(monkeypatch: pytest.MonkeyPatch) -> None:
++    ncbi = _Ncbi(monkeypatch)
++    phrases = ["Alphavirus Q", "Betavirus Q", "Gammavirus Q"]
++    _Model(monkeypatch, _reply([(p, "disease") for p in phrases]))
++    with call_budget.query_budget_scope("lookup"):
++        result = await _think("Find SRA runs of Alphavirus Q, Betavirus Q and Gammavirus Q")
++        outer = call_budget.calls_made()
++    looked = ncbi.taxonomy_terms()
++    assert "Alphavirus Q[All Names]" in looked and "Betavirus Q[All Names]" in looked
++    assert "Gammavirus Q[All Names]" not in looked
++    # The question's own ceiling paid only for the three disease checks,
++    # never for the lookup's Taxonomy searches.
++    assert outer == len(ncbi.medgen_terms()), (outer, ncbi.searched)
++    assert "'Alphavirus Q' or 'Betavirus Q'" in result["clarification_needed"]
++
++
++def test_the_lookup_budget_is_ten_calls_apart_from_the_question_ceiling() -> None:
++    budget = phrase_lookup.LookupBudget("lookup")
++    with call_budget.query_budget_scope("lookup"):
++        for _ in range(5):
++            call_budget.charge_one_call(tool="question", layer=2)
++        with budget.calls():
++            for _ in range(7):
++                call_budget.charge_one_call(tool="lookup", layer=2)
++        with budget.calls():
++            for _ in range(3):
++                call_budget.charge_one_call(tool="lookup", layer=2)
++            with pytest.raises(call_budget.CallBudgetExceededError):
++                call_budget.charge_one_call(tool="lookup", layer=2)
++        assert call_budget.calls_made() == 5
++    assert budget.calls_used == phrase_lookup.MAX_CALLS == 10
++
++
++@pytest.mark.asyncio
++async def test_a_lookup_past_the_call_cap_is_unknown_and_binds_nothing(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    _Ncbi(monkeypatch)
++    budget = phrase_lookup.LookupBudget("lookup")
++    budget.calls_used = phrase_lookup.MAX_CALLS
++    found = await phrase_lookup.look_up("SARS CoV-2", "human", budget)
++    assert found is not None and found.outcome == "unknown" and found.fits == ()
++
++
++# ---------------------------------------------------------------------------
++# What "fits" means per database
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_medgen_fits_only_by_exact_title(monkeypatch: pytest.MonkeyPatch) -> None:
++    """MedGen's title search finds two records for "Mycobacterium
++    tuberculosis"; neither title IS the phrase, so only Taxonomy fits."""
++    _Ncbi(monkeypatch)
++    found = await phrase_lookup.look_up(
++        "Mycobacterium tuberculosis", "human", phrase_lookup.LookupBudget("lookup")
++    )
++    assert found is not None
++    assert found.outcome == "one", found
++    assert [fit.curie for fit in found.fits] == ["NCBITaxon:1773"]
++
++
++@pytest.mark.asyncio
++async def test_an_exact_medgen_title_and_a_gene_bind_with_their_reading_line(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    monkeypatch.setitem(MEDGEN, "Gastroesophageal[title] AND reflux[title] AND disease[title]", ["3001"])
++    _Ncbi(monkeypatch)
++    found = await phrase_lookup.look_up(
++        "Gastroesophageal reflux disease", "human", phrase_lookup.LookupBudget("lookup")
++    )
++    assert found is not None and found.outcome == "one"
++    assert phrase_lookup.reading_line(found.phrase, found.fits[0]) == (
++        "Read 'Gastroesophageal reflux disease' as the condition Gastroesophageal "
++        "reflux disease (MedGen C0017168)"
++    )
++
++
++def test_the_ask_wording_never_overflows_the_event_contract() -> None:
++    lookup = phrase_lookup.PhraseLookup(
++        phrase="x" * 200,
++        fits=tuple(
++            phrase_lookup.PhraseFit(kind="organism", record_id=str(i), name="y" * 300)
++            for i in range(6)
++        ),
++        complete=True,
++    )
++    question, options = phrase_lookup.several_question(lookup, "q " * 300)
++    assert len(question) <= 500 and len(options) <= 4
++    assert all(len(option) <= 220 for option in options)
++    assert len(phrase_lookup.none_question(["z" * 300, "w" * 300], "genome assemblies")) <= 500
++
++
++def test_the_retry_message_lists_every_schema_key() -> None:
++    text = graph_module._content_retry_message("records", "sra")
++    assert '"record_type" to "sra"' in text
++    assert json.loads("[" + graph_module._THINK_RETRY_KEY_LIST + "]") == list(
++        graph_module._ThinkClassification.model_fields
++    )
++
++
++# ---------------------------------------------------------------------------
++# The owner's digit exception (2026-10-17): a piece of a hyphen-joined word
++# that carries a digit is tried, only as an exact official human gene symbol
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize(
++    ("question", "gene", "curie"),
++    [
++        ("SRA runs of BRCA1-mutant tumours", "BRCA1", "NCBIGene:672"),
++        ("papers on TP53-null cells", "TP53", "NCBIGene:7157"),
++    ],
++)
++async def test_a_digit_piece_finds_its_gene_as_on_develop(
++    monkeypatch: pytest.MonkeyPatch, question: str, gene: str, curie: str
++) -> None:
++    ncbi = _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply([], "none"))
++    result = await _think(question)
++    assert _outcome(result)["resolved"] == [(gene, curie)]
++    assert f"{gene}[title]" not in ncbi.medgen_terms()
++    assert f"{gene}[All Names]" not in ncbi.taxonomy_terms()
++
++
++@pytest.mark.asyncio
++async def test_a_digit_piece_that_is_no_gene_is_never_a_disease_or_a_lookup(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    monkeypatch.setitem(MEDGEN, "XYZ9[title]", ["1001"])
++    ncbi = _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply([], "sra"))
++    result = await _think("SRA runs of XYZ9-derived cell lines")
++    assert "XYZ9" in ncbi.genes_asked, "populate check: the piece was tried as a gene"
++    assert "XYZ9[title]" not in ncbi.medgen_terms()
++    assert "XYZ9[All Names]" not in ncbi.taxonomy_terms()
++    assert _outcome(result)["resolved"] == []
++
++
++@pytest.mark.asyncio
++async def test_a_digit_piece_is_not_tried_when_the_question_names_another_organism(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """Only a human symbol: in a mouse question the piece is not tried at
++    all, so no human gene answers a mouse question (F-4.7-A-03)."""
++    monkeypatch.setitem(TAXONOMY, "mouse", ["10090"])
++    ncbi = _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply([("mouse", "organism")], "none"))
++    await _think("papers on TP53-null mouse embryos")
++    assert "TP53" not in ncbi.genes_asked, ncbi.genes_asked
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize(
++    "question",
++    ["SRA runs of SARS-CoV-2", "SRA runs of SARS CoV-2", "papers on COVID-19"],
++)
++async def test_a_piece_without_a_digit_is_never_tried(
++    monkeypatch: pytest.MonkeyPatch, question: str
++) -> None:
++    ncbi = _Ncbi(monkeypatch)
++    _Model(monkeypatch, _reply([], "sra"))
++    await _think(question)
++    for piece in ("SARS", "COVID", "CoV", "2", "19"):
++        assert piece not in ncbi.genes_asked, ncbi.genes_asked
++        assert f"{piece}[title]" not in ncbi.medgen_terms()
++
++
++def test_digit_pieces_are_only_digit_bearing_pieces_of_joined_words() -> None:
++    assert phrase_lookup.digit_pieces("BRCA1-mutant") == ["BRCA1"]
++    assert phrase_lookup.digit_pieces("TP53-null") == ["TP53"]
++    for text in ("SARS-CoV-2", "SARS CoV-2", "COVID-19", "BRCA1", "AML-derived"):
++        assert phrase_lookup.digit_pieces(text) == [], text
+diff --git a/tests/system_03_search_agent/core/test_think_sra_disease_fallback.py b/tests/system_03_search_agent/core/test_think_sra_disease_fallback.py
+index 4f669071..fdbc78c6 100644
+--- a/tests/system_03_search_agent/core/test_think_sra_disease_fallback.py
++++ b/tests/system_03_search_agent/core/test_think_sra_disease_fallback.py
+@@ -19,7 +19,8 @@ Each arm names the one mutation of the change that turns it red
+   SRA only, or only for the ASCII hyphen.
+ - The MODY arm: every candidate is skipped on an SRA question, not only a
+   piece of a name.
+-- The paper arm: the skip ignores the record type.
++- The paper arm: until card 56's slice 1 it pinned develop's binding of
++  "SARS" on a papers question; it now asserts no piece binds there either.
+ - The follow-up arms: the whole disease fallback is skipped on an SRA
+   question.
+ - The parse-retry arms: the retry message or the narrative repair goes back
+@@ -60,6 +61,9 @@ PAPER_QUESTION = "papers on SARS-CoV-2"
+ 
+ TAXONOMY = {
+     "sars-cov-2": ["2697049"],
++    # `_organism_taxids` sends a Unicode hyphen as a space; live, NCBI
++    # Taxonomy answers 2697049 for "SARS CoV 2" too (card 56 code map, E1).
++    "sars cov 2": ["2697049"],
+     "mycobacterium tuberculosis": ["1773"],
+ }
+ #: MedGen as faked here: "SARS[title]" binds the three records it bound live
+@@ -75,7 +79,6 @@ MEDGEN_TITLES = {
+     "1003": ("C4302019", "SARS (severe acute respiratory syndrome) confirmed"),
+     "2001": ("C1833382", "Impaired glucose tolerance in MODY"),
+ }
+-SARS_CURIES = ["MedGen:C1519126", "MedGen:C4302012", "MedGen:C4302019"]
+ 
+ 
+ class _Record:
+@@ -198,13 +201,19 @@ async def test_sra_question_with_no_entity_binds_no_medgen_record(
+ ) -> None:
+     searched = _install_ncbi(monkeypatch)
+     _install_model(monkeypatch, "sra")
+-    result = await graph_module.think_node(_state(SRA_QUESTION.format(h=hyphen)))
++    question = SRA_QUESTION.format(h=hyphen)
++    result = await graph_module.think_node(_state(question))
+     outcome = _outcome(result)
+     assert not any(curie.startswith("MedGen:") for _, curie in outcome["resolved"]), outcome
+     assert ("medgen", "SARS[title]") not in searched, searched
+-    # Populate check: the run ends where develop ends when nothing resolved,
+-    # with develop's own question asked back ("each one" refers back).
+-    assert outcome["clarification"] == graph_module.CLARIFICATION_QUESTION, outcome
++    # Card 56, slice 1: the intent holds (no record from a piece of the
++    # name), and the outcome moves on from develop's question asked back:
++    # the whole word is now the fallback's candidate, and the whole-phrase
++    # lookup reads it as its Taxonomy record, the organism route.
++    whole = f"SARS{hyphen}CoV{hyphen}2"
++    assert outcome["resolved"] == [(whole, "NCBITaxon:2697049")], outcome
++    assert outcome["organism_records"] == ("NCBITaxon:2697049", "sra"), outcome
++    assert outcome["clarification"] is None, outcome
+     # The whole word "SRA" is still tried, as on develop.
+     assert ("medgen", "SRA[title]") in searched, searched
+ 
+@@ -219,7 +228,9 @@ async def test_assembly_question_with_no_entity_binds_no_medgen_record(
+     outcome = _outcome(result)
+     assert not any(curie.startswith("MedGen:") for _, curie in outcome["resolved"]), outcome
+     assert ("medgen", "SARS[title]") not in searched, searched
+-    assert outcome["clarification"] == graph_module.CLARIFICATION_QUESTION, outcome
++    # Card 56, slice 1: read whole, as on the SRA question above.
++    assert outcome["organism_records"] == ("NCBITaxon:2697049", "assembly"), outcome
++    assert outcome["clarification"] is None, outcome
+ 
+ 
+ # ---------------------------------------------------------------------------
+@@ -244,22 +255,27 @@ async def test_a_whole_word_on_an_sra_question_still_binds_as_on_develop(
+ 
+ 
+ @pytest.mark.asyncio
+-async def test_a_paper_question_is_unchanged_from_develop(
++async def test_a_paper_question_never_binds_a_piece_of_the_name(
+     monkeypatch: pytest.MonkeyPatch,
+ ) -> None:
+-    """Record type "none": the piece is still tried, exactly as develop
+-    tries it, SARS records included. This change is fenced to SRA and
+-    assembly questions by the owner's decision."""
++    """Record type "none". Until card 56's slice 1 this arm pinned
++    develop's wrong binding on purpose (the piece "SARS" bound the three
++    SARS disease records, round 3's fence). The owner's call 1 of
++    2026-10-17 reaches every record type: the whole word is tried, binds
++    no disease, is read as an organism by the whole-phrase lookup, and
++    since a papers question has no organism route nothing is bound, so
++    Plan searches the question's own words."""
+     searched = _install_ncbi(monkeypatch)
+     _install_model(monkeypatch, "none")
+     result = await graph_module.think_node(_state(PAPER_QUESTION))
+     assert _outcome(result) == {
+-        "resolved": [("SARS", curie) for curie in SARS_CURIES],
++        "resolved": [],
+         "clarification": None,
+         "organism_records": None,
+         "unresolved": None,
+     }
+-    assert ("medgen", "SARS[title]") in searched, searched
++    assert ("medgen", "SARS[title]") not in searched, searched
++    assert ("taxonomy", "SARS-CoV-2[All Names]") in searched, searched
+ 
+ 
+ @pytest.mark.asyncio
+diff --git a/tests/system_03_search_agent/fixtures/debugging_guide_manifest.json b/tests/system_03_search_agent/fixtures/debugging_guide_manifest.json
+index 6bf8baeb..3c3b6eae 100644
+--- a/tests/system_03_search_agent/fixtures/debugging_guide_manifest.json
++++ b/tests/system_03_search_agent/fixtures/debugging_guide_manifest.json
+@@ -46,6 +46,7 @@
+     "src/system_03_search_agent/core/next_step.py": "f002af90ff2114cc7644bb908626f252261a23714ca88ee1502a1340a657eb97",
+     "src/system_03_search_agent/core/paper_links.py": "c39d11051001554a3a5c651c690f0575720d83b635d12dc93129d77ba33d73eb",
+     "src/system_03_search_agent/core/persona.py": "2691222aa551ba0dcd0faa2f9ef9c44e9cce6a8bd697994857dac831e9f6f2ff",
++    "src/system_03_search_agent/core/phrase_lookup.py": "71a6065f5240ff1414668be81fdd9514d667ac9bd18bc2cea94bc166b8d73528",
+     "src/system_03_search_agent/core/run.py": "32b6be617527f0a55bf1e51a296e317d449331df0af866059a277b1309fbd298",
+     "src/system_03_search_agent/core/run_registry.py": "f6282dbcac832637f59c5b4ae6b62177efe37070bdf089c2d56a47e204281986",
+     "src/system_03_search_agent/core/session_memory.py": "468ca238788394fabea078fc69a9271868c281504fea296355cfe21c2200bd14",
