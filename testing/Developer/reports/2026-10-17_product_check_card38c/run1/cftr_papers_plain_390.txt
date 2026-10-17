@@ -1,0 +1,49 @@
+Which papers in the graph mention the CFTR gene, and what do they cover?
+New search
+
+✓ Answered27.7s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+A paper on gene regulation examines a control region upstream of the CFTR gene, and another explores how splicing factors cause a part of the CFTR genetic instructions to be skipped.⁠4, 8 I found 54 published papers related to CFTR, out of 1962 available.⁠1–20
+
+One identifies a patient with a D579G mutation who has milder lung involvement and sufficient pancreatic function, another reports a D513G mutation found in a French patient with a condition involving the vas deferens.⁠2, 6
+
+Another studies how a separate gene affects liver disease severity in cystic fibrosis.⁠29
+
+WHERE THIS ANSWER COMES FROM
+The Hdj-2/Hsc70 chaperone pair facilitates early steps in CFTR biogenesis.⁠1
+Identification of a D579G homozygote cystic fibrosis patient with pancreatic sufficiency and minor lung involvement. Mutations in brief no. 221. Online.⁠2
+Genetic findings in congenital bilateral aplasia of vas deferens patients and identification of six novel mutatations. Mutations in brief no. 138. Online.⁠3
+Analysis of a DNase I hypersensitive site located -20.9 kb upstream of the CFTR gene.⁠4
+Differential function of the two nucleotide binding domains on cystic fibrosis transmembrane conductance regulator.⁠5
+A novel missense mutation D513G in exon 10 of the cystic fibrosis transmembrane conductance regulator (CFTR) gene identified in a French CBAVD patient. Mutations in brief no. 175. Online.⁠6
+Sodium 4-phenylbutyrate downregulates Hsc70: implications for intracellular trafficking of DeltaF508-CFTR.⁠7
+Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element.⁠8
+Protein kinase A associates with cystic fibrosis transmembrane conductance regulator via an interaction with ezrin.⁠9
+The PDZ-interacting domain of cystic fibrosis transmembrane conductance regulator is required for functional expression in the apical plasma membrane.⁠10
+Showing 1–10 of 71
+‹ Previous
+Page 1 of 8
+Next ›
+NOTES
+Note: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+71
+Based on 71 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
