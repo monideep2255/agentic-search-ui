@@ -334,7 +334,7 @@ def test_a_refusal_and_a_clarifying_question_store_nothing(text: str) -> None:
     assert row.answer_trust_line is None
 
 
-_NOT_YET_CONFIRMED = "Based on 2 sources, not yet confirmed"
+_NOT_YET_CONFIRMED = "Based on 2 sources cited, all from MedGen"
 _DOWN_NOTE = (
     "PubMed is down at NCBI right now, so this answer may be missing papers "
     "from it. Try again later."

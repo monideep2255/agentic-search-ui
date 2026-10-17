@@ -609,6 +609,82 @@ def _databases_backing(claim_finding: SynthFinding, cited: list[SynthFinding]) -
     return {database for finding in agreeing if (database := record_database(finding))}
 
 
+# Card 8: the closed display table for `record_database` keys. A key that is
+# not here is counted under "other databases" and never printed raw, so a
+# stray host cannot reach the reader's screen.
+_NCBI_DATABASE_NAMES: dict[str, str] = {
+    "assembly": "Assembly",
+    "bioproject": "BioProject",
+    "biosample": "BioSample",
+    "clinvar": "ClinVar",
+    "datasets": "NCBI Datasets",
+    "dbvar": "dbVar",
+    "gds": "GEO DataSets",
+    "gene": "NCBI Gene",
+    "gtr": "GTR",
+    "medgen": "MedGen",
+    "mesh": "MeSH",
+    "nuccore": "Nucleotide",
+    "pathogens": "Pathogen Detection",
+    "pmc": "PMC",
+    "pubchem": "PubChem",
+    "pubmed": "PubMed",
+    "snp": "dbSNP",
+    "sra": "SRA",
+    "taxonomy": "Taxonomy",
+}
+_NCBI_RESEARCH_NAMES: dict[str, str] = {"litvar2": "LitVar2", "pubtator3": "PubTator3"}
+_DATABASE_NAMES: dict[str, str] = {
+    **{f"{_NCBI_HOST}/{path}": name for path, name in _NCBI_DATABASE_NAMES.items()},
+    **{f"{_NCBI_HOST}/research/{path}": name for path, name in _NCBI_RESEARCH_NAMES.items()},
+    "omim.org": "OMIM",
+    "clinicaltrials.gov": "ClinicalTrials.gov",
+    "clinvar": "ClinVar",
+    "medgen": "MedGen",
+    "mesh": "MeSH",
+    "ncbigene": "NCBI Gene",
+    "omim": "OMIM",
+    "pubmed": "PubMed",
+    "dbsnp": "dbSNP",
+}
+
+
+def _join_names(names: list[str]) -> str:
+    if len(names) <= 1:
+        return "".join(names)
+    return ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def _databases_phrase(claims: list[GroundedClaim], citation_count: int) -> tuple[str, int]:
+    """Card 8: the databases behind a "Based on" line, and how many there are.
+
+    Counts distinct cited pages per `record_database` key, names the known
+    ones through `_DATABASE_NAMES` (most cited first, ties by name), and
+    folds every unknown or empty key into "other databases". Four or more
+    databases: only the three most cited are named. Returns the phrase that
+    follows the count ("all from ClinVar", "from MedGen and OMIM") and the
+    number of distinct databases.
+    """
+    pages: dict[str, set[str]] = {}
+    for claim in claims:
+        page = source_page_key(claim.finding.source_url) or claim.finding.citation_id
+        pages.setdefault(record_database(claim.finding), set()).add(page)
+    known = sorted(
+        (key for key in pages if key in _DATABASE_NAMES),
+        key=lambda key: (-len(pages[key]), _DATABASE_NAMES[key].casefold()),
+    )
+    total = len(pages)
+    shown = known[:3] if total >= 4 else known
+    other = total - len(shown)
+    parts = [_DATABASE_NAMES[key] for key in shown]
+    if other:
+        parts.append(f"{other} other {'database' if other == 1 else 'databases'}")
+    if total == 1:
+        lone = citation_count == 1 or not shown
+        return (f"from {parts[0]}" if lone else f"all from {parts[0]}"), 1
+    return f"from {_join_names(parts)}", total
+
+
 def answer_trust_line(
     trust_outcome: TrustOutcome,
     claim_trusts: list[ClaimTrust],
@@ -628,11 +704,9 @@ def answer_trust_line(
       "Confirmed by N independent databases". This is the only line that
       says "confirmed", because concordance is the only verdict that means
       it.
-    - `ask`, or a high-risk claim whose agreement does not reach two
-      databases: "Based on N source(s) cited, not yet confirmed".
-    - Otherwise (every claim low risk): "Based on N source(s) cited".
-      Low-risk claims are never triangulated, so "not yet confirmed" would
-      imply a check that does not apply to them.
+    - Every other answer: "Based on N source(s) cited" plus the databases
+      behind it (card 8, below). The words "not yet confirmed" are gone;
+      the line names what it rests on instead of sounding like a warning.
 
     Agreement is counted among the cited claims only, so N can never exceed
     the number of databases in the answer's Sources list.
@@ -720,7 +794,17 @@ def answer_trust_line(
         ]
         if min(backing) >= 2:
             return f"Confirmed by {min(backing)} independent databases"
-        return f"Based on {citation_count} {noun} cited, not yet confirmed"
-    if trust_outcome == "ask":
-        return f"Based on {citation_count} {noun} cited, not yet confirmed"
-    return f"Based on {citation_count} {noun} cited"
+    base = f"Based on {citation_count} {noun} cited"
+    named, database_count = _databases_phrase(claims, citation_count)
+    line = f"{base}, {named}" if database_count == 1 else f"{base} {named}"
+    # Card 8: say the values could not be compared only when that is true,
+    # a high-risk claim came back `insufficient` AND the cited records come
+    # from two or more databases. A floor-only `ask` and an all-low-risk one
+    # (low risk is marked `insufficient` by design) never take the clause.
+    if (
+        trust_outcome == "ask"
+        and database_count >= 2
+        and any(trust.triangulation == "insufficient" for trust in high)
+    ):
+        line += "; their values could not be compared"
+    return line

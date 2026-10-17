@@ -113,7 +113,7 @@ function researcherStream(extraDone: Record<string, unknown> = {}): AgentEvent[]
       total_tool_calls: 1,
       elapsed_ms: 1200,
       trust_outcome: "ask",
-      trust_line: "Based on 1 source, not yet confirmed",
+      trust_line: "Based on 1 source cited, from MedGen",
       ...extraDone,
     } as Extract<AgentEvent, { type: "done" }>["payload"]),
   ];
@@ -221,12 +221,12 @@ describe("set 9: structure travels on the wire and reaches the screen", () => {
   it("replaces the pills with one plain trust line, keeping high risk visible (9.9)", () => {
     const { result } = renderHook(() => useRunView(researcherStream()));
     expect(result.current.trust).toEqual([
-      { kind: "plain", label: "Based on 1 source, not yet confirmed" },
+      { kind: "plain", label: "Based on 1 source cited, from MedGen" },
       { kind: "risk", label: "High-risk claim" },
     ]);
     renderView(result.current);
     const line = screen.getByTestId("trust-line");
-    expect(line).toHaveTextContent("Based on 1 source, not yet confirmed");
+    expect(line).toHaveTextContent("Based on 1 source cited, from MedGen");
     expect(line).not.toHaveTextContent(/every claim cited/i);
     expect(within(line).getByRole("button", { name: /about trust signals/i })).toBeInTheDocument();
   });
