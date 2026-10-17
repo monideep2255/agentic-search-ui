@@ -886,22 +886,37 @@ async def test_a_picked_window_leaves_the_graph_s_undated_papers_out(
     assert done is not None and done["trust_outcome"] != "refuse", done
 
 
+_NO_WINDOW_PAPERS_LINE = "No PubMed papers from the last 5 years were found for BRCA1."
+
+
+def _notes(events: list[Any]) -> str:
+    return "\n".join(e.payload["text"] for e in events if e.type == "token" and e.payload["kind"] == "note")
+
+
 @pytest.mark.asyncio
-async def test_a_picked_window_with_no_papers_in_it_lists_no_older_papers(
+async def test_a_picked_window_with_no_papers_in_it_says_so(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Card 105: the window's PubMed search finds nothing. The graph's undated
-    papers stay out, so no paper from outside the window is listed and the
-    answer still ships on the gene record. (Today the answer does not also
-    say that no paper in the window was found; the plan line is the only
-    place the window shows. That note is a separate card.)"""
+    papers stay out, none is cited, and one plain line says no paper from the
+    window was found and why the graph's papers are not listed."""
     events = await _ask_brca1(monkeypatch, pick_window=True, pubmed_ids=[])
 
     text = _cited_and_written(events)
     assert "10026184" not in text and "10417300" not in text, text
-    assert "NCBIGene:672" in text
+    notes = _notes(events)
+    assert _NO_WINDOW_PAPERS_LINE in notes, notes
+    assert "carry no publication date" in notes and len(notes) < 200, notes
     done = _payload(events, "done")
     assert done is not None and done["trust_outcome"] == "answer", done
+
+
+@pytest.mark.asyncio
+async def test_a_picked_window_with_papers_in_it_carries_no_such_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events = await _ask_brca1(monkeypatch, pick_window=True)
+    assert "No PubMed papers" not in _notes(events), _notes(events)
 
 
 @pytest.mark.asyncio
@@ -914,6 +929,7 @@ async def test_an_unpicked_window_keeps_the_graph_s_papers(
 
     text = _cited_and_written(events)
     assert "10026184" in text, text
+    assert "No PubMed papers" not in _notes(events)
     done = _payload(events, "done")
     assert done is not None and done["trust_outcome"] != "refuse", done
 

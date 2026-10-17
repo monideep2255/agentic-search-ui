@@ -9999,6 +9999,43 @@ def _paper_link_notes(state: GraphState) -> list[str]:
     return notes
 
 
+def _window_no_papers_note(state: GraphState, query: Any) -> str | None:
+    """Card 105: when the person picked a window, the graph's undated papers
+    were left out and the windowed PubMed search found none, say so.
+
+    None for every question without a picked window, and whenever the
+    windowed search returned papers, failed or never ran (a failed search
+    has its own note, and no claim of "none found" is made over it).
+    """
+    planned_calls = state.get("tool_calls") or []
+    if not any(getattr(p, "undated_papers_left_out", False) for p in planned_calls):
+        return None
+    window = _picked_publication_window(query)
+    if window is None:
+        return None
+    raw_outputs: dict[str, NcbiEfetchOutput] = state.get("layer2_raw_outputs") or {}
+    searches = [p for p in planned_calls if getattr(p, "purpose", "") == "pubmed_search"]
+    if not searches:
+        return None
+    for search in searches:
+        output = raw_outputs.get(search.tool_call.call_id)
+        if output is None or output.status == "error" or _search_ids(output):
+            return None
+    symbol = next(
+        (
+            p.gene_symbol
+            for p in planned_calls
+            if getattr(p, "purpose", "") == _PUBMED_ABSTRACTS_PURPOSE and p.gene_symbol
+        ),
+        None,
+    )
+    subject = f" for {symbol}" if symbol else ""
+    return (
+        f"No PubMed papers from {window.label} were found{subject}. Papers in the "
+        "knowledge graph carry no publication date, so they are not listed here."
+    )
+
+
 def _isolate_count_note(state: GraphState) -> str | None:
     """The isolate search's own count sentence, or None for every other question.
 
@@ -15162,6 +15199,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 truncation_note,
                 _isolate_count_note(state),
                 *_paper_link_notes(state),
+                _window_no_papers_note(state, query),
                 _isolate_disclosure_note(state),
                 _disease_lookup_failed_note(state),
                 structured_fallback_note,
