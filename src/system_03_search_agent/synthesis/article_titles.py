@@ -175,8 +175,11 @@ def clean_article_title(raw: object) -> str | None:
     it would read as a citation of finding 3.
 
     A markup tag shaped span (`<`, optional `/`, a letter, then up to the
-    next `>`) loses its brackets and slash and keeps its words, so no title can open or close a prompt block
-    such as `</question>`. Every other `<` and `>` is kept: PubMed writes
+    next `>`) loses its brackets and slash and keeps its words, so an exact
+    tag such as `</question>` does not reach the prompt. Looser forms such
+    as `< /question>` or an unclosed `</question` pass unchanged, as live
+    PubMed titles already do on develop; the title lands in the findings
+    block, which no tag wraps. Every other `<` and `>` is kept: PubMed writes
     "c.3140-26A>G", "3849+10kbC->T" and "<5 years" with them.
 
     None for a non-string, a blank, a title the fetch already cut, a title
