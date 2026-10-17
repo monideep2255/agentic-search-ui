@@ -13197,8 +13197,15 @@ def _answer_parts(
                 if marker not in ids:
                     ids.append(marker)
             text = first.token.text + (sentence if sentence.endswith(" ") else sentence + " ")
-            if len(ids) > 20 or len(text) > 1000:
+            if len(ids) > 20:
                 continue
+            if len(text) > 1000:
+                # A repeat that adds no citation folds in without its
+                # sentence, so a long abstract is one row, not several. A
+                # repeat that brings a new citation stays its own row.
+                if len(ids) > len(first.token.marker_ids):
+                    continue
+                text = first.token.text
             first.token.marker_ids = in_citation_order(ids)
             first.token.text = text
             first.token.cells = merged
