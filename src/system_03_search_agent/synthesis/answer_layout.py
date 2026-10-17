@@ -381,6 +381,39 @@ def variant_to_disease_source_note(entity_type: str, mapped: bool) -> str | None
     return VARIANT_TO_DISEASE_SOURCE_NOTE
 
 
+# Card 30 (owner decision D15, 2026-10-16). The knowledge graph's variant
+# records carry no ClinVar classification, so a list of a gene's variants
+# cannot say which are pathogenic. The line says so, once, in the Notes.
+VARIANT_CLASSIFICATION_NOTE = (
+    "ClinVar's classification of these variants (for example pathogenic, "
+    "benign or uncertain) was not retrieved, so this list does not say which "
+    "are pathogenic. Each variant's ClinVar record shows its classification."
+)
+
+#: The record fields that carry a variant's classification. A shown finding
+#: citing one means the answer does give a classification.
+_CLASSIFICATION_FIELDS: frozenset[str] = frozenset(
+    {"clinical_significance", "germline_classification"}
+)
+
+
+def variant_classification_note(findings: Sequence[Any]) -> str | None:
+    """The card 30 line, or None when it would not be true.
+
+    Keyed on record type and field only, never on the question's words: at
+    least one finding is a knowledge graph `SequenceVariant` record, and no
+    finding cites a classification field.
+    """
+    has_graph_variant = any(
+        f.layer == "layer_1_graph" and f.entity_type == "SequenceVariant" for f in findings
+    )
+    if not has_graph_variant:
+        return None
+    if any(f.field in _CLASSIFICATION_FIELDS for f in findings):
+        return None
+    return VARIANT_CLASSIFICATION_NOTE
+
+
 # ---------------------------------------------------------------------------
 # Item 12.9 (2026-09-23): what each depth's reader is shown.
 # ---------------------------------------------------------------------------

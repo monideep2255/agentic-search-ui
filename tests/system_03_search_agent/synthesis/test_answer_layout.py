@@ -1279,3 +1279,77 @@ def test_a_lead_in_never_cuts_the_end_of_a_sentence_at_the_token_limit() -> None
     bare = led(995)
     assert not bare.startswith("From")
     assert bare.endswith("[3].")
+
+
+# ---------------------------------------------------------------- card 30
+
+
+def _card30_finding(*, layer: str, entity_type: str, field: str, value: str):
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    return SynthFinding(
+        ref_index=1,
+        citation_id="c-1",
+        layer=layer,
+        tool="t",
+        field=field,
+        field_value=value,
+        source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/1",
+        entity_type=entity_type,
+    )
+
+
+def test_card30_a_graph_variant_list_says_classification_was_not_retrieved() -> None:
+    """Graph variant names beside live ClinVar titles: the pinned line."""
+    from system_03_search_agent.synthesis.answer_layout import (
+        VARIANT_CLASSIFICATION_NOTE,
+        variant_classification_note,
+    )
+
+    findings = [
+        _card30_finding(
+            layer="layer_1_graph", entity_type="SequenceVariant", field="name", value="c.1A>G"
+        ),
+        _card30_finding(
+            layer="layer_2_api", entity_type="ClinVar record", field="title", value="a title"
+        ),
+    ]
+    assert variant_classification_note(findings) == VARIANT_CLASSIFICATION_NOTE
+    assert VARIANT_CLASSIFICATION_NOTE == (
+        "ClinVar's classification of these variants (for example pathogenic, benign or "
+        "uncertain) was not retrieved, so this list does not say which are pathogenic. "
+        "Each variant's ClinVar record shows its classification."
+    )
+
+
+def test_card30_no_line_when_a_shown_record_gives_a_classification() -> None:
+    """An rs334 shaped answer cites dbSNP's clinical significance and lists no
+    graph variant; and a graph variant list that does cite a classification
+    field needs no line either."""
+    from system_03_search_agent.synthesis.answer_layout import variant_classification_note
+
+    rs334 = [
+        _card30_finding(
+            layer="layer_2_api",
+            entity_type="Variant record",
+            field="clinical_significance",
+            value="Pathogenic",
+        ),
+        _card30_finding(
+            layer="layer_3_enrichment", entity_type="Variant record", field="name", value="HbS"
+        ),
+    ]
+    assert variant_classification_note(rs334) is None
+    classified = [
+        _card30_finding(
+            layer="layer_1_graph", entity_type="SequenceVariant", field="name", value="c.1A>G"
+        ),
+        _card30_finding(
+            layer="layer_2_api",
+            entity_type="ClinVar record",
+            field="germline_classification",
+            value="Pathogenic",
+        ),
+    ]
+    assert variant_classification_note(classified) is None
+    assert variant_classification_note([]) is None
