@@ -7587,3 +7587,94 @@ async def test_card30_a_write_that_ends_early_stops_the_classification_decision(
     await graph_module.write_node(state)
     await asyncio.sleep(0)
     assert cancelled.is_set() and task.cancelled()
+
+
+@pytest.mark.asyncio
+async def test_card30_two_late_decisions_share_one_grace(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Both Think decisions still running at Write cost one grace together,
+    not two (develop's worst case is one). Red when the reads run one after
+    the other."""
+    import asyncio
+
+    monkeypatch.setattr(graph_module, "_LATE_DECISION_GRACE_S", 0.5)
+
+    async def _slow(record: object) -> object:
+        await asyncio.sleep(30)
+        return record
+
+    async def _timed(hang: bool) -> float:
+        findings = await _unclassified_variant_findings()
+        query = _valid_query(text="Which variants matter?", audience_depth="researcher")
+        state = _write_state(query, findings)
+        if hang:
+            entry = graph_module._run_decisions(state["harness"])
+            loop = asyncio.get_running_loop()
+            entry.features_task = loop.create_task(_slow(_features_record("asks_features")))
+            entry.classification_task = loop.create_task(
+                _slow(_classification_record("asks_classification"))
+            )
+        started = time.monotonic()
+        await graph_module.write_node(state)
+        return time.monotonic() - started
+
+    baseline = await _timed(False)
+    both_late = await _timed(True)
+    added = both_late - baseline
+    assert 0.3 < added < 0.8, added
+
+
+@pytest.mark.asyncio
+async def test_card30_no_floor_when_the_answer_shows_a_classification(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The classifier picked asks_classification, but the variants listed
+    carry a classification field, so the line and the floor both stand down.
+    Red when the floor ignores the record-shape check."""
+    findings = await _unclassified_variant_findings()
+    harness = harness_module.Harness(trace_id="test-trace-classified")
+    call = ToolCall(tool="cypher_query", call_id="cy-classed", layer="layer_1_graph")
+    classified = {
+        "status": "ok",
+        "row_count": 1,
+        "total_available": 1,
+        "truncated": False,
+        "rows": [
+            {
+                "node_or_edge_type": "SequenceVariant",
+                "curie": "ClinVar:99",
+                "fields": {"clinical_significance": "Pathogenic"},
+                "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/99",
+                "graph_snapshot_version": "v1",
+            }
+        ],
+        "error": None,
+    }
+    findings += await coordinator_worker_execute(
+        harness,
+        [call],
+        [ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=classified)],
+    )
+    query = _valid_query(text="Which variants are pathogenic?", audience_depth="researcher")
+    # A classified claim is already "ask" by its own trust, so the outcome
+    # cannot tell the floor from no floor. Count the floors applied instead.
+    floors: list[int] = [0]
+    real_aggregate = graph_module.aggregate
+
+    def _counting(outcomes: list[str]) -> str:
+        if len(outcomes) == 2 and outcomes[1] == "ask":
+            floors[0] += 1
+        return real_aggregate(outcomes)
+
+    monkeypatch.setattr(graph_module, "aggregate", _counting)
+    await graph_module.write_node(_write_state(query, findings))
+    floors_without_the_decision = floors[0]
+    floors[0] = 0
+    state = _write_state(query, findings)
+    _hand_write_the_classification_decision(state, "asks_classification")
+    result = await graph_module.write_node(state)
+    seen = _everything_the_reader_sees(result["events"])
+    assert "Pathogenic" in seen, "populate-check: the classification is on the page"
+    assert "classification of these variants" not in seen
+    assert floors[0] == floors_without_the_decision

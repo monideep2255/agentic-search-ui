@@ -2013,3 +2013,34 @@ async def test_card30_beside_the_variant_table_only_card_23s_line_shows(monkeypa
     assert len(_source_notes(tokens)) == 1
     assert _classification_notes(tokens) == []
 
+
+
+@pytest.mark.asyncio
+async def test_card30_answer_parts_skips_its_line_beside_card_23s_table(monkeypatch) -> None:
+    """On a request that does not read `placement` the table is built in the
+    last `_answer_parts` call. Handed the card 30 line there, it must leave
+    it out beside card 23's line. Red when `_answer_parts` drops that check."""
+    from system_03_search_agent.synthesis.answer_layout import VARIANT_CLASSIFICATION_NOTE
+
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+    _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
+    real = graph_module._answer_parts
+    seen: list[object] = []
+
+    def _forcing(**kwargs):
+        if kwargs.get("fallback_sentences") or kwargs.get("tail_sentences"):
+            kwargs["classification_note"] = VARIANT_CLASSIFICATION_NOTE
+            parts = real(**kwargs)
+            seen.append(parts)
+            return parts
+        return real(**kwargs)
+
+    monkeypatch.setattr(graph_module, "_answer_parts", _forcing)
+    state = _state("researcher", rows=[*_FOLDED_VARIANT_ROWS, _FOLDED_GENE_ROW])
+    state["context"] = RequestContext(surface="web_ui", reads_placement=False)
+    await graph_module.write_node(state)
+    assert seen, "populate-check: the table was built in the final call"
+    for parts in seen:
+        everything = [t.model_dump() for t in (*parts.summary, *parts.listing, *parts.notes)]
+        assert len(_source_notes(everything)) == 1
+        assert _classification_notes(everything) == []

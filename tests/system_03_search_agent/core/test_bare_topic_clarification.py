@@ -1391,3 +1391,37 @@ async def test_the_literature_decision_is_under_way_before_thinks_call(
     await _run("which papers discuss statin side effects")
     assert order.index("plan.literature") < order.index("think"), order
     assert order.index("think.recent_years") < order.index("think"), order
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "ends", [{"clarification_needed": True}, {"cap_exceeded": True}, {"step_error": {"message": "stand-in"}}]
+)
+async def test_card30_think_ending_the_search_stops_the_classification_decision(
+    monkeypatch: pytest.MonkeyPatch, ends: dict[str, Any]
+) -> None:
+    """Think itself stops `think.asks_classification` when the search does not
+    go ahead (Write's own drop would also catch it, so Think is called alone).
+    Red when Think's `finally` leaves the task running."""
+    stopped = _hang_one_point(monkeypatch, "think.asks_classification")
+
+    async def _ended(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+        await asyncio.sleep(0.05)
+        return dict(ends)
+
+    monkeypatch.setattr(graph_module, "_think", _ended)
+    from system_03_search_agent.contracts.query import Query
+    from system_03_search_agent.harness import harness as harness_module
+
+    query = Query(
+        text="tell me about brca1 variants",
+        session_id="s-card30",
+        trace_id="t-card30",
+        user_id=None,
+        audience_depth="researcher",
+    )
+    state = {"query": query, "harness": harness_module.Harness(trace_id=query.trace_id)}
+    await graph_module.think_node(state)  # type: ignore[arg-type]
+    await asyncio.sleep(0)
+    assert stopped.is_set()
+    assert graph_module._run_decisions(state["harness"]).classification_task is None

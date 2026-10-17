@@ -14073,8 +14073,12 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     #
     # Either can renumber, so this runs before `row_types` and the prompt
     # slice read the numbering.
-    clinical_features_asked = await _clinical_features_asked(harness, step_deadline)
-    classification_asked = await _classification_asked(harness, step_deadline)
+    # Both late reads share one grace (card 30 fix round): awaited together,
+    # the worst case stays `_LATE_DECISION_GRACE_S`, as with one decision.
+    clinical_features_asked, classification_asked = await asyncio.gather(
+        _clinical_features_asked(harness, step_deadline),
+        _classification_asked(harness, step_deadline),
+    )
     if clinical_features_asked:
         synth_findings = reserve_prompt_slots(
             synth_findings,
