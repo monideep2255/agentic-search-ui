@@ -55,7 +55,7 @@ const DONE = envelope("done", {
   total_tool_calls: 1,
   elapsed_ms: 900,
   trust_outcome: "answer",
-  trust_line: "Based on sources, not yet confirmed",
+  trust_line: "Based on sources cited, all from MedGen",
 });
 
 /** One table's worth of events: a header, `rows` table_row tokens, and a citation per row. */

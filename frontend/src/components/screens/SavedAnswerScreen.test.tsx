@@ -182,7 +182,7 @@ describe("SavedAnswerScreen", () => {
       <SavedAnswerScreen
         question={ANSWER.question}
         loading={false}
-        answer={{ ...ANSWER, trust_line: "Based on 2 sources cited, not yet confirmed", risk_tier: "high" }}
+        answer={{ ...ANSWER, trust_line: "Based on 2 sources cited from MedGen and OMIM", risk_tier: "high" }}
         onRunAgain={() => undefined}
       />,
     );
@@ -193,7 +193,7 @@ describe("SavedAnswerScreen", () => {
     expect(tag).toHaveStyle({ color: designTokens.risk, fontWeight: 400 });
     expect(screen.getByTestId("saved-answer-trust-line")).toContainElement(tag);
     expect(screen.getByTestId("saved-answer-trust-line")).toHaveTextContent(
-      "Based on 2 sources cited, not yet confirmed",
+      "Based on 2 sources cited from MedGen and OMIM",
     );
   });
 
@@ -204,7 +204,7 @@ describe("SavedAnswerScreen", () => {
   ])("shows the live words for a stored %s tier", (tier, words) => {
     // J-71T-09: the other known tiers and a tier the live screen does not
     // know. Mutation: returning no tag for anything but "high" turns this red.
-    renderSaved({ ...ANSWER, trust_line: "Based on 2 sources cited, not yet confirmed", risk_tier: tier });
+    renderSaved({ ...ANSWER, trust_line: "Based on 2 sources cited from MedGen and OMIM", risk_tier: tier });
     const tag = screen.getByTestId("saved-answer-trust-risk");
     expect(tag).toHaveTextContent(words);
     expect(tag).toHaveStyle({ color: designTokens.risk, fontWeight: 400 });

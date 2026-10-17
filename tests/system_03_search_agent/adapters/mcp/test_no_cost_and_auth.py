@@ -442,7 +442,7 @@ class TestNeverCost:
                 citations=[_GOLDEN_CITATION.model_dump()],
                 answer_markdown="BRCA1 is a protein-coding gene [1].",
                 audience_depth="researcher",
-                answer_trust_line="Based on 1 source, not yet confirmed",
+                answer_trust_line="Based on 1 source cited, from MedGen",
             )
         )
 

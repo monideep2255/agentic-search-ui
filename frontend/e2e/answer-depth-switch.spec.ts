@@ -172,7 +172,7 @@ function landedStream(mode: "plain" | "researcher"): string {
     frame("trust_signal", { outcome: "answer", risk_tier: "high", grounded: true, triangulated: null, scope: "answer" }),
     frame("done", {
       total_cost_usd: 0.02, total_tool_calls: 2, elapsed_ms: 6200, trust_outcome: "answer",
-      trust_line: "Based on 4 sources, not yet confirmed",
+      trust_line: "Based on 4 sources cited, all from MedGen",
     }),
   ].join("");
 }

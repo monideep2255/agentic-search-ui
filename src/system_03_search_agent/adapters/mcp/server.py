@@ -452,7 +452,7 @@ class AskBiomedicalQuestionOutput(BaseModel):
         ),
     )
     # `DonePayload.trust_line`, the one plain sentence the web shows under
-    # an answer ("Based on 3 sources, not yet confirmed"), same bound.
+    # an answer ("Based on 3 sources cited, all from ClinVar"), same bound.
     trust_line: str | None = Field(
         default=None,
         max_length=200,

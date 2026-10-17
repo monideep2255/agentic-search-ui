@@ -84,7 +84,7 @@ def test_a_trailing_slash_is_the_same_source() -> None:
     """The measured duplicate: the graph's gene link and the live Datasets
     gene link name one page. Mutation: drop `.rstrip("/")` and this reads 2."""
     line = answer_trust_line("answer", [], _claims(_finding(1, _GENE), _finding(2, _GENE + "/")))
-    assert line == "Based on 1 source cited"
+    assert line == "Based on 1 source cited, from NCBI Gene"
 
 
 def test_a_query_string_is_not_guessed_away() -> None:
@@ -94,21 +94,21 @@ def test_a_query_string_is_not_guessed_away() -> None:
     line = answer_trust_line(
         "answer", [], _claims(_finding(1, base + "?query=BRCA1"), _finding(2, base + "?query=TP53"))
     )
-    assert line == "Based on 2 sources cited"
+    assert line == "Based on 2 sources cited, from 1 other database"
 
 
 def test_a_record_without_a_link_is_never_merged() -> None:
     line = answer_trust_line("answer", [], _claims(_finding(1, ""), _finding(2, "")))
-    assert line == "Based on 2 sources cited"
+    assert line == "Based on 2 sources cited, all from MedGen"
 
 
 @pytest.mark.parametrize(
     ("outcome", "count", "expected"),
     [
-        ("answer", 1, "Based on 1 source cited"),
-        ("answer", 2, "Based on 2 sources cited"),
-        ("ask", 1, "Based on 1 source cited, not yet confirmed"),
-        ("ask", 3, "Based on 3 sources cited, not yet confirmed"),
+        ("answer", 1, "Based on 1 source cited, from MedGen"),
+        ("answer", 2, "Based on 2 sources cited, all from MedGen"),
+        ("ask", 1, "Based on 1 source cited, from MedGen"),
+        ("ask", 3, "Based on 3 sources cited, all from MedGen"),
     ],
 )
 def test_based_on_says_sources_cited(outcome: str, count: int, expected: str) -> None:
@@ -256,7 +256,7 @@ def test_a_graph_row_and_a_live_fetch_of_one_record_confirm_nothing() -> None:
         "populate-check: the per-claim verdict still compares tools; if this "
         "changes, the case below no longer reaches the line"
     )
-    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, not yet confirmed"
+    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, from ClinVar"
 
 
 def test_the_graph_gene_page_and_the_live_gene_page_are_one_database() -> None:
@@ -265,7 +265,7 @@ def test_the_graph_gene_page_and_the_live_gene_page_are_one_database() -> None:
     graph = _fact(1, _GENE, curie="NCBIGene:672")
     live = _fact(2, _GENE + "/", tool="ncbi_datasets", layer="layer_2_api")
     line = answer_trust_line("answer", _confirmed("c-1"), _claims(graph, live))
-    assert line == "Based on 1 source cited, not yet confirmed"
+    assert line == "Based on 1 source cited, from NCBI Gene"
 
 
 def test_agreement_is_read_from_the_cited_records_only() -> None:
@@ -287,7 +287,7 @@ def test_agreement_is_read_from_the_cited_records_only() -> None:
     trusts = trust_for_claims(_claims(cited), [cited, *uncited])
     assert [t.triangulation for t in trusts] == ["concordant"], "populate-check"
     assert answer_trust_line("answer", trusts, _claims(cited)) == (
-        "Based on 1 source cited, not yet confirmed"
+        "Based on 1 source cited, from ClinVar"
     )
 
 
@@ -300,7 +300,7 @@ def test_one_record_fetched_twice_beside_an_uncited_corroborator_confirms_nothin
     litvar = _fact(3, _SNP, tool="litvar2_lookup", layer="layer_3_enrichment")
     claims = _claims(graph, live)
     trusts = trust_for_claims(claims, [graph, live, litvar])
-    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, not yet confirmed"
+    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, from ClinVar"
 
 
 def test_n_never_exceeds_the_databases_in_the_sources_list() -> None:
@@ -318,7 +318,7 @@ def test_a_record_stating_a_different_value_does_not_count_as_agreeing() -> None
     cited = _fact(1, _CLINVAR, curie="ClinVar:17661")
     other = _fact(2, _SNP, tool="ncbi_dbsnp", value="Benign")
     line = answer_trust_line("answer", _confirmed("c-1"), _claims(cited, other))
-    assert line == "Based on 2 sources cited, not yet confirmed"
+    assert line == "Based on 2 sources cited from ClinVar and dbSNP"
 
 
 def test_with_several_confirmed_facts_n_is_what_every_one_of_them_has() -> None:
@@ -588,4 +588,5 @@ def test_evidence_trust_line_agrees_with_the_screen() -> None:
     `AnswerScreen.card22.test.tsx`, reads this fixture too)."""
     after = _DATA["expected_after"]
     assert answer_trust_line("ask", _HIGH_ASK, _evidence_claims()) == after["trust_line"]
-    assert after["trust_line"] == f"Based on {after['sources_cited']} sources cited, not yet confirmed"
+    assert after["trust_line"].startswith(f"Based on {after['sources_cited']} sources cited from ")
+    assert "not yet confirmed" not in after["trust_line"]

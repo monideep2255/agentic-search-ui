@@ -624,6 +624,9 @@ _ROW_TYPE_COLUMNS: dict[tuple[str, str], str] = {
     # (V-37-01). Read only when the significance is absent: the loop returns
     # the first match in this order.
     ("Variant record", "functional_consequence"): "Consequence",
+    # Card 38 slice B: a graph ortholog gene row carries its taxon names. The
+    # exact graph type `Gene` only; the Layer 2 `gene` type is a different key.
+    ("Gene", "organism"): "Organism",
 }
 
 #: Card 37, slice A1: the row field that names a record of this exact type.
@@ -636,6 +639,9 @@ _ROW_TYPE_LABEL_FIELDS: dict[str, str] = {
 #: label's noun. The field's value follows in brackets: "Genetic variant (HBB)".
 _ROW_TYPE_PLAIN_SUFFIXES: dict[tuple[str, str], str] = {
     ("Variant record", "genes"): "Genetic variant",
+    # Card 38 slice B: an empty noun means the record's own title leads:
+    # "tumor protein p53 (Oryctolagus cuniculus)".
+    ("Gene", "organism"): "",
 }
 
 #: Card 37, slice A1 fix round (V-37-02): after the gene, the plain-language
@@ -1018,6 +1024,15 @@ def plain_record_label(
         if code
     }
     if label not in codes and not _carries_accession(label, codes):
+        for (row_type, key), base in _ROW_TYPE_PLAIN_SUFFIXES.items():
+            organism = (row_fields or {}).get(key)
+            if (
+                not base
+                and row_type == finding.entity_type
+                and isinstance(organism, str)
+                and organism.strip()
+            ):
+                return f"{label} ({organism.strip()[:100]})"
         return label
     noun = plain_noun(finding.entity_type)
     return noun[:1].upper() + noun[1:]
