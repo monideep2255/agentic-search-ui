@@ -1,0 +1,1965 @@
+diff --git a/docs/architecture/Model_architecture.md b/docs/architecture/Model_architecture.md
+index 9313ab1c..c3459f3c 100644
+--- a/docs/architecture/Model_architecture.md
++++ b/docs/architecture/Model_architecture.md
+@@ -207,7 +207,6 @@ The decisions it makes on develop:
+ - Whether the question is a prompt-injection attempt (`guardrail.injection`, build phase 8.6), asked beside the guardrail's classifier call and only when `CLASSIFIER_PROVIDER=jev`; with the code default the classifier's own verdict stands, byte for byte as before. Jev is a second judge here, never the only one: the question is refused when the classifier OR Jev says injection. It is the one decision not asked through `decide()`: Jev is asked alone, and when Jev fails, or is still running at the guardrail's budget, the classifier's verdict stands, so the guard tier's generic decision prompt, which admitted 5 of 25 prefilter-passing injections where the classifier admitted 2, never judges it (fix round, F-8.6-A05, A06, A10, J04, A12).
+ - The question's shape is NOT a Jev decision. Build phase 8.6 made it one (`think.query_class`) and its fix round reverted that (F-8.6-J03, A07, A17): with either provider the class is the plan tier's classification, as before the phase.
+ - Whether the question asks about a condition's features, signs, symptoms or phenotype (`think.asks_features`, build phase 8.6), read by Write. Only on "asks_features" does an answer say "MedGen lists no clinical features for ..." or keep ten of the model's prompt slots for the disease's features; any other outcome speaks of neither. Since the fix round the sentence is also said only of a record MedGen's own semantic type marks as a disease (F-8.6-A11).
+-- Whether the question asks about the clinical classification of variants: pathogenic, benign, clinically significant or of uncertain significance (`think.asks_classification`, card 30), read by Write. Only on "asks_classification", and only when the variants listed carry no ClinVar classification, is the answer's verdict floored at "ask"; any other outcome leaves the verdict as computed. The decision sits at the classifier tier.
+ 
+ How each decision is made, since build phase 8.6 (DECISIONS.md 2026-09-25, "Jev decides; the guard tier (DeepSeek) is Jev's fallback on failure only"):
+ 
+diff --git a/frontend/e2e/answer-depth-switch.spec.ts b/frontend/e2e/answer-depth-switch.spec.ts
+index 2d227d2a..c90ea6cd 100644
+--- a/frontend/e2e/answer-depth-switch.spec.ts
++++ b/frontend/e2e/answer-depth-switch.spec.ts
+@@ -172,7 +172,7 @@ function landedStream(mode: "plain" | "researcher"): string {
+     frame("trust_signal", { outcome: "answer", risk_tier: "high", grounded: true, triangulated: null, scope: "answer" }),
+     frame("done", {
+       total_cost_usd: 0.02, total_tool_calls: 2, elapsed_ms: 6200, trust_outcome: "answer",
+-      trust_line: "Based on 4 sources, not yet confirmed",
++      trust_line: "Based on 4 sources cited, all from MedGen",
+     }),
+   ].join("");
+ }
+diff --git a/frontend/e2e/answer-layout.spec.ts b/frontend/e2e/answer-layout.spec.ts
+index 5cc521dd..c2c53d6c 100644
+--- a/frontend/e2e/answer-layout.spec.ts
++++ b/frontend/e2e/answer-layout.spec.ts
+@@ -180,7 +180,7 @@ function landedStream(mode: "plain" | "researcher"): string {
+     frame("trust_signal", { outcome: "answer", risk_tier: "high", grounded: true, triangulated: null, scope: "answer" }),
+     frame("done", {
+       total_cost_usd: 0.02, total_tool_calls: 2, elapsed_ms: 6200, trust_outcome: "answer",
+-      trust_line: "Based on 4 sources, not yet confirmed",
++      trust_line: "Based on 4 sources cited, all from MedGen",
+     }),
+   ].join("");
+ }
+@@ -234,7 +234,7 @@ for (const width of [1280, 390]) {
+         await expect(page.getByRole("heading", { name: "Related clinical trials" })).toBeVisible();
+         await expect(page.getByTestId("answer-notes")).toBeVisible();
+         await expect(page.getByTestId("sources-disclosure")).toBeVisible();
+-        await expect(page.getByTestId("trust-line")).toContainText("Based on 4 sources, not yet confirmed");
++        await expect(page.getByTestId("trust-line")).toContainText("Based on 4 sources cited, all from MedGen");
+         if (mode === "plain") await expect(page.getByTestId("answer-medical-note")).toBeVisible();
+         else await expect(page.getByTestId("answer-medical-note")).toHaveCount(0);
+         if (width === 390) {
+diff --git a/frontend/e2e/bold-and-stagger.spec.ts b/frontend/e2e/bold-and-stagger.spec.ts
+index bbcadc01..75b21a76 100644
+--- a/frontend/e2e/bold-and-stagger.spec.ts
++++ b/frontend/e2e/bold-and-stagger.spec.ts
+@@ -114,7 +114,7 @@ function stream(mode: "plain" | "researcher"): string {
+     frame("trust_signal", { outcome: "answer", risk_tier: "high", grounded: true, triangulated: null, scope: "answer" }),
+     frame("done", {
+       total_cost_usd: 0.02, total_tool_calls: 2, elapsed_ms: 6200, trust_outcome: "answer",
+-      trust_line: "Based on 2 sources, not yet confirmed",
++      trust_line: "Based on 2 sources cited, all from MedGen",
+     }),
+   ].join("");
+ }
+diff --git a/frontend/e2e/fixtures/card22_brca1_citations.json b/frontend/e2e/fixtures/card22_brca1_citations.json
+index 91f9f2c4..78dd128f 100644
+--- a/frontend/e2e/fixtures/card22_brca1_citations.json
++++ b/frontend/e2e/fixtures/card22_brca1_citations.json
+@@ -200,6 +200,6 @@
+       "3": 5
+     },
+     "meta": "13 tool calls · 16 sources cited from 3 layers",
+-    "trust_line": "Based on 16 sources cited, not yet confirmed"
++    "trust_line": "Based on 16 sources cited from ClinicalTrials.gov, ClinVar, MedGen and 2 other databases; their values could not be compared"
+   }
+ }
+\ No newline at end of file
+diff --git a/frontend/src/answerLayout.test.tsx b/frontend/src/answerLayout.test.tsx
+index 6e74df09..373183ed 100644
+--- a/frontend/src/answerLayout.test.tsx
++++ b/frontend/src/answerLayout.test.tsx
+@@ -63,7 +63,7 @@ const DONE = envelope("done", {
+   total_tool_calls: 1,
+   elapsed_ms: 900,
+   trust_outcome: "answer",
+-  trust_line: "Based on 4 sources, not yet confirmed",
++  trust_line: "Based on 4 sources cited, all from MedGen",
+ });
+ 
+ function tailStream(typed: boolean): AgentEvent[] {
+diff --git a/frontend/src/answerPagination.test.tsx b/frontend/src/answerPagination.test.tsx
+index e4a5bfca..5a31e4ae 100644
+--- a/frontend/src/answerPagination.test.tsx
++++ b/frontend/src/answerPagination.test.tsx
+@@ -55,7 +55,7 @@ const DONE = envelope("done", {
+   total_tool_calls: 1,
+   elapsed_ms: 900,
+   trust_outcome: "answer",
+-  trust_line: "Based on sources, not yet confirmed",
++  trust_line: "Based on sources cited, all from MedGen",
+ });
+ 
+ /** One table's worth of events: a header, `rows` table_row tokens, and a citation per row. */
+diff --git a/frontend/src/components/screens/AnswerScreen.card22.test.tsx b/frontend/src/components/screens/AnswerScreen.card22.test.tsx
+index 56f9d011..dc1abe3c 100644
+--- a/frontend/src/components/screens/AnswerScreen.card22.test.tsx
++++ b/frontend/src/components/screens/AnswerScreen.card22.test.tsx
+@@ -230,9 +230,7 @@ describe("the BRCA1 evidence of 2026-09-27", () => {
+       `${after.sources_cited} sources cited from ${after.layers} layers`,
+     );
+     expect(screen.getByTestId("sources-count")).toHaveTextContent(new RegExp(`^${after.sources_cited}$`));
+-    expect(screen.getByTestId("trust-line")).toHaveTextContent(
+-      `Based on ${after.sources_cited} sources cited, not yet confirmed`,
+-    );
++    expect(screen.getByTestId("trust-line")).toHaveTextContent(after.trust_line);
+   });
+ });
+ 
+@@ -368,12 +366,14 @@ describe("the trust line's info card", () => {
+     expect(TRUST_LINE_EXPLAINER).not.toMatch(/counted by the database/);
+   });
+ 
+-  it("explains a not-yet-confirmed answer that is incomplete, not only one missing a second database", () => {
+-    // J-22-08: the backend also floors an incomplete answer (a search that
+-    // did not finish, more records than the answer lists) at "not yet
+-    // confirmed". Mutation: revert to the one-cause sentence and this fails.
+-    expect(TRUST_LINE_EXPLAINER).toContain("has not been found in a second independent database");
+-    expect(TRUST_LINE_EXPLAINER).toContain("or this answer may be incomplete");
+-    expect(TRUST_LINE_EXPLAINER).toContain("a search did not finish");
++  it("describes the lines that show now: which databases, and when values could not be compared", () => {
++    // Card 8: "not yet confirmed" is gone from the line, so the card no longer
++    // explains it. Mutation: restore the old paragraph and this fails.
++    expect(TRUST_LINE_EXPLAINER).not.toMatch(/not yet confirmed/i);
++    expect(TRUST_LINE_EXPLAINER).toContain("names the databases");
++    expect(TRUST_LINE_EXPLAINER).toContain(
++      "When an answer rests on two or more databases and a high-stakes fact could not be checked against a second one",
++    );
++    expect(TRUST_LINE_EXPLAINER).toContain("their values could not be compared");
+   });
+ });
+diff --git a/frontend/src/components/screens/AnswerScreen.tsx b/frontend/src/components/screens/AnswerScreen.tsx
+index 2e8100ec..5154552d 100644
+--- a/frontend/src/components/screens/AnswerScreen.tsx
++++ b/frontend/src/components/screens/AnswerScreen.tsx
+@@ -123,20 +123,19 @@ export function summarySentencesShown(claims: Claim[]): number {
+  * which stopped being true for "Based on N sources" on 2026-09-23 (item
+  * 12.8 made it count pages). It now states what each number counts.
+  *
+- * Card 22 fix round (J-22-08): "not yet confirmed" has two causes, and the
+- * card names both. The backend floors an answer at `ask` when it may be
+- * incomplete (a background search did not finish, more records were found
+- * than it lists, a named item went unanswered, or the written summary fell
+- * back to a list: `core/graph.py`), as well as when a high-stakes fact has
+- * only one database behind it. The sentence says what the reader gets in
+- * each case and blames no one.
++ * Card 8 (2026-10-16): the "Based on" lines name their databases and no
++ * longer say "not yet confirmed", so the last sentence describes them: which
++ * databases, and when values could not be compared (an answer from two or
++ * more databases with a high-stakes fact that had no second database to check
++ * it against; the backend adds the clause on exactly that).
+  */
+ export const TRUST_LINE_EXPLAINER =
+   "Sources cited counts the record pages this answer cites, the same pages listed under " +
+   "Sources; two links to one page count once. Confirmed means two or more independent " +
+-  "databases agree on the same high-stakes fact. Not yet confirmed means a high-stakes fact " +
+-  "has not been found in a second independent database, or this answer may be incomplete, " +
+-  "for example because a search did not finish or more records were found than it lists.";
++  "databases agree on the same high-stakes fact. A Based on line names the databases the " +
++  "cited pages come from, the three most cited when there are four or more. When an answer rests " +
++  "on two or more databases and a high-stakes fact could not be checked against a second one, " +
++  "the line adds \"their values could not be compared\".";
+ 
+ /*
+  * UI fix 11.27, product owner 2026-09-14: "There is too much bold. Only the
+diff --git a/frontend/src/components/screens/SavedAnswerScreen.test.tsx b/frontend/src/components/screens/SavedAnswerScreen.test.tsx
+index 8c1c4e5b..4271fe44 100644
+--- a/frontend/src/components/screens/SavedAnswerScreen.test.tsx
++++ b/frontend/src/components/screens/SavedAnswerScreen.test.tsx
+@@ -182,7 +182,7 @@ describe("SavedAnswerScreen", () => {
+       <SavedAnswerScreen
+         question={ANSWER.question}
+         loading={false}
+-        answer={{ ...ANSWER, trust_line: "Based on 2 sources cited, not yet confirmed", risk_tier: "high" }}
++        answer={{ ...ANSWER, trust_line: "Based on 2 sources cited from MedGen and OMIM", risk_tier: "high" }}
+         onRunAgain={() => undefined}
+       />,
+     );
+@@ -193,7 +193,7 @@ describe("SavedAnswerScreen", () => {
+     expect(tag).toHaveStyle({ color: designTokens.risk, fontWeight: 400 });
+     expect(screen.getByTestId("saved-answer-trust-line")).toContainElement(tag);
+     expect(screen.getByTestId("saved-answer-trust-line")).toHaveTextContent(
+-      "Based on 2 sources cited, not yet confirmed",
++      "Based on 2 sources cited from MedGen and OMIM",
+     );
+   });
+ 
+@@ -204,7 +204,7 @@ describe("SavedAnswerScreen", () => {
+   ])("shows the live words for a stored %s tier", (tier, words) => {
+     // J-71T-09: the other known tiers and a tier the live screen does not
+     // know. Mutation: returning no tag for anything but "high" turns this red.
+-    renderSaved({ ...ANSWER, trust_line: "Based on 2 sources cited, not yet confirmed", risk_tier: tier });
++    renderSaved({ ...ANSWER, trust_line: "Based on 2 sources cited from MedGen and OMIM", risk_tier: tier });
+     const tag = screen.getByTestId("saved-answer-trust-risk");
+     expect(tag).toHaveTextContent(words);
+     expect(tag).toHaveStyle({ color: designTokens.risk, fontWeight: 400 });
+diff --git a/frontend/src/lib/events.ts b/frontend/src/lib/events.ts
+index 919cbd35..120f5b42 100644
+--- a/frontend/src/lib/events.ts
++++ b/frontend/src/lib/events.ts
+@@ -288,7 +288,7 @@ export interface DonePayload {
+   trust_outcome: TrustOutcome;
+   /**
+    * UI fix set 9, item 9.9. The one plain trust line for the answer ("Based
+-   * on 1 source, not yet confirmed"), built in code by the backend. Optional
++   * on 1 source cited, from MedGen"), built in code by the backend. Optional
+    * and nullable; null on a refusal, absent from an older backend.
+    */
+   trust_line?: string | null;
+diff --git a/frontend/src/lib/riskTag.parity.test.tsx b/frontend/src/lib/riskTag.parity.test.tsx
+index 71ab5b6e..76d649f5 100644
+--- a/frontend/src/lib/riskTag.parity.test.tsx
++++ b/frontend/src/lib/riskTag.parity.test.tsx
+@@ -86,7 +86,7 @@ function savedText(outcome: string, trustLine: string | null, stored: string | n
+   return screen.getByTestId("saved-answer-trust-line").textContent ?? "";
+ }
+ 
+-const TRUST_LINE = "Based on 2 sources cited, not yet confirmed";
++const TRUST_LINE = "Based on 2 sources cited from MedGen and OMIM";
+ 
+ describe("the live and the reopened answer show the same trust words", () => {
+   it("the fixture has cases, including an empty tier beside high", () => {
+diff --git a/frontend/src/set9AnswerStructure.test.tsx b/frontend/src/set9AnswerStructure.test.tsx
+index f67e91ab..5b6567ec 100644
+--- a/frontend/src/set9AnswerStructure.test.tsx
++++ b/frontend/src/set9AnswerStructure.test.tsx
+@@ -113,7 +113,7 @@ function researcherStream(extraDone: Record<string, unknown> = {}): AgentEvent[]
+       total_tool_calls: 1,
+       elapsed_ms: 1200,
+       trust_outcome: "ask",
+-      trust_line: "Based on 1 source, not yet confirmed",
++      trust_line: "Based on 1 source cited, from MedGen",
+       ...extraDone,
+     } as Extract<AgentEvent, { type: "done" }>["payload"]),
+   ];
+@@ -221,12 +221,12 @@ describe("set 9: structure travels on the wire and reaches the screen", () => {
+   it("replaces the pills with one plain trust line, keeping high risk visible (9.9)", () => {
+     const { result } = renderHook(() => useRunView(researcherStream()));
+     expect(result.current.trust).toEqual([
+-      { kind: "plain", label: "Based on 1 source, not yet confirmed" },
++      { kind: "plain", label: "Based on 1 source cited, from MedGen" },
+       { kind: "risk", label: "High-risk claim" },
+     ]);
+     renderView(result.current);
+     const line = screen.getByTestId("trust-line");
+-    expect(line).toHaveTextContent("Based on 1 source, not yet confirmed");
++    expect(line).toHaveTextContent("Based on 1 source cited, from MedGen");
+     expect(line).not.toHaveTextContent(/every claim cited/i);
+     expect(within(line).getByRole("button", { name: /about trust signals/i })).toBeInTheDocument();
+   });
+diff --git a/src/system_03_search_agent/adapters/mcp/server.py b/src/system_03_search_agent/adapters/mcp/server.py
+index 9a1047cd..8dbe4175 100644
+--- a/src/system_03_search_agent/adapters/mcp/server.py
++++ b/src/system_03_search_agent/adapters/mcp/server.py
+@@ -452,7 +452,7 @@ class AskBiomedicalQuestionOutput(BaseModel):
+         ),
+     )
+     # `DonePayload.trust_line`, the one plain sentence the web shows under
+-    # an answer ("Based on 3 sources, not yet confirmed"), same bound.
++    # an answer ("Based on 3 sources cited, all from ClinVar"), same bound.
+     trust_line: str | None = Field(
+         default=None,
+         max_length=200,
+diff --git a/src/system_03_search_agent/contracts/events.py b/src/system_03_search_agent/contracts/events.py
+index ae949fce..b861dcd9 100644
+--- a/src/system_03_search_agent/contracts/events.py
++++ b/src/system_03_search_agent/contracts/events.py
+@@ -612,7 +612,7 @@ class DonePayload(BaseModel):
+     trust_outcome: TrustOutcome
+ 
+     # UI fix set 9, item 9.9 (2026-09-13). The one plain trust line for the
+-    # answer ("Based on 1 source, not yet confirmed"), built in code by
++    # answer ("Based on 1 source cited, from MedGen"), built in code by
+     # `synthesis.trust.answer_trust_line` from the verdicts `trust_outcome`
+     # already summarises. Additive and optional; None on a refusal. Carried
+     # HERE rather than on `TrustSignalPayload` because the MCP surface
+diff --git a/src/system_03_search_agent/core/graph.py b/src/system_03_search_agent/core/graph.py
+index 206135ac..5b9ebe88 100644
+--- a/src/system_03_search_agent/core/graph.py
++++ b/src/system_03_search_agent/core/graph.py
+@@ -550,7 +550,6 @@ from system_03_search_agent.synthesis.answer_layout import (
+     PLAIN_SOURCES_HEADING,
+     TABLE_COLUMNS,
+     TABLE_HEADINGS,
+-    VARIANT_TO_DISEASE_SOURCE_NOTE,
+     AskedField,
+     GroundingInput,
+     answer_summary_sentence,
+@@ -575,7 +574,6 @@ from system_03_search_agent.synthesis.answer_layout import (
+     record_label,
+     record_status_or_year,
+     table_second_cell,
+-    variant_classification_note,
+     variant_to_disease_source_note,
+ )
+ from system_03_search_agent.synthesis.conflict_detection import detect_conflict
+@@ -1208,37 +1206,9 @@ _ASKS_FEATURES: Final = _DecisionSpec(
+     },
+ )
+ 
+-#: Card 30 (owner decision D15): whether the question asks about the
+-#: clinical classification of variants. Read by Write, which floors the
+-#: answer's verdict at "ask" when the variants listed carry none.
+-_ASKS_CLASSIFICATION: Final = _DecisionSpec(
+-    point="think.asks_classification",
+-    options=("asks_classification", "not_applicable"),
+-    fail_open="not_applicable",
+-    instructions=(
+-        "The state is a question a person typed into a biomedical evidence search "
+-        "engine. Decide whether it asks about the clinical classification of "
+-        "genetic variants: whether variants are pathogenic, likely pathogenic, "
+-        "benign, of uncertain significance or clinically significant."
+-    ),
+-    criteria={
+-        "asks_classification": (
+-            "It asks which variants, or whether a variant, are pathogenic, "
+-            "harmful, disease causing, benign, clinically significant or of "
+-            "uncertain significance, or how a variant is classified."
+-        ),
+-        "not_applicable": (
+-            "Anything else. It asks what variants exist in a gene, which "
+-            "conditions a variant is linked to, about a gene, a disease, papers, "
+-            "trials or records, or it is not about variants at all. Naming a "
+-            "variant or a gene is not asking how it is classified."
+-        ),
+-    },
+-)
+-
+-#: `DonePayload.decisions`' own `max_length`. A run makes well under this
+-#: many decisions today (relevancy, injection, ask_back, recent_years,
+-#: literature, asks_features, asks_classification, and a few more).
++#: `DonePayload.decisions`' own `max_length`. A run makes at most six
++#: decisions today (relevancy, injection, ask_back, recent_years,
++#: literature, asks_features).
+ _MAX_DONE_DECISIONS: Final[int] = 16
+ 
+ #: How long a later step waits, at the point it needs a decision Think
+@@ -1277,9 +1247,6 @@ class _RunDecisions:
+     #: that decides what is said about a condition's clinical features. None
+     #: when Think never started it (small talk, or a Write reached directly).
+     features_task: asyncio.Task[DecisionRecord | None] | None = None
+-    #: `think.asks_classification` (card 30), started at Think beside the
+-    #: features decision and read once by Write.
+-    classification_task: asyncio.Task[DecisionRecord | None] | None = None
+ 
+ 
+ #: One entry per live run, keyed by the run's `Harness`. `core/run.py`
+@@ -1550,26 +1517,6 @@ async def _clinical_features_asked(harness: Harness, deadline: float | None = No
+     return _usable_choice(await _read_late_decision(task, deadline)) == "asks_features"
+ 
+ 
+-async def _classification_asked(harness: Harness, deadline: float | None = None) -> bool:
+-    """Whether `think.asks_classification` picked `asks_classification`.
+-
+-    Card 30. Read once, by Write, with the late-read grace. No decision, no
+-    usable pick, or one still running past the grace all read as False, the
+-    decision's fail-open side: the verdict is left as computed.
+-    """
+-    entry = _run_decisions(harness)
+-    task, entry.classification_task = entry.classification_task, None
+-    return _usable_choice(await _read_late_decision(task, deadline)) == "asks_classification"
+-
+-
+-def _drop_classification_decision(harness: Any) -> None:
+-    """Stop `think.asks_classification` on a path that ends the run without
+-    reading it. Never awaits."""
+-    entry = _run_decisions(harness)
+-    task, entry.classification_task = entry.classification_task, None
+-    _cancel_if_pending(task)
+-
+-
+ def _drop_features_decision(harness: Any) -> None:
+     """Stop `think.asks_features` on a path that ends the run without
+     reading it (a refusal or error Write ships early). Never awaits."""
+@@ -4188,11 +4135,6 @@ async def think_node(state: GraphState) -> dict[str, Any]:
+         decisions.features_task = asyncio.create_task(
+             _decide_point(harness, query.trace_id, _ASKS_FEATURES, query.text)
+         )
+-    # think.asks_classification (card 30): same shape, read by Write.
+-    if not small_talk and decisions.classification_task is None:
+-        decisions.classification_task = asyncio.create_task(
+-            _decide_point(harness, query.trace_id, _ASKS_CLASSIFICATION, query.text)
+-        )
+     result: dict[str, Any] | None = None
+     try:
+         result = await _think(state, recent_task, step_deadline)
+@@ -4204,8 +4146,6 @@ async def think_node(state: GraphState) -> dict[str, Any]:
+             decisions.literature_task = None
+             _cancel_if_pending(decisions.features_task)
+             decisions.features_task = None
+-            _cancel_if_pending(decisions.classification_task)
+-            decisions.classification_task = None
+ 
+ 
+ def _search_goes_ahead(think_result: dict[str, Any]) -> bool:
+@@ -13072,7 +13012,6 @@ def _answer_parts(
+     findings: list[Finding],
+     mentions: list[str],
+     notes: list[str],
+-    classification_note: str | None = None,
+     summary_sentence: str | None = None,
+     condition_names: dict[str, str | None] | None = None,
+     lead_index: int | None = None,
+@@ -13735,13 +13674,6 @@ def _answer_parts(
+ 
+     # THE NOTES, after the listing in reading order.
+     notes_at = len(tokens)
+-    # Card 30: skipped when card 23's line already says the classification is
+-    # not shown, so the fact is never said twice.
+-    if classification_note is not None and not any(
+-        t.kind == "note" and t.text == VARIANT_TO_DISEASE_SOURCE_NOTE for t in tokens
+-    ):
+-        paragraph_break()
+-        tokens.append(TokenPayload(text=classification_note, marker_ids=[], kind="note"))
+     for note in notes:
+         paragraph_break()
+         tokens.append(TokenPayload(text=note[:1000], marker_ids=[], kind="note"))
+@@ -13764,7 +13696,6 @@ async def write_node(state: GraphState) -> dict[str, Any]:
+         return await _write_answer(state)
+     finally:
+         _drop_features_decision(state["harness"])
+-        _drop_classification_decision(state["harness"])
+         # Build phase 8.7, card 50: a second draft started beside the first
+         # never outlives the Write step, however it ends.
+         await _drop_second_draft(state["harness"])
+@@ -14073,12 +14004,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+     #
+     # Either can renumber, so this runs before `row_types` and the prompt
+     # slice read the numbering.
+-    # Both late reads share one grace (card 30 fix round): awaited together,
+-    # the worst case stays `_LATE_DECISION_GRACE_S`, as with one decision.
+-    clinical_features_asked, classification_asked = await asyncio.gather(
+-        _clinical_features_asked(harness, step_deadline),
+-        _classification_asked(harness, step_deadline),
+-    )
++    clinical_features_asked = await _clinical_features_asked(harness, step_deadline)
+     if clinical_features_asked:
+         synth_findings = reserve_prompt_slots(
+             synth_findings,
+@@ -14982,21 +14908,6 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+         # Card 63: "Try again later" when NCBI said a database is down, the
+         # original "Ask again to retry" otherwise. See the builder.
+         failed_search_note = _build_failed_search_note(failed_searches)
+-    # Card 30 (owner decision D15): a list of graph variants carries no
+-    # classification. The note is true on every such listing; the verdict
+-    # floor needs the classifier's reading that the question asked for one.
+-    # Floors the answer-level outcome only, never a claim's trust.
+-    classification_note = variant_classification_note(synth_findings)
+-    # The code-built listing may already have left (or be about to leave)
+-    # with card 23's line under its table; that line says the same thing.
+-    if any(
+-        t.kind == "note" and t.text == VARIANT_TO_DISEASE_SOURCE_NOTE for t in listing_tokens
+-    ):
+-        note_for_notes: str | None = None
+-    else:
+-        note_for_notes = classification_note
+-    if classification_note is not None and classification_asked and trust_outcome != "refuse":
+-        trust_outcome = aggregate([trust_outcome, "ask"])
+     if repair_cap_exceeded and trust_outcome != "refuse":
+         repair_cap_note = _build_repair_cap_note(omission_remains=bool(omitted_findings))
+ 
+@@ -15324,7 +15235,6 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+             findings=findings,
+             mentions=answer_mentions,
+             notes=notes,
+-            classification_note=note_for_notes,
+             summary_sentence=summary_sentence,
+             condition_names=condition_names,
+             lead_index=lead_index,
+diff --git a/src/system_03_search_agent/harness/task_tiers.py b/src/system_03_search_agent/harness/task_tiers.py
+index e7686311..86fa044a 100644
+--- a/src/system_03_search_agent/harness/task_tiers.py
++++ b/src/system_03_search_agent/harness/task_tiers.py
+@@ -175,16 +175,6 @@ _CLASSIFIER_DECISION_POINTS: tuple[TaskTierEntry, ...] = (
+             "which decides whether the answer makes room for them."
+         ),
+     ),
+-    TaskTierEntry(
+-        call_site="think.asks_classification",
+-        step="think",
+-        tier="classifier",
+-        note=(
+-            "Whether the question asks about the clinical classification of variants "
+-            "(card 30), which decides whether a list of unclassified variants floors "
+-            "the answer's verdict at ask."
+-        ),
+-    ),
+ )
+ 
+ # Sorted by call_site, fixed in code. Not part of the prompt-cache stable
+diff --git a/src/system_03_search_agent/synthesis/answer_layout.py b/src/system_03_search_agent/synthesis/answer_layout.py
+index 2844f118..0d7e79ee 100644
+--- a/src/system_03_search_agent/synthesis/answer_layout.py
++++ b/src/system_03_search_agent/synthesis/answer_layout.py
+@@ -377,39 +377,6 @@ def variant_to_disease_source_note(entity_type: str, mapped: bool) -> str | None
+     return VARIANT_TO_DISEASE_SOURCE_NOTE
+ 
+ 
+-# Card 30 (owner decision D15, 2026-10-16). The knowledge graph's variant
+-# records carry no ClinVar classification, so a list of a gene's variants
+-# cannot say which are pathogenic. The line says so, once, in the Notes.
+-VARIANT_CLASSIFICATION_NOTE = (
+-    "ClinVar's classification of these variants (for example pathogenic, "
+-    "benign or uncertain) was not retrieved, so this list does not say which "
+-    "are pathogenic. Each variant's ClinVar record shows its classification."
+-)
+-
+-#: The record fields that carry a variant's classification. A shown finding
+-#: citing one means the answer does give a classification.
+-_CLASSIFICATION_FIELDS: frozenset[str] = frozenset(
+-    {"clinical_significance", "germline_classification"}
+-)
+-
+-
+-def variant_classification_note(findings: Sequence[Any]) -> str | None:
+-    """The card 30 line, or None when it would not be true.
+-
+-    Keyed on record type and field only, never on the question's words: at
+-    least one finding is a knowledge graph `SequenceVariant` record, and no
+-    finding cites a classification field.
+-    """
+-    has_graph_variant = any(
+-        f.layer == "layer_1_graph" and f.entity_type == "SequenceVariant" for f in findings
+-    )
+-    if not has_graph_variant:
+-        return None
+-    if any(f.field in _CLASSIFICATION_FIELDS for f in findings):
+-        return None
+-    return VARIANT_CLASSIFICATION_NOTE
+-
+-
+ # ---------------------------------------------------------------------------
+ # Item 12.9 (2026-09-23): what each depth's reader is shown.
+ # ---------------------------------------------------------------------------
+diff --git a/src/system_03_search_agent/synthesis/trust.py b/src/system_03_search_agent/synthesis/trust.py
+index aab20844..28c9ff78 100644
+--- a/src/system_03_search_agent/synthesis/trust.py
++++ b/src/system_03_search_agent/synthesis/trust.py
+@@ -609,6 +609,82 @@ def _databases_backing(claim_finding: SynthFinding, cited: list[SynthFinding]) -
+     return {database for finding in agreeing if (database := record_database(finding))}
+ 
+ 
++# Card 8: the closed display table for `record_database` keys. A key that is
++# not here is counted under "other databases" and never printed raw, so a
++# stray host cannot reach the reader's screen.
++_NCBI_DATABASE_NAMES: dict[str, str] = {
++    "assembly": "Assembly",
++    "bioproject": "BioProject",
++    "biosample": "BioSample",
++    "clinvar": "ClinVar",
++    "datasets": "NCBI Datasets",
++    "dbvar": "dbVar",
++    "gds": "GEO DataSets",
++    "gene": "NCBI Gene",
++    "gtr": "GTR",
++    "medgen": "MedGen",
++    "mesh": "MeSH",
++    "nuccore": "Nucleotide",
++    "pathogens": "Pathogen Detection",
++    "pmc": "PMC",
++    "pubchem": "PubChem",
++    "pubmed": "PubMed",
++    "snp": "dbSNP",
++    "sra": "SRA",
++    "taxonomy": "Taxonomy",
++}
++_NCBI_RESEARCH_NAMES: dict[str, str] = {"litvar2": "LitVar2", "pubtator3": "PubTator3"}
++_DATABASE_NAMES: dict[str, str] = {
++    **{f"{_NCBI_HOST}/{path}": name for path, name in _NCBI_DATABASE_NAMES.items()},
++    **{f"{_NCBI_HOST}/research/{path}": name for path, name in _NCBI_RESEARCH_NAMES.items()},
++    "omim.org": "OMIM",
++    "clinicaltrials.gov": "ClinicalTrials.gov",
++    "clinvar": "ClinVar",
++    "medgen": "MedGen",
++    "mesh": "MeSH",
++    "ncbigene": "NCBI Gene",
++    "omim": "OMIM",
++    "pubmed": "PubMed",
++    "dbsnp": "dbSNP",
++}
++
++
++def _join_names(names: list[str]) -> str:
++    if len(names) <= 1:
++        return "".join(names)
++    return ", ".join(names[:-1]) + " and " + names[-1]
++
++
++def _databases_phrase(claims: list[GroundedClaim], citation_count: int) -> tuple[str, int]:
++    """Card 8: the databases behind a "Based on" line, and how many there are.
++
++    Counts distinct cited pages per `record_database` key, names the known
++    ones through `_DATABASE_NAMES` (most cited first, ties by name), and
++    folds every unknown or empty key into "other databases". Four or more
++    databases: only the three most cited are named. Returns the phrase that
++    follows the count ("all from ClinVar", "from MedGen and OMIM") and the
++    number of distinct databases.
++    """
++    pages: dict[str, set[str]] = {}
++    for claim in claims:
++        page = source_page_key(claim.finding.source_url) or claim.finding.citation_id
++        pages.setdefault(record_database(claim.finding), set()).add(page)
++    known = sorted(
++        (key for key in pages if key in _DATABASE_NAMES),
++        key=lambda key: (-len(pages[key]), _DATABASE_NAMES[key].casefold()),
++    )
++    total = len(pages)
++    shown = known[:3] if total >= 4 else known
++    other = total - len(shown)
++    parts = [_DATABASE_NAMES[key] for key in shown]
++    if other:
++        parts.append(f"{other} other {'database' if other == 1 else 'databases'}")
++    if total == 1:
++        lone = citation_count == 1 or not shown
++        return (f"from {parts[0]}" if lone else f"all from {parts[0]}"), 1
++    return f"from {_join_names(parts)}", total
++
++
+ def answer_trust_line(
+     trust_outcome: TrustOutcome,
+     claim_trusts: list[ClaimTrust],
+@@ -628,11 +704,9 @@ def answer_trust_line(
+       "Confirmed by N independent databases". This is the only line that
+       says "confirmed", because concordance is the only verdict that means
+       it.
+-    - `ask`, or a high-risk claim whose agreement does not reach two
+-      databases: "Based on N source(s) cited, not yet confirmed".
+-    - Otherwise (every claim low risk): "Based on N source(s) cited".
+-      Low-risk claims are never triangulated, so "not yet confirmed" would
+-      imply a check that does not apply to them.
++    - Every other answer: "Based on N source(s) cited" plus the databases
++      behind it (card 8, below). The words "not yet confirmed" are gone;
++      the line names what it rests on instead of sounding like a warning.
+ 
+     Agreement is counted among the cited claims only, so N can never exceed
+     the number of databases in the answer's Sources list.
+@@ -720,7 +794,17 @@ def answer_trust_line(
+         ]
+         if min(backing) >= 2:
+             return f"Confirmed by {min(backing)} independent databases"
+-        return f"Based on {citation_count} {noun} cited, not yet confirmed"
+-    if trust_outcome == "ask":
+-        return f"Based on {citation_count} {noun} cited, not yet confirmed"
+-    return f"Based on {citation_count} {noun} cited"
++    base = f"Based on {citation_count} {noun} cited"
++    named, database_count = _databases_phrase(claims, citation_count)
++    line = f"{base}, {named}" if database_count == 1 else f"{base} {named}"
++    # Card 8: say the values could not be compared only when that is true,
++    # a high-risk claim came back `insufficient` AND the cited records come
++    # from two or more databases. A floor-only `ask` and an all-low-risk one
++    # (low risk is marked `insufficient` by design) never take the clause.
++    if (
++        trust_outcome == "ask"
++        and database_count >= 2
++        and any(trust.triangulation == "insufficient" for trust in high)
++    ):
++        line += "; their values could not be compared"
++    return line
+diff --git a/testing/Test_queries_and_workflows.md b/testing/Test_queries_and_workflows.md
+index 13fdd068..0b1a25af 100644
+--- a/testing/Test_queries_and_workflows.md
++++ b/testing/Test_queries_and_workflows.md
+@@ -539,9 +539,8 @@ Queries to try:
+ 
+ What you should see:
+ 
+-- The answer still lists CFTR's variant records, with the same sources as before.
+-- Below the answer, one line reads "ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification."
+-- The answer is not marked as a confirmed answer, because the question asks which variants are clinically significant and the list does not say. If a run marks it confirmed anyway, report it: the check that reads the question's meaning missed it.
++- A previously working gene-variant question keeps answering the same way.
++- The answer still answers, with the same sources as before.
+ - Why it matters: someone checking CFTR before an appointment needs this answer to keep working exactly as it did last time, not to quietly go missing because some unrelated part of the product changed.
+ 
+ ### 23. rs334 without invented conditions
+@@ -623,7 +622,7 @@ What you should see:
+ 
+ - Variant-to-disease and gene-to-disease tables over the graph's ClinVar links, in every mode.
+ - The HNF1A answer shows "Variant-to-disease mapping".
+-- With that table, and with no other, one line reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI." (card 23). Directly under that table, at 1280 and 390, whether more records follow it or the table ends the answer; never in the Notes list. Plain language shows no table, so no card 23 line, but its Notes list carries card 30's line that ClinVar's classification was not retrieved (the variant list is unclassified).
++- With that table, and with no other, one line reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI." (card 23). Directly under that table, at 1280 and 390, whether more records follow it or the table ends the answer; never in the Notes list. Plain language shows no table, so no line.
+ - When checked live on 2026-09-14 the table stopped at 5 rows where the reference prototype shows 13, because an answer cites at most 20 sources. Whether that ceiling is right is the product owner's call, a card in the board's To do column.
+ - No disease cell is blank without a reason: a row whose ClinVar record names only a placeholder reads "None named: the ClinVar record says not provided" (or "not specified", or "gives only a placeholder"), and a row whose disease name could not be looked up reads "Name could not be looked up" (card 103).
+ - Why it matters: a person asking which diseases a gene's variants cause wants the variant and the disease side by side, not two lists to match up themselves.
+@@ -644,22 +643,6 @@ What you should see:
+ - Known: the arachnodactyly answer can name only Haim-Munk syndrome, from a paper's title, and not Marfan syndrome (F-8.6-V08, an answer-quality note for the product owner).
+ - Why it matters: a sentence about a record the person never asked about reads as part of the answer. In the phase 8.1 product review's words: "It told me twice that a nurse visit has no clinical features, and never told me how many genes."
+ 
+-### 115. Variants are never shown as pathogenic unless ClinVar says so (card 30)
+-
+-Queries to try:
+-
+-- `Which BRCA1 variants are pathogenic?`: ask it once in Plain language and once in Researcher.
+-- `What is rs334 and what condition is it associated with?`, in either mode, as the control.
+-
+-What you should see:
+-
+-- The BRCA1 answer still lists BRCA1's variant records, each linked to its ClinVar record.
+-- Below the answer, one line reads "ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification."
+-- The BRCA1 answer is never marked as a confirmed answer, and no sentence calls the listed variants pathogenic.
+-- Both modes carry the same line, once.
+-- The rs334 answer shows dbSNP's clinical significance and carries no such line.
+-- Why it matters: of the first 40 BRCA1 variants this question listed on 2026-10-05, ClinVar classifies 2 as pathogenic. A person asking which variants are pathogenic reads any list under that question as the answer, and an unmarked list of unclassified variants is a confident wrong answer about cancer risk.
+-
+ ## 4. Chromosome windows and accessions
+ 
+ ### 26. A copy number variant window, before the coordinate range feature
+@@ -1988,7 +1971,7 @@ The daily shipped lists named below were folded into this document and `testing/
+ |---|---|
+ | 1. Basic search and answers | `Product/Product_workflows.md` tests 1, 7, 12, 13, 14; the 2026-09-22 shipped list's items 1, 6; the 2026-09-20 shipped list's retest items 1, 2, 3, 5, 6; `UI_fixes_done.md` "What is live on develop" and items 8.4, 9.12, 11.14, 11.27, 11.31, 11.34, 11.35, 11.36; the 2026-09-23 shipped list's items 3, 4, 5 |
+ | 2. Follow-up questions and conversation | `Product/Product_workflows.md` test 2 |
+-| 3. Genes, variants and diseases | the 2026-09-22 shipped list's items 3, 5, 7, 8, 12, 13; the 2026-09-23 shipped list's item 6; `UI_fixes_done.md` items 11.6, 11.20 and 12.14; board card 1 and `tracker/phase_8.6.md` ticket T-8.6-06 with findings F-8.6-A11 and F-8.6-V08; board card 30 |
++| 3. Genes, variants and diseases | the 2026-09-22 shipped list's items 3, 5, 7, 8, 12, 13; the 2026-09-23 shipped list's item 6; `UI_fixes_done.md` items 11.6, 11.20 and 12.14; board card 1 and `tracker/phase_8.6.md` ticket T-8.6-06 with findings F-8.6-A11 and F-8.6-V08 |
+ | 4. Chromosome windows and accessions | the 2026-09-22 shipped list's items 2, 9, 10, 11, 14, 15, 16 |
+ | 5. Pathogen isolates | `Product/queries/Isolate_search_queries_and_workflow.md` queries 1 to 12; the 2026-09-22 shipped list's items 17 to 22 |
+ | 6. Refusals, off-topic and compute requests | `Product/Product_workflows.md` tests 8, 19; the 2026-09-22 shipped list's item 4; `UI_fixes_done.md` "What is live on develop" and item 12.6; `tracker/phase_8.6.md` ticket T-8.6-04, re-land ticket R-02 and findings F-8.6-A10 and F-8.6-G01, with golden rows G-043 and G-044 |
+@@ -2126,7 +2109,6 @@ Every feature accounted for, in three tables:
+ |---|---|---|
+ | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
+ | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
+-| card 30 | A list of a gene's variants says ClinVar's classification was not retrieved, and a question about which are pathogenic is never marked confirmed | Queries 22 and 115 |
+ | card 17 | A written sentence that moves to a different paper on one shared title word opens with the name of that paper | Query 113 |
+ | card 35 | An off-topic follow-up that contains a word such as "cell" or "study" is checked for topic like any other question | Query 111 |
+ | cards 84 and 72 | When the check every question passes first cannot finish, the message says nothing was searched, the problem was ours, and to ask again | Query 109 |
+diff --git a/tests/system_03_search_agent/adapters/cli/test_s3_as_printed.py b/tests/system_03_search_agent/adapters/cli/test_s3_as_printed.py
+index 7554ef88..ca655aa1 100644
+--- a/tests/system_03_search_agent/adapters/cli/test_s3_as_printed.py
++++ b/tests/system_03_search_agent/adapters/cli/test_s3_as_printed.py
+@@ -770,12 +770,12 @@ class TestAQuestionBackIsLabelledAsk:
+ # ---------------------------------------------------------------------------
+ 
+ 
+-_UNCONFIRMED = "Based on 17 sources, not yet confirmed"
++_UNCONFIRMED = "Based on 17 sources cited, all from MedGen"
+ 
+ 
+ def _unconfirmed_answer_frames(trust_line: str | None = _UNCONFIRMED) -> list[dict]:
+     """A finished, cited answer whose outcome is the server's `ask`: answered,
+-    not yet confirmed. Phase 8.10's product review (PR-8.10-01) got exactly
++    not confirmed by a second database. Phase 8.10's product review (PR-8.10-01) got exactly
+     this for "Which diseases are associated with BRCA1?", and the web showed
+     it as "Answered" with the trust line below."""
+     frames = _answer_frames()
+@@ -789,7 +789,7 @@ class TestAFinishedAnswerShowsTheWebsTrustLine:
+     """Card 62, PR-8.10-01: `s3` printed `[ask]` under a finished, 12-citation
+     answer that asked nothing, and no trust line, while `[ask]` also labels a
+     question back with options to pick from. The web shows the same answer
+-    as "Answered" with "Based on N sources, not yet confirmed" under it.
++    as "Answered" with "Based on N sources cited, all from MedGen" under it.
+ 
+     Mutation that turns these red: tag the server's `ask` verdict `[ask]`
+     again, or drop the `_write_verdict` call from `_handle_done`."""
+@@ -1038,10 +1038,10 @@ class TestAQuestionBackIsItsOwnState:
+                 _TOKEN,
+                 _CITE,
+                 ("trust_signal", _signal("ask")),
+-                ("done", _done("ask", "Based on 1 source, not yet confirmed")),
++                ("done", _done("ask", "Based on 1 source cited, from MedGen")),
+             ]
+         )
+-        assert "\n[answer]\nBased on 1 source, not yet confirmed\n" in out
++        assert "\n[answer]\nBased on 1 source cited, from MedGen\n" in out
+         assert "[ask]" not in out
+         assert code == 0
+ 
+@@ -1150,12 +1150,12 @@ class TestTheVerdictIsPrintedOnce:
+                 _TOKEN,
+                 _CITE,
+                 ("trust_signal", _signal("ask")),
+-                ("done", _done("ask", "Based on 12 sources, not yet confirmed")),
++                ("done", _done("ask", "Based on 12 sources cited, all from MedGen")),
+                 ("done", _done("ask")),
+             ]
+         )
+         assert out.count("[answer]") == 1
+-        assert out.count("not yet confirmed") == 1
++        assert out.count("Based on 12 sources cited") == 1
+         assert "Single source" not in out
+ 
+     def test_nothing_follows_the_references(self) -> None:
+@@ -1165,7 +1165,7 @@ class TestTheVerdictIsPrintedOnce:
+                 _TOKEN,
+                 _CITE,
+                 ("trust_signal", _signal("ask")),
+-                ("done", _done("ask", "Based on 12 sources, not yet confirmed")),
++                ("done", _done("ask", "Based on 12 sources cited, all from MedGen")),
+             ]
+         )
+         assert out.endswith("[1] ncbi_gene - https://www.ncbi.nlm.nih.gov/gene/672\n")
+diff --git a/tests/system_03_search_agent/adapters/graphql/test_parity_fields.py b/tests/system_03_search_agent/adapters/graphql/test_parity_fields.py
+index 7b211b1c..6a3e09c5 100644
+--- a/tests/system_03_search_agent/adapters/graphql/test_parity_fields.py
++++ b/tests/system_03_search_agent/adapters/graphql/test_parity_fields.py
+@@ -54,7 +54,7 @@ _GERD_OPTIONS = [
+     "Are there clinical trials on GERD treatments?",
+     "What does recent research say about GERD?",
+ ]
+-_TRUST_LINE = "Based on 3 sources, not yet confirmed"
++_TRUST_LINE = "Based on 3 sources cited, all from ClinVar"
+ _MARKER = re.compile(r"\[(\d+)\]")
+ 
+ 
+diff --git a/tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py b/tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py
+index a452b40a..8e616850 100644
+--- a/tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py
++++ b/tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py
+@@ -442,7 +442,7 @@ class TestNeverCost:
+                 citations=[_GOLDEN_CITATION.model_dump()],
+                 answer_markdown="BRCA1 is a protein-coding gene [1].",
+                 audience_depth="researcher",
+-                answer_trust_line="Based on 1 source, not yet confirmed",
++                answer_trust_line="Based on 1 source cited, from MedGen",
+             )
+         )
+ 
+diff --git a/tests/system_03_search_agent/adapters/mcp/test_parity_tools.py b/tests/system_03_search_agent/adapters/mcp/test_parity_tools.py
+index 2e2ef61f..31379bdf 100644
+--- a/tests/system_03_search_agent/adapters/mcp/test_parity_tools.py
++++ b/tests/system_03_search_agent/adapters/mcp/test_parity_tools.py
+@@ -70,7 +70,7 @@ _GERD_OPTIONS = [
+     "Are there clinical trials on GERD treatments?",
+     "What does recent research say about GERD?",
+ ]
+-_TRUST_LINE = "Based on 3 sources, not yet confirmed"
++_TRUST_LINE = "Based on 3 sources cited, all from ClinVar"
+ 
+ 
+ # ---------------------------------------------------------------------------
+diff --git a/tests/system_03_search_agent/core/test_bare_topic_clarification.py b/tests/system_03_search_agent/core/test_bare_topic_clarification.py
+index c7b51ea8..2c7cda6d 100644
+--- a/tests/system_03_search_agent/core/test_bare_topic_clarification.py
++++ b/tests/system_03_search_agent/core/test_bare_topic_clarification.py
+@@ -244,7 +244,6 @@ _SAFE_PICKS: dict[str, str] = {
+     "think.recent_years": "not_applicable",
+     "plan.literature": "not_literature",
+     "think.asks_features": "not_applicable",
+-    "think.asks_classification": "not_applicable",
+ }
+ 
+ 
+@@ -1150,37 +1149,6 @@ async def test_a_searched_question_asks_whether_it_is_about_features_and_carries
+     assert record["chosen"] == "asks_features"
+ 
+ 
+-@pytest.mark.asyncio
+-async def test_card30_a_searched_question_asks_about_classification_and_carries_it_on_done(
+-    monkeypatch: pytest.MonkeyPatch,
+-) -> None:
+-    """Card 30: `think.asks_classification` is asked at Think with its fixed
+-    description, and its record rides on the `done` event."""
+-    _install_tools(monkeypatch)
+-    _install_models(monkeypatch, clarify_reply=None)
+-    asked = _install_decide(monkeypatch, {"think.asks_classification": "asks_classification"})
+-
+-    events = await _run("which papers discuss statin side effects")
+-    assert "think.asks_classification" in asked, asked
+-    done = _payload(events, "done")
+-    assert done is not None
+-    record = next(d for d in done["decisions"] if d["name"] == "think.asks_classification")
+-    assert record["options"] == ["asks_classification", "not_applicable"]
+-    assert record["chosen"] == "asks_classification"
+-
+-
+-@pytest.mark.asyncio
+-async def test_card30_small_talk_is_never_asked_about_classification(
+-    monkeypatch: pytest.MonkeyPatch,
+-) -> None:
+-    _install_tools(monkeypatch)
+-    _install_models(monkeypatch, clarify_reply=None)
+-    asked = _install_decide(monkeypatch)
+-
+-    await _run("what can you do")
+-    assert "think.asks_classification" not in asked, asked
+-
+-
+ @pytest.mark.asyncio
+ async def test_small_talk_is_never_asked_whether_it_is_about_features(
+     monkeypatch: pytest.MonkeyPatch,
+@@ -1391,37 +1359,3 @@ async def test_the_literature_decision_is_under_way_before_thinks_call(
+     await _run("which papers discuss statin side effects")
+     assert order.index("plan.literature") < order.index("think"), order
+     assert order.index("think.recent_years") < order.index("think"), order
+-
+-
+-@pytest.mark.asyncio
+-@pytest.mark.parametrize(
+-    "ends", [{"clarification_needed": True}, {"cap_exceeded": True}, {"step_error": {"message": "stand-in"}}]
+-)
+-async def test_card30_think_ending_the_search_stops_the_classification_decision(
+-    monkeypatch: pytest.MonkeyPatch, ends: dict[str, Any]
+-) -> None:
+-    """Think itself stops `think.asks_classification` when the search does not
+-    go ahead (Write's own drop would also catch it, so Think is called alone).
+-    Red when Think's `finally` leaves the task running."""
+-    stopped = _hang_one_point(monkeypatch, "think.asks_classification")
+-
+-    async def _ended(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+-        await asyncio.sleep(0.05)
+-        return dict(ends)
+-
+-    monkeypatch.setattr(graph_module, "_think", _ended)
+-    from system_03_search_agent.contracts.query import Query
+-    from system_03_search_agent.harness import harness as harness_module
+-
+-    query = Query(
+-        text="tell me about brca1 variants",
+-        session_id="s-card30",
+-        trace_id="t-card30",
+-        user_id=None,
+-        audience_depth="researcher",
+-    )
+-    state = {"query": query, "harness": harness_module.Harness(trace_id=query.trace_id)}
+-    await graph_module.think_node(state)  # type: ignore[arg-type]
+-    await asyncio.sleep(0)
+-    assert stopped.is_set()
+-    assert graph_module._run_decisions(state["harness"]).classification_task is None
+diff --git a/tests/system_03_search_agent/core/test_graph.py b/tests/system_03_search_agent/core/test_graph.py
+index 9285c0db..c88a50a3 100644
+--- a/tests/system_03_search_agent/core/test_graph.py
++++ b/tests/system_03_search_agent/core/test_graph.py
+@@ -7410,271 +7410,3 @@ async def test_unresolved_gene_symbol_refusal_never_announces_write_started(
+         "a refusal that never began the answer path announced that Write "
+         "had started"
+     )
+-
+-
+-# ---------------------------------------------------------------------------
+-# Card 30 (owner decision D15, 2026-10-16): the `think.asks_classification`
+-# decision floors the answer's verdict at "ask" when the variants listed carry
+-# no ClinVar classification. These arms hand Write the decision Think would
+-# have started (`_RunDecisions.classification_task`), so no model is needed.
+-# ---------------------------------------------------------------------------
+-
+-
+-def _classification_record(pick: str | None) -> object:
+-    from system_03_search_agent.contracts.events import DecisionRecord
+-
+-    options = ["asks_classification", "not_applicable"]
+-    if pick is None:
+-        return DecisionRecord(
+-            name="think.asks_classification",
+-            options=options,
+-            chosen="not_applicable",
+-            decided_by="guard",
+-            fallback_reason="no_usable_pick:timeout",
+-        )
+-    return DecisionRecord(
+-        name="think.asks_classification",
+-        options=options,
+-        chosen=pick,
+-        decided_by="jev",
+-        jev_choice=pick,
+-    )
+-
+-
+-def _hand_write_the_classification_decision(state: dict[str, object], pick: str | None) -> None:
+-    import asyncio
+-
+-    record = _classification_record(pick)
+-
+-    async def _decided() -> object:
+-        return record
+-
+-    graph_module._run_decisions(state["harness"]).classification_task = (
+-        asyncio.get_running_loop().create_task(_decided())
+-    )
+-
+-
+-async def _unclassified_variant_findings() -> list[object]:
+-    """A gene's variants from the graph, none carrying a classification."""
+-    harness = harness_module.Harness(trace_id="test-trace-classification")
+-    call = ToolCall(tool="cypher_query", call_id="cy-class", layer="layer_1_graph")
+-    fields = {
+-        "status": "ok",
+-        "row_count": 3,
+-        "total_available": 3,
+-        "truncated": False,
+-        "rows": [
+-            {
+-                "node_or_edge_type": "SequenceVariant",
+-                "curie": f"ClinVar:{index}",
+-                "fields": {"name": f"c.{index}A>G (p.Xaa{index}Yaa)"},
+-                "source_url": f"https://www.ncbi.nlm.nih.gov/clinvar/variation/{index}",
+-                "graph_snapshot_version": "v1",
+-            }
+-            for index in range(1, 4)
+-        ],
+-        "error": None,
+-    }
+-    return await coordinator_worker_execute(
+-        harness,
+-        [call],
+-        [ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=fields)],
+-    )
+-
+-
+-async def _classification_write(pick: str | None, *, hand: bool = True) -> dict[str, object]:
+-    findings = await _unclassified_variant_findings()
+-    query = _valid_query(text="Which variants of this gene matter?", audience_depth="researcher")
+-    state = _write_state(query, findings)
+-    if hand:
+-        _hand_write_the_classification_decision(state, pick)
+-    return await graph_module.write_node(state)
+-
+-
+-def _answer_scope_outcome(result: dict[str, object]) -> str:
+-    done = next(e for e in result["events"] if e.type == "done")
+-    return done.payload["trust_outcome"]
+-
+-
+-def _claim_outcomes(result: dict[str, object]) -> list[str]:
+-    return [
+-        e.payload["outcome"]
+-        for e in result["events"]
+-        if e.type == "trust_signal" and e.payload.get("scope") == "claim"
+-    ]
+-
+-
+-@pytest.mark.asyncio
+-async def test_card30_a_classification_question_over_unclassified_variants_is_ask(
+-    _mock_litellm: AsyncMock,
+-) -> None:
+-    """The decision picked, and the variants carry no classification: the
+-    answer is "ask". Each claim's own trust is exactly what it was without
+-    the decision, so only the answer-level outcome moves."""
+-    baseline = await _classification_write(None, hand=False)
+-    assert _answer_scope_outcome(baseline) == "answer", "populate-check: otherwise an answer"
+-    result = await _classification_write("asks_classification")
+-    assert _answer_scope_outcome(result) == "ask"
+-    assert _claim_outcomes(result) == _claim_outcomes(baseline)
+-    assert "classification of these variants" in _everything_the_reader_sees(result["events"])
+-
+-
+-@pytest.mark.asyncio
+-@pytest.mark.parametrize("pick", ["not_applicable", None])
+-async def test_card30_no_floor_without_the_decision(
+-    _mock_litellm: AsyncMock, pick: str | None
+-) -> None:
+-    """Not asked, no usable pick and no decision at all leave the verdict as
+-    computed; the line still shows, since it is true on every such list."""
+-    result = await _classification_write(pick)
+-    assert _answer_scope_outcome(result) == "answer"
+-    assert "classification of these variants" in _everything_the_reader_sees(result["events"])
+-    none_at_all = await _classification_write(None, hand=False)
+-    assert _answer_scope_outcome(none_at_all) == "answer"
+-
+-
+-@pytest.mark.asyncio
+-async def test_card30_a_decision_still_running_past_the_grace_is_not_a_floor(
+-    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+-) -> None:
+-    import asyncio
+-
+-    monkeypatch.setattr(graph_module, "_LATE_DECISION_GRACE_S", 0.05)
+-
+-    async def _slow() -> object:
+-        await asyncio.sleep(30)
+-        return _classification_record("asks_classification")
+-
+-    findings = await _unclassified_variant_findings()
+-    query = _valid_query(text="Which variants of this gene matter?", audience_depth="researcher")
+-    state = _write_state(query, findings)
+-    graph_module._run_decisions(state["harness"]).classification_task = (
+-        asyncio.get_running_loop().create_task(_slow())
+-    )
+-    result = await graph_module.write_node(state)
+-    assert _answer_scope_outcome(result) == "answer"
+-
+-
+-@pytest.mark.asyncio
+-async def test_card30_a_write_that_ends_early_stops_the_classification_decision(
+-    _mock_litellm: AsyncMock,
+-) -> None:
+-    import asyncio
+-
+-    cancelled = asyncio.Event()
+-
+-    async def _slow() -> object:
+-        try:
+-            await asyncio.sleep(30)
+-        except asyncio.CancelledError:
+-            cancelled.set()
+-            raise
+-        return _classification_record("asks_classification")
+-
+-    query = _valid_query(text="Which variants of this gene matter?")
+-    state = _write_state(query, [])
+-    state["step_error"] = {
+-        "fatal": True,
+-        "scope": "step",
+-        "source": "plan",
+-        "error_class": "recoverable",
+-        "message": "a stand-in step error",
+-        "retry_after_s": 0,
+-    }
+-    task = asyncio.get_running_loop().create_task(_slow())
+-    graph_module._run_decisions(state["harness"]).classification_task = task
+-    await asyncio.sleep(0)
+-    await graph_module.write_node(state)
+-    await asyncio.sleep(0)
+-    assert cancelled.is_set() and task.cancelled()
+-
+-
+-@pytest.mark.asyncio
+-async def test_card30_two_late_decisions_share_one_grace(
+-    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+-) -> None:
+-    """Both Think decisions still running at Write cost one grace together,
+-    not two (develop's worst case is one). Red when the reads run one after
+-    the other."""
+-    import asyncio
+-
+-    monkeypatch.setattr(graph_module, "_LATE_DECISION_GRACE_S", 0.5)
+-
+-    async def _slow(record: object) -> object:
+-        await asyncio.sleep(30)
+-        return record
+-
+-    async def _timed(hang: bool) -> float:
+-        findings = await _unclassified_variant_findings()
+-        query = _valid_query(text="Which variants matter?", audience_depth="researcher")
+-        state = _write_state(query, findings)
+-        if hang:
+-            entry = graph_module._run_decisions(state["harness"])
+-            loop = asyncio.get_running_loop()
+-            entry.features_task = loop.create_task(_slow(_features_record("asks_features")))
+-            entry.classification_task = loop.create_task(
+-                _slow(_classification_record("asks_classification"))
+-            )
+-        started = time.monotonic()
+-        await graph_module.write_node(state)
+-        return time.monotonic() - started
+-
+-    baseline = await _timed(False)
+-    both_late = await _timed(True)
+-    added = both_late - baseline
+-    assert 0.3 < added < 0.8, added
+-
+-
+-@pytest.mark.asyncio
+-async def test_card30_no_floor_when_the_answer_shows_a_classification(
+-    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+-) -> None:
+-    """The classifier picked asks_classification, but the variants listed
+-    carry a classification field, so the line and the floor both stand down.
+-    Red when the floor ignores the record-shape check."""
+-    findings = await _unclassified_variant_findings()
+-    harness = harness_module.Harness(trace_id="test-trace-classified")
+-    call = ToolCall(tool="cypher_query", call_id="cy-classed", layer="layer_1_graph")
+-    classified = {
+-        "status": "ok",
+-        "row_count": 1,
+-        "total_available": 1,
+-        "truncated": False,
+-        "rows": [
+-            {
+-                "node_or_edge_type": "SequenceVariant",
+-                "curie": "ClinVar:99",
+-                "fields": {"clinical_significance": "Pathogenic"},
+-                "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/99",
+-                "graph_snapshot_version": "v1",
+-            }
+-        ],
+-        "error": None,
+-    }
+-    findings += await coordinator_worker_execute(
+-        harness,
+-        [call],
+-        [ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=classified)],
+-    )
+-    query = _valid_query(text="Which variants are pathogenic?", audience_depth="researcher")
+-    # A classified claim is already "ask" by its own trust, so the outcome
+-    # cannot tell the floor from no floor. Count the floors applied instead.
+-    floors: list[int] = [0]
+-    real_aggregate = graph_module.aggregate
+-
+-    def _counting(outcomes: list[str]) -> str:
+-        if len(outcomes) == 2 and outcomes[1] == "ask":
+-            floors[0] += 1
+-        return real_aggregate(outcomes)
+-
+-    monkeypatch.setattr(graph_module, "aggregate", _counting)
+-    await graph_module.write_node(_write_state(query, findings))
+-    floors_without_the_decision = floors[0]
+-    floors[0] = 0
+-    state = _write_state(query, findings)
+-    _hand_write_the_classification_decision(state, "asks_classification")
+-    result = await graph_module.write_node(state)
+-    seen = _everything_the_reader_sees(result["events"])
+-    assert "Pathogenic" in seen, "populate-check: the classification is on the page"
+-    assert "classification of these variants" not in seen
+-    assert floors[0] == floors_without_the_decision
+diff --git a/tests/system_03_search_agent/core/test_write_answer_structure.py b/tests/system_03_search_agent/core/test_write_answer_structure.py
+index decd1dc3..29fa68ae 100644
+--- a/tests/system_03_search_agent/core/test_write_answer_structure.py
++++ b/tests/system_03_search_agent/core/test_write_answer_structure.py
+@@ -1905,35 +1905,36 @@ async def _hnf1a_answer(monkeypatch, depth: str):
+ 
+ _SEVEN = "[1][2][3][4][5][6][7]"
+ # Read by running exactly these inputs against develop 2182aff3's source.
++# The trust-line text names its databases since card 8; every count is unchanged.
+ _DEVELOP_NUMBERS = {
+     ("hnf1a", "researcher"): (
+         f"Found 7 sequence variant records for BRCA1 {_SEVEN}, linked to 1 disease. ",
+-        "Based on 7 sources cited",
++        "Based on 7 sources cited, all from ClinVar",
+         7,
+     ),
+     ("hnf1a", "plain_language"): (
+         f"I found 7 genetic variants related to BRCA1 {_SEVEN}, linked to 1 condition. ",
+-        "Based on 7 sources cited",
++        "Based on 7 sources cited, all from ClinVar",
+         7,
+     ),
+     ("case_a", "researcher"): (
+         "Found 1 gene record for BRCA1: BRCA1 [1]. ",
+-        "Based on 1 source cited",
++        "Based on 1 source cited, from NCBI Gene",
+         1,
+     ),
+     ("case_a", "plain_language"): (
+         "I found 1 gene related to BRCA1 [1]. ",
+-        "Based on 1 source cited",
++        "Based on 1 source cited, from NCBI Gene",
+         1,
+     ),
+     ("case_b", "researcher"): (
+         "Found 1 gene record for BRCA1: BRCA1 DNA repair associated [1]. ",
+-        "Based on 1 source cited",
++        "Based on 1 source cited, from NCBI Gene",
+         1,
+     ),
+     ("case_b", "plain_language"): (
+         "I found 1 gene related to BRCA1 [1]. ",
+-        "Based on 1 source cited",
++        "Based on 1 source cited, from NCBI Gene",
+         1,
+     ),
+ }
+@@ -1958,89 +1959,3 @@ async def test_the_stated_numbers_stay_as_on_develop(monkeypatch, depth: str) ->
+     for name, rows in (("case_a", case_a), ("case_b", case_b)):
+         result = await _gene_answer(monkeypatch, depth, rows)
+         assert _numbers(result, _tokens(result)) == _DEVELOP_NUMBERS[(name, depth)], name
+-
+-
+-# ---------------------------------------------------------------------------
+-# Card 30 (owner decision D15, 2026-10-16): under a list of a gene's graph
+-# variants, one line says ClinVar's classification was not retrieved. In the
+-# Notes, once, in both depths; beside card 23's table only card 23's line.
+-# ---------------------------------------------------------------------------
+-
+-_UNCLASSIFIED_VARIANT_ROWS = [
+-    {
+-        "node_or_edge_type": "SequenceVariant",
+-        "curie": f"ClinVar:{index}",
+-        "fields": {"name": f"c.{index}A>G (p.Xaa{index}Yaa)"},
+-        "source_url": f"https://www.ncbi.nlm.nih.gov/clinvar/variation/{index}",
+-        "graph_snapshot_version": "v1",
+-    }
+-    for index in range(1, 4)
+-]
+-
+-
+-def _classification_notes(tokens: list[dict]) -> list[int]:
+-    from system_03_search_agent.synthesis.answer_layout import VARIANT_CLASSIFICATION_NOTE
+-
+-    return [
+-        index
+-        for index, token in enumerate(tokens)
+-        if token["kind"] == "note" and token["text"] == VARIANT_CLASSIFICATION_NOTE
+-    ]
+-
+-
+-@pytest.mark.asyncio
+-@pytest.mark.parametrize("depth", ["plain_language", "researcher"])
+-async def test_card30_the_line_shows_in_both_depths_once_after_the_list(monkeypatch, depth) -> None:
+-    """Red on develop: no line. Red if the note is emitted before the list."""
+-    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+-    _install(monkeypatch, _no_prose)
+-    tokens = _read_tokens(
+-        await graph_module.write_node(_state(depth, rows=_UNCLASSIFIED_VARIANT_ROWS))
+-    )
+-    (note_at,) = _classification_notes(tokens)
+-    last_row = max(i for i, t in enumerate(tokens) if t["kind"] in ("table_row", "list_item"))
+-    assert note_at > last_row, (note_at, last_row)
+-
+-
+-@pytest.mark.asyncio
+-async def test_card30_beside_the_variant_table_only_card_23s_line_shows(monkeypatch) -> None:
+-    """A mapped HNF1A shaped table at Researcher already says the
+-    classification is not shown; the fact is never said twice."""
+-    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+-    _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
+-    rows = [*_FOLDED_VARIANT_ROWS, _FOLDED_GENE_ROW]
+-    tokens = _tokens(await graph_module.write_node(_state("researcher", rows=rows)))
+-    assert len(_source_notes(tokens)) == 1
+-    assert _classification_notes(tokens) == []
+-
+-
+-
+-@pytest.mark.asyncio
+-async def test_card30_answer_parts_skips_its_line_beside_card_23s_table(monkeypatch) -> None:
+-    """On a request that does not read `placement` the table is built in the
+-    last `_answer_parts` call. Handed the card 30 line there, it must leave
+-    it out beside card 23's line. Red when `_answer_parts` drops that check."""
+-    from system_03_search_agent.synthesis.answer_layout import VARIANT_CLASSIFICATION_NOTE
+-
+-    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+-    _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
+-    real = graph_module._answer_parts
+-    seen: list[object] = []
+-
+-    def _forcing(**kwargs):
+-        if kwargs.get("fallback_sentences") or kwargs.get("tail_sentences"):
+-            kwargs["classification_note"] = VARIANT_CLASSIFICATION_NOTE
+-            parts = real(**kwargs)
+-            seen.append(parts)
+-            return parts
+-        return real(**kwargs)
+-
+-    monkeypatch.setattr(graph_module, "_answer_parts", _forcing)
+-    state = _state("researcher", rows=[*_FOLDED_VARIANT_ROWS, _FOLDED_GENE_ROW])
+-    state["context"] = RequestContext(surface="web_ui", reads_placement=False)
+-    await graph_module.write_node(state)
+-    assert seen, "populate-check: the table was built in the final call"
+-    for parts in seen:
+-        everything = [t.model_dump() for t in (*parts.summary, *parts.listing, *parts.notes)]
+-        assert len(_source_notes(everything)) == 1
+-        assert _classification_notes(everything) == []
+diff --git a/tests/system_03_search_agent/feedback/test_capture_saved_answer.py b/tests/system_03_search_agent/feedback/test_capture_saved_answer.py
+index b40367ab..d9bebe11 100644
+--- a/tests/system_03_search_agent/feedback/test_capture_saved_answer.py
++++ b/tests/system_03_search_agent/feedback/test_capture_saved_answer.py
+@@ -334,7 +334,7 @@ def test_a_refusal_and_a_clarifying_question_store_nothing(text: str) -> None:
+     assert row.answer_trust_line is None
+ 
+ 
+-_NOT_YET_CONFIRMED = "Based on 2 sources, not yet confirmed"
++_NOT_YET_CONFIRMED = "Based on 2 sources cited, all from MedGen"
+ _DOWN_NOTE = (
+     "PubMed is down at NCBI right now, so this answer may be missing papers "
+     "from it. Try again later."
+diff --git a/tests/system_03_search_agent/feedback/test_outage_note_dated.py b/tests/system_03_search_agent/feedback/test_outage_note_dated.py
+index e91f5104..870319b5 100644
+--- a/tests/system_03_search_agent/feedback/test_outage_note_dated.py
++++ b/tests/system_03_search_agent/feedback/test_outage_note_dated.py
+@@ -270,7 +270,7 @@ def _serve(monkeypatch: pytest.MonkeyPatch, stored: str, created_at: Any) -> Any
+         citations=[],
+         answer_markdown=stored,
+         audience_depth="researcher",
+-        answer_trust_line="Based on 9 sources, not yet confirmed",
++        answer_trust_line="Based on 9 sources cited, all from MedGen",
+         risk_tier=None,
+     )
+ 
+diff --git a/tests/system_03_search_agent/harness/test_task_tiers.py b/tests/system_03_search_agent/harness/test_task_tiers.py
+index 90eaa2b0..de597c01 100644
+--- a/tests/system_03_search_agent/harness/test_task_tiers.py
++++ b/tests/system_03_search_agent/harness/test_task_tiers.py
+@@ -37,14 +37,13 @@ _CLASSIFIER_CALL_SITES = {
+     "plan.resource",
+     "guardrail.injection",
+     "think.asks_features",
+-    "think.asks_classification",
+ }
+ 
+ 
+-def test_all_sixteen_call_sites_are_present() -> None:
++def test_all_fifteen_call_sites_are_present() -> None:
+     names = {entry.call_site for entry in ALL_TASK_TIERS}
+     assert names == _TIER_CALL_SITES | _CLASSIFIER_CALL_SITES
+-    assert len(ALL_TASK_TIERS) == 16
++    assert len(ALL_TASK_TIERS) == 15
+ 
+ 
+ def test_table_is_sorted_by_call_site() -> None:
+diff --git a/tests/system_03_search_agent/synthesis/test_answer_layout.py b/tests/system_03_search_agent/synthesis/test_answer_layout.py
+index d1b6e141..3248d106 100644
+--- a/tests/system_03_search_agent/synthesis/test_answer_layout.py
++++ b/tests/system_03_search_agent/synthesis/test_answer_layout.py
+@@ -326,7 +326,7 @@ def _claims(*findings: SynthFinding) -> list[GroundedClaim]:
+ 
+ def test_trust_line_single_source_not_confirmed() -> None:
+     line = answer_trust_line("ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE))
+-    assert line == "Based on 1 source cited, not yet confirmed"
++    assert line == "Based on 1 source cited, from MedGen"
+ 
+ 
+ def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
+@@ -344,7 +344,7 @@ def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
+     line = answer_trust_line(
+         "ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE, other, GENE)
+     )
+-    assert line == "Based on 3 sources cited, not yet confirmed"
++    assert line == "Based on 3 sources cited, all from MedGen"
+ 
+ 
+ def _significance(ref_index: int, url: str, *, tool: str = "cypher_query") -> SynthFinding:
+@@ -396,7 +396,9 @@ def test_trust_line_confirmed_only_on_concordance() -> None:
+         "Confirmed by 2 independent databases"
+     )
+     low = [_trust("c-1", "low", "insufficient", "answer")]
+-    assert answer_trust_line("answer", low, _claims(CLINVAR_A, LITVAR)) == "Based on 2 sources cited"
++    assert answer_trust_line("answer", low, _claims(CLINVAR_A, LITVAR)) == (
++        "Based on 2 sources cited from ClinVar and dbSNP"
++    )
+ 
+ 
+ def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
+@@ -409,7 +411,7 @@ def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
+         for n in range(1, 6)
+     ]
+     line = answer_trust_line("answer", [], _claims(*papers))
+-    assert line == "Based on 5 sources cited"
++    assert line == "Based on 5 sources cited, all from MedGen"
+ 
+ 
+ def test_trust_line_counts_pages_the_source_list_shows() -> None:
+@@ -432,7 +434,7 @@ def test_trust_line_counts_pages_the_source_list_shows() -> None:
+     assert len({c.finding.citation_id for c in claims}) == 3, (
+         "populate-check: three citation ids, or the old count could not be told apart"
+     )
+-    assert answer_trust_line("answer", [], claims) == "Based on 2 sources cited"
++    assert answer_trust_line("answer", [], claims) == "Based on 2 sources cited, all from MedGen"
+ 
+ 
+ def test_trust_line_flag_and_refuse() -> None:
+@@ -1279,77 +1281,3 @@ def test_a_lead_in_never_cuts_the_end_of_a_sentence_at_the_token_limit() -> None
+     bare = led(995)
+     assert not bare.startswith("From")
+     assert bare.endswith("[3].")
+-
+-
+-# ---------------------------------------------------------------- card 30
+-
+-
+-def _card30_finding(*, layer: str, entity_type: str, field: str, value: str):
+-    from system_03_search_agent.synthesis.findings import SynthFinding
+-
+-    return SynthFinding(
+-        ref_index=1,
+-        citation_id="c-1",
+-        layer=layer,
+-        tool="t",
+-        field=field,
+-        field_value=value,
+-        source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/1",
+-        entity_type=entity_type,
+-    )
+-
+-
+-def test_card30_a_graph_variant_list_says_classification_was_not_retrieved() -> None:
+-    """Graph variant names beside live ClinVar titles: the pinned line."""
+-    from system_03_search_agent.synthesis.answer_layout import (
+-        VARIANT_CLASSIFICATION_NOTE,
+-        variant_classification_note,
+-    )
+-
+-    findings = [
+-        _card30_finding(
+-            layer="layer_1_graph", entity_type="SequenceVariant", field="name", value="c.1A>G"
+-        ),
+-        _card30_finding(
+-            layer="layer_2_api", entity_type="ClinVar record", field="title", value="a title"
+-        ),
+-    ]
+-    assert variant_classification_note(findings) == VARIANT_CLASSIFICATION_NOTE
+-    assert VARIANT_CLASSIFICATION_NOTE == (
+-        "ClinVar's classification of these variants (for example pathogenic, benign or "
+-        "uncertain) was not retrieved, so this list does not say which are pathogenic. "
+-        "Each variant's ClinVar record shows its classification."
+-    )
+-
+-
+-def test_card30_no_line_when_a_shown_record_gives_a_classification() -> None:
+-    """An rs334 shaped answer cites dbSNP's clinical significance and lists no
+-    graph variant; and a graph variant list that does cite a classification
+-    field needs no line either."""
+-    from system_03_search_agent.synthesis.answer_layout import variant_classification_note
+-
+-    rs334 = [
+-        _card30_finding(
+-            layer="layer_2_api",
+-            entity_type="Variant record",
+-            field="clinical_significance",
+-            value="Pathogenic",
+-        ),
+-        _card30_finding(
+-            layer="layer_3_enrichment", entity_type="Variant record", field="name", value="HbS"
+-        ),
+-    ]
+-    assert variant_classification_note(rs334) is None
+-    classified = [
+-        _card30_finding(
+-            layer="layer_1_graph", entity_type="SequenceVariant", field="name", value="c.1A>G"
+-        ),
+-        _card30_finding(
+-            layer="layer_2_api",
+-            entity_type="ClinVar record",
+-            field="germline_classification",
+-            value="Pathogenic",
+-        ),
+-    ]
+-    assert variant_classification_note(classified) is None
+-    assert variant_classification_note([]) is None
+diff --git a/tests/system_03_search_agent/synthesis/test_trust_line.py b/tests/system_03_search_agent/synthesis/test_trust_line.py
+new file mode 100644
+index 00000000..10cc8a93
+--- /dev/null
++++ b/tests/system_03_search_agent/synthesis/test_trust_line.py
+@@ -0,0 +1,357 @@
++"""Card 8 (owner, 2026-10-16): the trust line names the databases behind it.
++
++Every "Based on" line says which databases the cited pages come from, keyed
++by `record_database`; "not yet confirmed" is gone; the clause "; their
++values could not be compared" shows only on an `ask` from two or more
++databases with a high-risk claim that came back `insufficient`. Wording
++only: these tests never change a verdict, they pass verdicts in.
++"""
++
++from __future__ import annotations
++
++from functools import cache
++from itertools import combinations
++
++import pytest
++
++from system_03_search_agent.synthesis.findings import SynthFinding
++from system_03_search_agent.synthesis.grounding import GroundedClaim
++from system_03_search_agent.synthesis.trust import (
++    _DATABASE_NAMES,
++    ClaimTrust,
++    answer_trust_line,
++    record_database,
++)
++
++#: `DonePayload.trust_line` is capped at 200 characters (contracts/events.py).
++_CAP = 200
++_COMPARE = "; their values could not be compared"
++
++_PAGES = {
++    "medgen": "https://www.ncbi.nlm.nih.gov/medgen/C{n}",
++    "omim": "https://omim.org/entry/{n}",
++    "clinvar": "https://www.ncbi.nlm.nih.gov/clinvar/variation/{n}",
++    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/{n}/",
++    "gene": "https://www.ncbi.nlm.nih.gov/gene/{n}",
++    "trials": "https://clinicaltrials.gov/study/NCT{n}",
++    "snp": "https://www.ncbi.nlm.nih.gov/snp/rs{n}",
++}
++_NAMES = {
++    "medgen": "MedGen",
++    "omim": "OMIM",
++    "clinvar": "ClinVar",
++    "pubmed": "PubMed",
++    "gene": "NCBI Gene",
++    "trials": "ClinicalTrials.gov",
++    "snp": "dbSNP",
++}
++
++
++def _claims(spec: dict[str, int]) -> list[GroundedClaim]:
++    """`{database: pages}` becomes that many distinct cited pages in each."""
++    out: list[GroundedClaim] = []
++    index = 0
++    for database, pages in spec.items():
++        for n in range(1, pages + 1):
++            index += 1
++            url = _PAGES[database].format(n=n) if database in _PAGES else database.format(n=n)
++            finding = SynthFinding(
++                ref_index=index,
++                citation_id=f"c-{index}",
++                layer="layer_1_graph",
++                tool="cypher_query",
++                field="name",
++                field_value=f"record {index}",
++                source_url=url,
++                entity_type="Disease",
++                curie="",
++            )
++            out.append(GroundedClaim(claim_text=finding.field_value, finding=finding))
++    return out
++
++
++def _trust(tier: str, triangulation: str, outcome: str) -> list[ClaimTrust]:
++    return [ClaimTrust("c-1", tier, True, triangulation, outcome)]  # type: ignore[arg-type]
++
++
++HIGH_INSUFFICIENT = _trust("high", "insufficient", "ask")
++LOW = _trust("low", "insufficient", "ask")
++
++
++# ---------------------------------------------------------------- the table
++
++
++def test_refuse_and_nothing_grounded_have_no_line() -> None:
++    assert answer_trust_line("refuse", [], _claims({"medgen": 1})) is None
++    assert answer_trust_line("answer", [], []) is None
++
++
++def test_flag_is_unchanged() -> None:
++    line = answer_trust_line("flag", _trust("high", "discordant", "flag"), _claims({"medgen": 2}))
++    assert line == "Sources disagree on at least one claim"
++
++
++def test_confirmed_is_unchanged() -> None:
++    from system_03_search_agent.synthesis.trust import trust_for_claims
++
++    graph = _claims({"clinvar": 1})[0].finding
++    snp = _claims({"snp": 1})[0].finding
++    tools = ["cypher_query", "ncbi_dbsnp"]
++    facts = [
++        SynthFinding(
++            ref_index=i + 1,
++            citation_id=f"c-{i + 1}",
++            layer="layer_1_graph",
++            tool=tools[i],
++            field="clinical_significance",
++            field_value="Pathogenic",
++            source_url=f.source_url,
++            entity_type="Variant",
++            curie="",
++        )
++        for i, f in enumerate([graph, snp])
++    ]
++    claims = [GroundedClaim(claim_text="x", finding=f) for f in facts]
++    trusts = trust_for_claims(claims, facts)
++    assert answer_trust_line("answer", trusts, claims) == "Confirmed by 2 independent databases"
++
++
++def test_all_low_risk_names_one_database() -> None:
++    line = answer_trust_line("answer", [], _claims({"medgen": 4}))
++    assert line == "Based on 4 sources cited, all from MedGen"
++
++
++def test_all_low_risk_names_two_databases() -> None:
++    line = answer_trust_line("answer", [], _claims({"medgen": 3, "omim": 1}))
++    assert line == "Based on 4 sources cited from MedGen and OMIM"
++
++
++def test_one_source_reads_singular() -> None:
++    assert answer_trust_line("answer", [], _claims({"medgen": 1})) == (
++        "Based on 1 source cited, from MedGen"
++    )
++
++
++def test_high_risk_concordant_under_two_databases_has_no_clause() -> None:
++    trusts = _trust("high", "concordant", "answer")
++    line = answer_trust_line("answer", trusts, _claims({"clinvar": 2}))
++    assert line == "Based on 2 sources cited, all from ClinVar"
++
++
++def test_ask_one_database_has_no_clause() -> None:
++    line = answer_trust_line("ask", HIGH_INSUFFICIENT, _claims({"clinvar": 4}))
++    assert line == "Based on 4 sources cited, all from ClinVar"
++    one = answer_trust_line("ask", HIGH_INSUFFICIENT, _claims({"medgen": 1}))
++    assert one == "Based on 1 source cited, from MedGen"
++
++
++def test_ask_two_databases_with_a_high_risk_insufficient_claim_shows_the_clause() -> None:
++    line = answer_trust_line("ask", HIGH_INSUFFICIENT, _claims({"medgen": 9, "omim": 7}))
++    assert line == "Based on 16 sources cited from MedGen and OMIM" + _COMPARE
++
++
++def test_ask_two_databases_from_a_floor_only_has_no_clause() -> None:
++    # A floor sets `ask` through `trust_outcome` while every claim's own
++    # verdict is concordant (or there are no high-risk claims at all).
++    concordant = _trust("high", "concordant", "answer")
++    floored = answer_trust_line("ask", concordant, _claims({"medgen": 2, "omim": 1}))
++    assert floored == "Based on 3 sources cited from MedGen and OMIM"
++    no_claims = answer_trust_line("ask", [], _claims({"medgen": 2, "omim": 1}))
++    assert no_claims == "Based on 3 sources cited from MedGen and OMIM"
++
++
++def test_ask_two_databases_all_low_risk_has_no_clause() -> None:
++    # Low-risk claims are marked `insufficient` by design (trust.py).
++    line = answer_trust_line("ask", LOW, _claims({"medgen": 2, "omim": 1}))
++    assert _COMPARE not in line
++    assert line == "Based on 3 sources cited from MedGen and OMIM"
++
++
++def test_four_or_more_databases_name_the_three_most_cited() -> None:
++    spec = {"medgen": 5, "omim": 4, "clinvar": 3, "pubmed": 2, "gene": 1}
++    line = answer_trust_line("answer", [], _claims(spec))
++    assert line == "Based on 15 sources cited from MedGen, OMIM, ClinVar and 2 other databases"
++
++
++def test_four_databases_say_one_other_database() -> None:
++    spec = {"medgen": 5, "omim": 4, "clinvar": 3, "pubmed": 2}
++    line = answer_trust_line("answer", [], _claims(spec))
++    assert line == "Based on 14 sources cited from MedGen, OMIM, ClinVar and 1 other database"
++
++
++def test_four_databases_with_a_failed_comparison_keep_the_clause() -> None:
++    spec = {"medgen": 5, "omim": 4, "clinvar": 3, "pubmed": 2}
++    line = answer_trust_line("ask", HIGH_INSUFFICIENT, _claims(spec))
++    assert line.endswith("and 1 other database" + _COMPARE)
++
++
++def test_an_unknown_database_counts_as_other_and_is_never_printed() -> None:
++    line = answer_trust_line(
++        "answer", [], _claims({"medgen": 2, "https://evil.example.com/x/{n}": 1})
++    )
++    assert line == "Based on 3 sources cited from MedGen and 1 other database"
++    assert "evil" not in line
++
++
++def test_only_unknown_databases_are_not_named() -> None:
++    line = answer_trust_line("answer", [], _claims({"https://evil.example.com/x/{n}": 2}))
++    assert line == "Based on 2 sources cited, from 1 other database"
++
++
++# ---------------------------------------------------------------- properties
++
++
++@cache
++def _all_lines() -> tuple[str, ...]:
++    lines: list[str] = []
++    keys = list(_PAGES) + ["https://unknown.example.org/{n}"]
++    states = [
++        ("answer", []),
++        ("answer", _trust("high", "concordant", "answer")),
++        ("ask", HIGH_INSUFFICIENT),
++        ("ask", LOW),
++        ("ask", []),
++        ("flag", _trust("high", "discordant", "flag")),
++    ]
++    for size in range(1, len(keys) + 1):
++        for combo in combinations(keys, size):
++            for pages in (1, 123):
++                spec = {key: pages for key in combo}
++                for outcome, trusts in states:
++                    line = answer_trust_line(outcome, trusts, _claims(spec))  # type: ignore[arg-type]
++                    assert line is not None
++                    lines.append(line)
++    return tuple(lines)
++
++
++def test_every_line_stays_within_the_done_payload_cap() -> None:
++    lines = _all_lines()
++    assert len(lines) > 1000, "populate-check: the sweep must cover many combinations"
++    assert max(map(len, lines)) <= _CAP
++
++
++def test_only_the_confirmed_branch_starts_with_confirmed() -> None:
++    # `_all_lines` never reaches the confirmed branch (it needs concordant
++    # records from two databases, covered above), so none may start with it.
++    for line in _all_lines():
++        assert not line.startswith("Confirmed")
++        if not line.startswith(("Based on ", "Sources disagree")):
++            pytest.fail(line)
++
++
++def test_no_branch_says_not_yet_confirmed_or_which_differ() -> None:
++    for line in _all_lines():
++        lowered = line.lower()
++        assert "not yet confirmed" not in lowered
++        assert "which differ" not in lowered
++
++
++def test_the_clause_needs_ask_a_high_risk_insufficient_claim_and_two_databases() -> None:
++    for line in _all_lines():
++        if _COMPARE in line:
++            assert line.startswith("Based on ")
++            assert " from " in line and " all from " not in line
++
++
++# ---------------------------------------------------------------- the sweep
++
++#: Written out by hand, independent of the module table: each `record_database`
++#: key, a real page that yields it, and the proper name a reader should see.
++_EXPECTED = {
++    "ncbi.nlm.nih.gov/assembly": ("https://www.ncbi.nlm.nih.gov/assembly/GCF_1", "Assembly"),
++    "ncbi.nlm.nih.gov/bioproject": ("https://www.ncbi.nlm.nih.gov/bioproject/1", "BioProject"),
++    "ncbi.nlm.nih.gov/biosample": ("https://www.ncbi.nlm.nih.gov/biosample/1", "BioSample"),
++    "ncbi.nlm.nih.gov/clinvar": ("https://www.ncbi.nlm.nih.gov/clinvar/variation/1", "ClinVar"),
++    "ncbi.nlm.nih.gov/datasets": ("https://www.ncbi.nlm.nih.gov/datasets/gene/1", "NCBI Datasets"),
++    "ncbi.nlm.nih.gov/dbvar": ("https://www.ncbi.nlm.nih.gov/dbvar/variants/1", "dbVar"),
++    "ncbi.nlm.nih.gov/gds": ("https://www.ncbi.nlm.nih.gov/gds/1", "GEO DataSets"),
++    "ncbi.nlm.nih.gov/gene": ("https://www.ncbi.nlm.nih.gov/gene/672", "NCBI Gene"),
++    "ncbi.nlm.nih.gov/gtr": ("https://www.ncbi.nlm.nih.gov/gtr/tests/1", "GTR"),
++    "ncbi.nlm.nih.gov/medgen": ("https://www.ncbi.nlm.nih.gov/medgen/C1", "MedGen"),
++    "ncbi.nlm.nih.gov/mesh": ("https://www.ncbi.nlm.nih.gov/mesh/1", "MeSH"),
++    "ncbi.nlm.nih.gov/nuccore": ("https://www.ncbi.nlm.nih.gov/nuccore/1", "Nucleotide"),
++    "ncbi.nlm.nih.gov/pathogens": ("https://www.ncbi.nlm.nih.gov/pathogens/isolates/1", "Pathogen Detection"),
++    "ncbi.nlm.nih.gov/pmc": ("https://pmc.ncbi.nlm.nih.gov/articles/PMC1/", "PMC"),
++    "ncbi.nlm.nih.gov/pubchem": ("https://pubchem.ncbi.nlm.nih.gov/compound/1", "PubChem"),
++    "ncbi.nlm.nih.gov/pubmed": ("https://pubmed.ncbi.nlm.nih.gov/12345/", "PubMed"),
++    "ncbi.nlm.nih.gov/research/litvar2": ("https://www.ncbi.nlm.nih.gov/research/litvar2/1", "LitVar2"),
++    "ncbi.nlm.nih.gov/research/pubtator3": ("https://www.ncbi.nlm.nih.gov/research/pubtator3/publication/1", "PubTator3"),
++    "ncbi.nlm.nih.gov/snp": ("https://www.ncbi.nlm.nih.gov/snp/rs1", "dbSNP"),
++    "ncbi.nlm.nih.gov/sra": ("https://www.ncbi.nlm.nih.gov/sra/1", "SRA"),
++    "ncbi.nlm.nih.gov/taxonomy": ("https://www.ncbi.nlm.nih.gov/taxonomy/1", "Taxonomy"),
++    "omim.org": ("https://www.omim.org/entry/113705", "OMIM"),
++    "clinicaltrials.gov": ("https://clinicaltrials.gov/study/NCT1", "ClinicalTrials.gov"),
++}
++_CURIE_EXPECTED = {
++    "clinvar": "ClinVar",
++    "medgen": "MedGen",
++    "mesh": "MeSH",
++    "ncbigene": "NCBI Gene",
++    "omim": "OMIM",
++    "pubmed": "PubMed",
++    "dbsnp": "dbSNP",
++}
++
++
++def _one(url: str, curie: str = "") -> SynthFinding:
++    return SynthFinding(
++        ref_index=1,
++        citation_id="c-1",
++        layer="layer_1_graph",
++        tool="cypher_query",
++        field="name",
++        field_value="x",
++        source_url=url,
++        entity_type="Disease",
++        curie=curie,
++    )
++
++
++def test_the_expected_mapping_covers_every_table_key() -> None:
++    page_keys = {key for key in _DATABASE_NAMES if "." in key}
++    assert set(_EXPECTED) == page_keys
++    assert set(_CURIE_EXPECTED) == set(_DATABASE_NAMES) - page_keys
++
++
++@pytest.mark.parametrize(("key", "case"), sorted(_EXPECTED.items()))
++def test_every_page_database_maps_to_a_proper_name(key: str, case: tuple[str, str]) -> None:
++    url, name = case
++    assert record_database(_one(url)) == key
++    line = answer_trust_line("answer", [], [GroundedClaim("x", _one(url))])
++    assert line == f"Based on 1 source cited, from {name}"
++
++
++@pytest.mark.parametrize(("prefix", "name"), sorted(_CURIE_EXPECTED.items()))
++def test_every_curie_fallback_maps_to_a_proper_name(prefix: str, name: str) -> None:
++    finding = _one("", curie=f"{prefix.upper()}:1")
++    assert record_database(finding) == prefix
++    line = answer_trust_line("answer", [], [GroundedClaim("x", finding)])
++    assert line == f"Based on 1 source cited, from {name}"
++
++
++def test_display_names_are_proper_names_not_hosts() -> None:
++    for name in _DATABASE_NAMES.values():
++        assert name and "/" not in name and not name.startswith("www.")
++
++
++def test_a_graph_row_and_a_live_fetch_of_one_database_name_it_once() -> None:
++    claims = [
++        GroundedClaim("a", _one("https://www.ncbi.nlm.nih.gov/clinvar/variation/1")),
++        GroundedClaim(
++            "b",
++            SynthFinding(
++                ref_index=2,
++                citation_id="c-2",
++                layer="layer_2_api",
++                tool="ncbi_efetch",
++                field="name",
++                field_value="y",
++                source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/2",
++                entity_type="Variant",
++                curie="",
++            ),
++        ),
++    ]
++    assert answer_trust_line("ask", HIGH_INSUFFICIENT, claims) == (
++        "Based on 2 sources cited, all from ClinVar"
++    )
+diff --git a/tests/system_03_search_agent/synthesis/test_trust_line_names_its_count.py b/tests/system_03_search_agent/synthesis/test_trust_line_names_its_count.py
+index e429beaf..5f0498e5 100644
+--- a/tests/system_03_search_agent/synthesis/test_trust_line_names_its_count.py
++++ b/tests/system_03_search_agent/synthesis/test_trust_line_names_its_count.py
+@@ -84,7 +84,7 @@ def test_a_trailing_slash_is_the_same_source() -> None:
+     """The measured duplicate: the graph's gene link and the live Datasets
+     gene link name one page. Mutation: drop `.rstrip("/")` and this reads 2."""
+     line = answer_trust_line("answer", [], _claims(_finding(1, _GENE), _finding(2, _GENE + "/")))
+-    assert line == "Based on 1 source cited"
++    assert line == "Based on 1 source cited, from NCBI Gene"
+ 
+ 
+ def test_a_query_string_is_not_guessed_away() -> None:
+@@ -94,21 +94,21 @@ def test_a_query_string_is_not_guessed_away() -> None:
+     line = answer_trust_line(
+         "answer", [], _claims(_finding(1, base + "?query=BRCA1"), _finding(2, base + "?query=TP53"))
+     )
+-    assert line == "Based on 2 sources cited"
++    assert line == "Based on 2 sources cited, from 1 other database"
+ 
+ 
+ def test_a_record_without_a_link_is_never_merged() -> None:
+     line = answer_trust_line("answer", [], _claims(_finding(1, ""), _finding(2, "")))
+-    assert line == "Based on 2 sources cited"
++    assert line == "Based on 2 sources cited, all from MedGen"
+ 
+ 
+ @pytest.mark.parametrize(
+     ("outcome", "count", "expected"),
+     [
+-        ("answer", 1, "Based on 1 source cited"),
+-        ("answer", 2, "Based on 2 sources cited"),
+-        ("ask", 1, "Based on 1 source cited, not yet confirmed"),
+-        ("ask", 3, "Based on 3 sources cited, not yet confirmed"),
++        ("answer", 1, "Based on 1 source cited, from MedGen"),
++        ("answer", 2, "Based on 2 sources cited, all from MedGen"),
++        ("ask", 1, "Based on 1 source cited, from MedGen"),
++        ("ask", 3, "Based on 3 sources cited, all from MedGen"),
+     ],
+ )
+ def test_based_on_says_sources_cited(outcome: str, count: int, expected: str) -> None:
+@@ -256,7 +256,7 @@ def test_a_graph_row_and_a_live_fetch_of_one_record_confirm_nothing() -> None:
+         "populate-check: the per-claim verdict still compares tools; if this "
+         "changes, the case below no longer reaches the line"
+     )
+-    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, not yet confirmed"
++    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, from ClinVar"
+ 
+ 
+ def test_the_graph_gene_page_and_the_live_gene_page_are_one_database() -> None:
+@@ -265,7 +265,7 @@ def test_the_graph_gene_page_and_the_live_gene_page_are_one_database() -> None:
+     graph = _fact(1, _GENE, curie="NCBIGene:672")
+     live = _fact(2, _GENE + "/", tool="ncbi_datasets", layer="layer_2_api")
+     line = answer_trust_line("answer", _confirmed("c-1"), _claims(graph, live))
+-    assert line == "Based on 1 source cited, not yet confirmed"
++    assert line == "Based on 1 source cited, from NCBI Gene"
+ 
+ 
+ def test_agreement_is_read_from_the_cited_records_only() -> None:
+@@ -287,7 +287,7 @@ def test_agreement_is_read_from_the_cited_records_only() -> None:
+     trusts = trust_for_claims(_claims(cited), [cited, *uncited])
+     assert [t.triangulation for t in trusts] == ["concordant"], "populate-check"
+     assert answer_trust_line("answer", trusts, _claims(cited)) == (
+-        "Based on 1 source cited, not yet confirmed"
++        "Based on 1 source cited, from ClinVar"
+     )
+ 
+ 
+@@ -300,7 +300,7 @@ def test_one_record_fetched_twice_beside_an_uncited_corroborator_confirms_nothin
+     litvar = _fact(3, _SNP, tool="litvar2_lookup", layer="layer_3_enrichment")
+     claims = _claims(graph, live)
+     trusts = trust_for_claims(claims, [graph, live, litvar])
+-    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, not yet confirmed"
++    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, from ClinVar"
+ 
+ 
+ def test_n_never_exceeds_the_databases_in_the_sources_list() -> None:
+@@ -318,7 +318,7 @@ def test_a_record_stating_a_different_value_does_not_count_as_agreeing() -> None
+     cited = _fact(1, _CLINVAR, curie="ClinVar:17661")
+     other = _fact(2, _SNP, tool="ncbi_dbsnp", value="Benign")
+     line = answer_trust_line("answer", _confirmed("c-1"), _claims(cited, other))
+-    assert line == "Based on 2 sources cited, not yet confirmed"
++    assert line == "Based on 2 sources cited from ClinVar and dbSNP"
+ 
+ 
+ def test_with_several_confirmed_facts_n_is_what_every_one_of_them_has() -> None:
+@@ -588,4 +588,5 @@ def test_evidence_trust_line_agrees_with_the_screen() -> None:
+     `AnswerScreen.card22.test.tsx`, reads this fixture too)."""
+     after = _DATA["expected_after"]
+     assert answer_trust_line("ask", _HIGH_ASK, _evidence_claims()) == after["trust_line"]
+-    assert after["trust_line"] == f"Based on {after['sources_cited']} sources cited, not yet confirmed"
++    assert after["trust_line"].startswith(f"Based on {after['sources_cited']} sources cited from ")
++    assert "not yet confirmed" not in after["trust_line"]

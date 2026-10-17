@@ -1,0 +1,98 @@
+Which BRCA1 variants are pathogenic?
+New search
+
+? Answered14.8s · 13 tool calls · 57 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Found 40 sequence variant records for BRCA1, of 15350 available.⁠1–20
+
+SEQUENCE VARIANT RECORDS FOUND
+NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)⁠1
+ClinVar:1000183
+NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)⁠2
+ClinVar:1000551
+NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)⁠3
+ClinVar:1001081
+NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)⁠4
+ClinVar:1002154
+NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)⁠5
+ClinVar:1002750
+NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)⁠6
+ClinVar:1003072
+NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)⁠7
+ClinVar:1003150
+NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)⁠8
+ClinVar:1004428
+NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)⁠9
+ClinVar:1004775
+NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val)⁠10
+ClinVar:1004786
+Showing 1–10 of 40
+‹ Previous
+Page 1 of 4
+Next ›
+GENE RECORDS FOUND
+BRCA1⁠41, 45
+NCBIGene:672
+PUBMED RECORDS FOUND
+BRCA1-BARD1 regulates transcription through BRD4 in Xenopus nucleoplasmic extract.⁠42
+PMID:33660782
+BRCA1: An Endocrine and Metabolic Regulator.⁠47
+PMID:35432218
+Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.⁠50
+PMID:36914836
+Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection.⁠53
+PMID:39261728
+Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors.⁠56
+PMID:39265497
+CLINVAR RECORDS FOUND
+NM_007294.4(BRCA1):c.5243_5277+2788del⁠43
+VCV000267740
+NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG⁠48
+VCV000267741
+NG_005905.2:g.(147057_150288)_(160933_166866)del⁠51
+VCV000373892
+GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3⁠54
+VCV004823850
+NM_007294.4(BRCA1):c.2145C>G (p.Thr715=)⁠57
+VCV004848411
+OMIM RECORDS FOUND
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠44
+omim 113705
+CLINICAL TRIAL RECORDS FOUND
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠46
+NCT00590109
+COMPLETED
+BRCA1 Haploinsufficiency and Gene Expression⁠49
+NCT00597987
+COMPLETED
+Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma⁠52
+NCT00617656
+TERMINATED
+Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation⁠55
+NCT00673335
+COMPLETED
+Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations⁠58
+NCT00700778
+TERMINATED
+NOTES
+ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification.
+Note: this answer was truncated because only 140 of the 15350 records that matched this question in the graph were retrieved
+Note: no written summary could be checked against the records, so the records found are listed below with their sources
+▶
+SOURCES
+57
+Based on 57 sources cited, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

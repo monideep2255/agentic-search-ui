@@ -1,0 +1,122 @@
+diff --git a/src/system_03_search_agent/core/graph.py b/src/system_03_search_agent/core/graph.py
+index 5b9ebe88..fe1749c0 100644
+--- a/src/system_03_search_agent/core/graph.py
++++ b/src/system_03_search_agent/core/graph.py
+@@ -13197,8 +13197,15 @@ def _answer_parts(
+                 if marker not in ids:
+                     ids.append(marker)
+             text = first.token.text + (sentence if sentence.endswith(" ") else sentence + " ")
+-            if len(ids) > 20 or len(text) > 1000:
++            if len(ids) > 20:
+                 continue
++            if len(text) > 1000:
++                # A repeat that adds no citation folds in without its
++                # sentence, so a long abstract is one row, not several. A
++                # repeat that brings a new citation stays its own row.
++                if len(ids) > len(first.token.marker_ids):
++                    continue
++                text = first.token.text
+             first.token.marker_ids = in_citation_order(ids)
+             first.token.text = text
+             first.token.cells = merged
+diff --git a/tests/system_03_search_agent/core/test_write_answer_structure.py b/tests/system_03_search_agent/core/test_write_answer_structure.py
+index e20b9be7..9e48e647 100644
+--- a/tests/system_03_search_agent/core/test_write_answer_structure.py
++++ b/tests/system_03_search_agent/core/test_write_answer_structure.py
+@@ -1958,3 +1958,96 @@ async def test_the_stated_numbers_stay_as_on_develop(monkeypatch, depth: str) ->
+     for name, rows in (("case_a", case_a), ("case_b", case_b)):
+         result = await _gene_answer(monkeypatch, depth, rows)
+         assert _numbers(result, _tokens(result)) == _DEVELOP_NUMBERS[(name, depth)], name
++
++
++def _pubmed_row_tokens(depth: str, sentences: tuple[str, ...], markers: tuple[str, ...]):
++    """Listing tokens for PubMed records `pm-1` (and `pm-2` when cited), one
++    sentence per fallback entry."""
++    from system_03_search_agent.contracts.events import CitationPayload
++    from system_03_search_agent.synthesis.findings import SynthFinding
++
++    findings = []
++    citations = []
++    for index, marker in enumerate(dict.fromkeys(markers), start=1):
++        pmid = f"1234567{index}"
++        url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
++        findings.append(
++            SynthFinding(
++                ref_index=index,
++                citation_id=marker,
++                layer="layer_2_api",
++                tool="ncbi_efetch",
++                field="title",
++                field_value=f"A paper about caffeine number {index}",
++                source_url=url,
++                entity_type="pubmed",
++            )
++        )
++        citations.append(
++            CitationPayload(
++                citation_id=marker,
++                display_index=index,
++                source="pubmed",
++                source_id=pmid,
++                source_url=url,
++                layer="layer_2_api",
++                field="title",
++                claim_text="A paper about caffeine",
++                evidence_kind="primary_assertion",
++                assertion_confidence="asserted",
++                license="public_domain_us_gov",
++            )
++        )
++    tokens = graph_module._answer_tokens(
++        audience_depth=depth,
++        question="q",
++        model_grounding=None,
++        model_layout=None,  # type: ignore[arg-type]
++        fallback_sentences=sentences,
++        tail_sentences=(),
++        tail_is_listing=False,
++        citations=citations,
++        synth_findings=findings,
++        findings=[],
++        mentions=[],
++        notes=[],
++    )
++    return [t for t in tokens if t.kind in ("table_row", "list_item")]
++
++
++def _long_sentence(letter: str, marker: str) -> str:
++    return (letter * 430) + f" [{marker[-1]}]. "
++
++
++def test_long_abstract_sentences_of_one_record_are_one_row() -> None:
++    """Three sentences of about 436 characters cite one paper. Their joined text
++    passes the answer token's 1000-character cap, yet the paper is one row, with
++    its first sentences, its cells and its citation marker."""
++    sentences = tuple(_long_sentence(letter, "pm-1") for letter in "abc")
++    for depth in ("researcher", "plain_language"):
++        rows = _pubmed_row_tokens(depth, sentences, ("pm-1",) * 3)
++        assert len(rows) == 1, (depth, [len(t.text) for t in rows])
++        row = rows[0]
++        assert len(row.text) <= 1000
++        assert row.text.startswith("a" * 430)
++        assert "b" * 430 in row.text and "c" * 430 not in row.text
++        assert row.marker_ids == ["pm-1"]
++        assert row.cells
++
++
++def test_short_repeat_of_one_record_still_appends_its_sentence() -> None:
++    sentences = tuple(f"{letter * 30} [1]. " for letter in "abc")
++    for depth in ("researcher", "plain_language"):
++        rows = _pubmed_row_tokens(depth, sentences, ("pm-1",) * 3)
++        assert len(rows) == 1
++        assert rows[0].text == "".join(sentences)
++        assert rows[0].marker_ids == ["pm-1"]
++
++
++def test_long_repeat_with_a_new_citation_stays_its_own_row() -> None:
++    sentences = (_long_sentence("a", "pm-1"), _long_sentence("b", "pm-1").replace("[1]", "[2]"))
++    for depth in ("researcher", "plain_language"):
++        rows = _pubmed_row_tokens(depth, sentences, ("pm-1", "pm-2"))
++        assert len(rows) == 2, (depth, [t.marker_ids for t in rows])
++        assert {m for t in rows for m in t.marker_ids} == {"pm-1", "pm-2"}
++        assert all(len(t.text) <= 1000 for t in rows)

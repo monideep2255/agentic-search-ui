@@ -1,0 +1,47 @@
+Which clinically significant variants have been reported in CFTR?
+New search
+
+? Answered14.1s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 54 genetic variants related to CFTR, out of 6047 available.⁠1–20
+
+WHERE THIS ANSWER COMES FROM
+NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr)⁠1
+NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala)⁠2
+NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser)⁠3
+NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu)⁠4
+NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala)⁠5
+NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn)⁠6
+NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys)⁠7
+NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro)⁠8
+NM_000492.4(CFTR):c.3064G>A (p.Val1022Met)⁠9
+NM_000492.4(CFTR):c.744-9G>T⁠10
+Showing 1–10 of 71
+‹ Previous
+Page 1 of 8
+Next ›
+NOTES
+ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification.
+Note: this answer was truncated because only 117 of the 6047 records that matched this question in the graph were retrieved
+Note: no written summary could be checked against the records, so the records found are listed below with their sources
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+71
+Based on 71 sources cited, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
