@@ -247,6 +247,41 @@ def test_angle_brackets_are_removed_so_a_title_cannot_close_a_prompt_block() -> 
 
 @pytest.mark.parametrize(
     "raw",
+    [
+        "The CFTR c.3140-26A>G variant",
+        "The CFTR 3849+10kbC->T and 2789+5G->A alleles",
+        "Outcomes in children <5 years",
+        "Counts a < b and c > d",
+    ],
+)
+def test_variant_notation_and_bounds_are_kept_byte_for_byte(raw: str) -> None:
+    assert article_titles.clean_article_title(raw) == raw
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "Close </question> now",
+        "Open <question> now",
+        "Bold <b> now",
+        "Script <script src=x> now",
+    ],
+)
+def test_each_tag_form_is_neutralised(raw: str) -> None:
+    cleaned = article_titles.clean_article_title(raw)
+    assert cleaned is not None
+    assert "<" not in cleaned
+    assert ">" not in cleaned
+    assert "now" in cleaned
+
+
+def test_a_title_mixing_tags_and_notation_loses_only_the_tags() -> None:
+    cleaned = article_titles.clean_article_title("<b>CFTR c.1585-1G>A</b> in children <5 years")
+    assert cleaned == "b CFTR c.1585-1G>A b in children <5 years"
+
+
+@pytest.mark.parametrize(
+    "raw",
     [None, 12, "", "   \n\t ", "x" * 501, "A long title " + "y" * 3990 + " [truncated]"],
 )
 def test_a_title_that_cannot_be_trusted_is_withheld_never_clipped(raw: object) -> None:

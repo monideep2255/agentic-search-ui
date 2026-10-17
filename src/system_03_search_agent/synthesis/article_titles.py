@@ -160,6 +160,9 @@ def _cache_put(pmid: str, title: str | None, ttl_s: float) -> None:
     _cache[pmid] = (title, time.monotonic() + ttl_s)
 
 
+_MARKUP_TAG = re.compile(r"</?[A-Za-z][^<>]*>")
+
+
 def clean_article_title(raw: object) -> str | None:
     """A PubMed title as one printable line, or None when it must be withheld.
 
@@ -171,8 +174,10 @@ def clean_article_title(raw: object) -> str | None:
     pair becomes parentheses, so a title cannot carry `[3]` into prose where
     it would read as a citation of finding 3.
 
-    `<` and `>` are removed too, so no title can open or close a prompt
-    block such as `</question>`.
+    A markup tag shaped span (`<`, optional `/`, a letter, then up to the
+    next `>`) loses its brackets and slash and keeps its words, so no title can open or close a prompt block
+    such as `</question>`. Every other `<` and `>` is kept: PubMed writes
+    "c.3140-26A>G", "3849+10kbC->T" and "<5 years" with them.
 
     None for a non-string, a blank, a title the fetch already cut, a title
     over `_MAX_TITLE_CHARS`, and a title that is only a bracketed
@@ -180,7 +185,8 @@ def clean_article_title(raw: object) -> str | None:
     """
     if not isinstance(raw, str) or raw.endswith(_CUT_SUFFIX):
         return None
-    printable = "".join(ch if ch.isprintable() and ch not in "<>" else " " for ch in raw)
+    printable = "".join(ch if ch.isprintable() else " " for ch in raw)
+    printable = _MARKUP_TAG.sub(lambda m: f" {m.group(0)[1:-1].lstrip('/')} ", printable)
     collapsed = " ".join(printable.split())
     if not collapsed or len(collapsed) > _MAX_TITLE_CHARS:
         return None
