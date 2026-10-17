@@ -1,0 +1,161 @@
+diff --git a/src/system_03_search_agent/synthesis/trust.py b/src/system_03_search_agent/synthesis/trust.py
+index 28c9ff78..59f86236 100644
+--- a/src/system_03_search_agent/synthesis/trust.py
++++ b/src/system_03_search_agent/synthesis/trust.py
+@@ -698,7 +698,9 @@ def answer_trust_line(
+     function decides nothing new about trust, it only says it once.
+ 
+     - `refuse`, or nothing grounded: None. A refusal has its own block.
+-    - `flag`: the sources disagree, which outranks any count.
++    - `flag`, or any cited high-risk claim that is discordant (card 126, even
++      when a floor made the outcome `ask`): the sources disagree, which
++      outranks any count.
+     - `answer` with at least one high-risk claim, every high-risk claim
+       concordant, and every one of them backed by two or more databases:
+       "Confirmed by N independent databases". This is the only line that
+@@ -777,9 +779,18 @@ def answer_trust_line(
+         }
+     )
+     noun = "source" if citation_count == 1 else "sources"
+-    if trust_outcome == "flag":
+-        return "Sources disagree on at least one claim"
+     high = [trust for trust in claim_trusts if trust.risk_tier == "high"]
++    # Card 126 (owner, 2026-10-17): a discordant high-risk claim says so even
++    # when a floor (a fallback, a failed search, omitted records, card 30's
++    # classification floor) lifted the aggregate to `ask`, which `_SEVERITY`
++    # ranks above `flag`. Only the words change; the outcome stays `ask`.
++    # Cited claims only: the trusts must belong to a claim in this answer.
++    cited_ids = {claim.finding.citation_id for claim in claims}
++    if trust_outcome == "flag" or any(
++        trust.triangulation == "discordant" and trust.citation_id in cited_ids
++        for trust in high
++    ):
++        return "Sources disagree on at least one claim"
+     if trust_outcome == "answer" and high and all(
+         trust.triangulation == "concordant" for trust in high
+     ):
+diff --git a/testing/Developer/reports/2026-10-17_card126/build.md b/testing/Developer/reports/2026-10-17_card126/build.md
+new file mode 100644
+index 00000000..4ff664df
+--- /dev/null
++++ b/testing/Developer/reports/2026-10-17_card126/build.md
+@@ -0,0 +1,30 @@
++# Card 126 build: the disagree line under an ask floor
++
++## The change
++
++- File: `src/system_03_search_agent/synthesis/trust.py`, function `answer_trust_line`.
++- The line is now "Sources disagree on at least one claim" when the outcome is `flag`, or when any high-risk claim has `triangulation == "discordant"` and belongs to a cited claim of the answer. Refuse (or no claims) still returns None first.
++- `_SEVERITY` and the aggregate outcome are untouched; the answer stays "ask".
++- Cited only: a trust counts only if its `citation_id` is the id of a claim in `claims`, the same list the function already reads.
++- The docstring bullet for `flag` now names the new case.
++
++## Places checked, none needed a change
++
++- `frontend/src/components/screens/AnswerScreen.tsx` `TRUST_LINE_EXPLAINER`: describes "Sources cited", "Confirmed" and "Based on" lines and never mentions the disagree line, so it stays true.
++- `src/system_03_search_agent/adapters/cli/render.py`: `_trust_line_text` prints the server's `done.trust_line` as sent; it does not key off the text.
++- Reopened-answer path (`feedback/history.py`, `SavedAnswerScreen.tsx`, `data/models.py` line 236): the stored line is the one the server sent; the comment's example "Sources disagree on at least one claim" remains true. Nothing re-derives the line.
++- `core/graph.py`, `adapters/web_sse/app.py`, `graphql`, `mcp`: pass the string through.
++
++## Tests
++
++New file `tests/system_03_search_agent/synthesis/test_trust_line_discordant_under_ask.py` (8 cases): case H shape; plain flag; low-risk discordant under ask keeps "Based on"; uncited discordant keeps "Based on"; insufficient keeps "; their values could not be compared"; floor-only ask keeps "Based on"; concordant keeps "Confirmed by 2 independent databases"; refuse gives None.
++
++Run with the existing `test_trust_line_names_its_count.py`: `60 passed`. `ruff check` and `isort --check-only` clean on both touched Python files.
++
++## Mutations (one property each, restored after)
++
++- Drop the discordant check: `1 failed, 59 passed`, case H red.
++- Check all claims instead of high-risk ones: `1 failed, 59 passed`, the low-risk case red.
++- Let refuse through: `1 failed, 59 passed`, the refuse case red.
++
++The frontend was not touched, so no frontend tests were run.
+diff --git a/tests/system_03_search_agent/synthesis/test_trust_line_discordant_under_ask.py b/tests/system_03_search_agent/synthesis/test_trust_line_discordant_under_ask.py
+new file mode 100644
+index 00000000..74f4d0fc
+--- /dev/null
++++ b/tests/system_03_search_agent/synthesis/test_trust_line_discordant_under_ask.py
+@@ -0,0 +1,83 @@
++"""Card 126 (owner, 2026-10-17): the trust line says when sources disagree.
++
++A floor can lift the aggregate outcome to `ask`, which outranks `flag`. The
++line used to say "Based on 2 sources cited ..." then, under two records that
++contradict each other. The outcome stays `ask`; only the words change.
++"""
++
++from __future__ import annotations
++
++from system_03_search_agent.synthesis.findings import SynthFinding
++from system_03_search_agent.synthesis.grounding import GroundedClaim
++from system_03_search_agent.synthesis.trust import ClaimTrust, answer_trust_line
++
++_DISAGREE = "Sources disagree on at least one claim"
++
++
++def _finding(index: int, url: str, value: str) -> SynthFinding:
++    return SynthFinding(
++        ref_index=index,
++        citation_id=f"c-{index}",
++        layer="layer_1_graph",
++        tool="cypher_query",
++        field="clinical_significance",
++        field_value=value,
++        source_url=url,
++        entity_type="Variant",
++        curie="",
++    )
++
++
++def _two_databases(second: str = "Benign") -> list[GroundedClaim]:
++    findings = [
++        _finding(1, "https://www.ncbi.nlm.nih.gov/clinvar/variation/17661", "Pathogenic"),
++        _finding(2, "https://www.ncbi.nlm.nih.gov/snp/rs80357713", second),
++    ]
++    return [GroundedClaim(claim_text=f.field_value, finding=f) for f in findings]
++
++
++def test_discordant_high_risk_claim_under_an_ask_floor_says_sources_disagree() -> None:
++    trusts = [ClaimTrust("c-1", "high", True, "discordant", "flag")]
++    assert answer_trust_line("ask", trusts, _two_databases()) == _DISAGREE
++
++
++def test_plain_flag_is_unchanged() -> None:
++    trusts = [ClaimTrust("c-1", "high", True, "discordant", "flag")]
++    assert answer_trust_line("flag", trusts, _two_databases()) == _DISAGREE
++
++
++def test_discordant_low_risk_claim_does_not_trigger_the_warning() -> None:
++    trusts = [ClaimTrust("c-1", "low", True, "discordant", "ask")]
++    assert answer_trust_line("ask", trusts, _two_databases()) == (
++        "Based on 2 sources cited from ClinVar and dbSNP"
++    )
++
++
++def test_discordant_claim_that_is_not_cited_does_not_trigger_the_warning() -> None:
++    trusts = [ClaimTrust("c-99", "high", True, "discordant", "ask")]
++    assert answer_trust_line("ask", trusts, _two_databases()).startswith("Based on 2 sources")
++
++
++def test_insufficient_high_risk_keeps_the_could_not_be_compared_clause() -> None:
++    trusts = [ClaimTrust("c-1", "high", True, "insufficient", "ask")]
++    assert answer_trust_line("ask", trusts, _two_databases()) == (
++        "Based on 2 sources cited from ClinVar and dbSNP; their values could not be compared"
++    )
++
++
++def test_floor_only_ask_keeps_based_on() -> None:
++    trusts = [ClaimTrust("c-1", "high", True, "concordant", "ask")]
++    assert answer_trust_line("ask", trusts, _two_databases()) == (
++        "Based on 2 sources cited from ClinVar and dbSNP"
++    )
++
++
++def test_concordant_answer_keeps_confirmed() -> None:
++    claims = _two_databases("Pathogenic")
++    trusts = [ClaimTrust("c-1", "high", True, "concordant", "answer")]
++    assert answer_trust_line("answer", trusts, claims) == "Confirmed by 2 independent databases"
++
++
++def test_refuse_gives_none_even_with_a_discordant_claim() -> None:
++    trusts = [ClaimTrust("c-1", "high", True, "discordant", "flag")]
++    assert answer_trust_line("refuse", trusts, _two_databases()) is None

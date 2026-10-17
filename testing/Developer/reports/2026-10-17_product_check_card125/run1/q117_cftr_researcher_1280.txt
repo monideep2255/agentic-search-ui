@@ -1,0 +1,70 @@
+Which papers in the graph mention the CFTR gene, and what do they cover?
+New search
+
+✓ Answered20.3s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Found 54 article records for CFTR, of 1962 available.⁠1–20
+
+ARTICLE RECORDS FOUND
+PAPER	IDENTIFIER	
+The Hdj-2/Hsc70 chaperone pair facilitates early steps in CFTR biogenesis.	PMID:10075921	⁠1
+Identification of a D579G homozygote cystic fibrosis patient with pancreatic sufficiency and minor lung involvement. Mutations in brief no. 221. Online.	PMID:10094564	⁠2
+Genetic findings in congenital bilateral aplasia of vas deferens patients and identification of six novel mutatations. Mutations in brief no. 138. Online.	PMID:10200050	⁠3
+Analysis of a DNase I hypersensitive site located -20.9 kb upstream of the CFTR gene.	PMID:10561583	⁠4
+Differential function of the two nucleotide binding domains on cystic fibrosis transmembrane conductance regulator.	PMID:10581360	⁠5
+A novel missense mutation D513G in exon 10 of the cystic fibrosis transmembrane conductance regulator (CFTR) gene identified in a French CBAVD patient. Mutations in brief no. 175. Online.	PMID:10651488	⁠6
+Sodium 4-phenylbutyrate downregulates Hsc70: implications for intracellular trafficking of DeltaF508-CFTR.	PMID:10666020	⁠7
+Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element.	PMID:10766763	⁠8
+Protein kinase A associates with cystic fibrosis transmembrane conductance regulator via an interaction with ezrin.	PMID:10799517	⁠9
+The PDZ-interacting domain of cystic fibrosis transmembrane conductance regulator is required for functional expression in the apical plasma membrane.	PMID:10852925	⁠10
+Showing 1–10 of 54
+‹ Previous
+Page 1 of 6
+Next ›
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+CFTR	NCBIGene:1080	⁠55, 59
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Molecular Structure of the Human CFTR Ion Channel.	PMID:28340353	⁠56
+ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction.	PMID:36207272	⁠61
+ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria.	PMID:36220763	⁠64
+Molecular structures reveal synergistic rescue of Δ508 CFTR by Trikafta modulators.	PMID:36264792	⁠67
+In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis.	PMID:38388235	⁠70
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_000492.4(CFTR):c.1209+1988_1392+2067inv	VCV001705265	⁠57
+NM_000492.4(CFTR):c.1392+2072_1392+2074del	VCV001705266	⁠62
+NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA	VCV001705980	⁠65
+NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT	VCV001705981	⁠68
+NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del	VCV001706438	⁠71
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR; CFTR	omim 602421	⁠58
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+NPDT Evaluation in Children With CFTR and (PSC)	NCT00179439	COMPLETED	⁠60
+Study of VX-809 in Cystic Fibrosis Subjects With the ∆F508-CFTR Gene Mutation	NCT00865904	COMPLETED	⁠63
+Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects	NCT01078740	COMPLETED	⁠66
+Effects of Sildenafil on CFTR-dependent Ion Transport Activity	NCT01132482	COMPLETED	⁠69
+Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators	NCT01348204	COMPLETED	⁠72
+NOTES
+Note: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved
+▶
+SOURCES
+71
+Based on 71 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

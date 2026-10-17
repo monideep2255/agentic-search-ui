@@ -68,7 +68,7 @@ Last updated: 2026-10-17.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-10-17 that begins "Card 30 step 2b's pull request #269 is closed under the owner's call", the last row at the checkpoint closing the night of 2026-10-16 to 17. None of the rows read since the afternoon checkpoint changes a registered document's shape: they record the night's rules, its card decisions, merges and closures, and one reading of the failure rule, none of which adds, removes or renames a registered section.
+Guarded through the DECISIONS.md row dated 2026-10-17 that begins "Card 56 slice 1 is closed, never pushed, and card 56 goes back to To do", the last row at the checkpoint closing the day session of 2026-10-17. None of the rows read since the morning checkpoint changes a registered document's shape: they record the owner's calls on cards 8, 38 C, 56, 125 and 126, two live-spend limits, card 125's three attempts and merge, and card 56's design and closed first slice, none of which adds, removes or renames a registered section.
 
 ## Why the registry lives here
 

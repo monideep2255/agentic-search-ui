@@ -57,6 +57,13 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
 
+### 17 October
+
+NEW ON 17 OCTOBER, on the practice site, after two first tries were taken back, read by fresh reviewers and tried on the site at desktop and phone width:
+
+- A paper's title or summary can no longer pretend to be part of the instructions the answer writer follows. Text inside a paper that looks like the system's own markup is treated as ordinary text from the paper.
+- Records now read exactly as the paper writes them. Before, some titles and text with angle brackets were changed, so "p<0.001" could read "p0.001".
+
 ### The night of 16 to 17 October
 
 NEW OVERNIGHT, 16 TO 17 OCTOBER, on the practice site, each change read by fresh reviewers before it went in, and tried on the site itself at desktop and phone width:
@@ -337,6 +344,18 @@ All six live-government-API connections the plan called for are now built. That 
 - Give it a stretch of chromosome coordinates with the genome build, and it names the genes under that stretch without being told them, then lists the structural and clinical variants recorded there, each with a link. Leave the build out and it asks which one, rather than guessing. On the practice site since the night of 22 September, waiting for the product owner to try it.
 
 ## What does not work yet
+
+### 17 October
+
+THE HONEST HEADLINE AS OF 17 OCTOBER, in one sentence:
+
+- one protection went live after two first tries were taken back, and the coronavirus question still fails when "SARS CoV-2" is typed with a space, because the first fix trusted a single database match for short names and read "HEV" (hepatitis E) as a pig virus.
+
+What the day found, in plain words:
+
+- Cleaning markup out of paper text changed what real records say ("concentrations were below the limit" lost its "below"), so that approach was dropped for one that leaves the text alone.
+- A warning that two databases disagree fired on answers where nothing disagreed, because the system compares records by the kind of fact, not by which variant they describe. It was taken back and needs a new design.
+- Looking a name up in NCBI and trusting a single match works for full names, but not for short names: NCBI files "HEV" under one pig virus and "CMV" under a plant virus. It was taken back before anyone saw it.
 
 ### The night of 16 to 17 October
 
@@ -702,6 +721,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| A day of designing with the owner, one protection in and two pieces taken back | The answer writer can no longer be steered by text inside a paper, and records read exactly as the paper writes them; it took three tries. A disagreement warning and the first part of the coronavirus fix were built and taken back before anyone saw them, each for a reason the reviewers found. The coronavirus fix was designed with the product owner in nine decisions | 17 October |
 | A night of six changes, three taken back and three rebuilt | Six changes went live: a note that variant classifications were not retrieved, a properly named rs334 record, a line naming the databases an answer rests on, the species shown beside a gene's counterparts, a date window that leaves out undated papers, and real titles on a gene's papers. Three others were taken back because each could lose part of an answer for programs that read it, or attach a gene to the wrong variant. Three first tries were rebuilt once after their reviewers found a wrong detail. Six new small problems were written down | 17 October |
 | A night of building every parked piece, four changes in and eight taken back | Every piece of half-finished work was finished or taken back, so nothing is left waiting on a side branch. Four changes went live: the read-only reply, the paper named when an answer moves between papers, isolate answers that survive a slow search, and the Plain language and Researcher switch. Eight were taken back because a reviewer found each could show something wrong | 16 October |
 | A day of owner decisions, a hidden price problem caught, and one change taken back | The product owner answered five waiting questions. Three changes went live: answers keep their written summary after the next update, off-topic follow-ups are turned away, and a repeated paper title no longer ends an answer. A fourth, a smarter choice of the answer's first sentence, was rebuilt after its reviewers found it could open on a paper title | 15 October |
@@ -1219,12 +1239,12 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. The product owner retests what went live overnight on 17 October, then 16 October, then 15 October, then 8 and 9 October, newest first.
+1. The product owner retests what went live on 17 October, the protection against text inside papers and last night's six changes, then 16 October, then 15 October, then 8 and 9 October, newest first.
 2. On 23 October, a week of the new freeze count decides whether the gatekeeper's freeze fix is worth building.
 3. New designs for the changes taken back: reading a year and a place for isolate questions in a way that matches how the records write places; looking up one named isolate; the checked database searches; where a quoted record sentence ends; the answer's first sentence; the one-sentence paper quotes; asking which aspect a broad subject means; keeping every sentence of a long abstract for programs that read our answers; showing each variant's classification without making long answers too big; and keeping a variant tied to its gene in the source check.
 4. Factory, the second building agent, works again on four small screen fixes, including the two small marks on the new mode switch and a top bar that runs off the screen with a long email address.
 5. Fix the six small problems found overnight on 17 October, listed in the table below: more than five papers after picking a date window, the condition for rs334, a repeated word in an opening sentence, unrelated papers for the RS1 gene, the explainer card running off a phone, and a stray old paper in a date window.
-6. Finish the coronavirus question: the unusual spellings and the follow-up cases the first fix left open.
+6. Finish the coronavirus question: designed with the product owner on 17 October and built in three parts; the first part was taken back, and the next design decides when a single database match can be trusted for a short name.
 7. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
 8. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting.
 9. Build the step where the system checks its own results and tries once more when they do not answer the question.
@@ -1346,6 +1366,10 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| "SARS CoV-2" typed with a space can still be answered about the disease SARS, and "Illumina" can still be read as a gene and refused | Designed with the product owner on 17 October; the first part was taken back the same day and waits for a new design |
+| When two databases disagree on a dangerous fact and something else also asks you to check the answer, the line under it gives no warning | Taken back on 17 October after the warning fired where nothing disagreed; waits for a new design |
+| After a question about tuberculosis, "And its SRA runs?" searches our own database, not the sequencing records | On the list of work to do, found on 17 October |
+| A CFTR papers answer in the researcher view can show no written summary and no note saying why | On the list of work to do, found on 17 October; the cause is not yet known |
 | After you pick a "How far back" window, an answer lists at most five papers from that window | On the list of work to do, found on 17 October |
 | A question about rs334 and its condition names no condition, although sickle cell disease is on record | On the list of work to do, found on 17 October |
 | An answer to a variant question can repeat a word in its opening sentence and table heading, such as "variant record record" | On the list of work to do, found on 17 October |

@@ -1,0 +1,50 @@
+▶
+recent papers on BRCA1
+0 tool calls · 0 sources cited
+Plain language
+Show answer
+Recent papers on BRCA1 from the last 5 years?
+New search
+
+✓ Answered12.4s · 13 tool calls · 17 sources cited from 2 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 4 published papers related to BRCA1.⁠1–4
+
+One review describes BRCA1 as an important regulator of endocrine and metabolic axes, with links to hormones and metabolic disorders like diabetes.⁠19 Another study identifies EXO1 as a promising therapeutic target for BRCA1-deficient tumors, because BRCA1-deficient cells depend on EXO1-mediated single-strand annealing to cope with DNA breaks.⁠20
+
+WHERE THIS ANSWER COMES FROM
+BRCA1: An Endocrine and Metabolic Regulator.⁠1
+EXO1 protects BRCA1-deficient cells against toxic DNA lesions.⁠2
+BRCA1, BRCA2, and Associated Cancer Risks and Management for Male Patients: A Review.⁠3
+BRCA1 and BRCA2: from cancer susceptibility to synthetic lethality.⁠4
+BRCA1⁠5, 8
+NM_007294.4(BRCA1):c.5243_5277+2788del⁠6
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠7
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠9
+Published paper⁠10
+NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG⁠11
+Showing 1–10 of 17
+‹ Previous
+Page 1 of 2
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+17
+Based on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

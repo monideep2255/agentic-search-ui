@@ -215,6 +215,7 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 38, slice B | TP53's orthologs list their species in an Organism column | Live, awaiting your retest | 116 |
 | card 38, slice C | A gene's graph papers are listed by their PubMed titles, notation kept exactly | Live, awaiting your retest | 117 |
 | card 105 | After picking a "How far back" window, the graph's undated papers are left out and the windowed PubMed papers lead; a line says when none were found | Live, awaiting your retest | 108 |
+| card 125 | No paper's title or abstract can pose as the answer writer's instructions; records read exactly as PubMed writes them | Live, awaiting your retest | 117, 1 |
 
 ## What is done, in summary
 
@@ -256,13 +257,13 @@ What the Waiting on column means:
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-10-17, AT THE END OF THE OVERNIGHT OF 2026-10-16 TO 17. THE ONE THING TO KNOW:
+LAST UPDATED 2026-10-17, AT THE END OF THE DAY SESSION OF 2026-10-17. THE ONE THING TO KNOW:
 
-- Six changes merged overnight, each behind CI, its reviews and a fresh verifier, and each checked on deployed develop at 1280 and 390 pixels: card 30 step 1 (#261), card 37 slice A1 (#262), card 8 (#266), card 38 slice B (#265), card 105 (#268) and card 38 slice C (#267). They wait for your retest, the rows at the top of `testing/Retest_product_owner.md`
-- Six pull requests were closed under your rule, back in To do: card 18 (#258), card 30 step 2b (#269) and card 37 slice A2 (#264), each needing a design with you or a smaller build; cards 8, 105 and 38 slice C were rebuilt once each and merged (#259, #260 and #263 closed)
-- Six new cards were filed, all buildable now: 119 to 124
-- Nothing is parked: no branch, tag or worktree other than develop and the night's docs branch
-- A usage limit stopped the session from 01:40 to 11:32; the 07:00 close never ran. The night spent about $1.3 of its $8 budget
+- One change merged today: card 125 (#271), no paper's title or abstract can pose as the answer writer's instructions and records read exactly as PubMed writes them, after two closed attempts. It was checked on deployed develop at 1280 and 390 and waits for your retest, row 1 of `testing/Retest_product_owner.md`, above the night's six
+- Two cards were built and closed by their reviewers, never pushed: card 126 (a "Sources disagree" line that fired where nothing disagreed) and card 56's first slice (a single NCBI fit trusted for an acronym, "HEV" read as a pig virus). Both are back in To do as "Design with you first", card 56 with a written design and nine of your calls (`testing/Developer/reports/2026-10-17_card56/design.md`)
+- Your calls on card 8 (V-8-04 kept, V-8-06 became card 126) and card 38 slice C (every title path protected, which became card 125) are answered
+- Three new cards: 126, 127 (a remembered organism never reaches its sequencing records) and 128 (a CFTR answer with no summary and no note)
+- Nothing is parked: no branch, tag or worktree other than develop. Live spend today about $1.6, inside the $5 and $2 you set
 
 `HANDOFF.md` says what to do next.
 
@@ -301,12 +302,10 @@ This section is also the shared plan.
 ### What is waiting on the product owner
 
 - `testing/Retest_product_owner.md`, newest first, the night's rows on top; each names its queries in `testing/Test_queries_and_workflows.md`.
-- Card 8: V-8-04 (MedGen under "other databases" on query 1, by the three-most-cited rule) and V-8-06 (rare: two databases disagreeing, lifted to "ask" by another check, read with no caution).
-- Card 38 slice C: an automated security review noted loose markup forms in a title reach the writer, equal to develop's live titles; whether every title path gets a stricter cleaning is your call.
 - Card 72 evidence: two of slice B's product check runs stopped at the safety check; develop's log shows the guard model's classify call timing out twice each, provider "unknown". Card 84's row asks you to read a week of such lines on 23 October.
-- Cards 18 and 37 slice A2 need designs.
+- Designs with you: card 56's next slice (its design and the first slice's reviews are in `testing/Developer/reports/2026-10-17_card56/`), card 126 (how records count as the same fact), and cards 18 and 37 slice A2.
 - Cards 84 and 72, step 3b: on 23 October, a week of `event loop lag` lines decides whether the gatekeeper's freeze fix is worth building (`testing/Developer/reports/2026-10-15_card84_72/design.md`).
-- The redesigns of the closed cards 48, 116, 110, 29, 94's lookup, 101, 20, 15, 18, 37 slice A2 and 30 step 2b, each named in its board row.
+- The redesigns of the closed cards 56, 126, 48, 116, 110, 29, 94's lookup, 101, 20, 15, 18, 37 slice A2 and 30 step 2b, each named in its board row.
 - The product checks' "needs your eye" findings: the reports under `testing/Developer/reports/2026-10-16_product_check*/` and `2026-10-17_product_check*/`, `testing/Developer/reports/2026-10-16_product_check/report.md` (PR-1016-01 to 05) and `testing/Developer/reports/2026-10-15_product_check/product_review.md`.
 - The guardrail's step 2 waits for a week of logs.
 - Whether develop's writer becomes Opus 5.5 (card 5). Since card 114, Opus is charged its real price against the 25-cent cap, where before it counted as free.
@@ -437,11 +436,11 @@ board on 2026-09-24.
 
 ### Next, in order
 
-- Rewritten 2026-10-17, at the checkpoint after the overnight of 2026-10-16 to 17, in the order of the board's To do column, top to bottom, one line per card: its Next move, then its status cell.
+- Rewritten 2026-10-17, at the checkpoint closing the day session of 2026-10-17, in the order of the board's To do column, top to bottom, one line per card: its Next move, then its status cell.
 - The board is the order; this list gives each card's state or a pointer to its detail.
 - `testing/Board_plan.md` holds the dependencies and the waves, and the order work is built in.
 
-1. Card 56 (Design with you first): Part live once merged (#186 or the next number): the plain SARS-CoV-2 question no longer binds the SARS disease (0 of 20 live runs, 5 of 26 before). Still open, for a design with you first: "SARS CoV-2" typed with a space still binds SARS; after a gene in the same conversation a missed SARS-CoV-2 question uses the remembered gene; "SRA runs from AML-derived cell lines" can lose its leukaemia match; the "Illumina" refusal (7 of 20 runs). Evidence: `testing/Developer/reports/2026-10-06_card56/`; card 16 folded in on 2026-10-09: golden question G-005 fails on this card's "Illumina" refusal
+1. Card 56 (Design with you first): Part live once merged (#186 or the next number): the plain SARS-CoV-2 question no longer binds the SARS disease (0 of 20 live runs, 5 of 26 before). Still open, for a design with you first: "SARS CoV-2" typed with a space still binds SARS; after a gene in the same conversation a missed SARS-CoV-2 question uses the remembered gene; "SRA runs from AML-derived cell lines" can lose its leukaemia match; the "Illumina" refusal (7 of 20 runs). Evidence: `testing/Developer/reports/2026-10-06_card56/`; card 16 folded in on 2026-10-09: golden question G-005 fails on this card's "Illumina" refusal. Designed with you on 2026-10-17 (`testing/Developer/reports/2026-10-17_card56/design.md`, seven calls in `DECISIONS.md`): built in three slices, each merged before the next: (1) a phrase that does not confirm is looked up whole in NCBI and used when exactly one record fits, otherwise asked, with a whole-word fallback when the model names nothing; (2) conditions such as Illumina are applied or said not applied, never read as genes; (3) a remembered subject fills in only when the question names none. Slice 1 built and closed on 2026-10-17 under your rule, never pushed: its judge and adversary found it worse than develop in ways one fix round could not close: a single NCBI fit is not proof for an acronym ("HEV" read as a pig virus, Taxonomy 42005; "CMV" as cucumber mosaic virus), "COVID-19 patients" on a sequencing question became the virus, "HIV-1" bound HIV disease records, an ask said "could not find CML" falsely, and the extra model call fired on ordinary questions (one topic question took 46 s). What held: no word was cut, and "SARS CoV-2", "SARS COV2" and "SARS CoV-2 variants" read as the virus. The next design decides when a single fit can be trusted, narrows the retry to the replies that contradict themselves, and puts the lookup before the disease fallback on sequencing questions. Reports and the closed diff: `testing/Developer/reports/2026-10-17_card56/`
 2. Card 101 (Design with you first): Part live (#193, #204, in Retest). Its last slices were rebuilt overnight on 2026-10-15 from a design for where a record sentence ends (#248), and closed under the owner's rule when the judge and the adversary both found sentences develop shows that the branch drops: a curly apostrophe or a later closing mark pairs with a stray opening quote and marks the rest of an abstract as quoted, and a negation one sentence further back is lost. The next attempt reads quote marks by their pairing in the record, not by their shape. Evidence: `testing/Developer/reports/2026-10-15_card101/` (design, build, both reviews, final diff) and `testing/Developer/reports/2026-10-08_card101/`
 3. Card 94 (Design with you first): Part live (#158, #165, #169, #174, and the place in the "Collected" cell, #226, in Retest). Still open: a single-isolate lookup, built overnight 2026-10-15 to your calls and closed by your rule (#244): Pathogen Detection's isolate file is read in submission order, so within an answer's time only the oldest 11 to 18 percent of Salmonella isolates can be reached, and reading the organism by genus sent two species to the wrong data; it needs an index of the files before it returns (`testing/Developer/reports/2026-10-15_card94/`). The timeout-crash fix from that build is re-split onto its own pull request, and a follow-up such as "from 2023" (card 20)
 4. Card 84 (Yours: read the counts on 23 October): Safe part live (#227, in Retest). Step 3b, the server-pause fix: your call 2026-10-16, count first. Since #251 (43bcfcf7) develop logs `event loop lag: <s> s (timers ran late)` each time the server's timers run 0.25 s or more late, from a freeze, a busy server or a host pause. Read a week of these lines on 23 October, then decide whether the fix (`testing/Developer/reports/2026-10-15_card84_72/design.md`) is worth building
@@ -480,10 +479,13 @@ board on 2026-09-24.
 37. Card 122 (Team: buildable now): Nobody on it; filed 2026-10-17 overnight, cause not diagnosed
 38. Card 123 (Team: buildable now): Nobody on it; filed 2026-10-17 overnight; the same popover serves the persona chips
 39. Card 124 (Team: buildable now): Nobody on it; filed 2026-10-17 overnight
-40. Card 11.11 (Yours: your architecture work): Tenth in "Next, in order". It was listed as in progress until 2026-09-24 with nobody on it, so it moved out of section 1. 12.9 and 12.10 answered part of its ask. The answer-writing model is unchanged: switching models is a separate decision
-41. Card 11.29 (Yours: your architecture work): Reclassified 2026-09-22 by the product owner: a discussion that precedes a build under `/bossman-mode`, not a question waiting on them. Raised 2026-09-20. Full detail: [11.29](#detail-1129)
-42. Card 11.32 (Yours: your architecture work): Reclassified 2026-09-22 by the product owner: scoped in a discussion first, then built under `/bossman-mode`, still against the locked Section 6 tool list. Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](#detail-1132)
-43. Card 11.38 (Yours: your architecture work): Raised 2026-09-22 by the product owner, who named the guardrail and the resource choice. BACKLOG ONLY, nothing designed and nothing promised. IDENTIFIED 2026-09-23 from the two links the product owner gave: it is `typesafe/jev-1.13` from TypeSafe, and it fits two of the three places they named and not the third. CORRECTION, because the assistant said the opposite hours earlier: it is NOT a harness config change, because it answers on its own `POST /api/alpha/decisions` endpoint rather than chat completions, so a trial needs a new client path. Full detail: [11.38](#detail-1138)
+40. Card 126 (Design with you first): Built 2026-10-17 and closed by your call the same day, never pushed: the line fired on answers where nothing disagrees, because the check that compares records matches any record with the same field, not the same variant and not only cited records (A-126-01, A-126-02, J-126-02). The next build fixes that comparison first (same variant, cited records only; A-126-03, 04, 14), then the line (A-126-06, 07, 12, J-126-01). Diff kept: `closed_branch.patch`
+41. Card 127 (Team: buildable now): Nobody on it; filed 2026-10-17, built after card 56 merges
+42. Card 128 (Team: buildable now): Nobody on it; filed 2026-10-17, needs a diagnosis first
+43. Card 11.11 (Yours: your architecture work): Tenth in "Next, in order". It was listed as in progress until 2026-09-24 with nobody on it, so it moved out of section 1. 12.9 and 12.10 answered part of its ask. The answer-writing model is unchanged: switching models is a separate decision
+44. Card 11.29 (Yours: your architecture work): Reclassified 2026-09-22 by the product owner: a discussion that precedes a build under `/bossman-mode`, not a question waiting on them. Raised 2026-09-20. Full detail: [11.29](#detail-1129)
+45. Card 11.32 (Yours: your architecture work): Reclassified 2026-09-22 by the product owner: scoped in a discussion first, then built under `/bossman-mode`, still against the locked Section 6 tool list. Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](#detail-1132)
+46. Card 11.38 (Yours: your architecture work): Raised 2026-09-22 by the product owner, who named the guardrail and the resource choice. BACKLOG ONLY, nothing designed and nothing promised. IDENTIFIED 2026-09-23 from the two links the product owner gave: it is `typesafe/jev-1.13` from TypeSafe, and it fits two of the three places they named and not the third. CORRECTION, because the assistant said the opposite hours earlier: it is NOT a harness config change, because it answers on its own `POST /api/alpha/decisions` endpoint rather than chat completions, so a trial needs a new client path. Full detail: [11.38](#detail-1138)
 
 ### How to start the next session
 
@@ -491,7 +493,7 @@ board on 2026-09-24.
 2. Run `git status` and `git worktree list`. Local carries only `develop`; GitHub carries only `develop` and `production` (`git ls-remote --heads origin`). Anything else is new since 2026-10-17 and `HANDOFF.md` names it.
 3. Read "What is parked, and why" before picking anything up. OMIM is live WITH its title filter; the two ship together and neither is re-enabled or removed without the other.
 4. Retests: `testing/Retest_product_owner.md`.
-   - Its newest rows are the overnight of 2026-10-16 to 17: cards 38 (slices C and B), 105, 8, 37 (slice A1) and 30 (step 1), then 24, 118, 75, 94's timeout fix, 17 and 115, then 114, 35 and 111, and the older rows below them.
+   - Its newest row is card 125, merged on 2026-10-17; below it the overnight of 2026-10-16 to 17: cards 38 (slices C and B), 105, 8, 37 (slice A1) and 30 (step 1), then 24, 118, 75, 94's timeout fix, 17 and 115, then 114, 35 and 111, and the older rows below them.
    - Each names its queries in `testing/Test_queries_and_workflows.md`.
 5. Then take the next card from the board's To do column, as `HANDOFF.md` says.
    - Test queries sign in with throwaway accounts made on develop only with the owner's yes, their details kept in the scratchpad and never committed; the golden run is an alarm, run only when the owner asks (2026-10-08).
@@ -553,6 +555,18 @@ Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-
 | 12.17 | A good question sometimes fails at the think step and shows a refusal | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it | Seen twice in about forty live runs over 2026-09-23 and 2026-09-24: `Does coffee help make exercise more effective?` and `is there a trial recruiting for melanoma`, both at researcher depth, each failing with "the plan tier's response did not match the think classification schema". Neither question reaches 12.3's ask-back, which only reads one to three words, so tonight's work did not cause it. The reader sees a refusal for a question the product answers on every other run. Evidence: `testing/Developer/reports/2026-09-24_no_hardcoding/live_runs/` |
 
 ## Session history
+
+### 2026-10-17, day session, in one table
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| Card 125 (#271) | No paper's title or abstract can pose as the answer writer's instructions, and records read as PubMed writes them. Third attempt: the first (cleaning tag shapes out of the text) changed real records such as "<LOQ"; the second's fix round called retrieved text an instruction. Merged with three small items named open (`testing/Future.md`, row 61). Product check PASS at 1280 and 390 | Merged, in Retest, queries 117, 1 and 108 |
+| Card 126 | A "Sources disagree" line under an ask-floored answer; built and closed by your call, never pushed: it fired where nothing disagreed, because records are compared by field name, not by variant | Closed, To do, design with you first |
+| Card 56, design | Designed with you: nine calls, from reading a name whole in NCBI to when memory may fill a subject (`testing/Developer/reports/2026-10-17_card56/design.md`) | Recorded |
+| Card 56, slice 1 | Built and closed under your finish rule, never pushed: a single NCBI fit trusted for an acronym ("HEV" read as a pig virus), and a retry that slowed ordinary questions. No word was cut, and "SARS CoV-2" read as the virus | Closed, To do, design with you first |
+| Card 8, your calls | MedGen under "other databases" kept by your rule; a floored disagreement became card 126 | Answered |
+| Card 127 | A remembered organism never reaches its sequencing records | Filed, buildable now |
+| Card 128 | A CFTR Researcher answer with no summary and no note saying why | Filed, buildable now, needs a diagnosis |
 
 ### The night of 2026-10-16 to 17, in one table
 
