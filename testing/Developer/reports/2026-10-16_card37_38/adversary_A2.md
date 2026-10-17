@@ -1,6 +1,6 @@
 # Card 37 slice A2 adversary report
 
-Pull request #264, branch `fix/card37-writer-given-the-gene`, commit `e146bb8b` on develop `ec30edb4`. Worktrees: `<asu-wt>/card37a2-adv` (detached at `e146bb8b`) and `<asu-wt>/card37a2-adv-dev` (develop, for comparison). Probes in `<scratchpad>/card37a2_adv/`. Written as each finding is established.
+Pull request #264, branch `fix/card37-writer-given-the-gene`, commit `e146bb8b` on develop `ec30edb4`. Worktrees: `<worktrees>/card37a2-adv` (detached at `e146bb8b`) and `<worktrees>/card37a2-adv-dev` (develop, for comparison). Probes in `<scratchpad>/card37a2_adv/`. Written as each finding is established.
 
 ## Table of contents
 
