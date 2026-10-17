@@ -12463,7 +12463,9 @@ def _layer3_base_citation(
                 raw_output = raw_output.model_copy(update={"variant_matches": own[:1]})
             return litvar2_build_citation(raw_output, display_index=display_index)
         if synth_finding.tool == "ncbi_dbsnp":
-            return dbsnp_build_citation(raw_output, synth_finding.field, display_index=display_index)
+            # The gene companion (card 37) is the output's `genes` field.
+            field = "genes" if synth_finding.field == "gene" else synth_finding.field
+            return dbsnp_build_citation(raw_output, field, display_index=display_index)
         if synth_finding.tool == "pathogen_detection":
             # The isolate search (G-035, 2026-09-22). The row's `name` is the
             # strain, which the tool's builder knows under its own field.

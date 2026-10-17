@@ -127,6 +127,14 @@ MAX_CITATION_ID_CHARS = 64
 # which findings exist.
 _EXPLANATORY_FIELDS: tuple[str, ...] = ("summary",)
 
+# Card 37, slice A2 (2026-10-16): a closed table of companion findings, keyed
+# by (row type, row field), value the field the companion is emitted under.
+# A dbSNP record's gene reaches the writer as its own low-risk finding
+# beside the record's `clinical_significance` finding, so a sentence "rs334
+# is in the HBB gene" can be licensed by the unchanged grounding gate and
+# cited to the same dbSNP record. Only the listed rows gain a finding.
+_COMPANION_FIELDS: dict[tuple[str, str], str] = {("Variant record", "genes"): "gene"}
+
 # Below this a "summary" is a label rather than an explanation, and pairing
 # a second finding with a row for a few words duplicates the first one.
 _MIN_EXPLANATORY_CHARS = 80
@@ -652,6 +660,14 @@ def build_synth_findings(
         # rest behind them. Admission above is already decided.
         collected.sort(key=lambda entry: entry[3].call_id not in lead_call_ids)
 
+    # Card 37, slice A2: companions are added AFTER admission is decided and
+    # only into slots still free, so one never pushes out a record the list
+    # showed before. A companion that finds the prompt full is not counted
+    # either, so `capped` is exactly what it was.
+    collected, total_citable = _with_companion_findings(
+        collected, seen, total_citable, max_findings
+    )
+
     synth_findings: list[SynthFinding] = []
     for source_url, row, (field_name, field_value, is_suspect, curie_fallback), finding in collected:
         ref_index = len(synth_findings) + 1
@@ -673,6 +689,44 @@ def build_synth_findings(
         )
 
     return synth_findings, total_citable > len(synth_findings)
+
+
+def _with_companion_findings(
+    collected: list[Any], seen: set[tuple[str, str, str]], total_citable: int, max_findings: int
+) -> tuple[list[Any], int]:
+    """Insert each admitted row's companion finding right after the row's
+    last finding (see `_COMPANION_FIELDS`). Nothing is emitted when the
+    value is not a non-blank string, when the row's own finding already
+    uses that field, when the identity was seen already, or when the prompt
+    is full."""
+    last_index: dict[int, int] = {id(entry[1]): i for i, entry in enumerate(collected)}
+    out: list[Any] = []
+    used = len(collected)
+    for i, entry in enumerate(collected):
+        out.append(entry)
+        source_url, row, _picked, finding = entry
+        if last_index[id(row)] != i:
+            continue
+        fields = row.get("fields") or {}
+        row_type = str(row.get("node_or_edge_type") or "")
+        if not isinstance(fields, dict):
+            continue
+        for (companion_type, row_field), name in _COMPANION_FIELDS.items():
+            if companion_type != row_type:
+                continue
+            value = fields.get(row_field)
+            if not isinstance(value, str) or not value.strip():
+                continue
+            if any(e[1] is row and e[2][0] in (row_field, name) for e in collected):
+                continue
+            identity = (source_url, name, value.strip())
+            if identity in seen or used >= max_findings:
+                continue
+            seen.add(identity)
+            total_citable += 1
+            used += 1
+            out.append((source_url, row, (name, value.strip(), False, False), finding))
+    return out, total_citable
 
 
 def _allot_with_lead_quota(
