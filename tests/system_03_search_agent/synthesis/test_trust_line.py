@@ -255,32 +255,42 @@ def test_the_clause_needs_ask_a_high_risk_insufficient_claim_and_two_databases()
 
 # ---------------------------------------------------------------- the sweep
 
-_SAMPLE_URLS = {
-    "ncbi.nlm.nih.gov/assembly": "https://www.ncbi.nlm.nih.gov/assembly/GCF_1",
-    "ncbi.nlm.nih.gov/bioproject": "https://www.ncbi.nlm.nih.gov/bioproject/1",
-    "ncbi.nlm.nih.gov/biosample": "https://www.ncbi.nlm.nih.gov/biosample/1",
-    "ncbi.nlm.nih.gov/clinvar": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1",
-    "ncbi.nlm.nih.gov/datasets": "https://www.ncbi.nlm.nih.gov/datasets/gene/1",
-    "ncbi.nlm.nih.gov/dbvar": "https://www.ncbi.nlm.nih.gov/dbvar/variants/1",
-    "ncbi.nlm.nih.gov/gds": "https://www.ncbi.nlm.nih.gov/gds/1",
-    "ncbi.nlm.nih.gov/gene": "https://www.ncbi.nlm.nih.gov/gene/672",
-    "ncbi.nlm.nih.gov/gtr": "https://www.ncbi.nlm.nih.gov/gtr/tests/1",
-    "ncbi.nlm.nih.gov/medgen": "https://www.ncbi.nlm.nih.gov/medgen/C1",
-    "ncbi.nlm.nih.gov/mesh": "https://www.ncbi.nlm.nih.gov/mesh/1",
-    "ncbi.nlm.nih.gov/nuccore": "https://www.ncbi.nlm.nih.gov/nuccore/1",
-    "ncbi.nlm.nih.gov/pathogens": "https://www.ncbi.nlm.nih.gov/pathogens/isolates/1",
-    "ncbi.nlm.nih.gov/pmc": "https://pmc.ncbi.nlm.nih.gov/articles/PMC1/",
-    "ncbi.nlm.nih.gov/pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/1",
-    "ncbi.nlm.nih.gov/pubmed": "https://pubmed.ncbi.nlm.nih.gov/12345/",
-    "ncbi.nlm.nih.gov/research/litvar2": "https://www.ncbi.nlm.nih.gov/research/litvar2/1",
-    "ncbi.nlm.nih.gov/research/pubtator3": "https://www.ncbi.nlm.nih.gov/research/pubtator3/publication/1",
-    "ncbi.nlm.nih.gov/snp": "https://www.ncbi.nlm.nih.gov/snp/rs1",
-    "ncbi.nlm.nih.gov/sra": "https://www.ncbi.nlm.nih.gov/sra/1",
-    "ncbi.nlm.nih.gov/taxonomy": "https://www.ncbi.nlm.nih.gov/taxonomy/1",
-    "omim.org": "https://www.omim.org/entry/113705",
-    "clinicaltrials.gov": "https://clinicaltrials.gov/study/NCT1",
+#: Written out by hand, independent of the module table: each `record_database`
+#: key, a real page that yields it, and the proper name a reader should see.
+_EXPECTED = {
+    "ncbi.nlm.nih.gov/assembly": ("https://www.ncbi.nlm.nih.gov/assembly/GCF_1", "Assembly"),
+    "ncbi.nlm.nih.gov/bioproject": ("https://www.ncbi.nlm.nih.gov/bioproject/1", "BioProject"),
+    "ncbi.nlm.nih.gov/biosample": ("https://www.ncbi.nlm.nih.gov/biosample/1", "BioSample"),
+    "ncbi.nlm.nih.gov/clinvar": ("https://www.ncbi.nlm.nih.gov/clinvar/variation/1", "ClinVar"),
+    "ncbi.nlm.nih.gov/datasets": ("https://www.ncbi.nlm.nih.gov/datasets/gene/1", "NCBI Datasets"),
+    "ncbi.nlm.nih.gov/dbvar": ("https://www.ncbi.nlm.nih.gov/dbvar/variants/1", "dbVar"),
+    "ncbi.nlm.nih.gov/gds": ("https://www.ncbi.nlm.nih.gov/gds/1", "GEO DataSets"),
+    "ncbi.nlm.nih.gov/gene": ("https://www.ncbi.nlm.nih.gov/gene/672", "NCBI Gene"),
+    "ncbi.nlm.nih.gov/gtr": ("https://www.ncbi.nlm.nih.gov/gtr/tests/1", "GTR"),
+    "ncbi.nlm.nih.gov/medgen": ("https://www.ncbi.nlm.nih.gov/medgen/C1", "MedGen"),
+    "ncbi.nlm.nih.gov/mesh": ("https://www.ncbi.nlm.nih.gov/mesh/1", "MeSH"),
+    "ncbi.nlm.nih.gov/nuccore": ("https://www.ncbi.nlm.nih.gov/nuccore/1", "Nucleotide"),
+    "ncbi.nlm.nih.gov/pathogens": ("https://www.ncbi.nlm.nih.gov/pathogens/isolates/1", "Pathogen Detection"),
+    "ncbi.nlm.nih.gov/pmc": ("https://pmc.ncbi.nlm.nih.gov/articles/PMC1/", "PMC"),
+    "ncbi.nlm.nih.gov/pubchem": ("https://pubchem.ncbi.nlm.nih.gov/compound/1", "PubChem"),
+    "ncbi.nlm.nih.gov/pubmed": ("https://pubmed.ncbi.nlm.nih.gov/12345/", "PubMed"),
+    "ncbi.nlm.nih.gov/research/litvar2": ("https://www.ncbi.nlm.nih.gov/research/litvar2/1", "LitVar2"),
+    "ncbi.nlm.nih.gov/research/pubtator3": ("https://www.ncbi.nlm.nih.gov/research/pubtator3/publication/1", "PubTator3"),
+    "ncbi.nlm.nih.gov/snp": ("https://www.ncbi.nlm.nih.gov/snp/rs1", "dbSNP"),
+    "ncbi.nlm.nih.gov/sra": ("https://www.ncbi.nlm.nih.gov/sra/1", "SRA"),
+    "ncbi.nlm.nih.gov/taxonomy": ("https://www.ncbi.nlm.nih.gov/taxonomy/1", "Taxonomy"),
+    "omim.org": ("https://www.omim.org/entry/113705", "OMIM"),
+    "clinicaltrials.gov": ("https://clinicaltrials.gov/study/NCT1", "ClinicalTrials.gov"),
 }
-_CURIE_KEYS = {key for key in _DATABASE_NAMES if "." not in key}
+_CURIE_EXPECTED = {
+    "clinvar": "ClinVar",
+    "medgen": "MedGen",
+    "mesh": "MeSH",
+    "ncbigene": "NCBI Gene",
+    "omim": "OMIM",
+    "pubmed": "PubMed",
+    "dbsnp": "dbSNP",
+}
 
 
 def _one(url: str, curie: str = "") -> SynthFinding:
@@ -297,23 +307,26 @@ def _one(url: str, curie: str = "") -> SynthFinding:
     )
 
 
-def test_the_sample_pages_cover_every_page_key_in_the_table() -> None:
-    assert set(_SAMPLE_URLS) == {key for key in _DATABASE_NAMES if "." in key}
+def test_the_expected_mapping_covers_every_table_key() -> None:
+    page_keys = {key for key in _DATABASE_NAMES if "." in key}
+    assert set(_EXPECTED) == page_keys
+    assert set(_CURIE_EXPECTED) == set(_DATABASE_NAMES) - page_keys
 
 
-@pytest.mark.parametrize(("key", "url"), sorted(_SAMPLE_URLS.items()))
-def test_every_page_database_maps_to_a_proper_name(key: str, url: str) -> None:
+@pytest.mark.parametrize(("key", "case"), sorted(_EXPECTED.items()))
+def test_every_page_database_maps_to_a_proper_name(key: str, case: tuple[str, str]) -> None:
+    url, name = case
     assert record_database(_one(url)) == key
     line = answer_trust_line("answer", [], [GroundedClaim("x", _one(url))])
-    assert line == f"Based on 1 source cited, from {_DATABASE_NAMES[key]}"
+    assert line == f"Based on 1 source cited, from {name}"
 
 
-@pytest.mark.parametrize("prefix", sorted(_CURIE_KEYS))
-def test_every_curie_fallback_maps_to_a_proper_name(prefix: str) -> None:
+@pytest.mark.parametrize(("prefix", "name"), sorted(_CURIE_EXPECTED.items()))
+def test_every_curie_fallback_maps_to_a_proper_name(prefix: str, name: str) -> None:
     finding = _one("", curie=f"{prefix.upper()}:1")
     assert record_database(finding) == prefix
     line = answer_trust_line("answer", [], [GroundedClaim("x", finding)])
-    assert line == f"Based on 1 source cited, from {_DATABASE_NAMES[prefix]}"
+    assert line == f"Based on 1 source cited, from {name}"
 
 
 def test_display_names_are_proper_names_not_hosts() -> None:

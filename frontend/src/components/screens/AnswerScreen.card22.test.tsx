@@ -371,6 +371,9 @@ describe("the trust line's info card", () => {
     // explains it. Mutation: restore the old paragraph and this fails.
     expect(TRUST_LINE_EXPLAINER).not.toMatch(/not yet confirmed/i);
     expect(TRUST_LINE_EXPLAINER).toContain("names the databases");
-    expect(TRUST_LINE_EXPLAINER).toContain("values could not be compared");
+    expect(TRUST_LINE_EXPLAINER).toContain(
+      "When an answer rests on two or more databases and a high-stakes fact could not be checked against a second one",
+    );
+    expect(TRUST_LINE_EXPLAINER).toContain("their values could not be compared");
   });
 });
