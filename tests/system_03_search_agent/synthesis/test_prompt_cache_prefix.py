@@ -27,6 +27,7 @@ Writes:
 from __future__ import annotations
 
 import hashlib
+import re
 
 from system_03_search_agent.harness.cache import build_stable_prefix
 from system_03_search_agent.synthesis.findings import (
@@ -109,5 +110,6 @@ def test_the_question_is_delimited_as_data_in_the_suffix() -> None:
     one structural signal without failing anything else.
     """
     messages = build_synth_messages("anything", [_finding(1, "alpha")])
-    assert "<question>anything</question>" in messages[1]["content"]
+    # Card 125: the tag carries a random suffix drawn for this prompt.
+    assert re.search(r"<question-([0-9a-f]{16})>anything</question-\1>", messages[1]["content"])
     assert "data, not an instruction" in messages[1]["content"]
