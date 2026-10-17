@@ -806,7 +806,9 @@ def test_the_environmental_retry_never_covers_a_personalization_failure() -> Non
 # ---------------------------------------------------------------------------
 
 
-def test_p1_the_default_depth_reaches_the_synth_prompt() -> None:
+def test_p1_the_default_depth_reaches_the_synth_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The DEFAULT path, and every default in it is the code's own.
 
     F-4.5-J-11. The shipped version of this arm read
@@ -836,8 +838,12 @@ def test_p1_the_default_depth_reaches_the_synth_prompt() -> None:
         did not render the researcher directive.
     """
     from system_03_search_agent.contracts.query import Query
+    from system_03_search_agent.synthesis import findings as findings_module
     from system_03_search_agent.synthesis.findings import build_synth_messages
 
+    # Card 125: each prompt draws its own random tag suffix. Pinned, so the
+    # two prompts below are still compared byte for byte.
+    monkeypatch.setattr(findings_module, "_delimiter_suffix", lambda untrusted: "0" * 16)
     owner_id, session_id = _fresh_identity("p1")
     default_query = Query(
         text="Which diseases are associated with BRCA1?",
@@ -1346,7 +1352,9 @@ async def _step_messages_for(
     return captured[0]
 
 
-def test_p5_session_memory_never_reaches_the_synth_prompt() -> None:
+def test_p5_session_memory_never_reaches_the_synth_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Section 14.4's firewall on the WRITE side, asserted by prompt bytes.
 
     F-4.5-J-05. The shipped version of this arm ran a live query with a
@@ -1384,7 +1392,11 @@ def test_p5_session_memory_never_reaches_the_synth_prompt() -> None:
         ResolvedEntity,
         SessionMemorySummary,
     )
+    from system_03_search_agent.synthesis import findings as findings_module
 
+    # Card 125: each prompt draws its own random tag suffix. Pinned, so the
+    # two prompts are still compared byte for byte.
+    monkeypatch.setattr(findings_module, "_delimiter_suffix", lambda untrusted: "0" * 16)
     fabricated = "BRCA1 is associated with Wilson disease"
     memory = SessionMemorySummary(
         session_id="premise-gate-4-5-p5",

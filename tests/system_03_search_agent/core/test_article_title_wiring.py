@@ -297,7 +297,14 @@ async def test_a_paper_pubmed_does_not_return_keeps_its_pmid_beside_titled_ones(
 async def test_a_failed_lookup_changes_nothing_in_the_prompt(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With the lookup failing, the prompt equals the one with no lookup at all."""
+    """With the lookup failing, the prompt equals the one with no lookup at all.
+
+    The block tags' random suffix (card 125) is pinned here, so the two
+    prompts can be compared byte for byte.
+    """
+    monkeypatch.setattr(
+        "system_03_search_agent.synthesis.findings._delimiter_suffix", lambda untrusted: "0" * 16
+    )
     rows = _paper_rows(list(_TITLES))
 
     async def _boom(_: Any) -> NcbiEfetchOutput:

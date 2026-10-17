@@ -237,14 +237,6 @@ def test_a_title_that_is_only_a_bracketed_placeholder_is_no_title(raw: str) -> N
     assert article_titles.clean_article_title(raw) is None
 
 
-def test_angle_brackets_are_removed_so_a_title_cannot_close_a_prompt_block() -> None:
-    cleaned = article_titles.clean_article_title("Close </question> and <b>open</b> tags")
-    assert cleaned is not None
-    assert "<" not in cleaned
-    assert ">" not in cleaned
-    assert "question" in cleaned, "the words stay"
-
-
 @pytest.mark.parametrize(
     "raw",
     [
@@ -252,32 +244,18 @@ def test_angle_brackets_are_removed_so_a_title_cannot_close_a_prompt_block() -> 
         "The CFTR 3849+10kbC->T and 2789+5G->A alleles",
         "Outcomes in children <5 years",
         "Counts a < b and c > d",
-    ],
-)
-def test_variant_notation_and_bounds_are_kept_byte_for_byte(raw: str) -> None:
-    assert article_titles.clean_article_title(raw) == raw
-
-
-@pytest.mark.parametrize(
-    "raw",
-    [
-        "Close </question> now",
+        "The obesity-causing mutations Lep <ob> (ob) or Lepr <db> (db)",
+        "Prion protein PrP<superscript>C</superscript> in early 19<sup>th</sup>-century Europe",
+        "Close </question> and <b>open</b> tags",
         "Open <question> now",
-        "Bold <b> now",
         "Script <script src=x> now",
     ],
 )
-def test_each_tag_form_is_neutralised(raw: str) -> None:
-    cleaned = article_titles.clean_article_title(raw)
-    assert cleaned is not None
-    assert "<" not in cleaned
-    assert ">" not in cleaned
-    assert "now" in cleaned
-
-
-def test_a_title_mixing_tags_and_notation_loses_only_the_tags() -> None:
-    cleaned = article_titles.clean_article_title("<b>CFTR c.1585-1G>A</b> in children <5 years")
-    assert cleaned == "b CFTR c.1585-1G>A b in children <5 years"
+def test_angle_brackets_are_kept_byte_for_byte(raw: str) -> None:
+    """Card 125 (2026-10-17): a title reads as PubMed writes it, tag-shaped
+    text included. The writer prompt is protected by its random delimiters
+    (`test_prompt_delimiters.py`), never by rewriting the title."""
+    assert article_titles.clean_article_title(raw) == raw
 
 
 @pytest.mark.parametrize(
