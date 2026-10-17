@@ -1958,3 +1958,58 @@ async def test_the_stated_numbers_stay_as_on_develop(monkeypatch, depth: str) ->
     for name, rows in (("case_a", case_a), ("case_b", case_b)):
         result = await _gene_answer(monkeypatch, depth, rows)
         assert _numbers(result, _tokens(result)) == _DEVELOP_NUMBERS[(name, depth)], name
+
+
+# ---------------------------------------------------------------------------
+# Card 30 (owner decision D15, 2026-10-16): under a list of a gene's graph
+# variants, one line says ClinVar's classification was not retrieved. In the
+# Notes, once, in both depths; beside card 23's table only card 23's line.
+# ---------------------------------------------------------------------------
+
+_UNCLASSIFIED_VARIANT_ROWS = [
+    {
+        "node_or_edge_type": "SequenceVariant",
+        "curie": f"ClinVar:{index}",
+        "fields": {"name": f"c.{index}A>G (p.Xaa{index}Yaa)"},
+        "source_url": f"https://www.ncbi.nlm.nih.gov/clinvar/variation/{index}",
+        "graph_snapshot_version": "v1",
+    }
+    for index in range(1, 4)
+]
+
+
+def _classification_notes(tokens: list[dict]) -> list[int]:
+    from system_03_search_agent.synthesis.answer_layout import VARIANT_CLASSIFICATION_NOTE
+
+    return [
+        index
+        for index, token in enumerate(tokens)
+        if token["kind"] == "note" and token["text"] == VARIANT_CLASSIFICATION_NOTE
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("depth", ["plain_language", "researcher"])
+async def test_card30_the_line_shows_in_both_depths_once_after_the_list(monkeypatch, depth) -> None:
+    """Red on develop: no line. Red if the note is emitted before the list."""
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+    _install(monkeypatch, _no_prose)
+    tokens = _read_tokens(
+        await graph_module.write_node(_state(depth, rows=_UNCLASSIFIED_VARIANT_ROWS))
+    )
+    (note_at,) = _classification_notes(tokens)
+    last_row = max(i for i, t in enumerate(tokens) if t["kind"] in ("table_row", "list_item"))
+    assert note_at > last_row, (note_at, last_row)
+
+
+@pytest.mark.asyncio
+async def test_card30_beside_the_variant_table_only_card_23s_line_shows(monkeypatch) -> None:
+    """A mapped HNF1A shaped table at Researcher already says the
+    classification is not shown; the fact is never said twice."""
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+    _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
+    rows = [*_FOLDED_VARIANT_ROWS, _FOLDED_GENE_ROW]
+    tokens = _tokens(await graph_module.write_node(_state("researcher", rows=rows)))
+    assert len(_source_notes(tokens)) == 1
+    assert _classification_notes(tokens) == []
+
