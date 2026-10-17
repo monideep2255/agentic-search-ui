@@ -1083,8 +1083,15 @@ def test_the_drafts_price_bounds_what_a_dropped_draft_is_metered_at() -> None:
     assert per_draft > cost_control.estimate_call_cost_usd("synth")
 
 
-def test_the_second_draft_leaves_the_stable_prefix_byte_identical() -> None:
-    """Prompt-cache discipline: the directive rides in the dynamic suffix."""
+def test_the_second_draft_leaves_the_stable_prefix_byte_identical(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Prompt-cache discipline: the directive rides in the dynamic suffix.
+
+    The block tags' random suffix (card 125) is pinned, so the first draft's
+    user message can be compared as a prefix of the second's.
+    """
+    monkeypatch.setattr(findings_module, "_delimiter_suffix", lambda untrusted: "0" * 16)
     findings = [_synth_finding(index, f"disease name number {index}") for index in (1, 2, 3)]
     plain = build_synth_messages("Which diseases?", findings, "researcher")
     beside = build_synth_messages(
