@@ -770,12 +770,12 @@ class TestAQuestionBackIsLabelledAsk:
 # ---------------------------------------------------------------------------
 
 
-_UNCONFIRMED = "Based on 17 sources, not yet confirmed"
+_UNCONFIRMED = "Based on 17 sources cited, all from MedGen"
 
 
 def _unconfirmed_answer_frames(trust_line: str | None = _UNCONFIRMED) -> list[dict]:
     """A finished, cited answer whose outcome is the server's `ask`: answered,
-    not yet confirmed. Phase 8.10's product review (PR-8.10-01) got exactly
+    not confirmed by a second database. Phase 8.10's product review (PR-8.10-01) got exactly
     this for "Which diseases are associated with BRCA1?", and the web showed
     it as "Answered" with the trust line below."""
     frames = _answer_frames()
@@ -789,7 +789,7 @@ class TestAFinishedAnswerShowsTheWebsTrustLine:
     """Card 62, PR-8.10-01: `s3` printed `[ask]` under a finished, 12-citation
     answer that asked nothing, and no trust line, while `[ask]` also labels a
     question back with options to pick from. The web shows the same answer
-    as "Answered" with "Based on N sources, not yet confirmed" under it.
+    as "Answered" with "Based on N sources cited, all from MedGen" under it.
 
     Mutation that turns these red: tag the server's `ask` verdict `[ask]`
     again, or drop the `_write_verdict` call from `_handle_done`."""
@@ -1038,10 +1038,10 @@ class TestAQuestionBackIsItsOwnState:
                 _TOKEN,
                 _CITE,
                 ("trust_signal", _signal("ask")),
-                ("done", _done("ask", "Based on 1 source, not yet confirmed")),
+                ("done", _done("ask", "Based on 1 source cited, from MedGen")),
             ]
         )
-        assert "\n[answer]\nBased on 1 source, not yet confirmed\n" in out
+        assert "\n[answer]\nBased on 1 source cited, from MedGen\n" in out
         assert "[ask]" not in out
         assert code == 0
 
@@ -1150,12 +1150,12 @@ class TestTheVerdictIsPrintedOnce:
                 _TOKEN,
                 _CITE,
                 ("trust_signal", _signal("ask")),
-                ("done", _done("ask", "Based on 12 sources, not yet confirmed")),
+                ("done", _done("ask", "Based on 12 sources cited, all from MedGen")),
                 ("done", _done("ask")),
             ]
         )
         assert out.count("[answer]") == 1
-        assert out.count("not yet confirmed") == 1
+        assert out.count("Based on 12 sources cited") == 1
         assert "Single source" not in out
 
     def test_nothing_follows_the_references(self) -> None:
@@ -1165,7 +1165,7 @@ class TestTheVerdictIsPrintedOnce:
                 _TOKEN,
                 _CITE,
                 ("trust_signal", _signal("ask")),
-                ("done", _done("ask", "Based on 12 sources, not yet confirmed")),
+                ("done", _done("ask", "Based on 12 sources cited, all from MedGen")),
             ]
         )
         assert out.endswith("[1] ncbi_gene - https://www.ncbi.nlm.nih.gov/gene/672\n")
