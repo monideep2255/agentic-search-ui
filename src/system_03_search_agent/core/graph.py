@@ -7206,10 +7206,6 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             tool_calls=[p.tool_call for p in planned_tool_calls],
         )
     else:
-        if publication_window is not None:
-            # Card 105: the graph's paper links carry no date, so a picked
-            # window leaves them out and the windowed PubMed papers lead.
-            planned = dataclasses.replace(planned, undated_papers_left_out=True)
         planned_tool_calls = [planned]
         narrative = "selected cypher_query for a Layer 1 graph lookup"
 
@@ -7309,6 +7305,18 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             set(matched_shapes(query.text, "Gene")) & _GO_SHAPES
         ):
             planned_tool_calls.append(_build_planned_go_terms_call(gene_curie, query_class))
+
+        # Card 105: the graph's paper links carry no date, so a picked window
+        # leaves them out and the windowed PubMed papers lead. Only when this
+        # plan really holds a windowed PubMed search (a gene typed as a CURIE
+        # has no symbol to search on), so nothing is dropped that nothing
+        # replaces.
+        if publication_window is not None and any(
+            getattr(c, "purpose", "") == "pubmed_search" for c in planned_tool_calls
+        ):
+            planned_tool_calls[0] = dataclasses.replace(
+                planned_tool_calls[0], undated_papers_left_out=True
+            )
 
         # UI fix set 8 (R30): one helper scientist per layer, none the lead,
         # drawn afresh on every run. Stamped onto copies of the ToolCalls,
@@ -9999,16 +10007,21 @@ def _paper_link_notes(state: GraphState) -> list[str]:
     return notes
 
 
-def _window_no_papers_note(state: GraphState, query: Any) -> str | None:
+_WINDOW_NO_PAPERS_NEXT_STEP: Final[str] = "Pick a longer window, or ask without one."
+
+
+def _window_no_papers_line(state: GraphState, query: Any) -> str | None:
     """Card 105: when the person picked a window, the graph's undated papers
-    were left out and the windowed PubMed search found none, say so.
+    were left out and the windowed PubMed search found none, the plain line
+    that says so.
 
     None for every question without a picked window, and whenever the
     windowed search returned papers, failed or never ran (a failed search
     has its own note, and no claim of "none found" is made over it).
     """
     planned_calls = state.get("tool_calls") or []
-    if not any(getattr(p, "undated_papers_left_out", False) for p in planned_calls):
+    graph_call = next((p for p in planned_calls if getattr(p, "undated_papers_left_out", False)), None)
+    if graph_call is None:
         return None
     window = _picked_publication_window(query)
     if window is None:
@@ -10021,7 +10034,17 @@ def _window_no_papers_note(state: GraphState, query: Any) -> str | None:
         output = raw_outputs.get(search.tool_call.call_id)
         if output is None or output.status == "error" or _search_ids(output):
             return None
+    # The symbol as the count line writes it: Think's resolved text for the
+    # question's gene, not the uppercased search term.
+    targets = set(graph_call.cypher_input.target_entities)
     symbol = next(
+        (
+            getattr(e, "text", "")
+            for e in state.get("resolved_entities") or []
+            if getattr(e, "curie", None) in targets and getattr(e, "text", "")
+        ),
+        None,
+    ) or next(
         (
             p.gene_symbol
             for p in planned_calls
@@ -10034,6 +10057,17 @@ def _window_no_papers_note(state: GraphState, query: Any) -> str | None:
         f"No PubMed papers from {window.label} were found{subject}. Papers in the "
         "knowledge graph carry no publication date, so they are not listed here."
     )
+
+
+def _window_no_papers_note(state: GraphState, query: Any) -> str | None:
+    """The line, as a note under an answer that stands."""
+    return _window_no_papers_line(state, query)
+
+
+def _window_no_papers_refusal(state: GraphState, query: Any) -> str | None:
+    """The line plus one next step, for a refusal the left-out papers caused."""
+    line = _window_no_papers_line(state, query)
+    return f"{line} {_WINDOW_NO_PAPERS_NEXT_STEP}" if line else None
 
 
 def _isolate_count_note(state: GraphState) -> str | None:
@@ -15160,7 +15194,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         refusal_message = refusal_message_for(
             state.get("failed_searches", []),
             state.get("topic_search_term") or None,
-            _paper_link_none_message(state),
+            _paper_link_none_message(state) or _window_no_papers_refusal(state, query),
         )
         sink.emit(
             "token",

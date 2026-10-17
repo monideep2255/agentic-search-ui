@@ -752,7 +752,13 @@ async def test_a_picked_window_reaches_a_gene_question_s_pubmed_search(
     assert plan is not None and "published in the last 5 years only" in plan["narrative"], plan
 
 
-def _install_gene_papers(monkeypatch: pytest.MonkeyPatch, *, pubmed_ids: list[str] | None = None) -> None:
+def _install_gene_papers(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    pubmed_ids: list[str] | None = None,
+    articles_only: bool = False,
+    pubmed_search_fails: bool = False,
+) -> None:
     """Card 105: BRCA1's graph call returns two undated Article rows (the
     1999 papers) and the Gene row; the windowed PubMed search finds one
     paper from 2024 and the abstracts fetch returns it with its title."""
@@ -782,6 +788,13 @@ def _install_gene_papers(monkeypatch: pytest.MonkeyPatch, *, pubmed_ids: list[st
         rows = [
             _article("10026184"),
             _article("10417300"),
+        ]
+        if articles_only:
+            # What the real gene_articles_one template returns: papers only.
+            return CypherQueryOutput(
+                status="ok", row_count=2, total_available=3487, truncated=True, rows=rows
+            )
+        rows += [
             CypherQueryRow(
                 node_or_edge_type="Gene",
                 curie="NCBIGene:672",
@@ -797,6 +810,11 @@ def _install_gene_papers(monkeypatch: pytest.MonkeyPatch, *, pubmed_ids: list[st
     async def _efetch(tool_input: Any, **kwargs: object) -> NcbiEfetchOutput:
         dumped = tool_input.model_dump()
         action = dumped.get("action", "search")
+        if action == "search" and dumped.get("db") == "pubmed" and pubmed_search_fails:
+            return NcbiEfetchOutput(
+                status="error", action="search", records=[], record_count=0,
+                total_available=None, truncated=False, error="ESearch failed",
+            )
         if action == "search" and dumped.get("db") == "pubmed" and found_ids:
             return NcbiEfetchOutput(
                 status="ok",
@@ -850,14 +868,25 @@ def _cited_and_written(events: list[Any]) -> str:
 
 
 async def _ask_brca1(
-    monkeypatch: pytest.MonkeyPatch, *, pick_window: bool, pubmed_ids: list[str] | None = None
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    pick_window: bool,
+    pubmed_ids: list[str] | None = None,
+    articles_only: bool = False,
+    pubmed_search_fails: bool = False,
+    ask: str = "recent papers on BRCA1",
 ) -> list[Any]:
     _install_tools(monkeypatch)
     _spy_searches(monkeypatch)
-    _install_gene_papers(monkeypatch, pubmed_ids=pubmed_ids)
+    _install_gene_papers(
+        monkeypatch,
+        pubmed_ids=pubmed_ids,
+        articles_only=articles_only,
+        pubmed_search_fails=pubmed_search_fails,
+    )
     _install_models(monkeypatch, clarify_reply=None)
     _install_decide(monkeypatch, {"think.recent_years": "recent_unbounded"})
-    asked = await _run("recent papers on BRCA1")
+    asked = await _run(ask)
     if not pick_window:
         # The same words typed again with no click: an unpicked question.
         clarify.clear_offered_windows()
@@ -917,6 +946,60 @@ async def test_a_picked_window_with_papers_in_it_carries_no_such_line(
 ) -> None:
     events = await _ask_brca1(monkeypatch, pick_window=True)
     assert "No PubMed papers" not in _notes(events), _notes(events)
+
+
+def _all_text(events: list[Any]) -> str:
+    return "\n".join(
+        e.payload["text"] for e in events if e.type == "token" and "text" in e.payload
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_refusal_the_left_out_papers_caused_says_what_happened_and_what_to_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-105-02: the real template returns papers only, so with the papers
+    left out and nothing found in the window, nothing grounds the answer. The
+    refusal then carries the empty-window line and a next step, not the
+    generic text."""
+    events = await _ask_brca1(monkeypatch, pick_window=True, pubmed_ids=[], articles_only=True)
+
+    done = _payload(events, "done")
+    assert done is not None and done["trust_outcome"] == "refuse", done
+    text = _all_text(events)
+    assert _NO_WINDOW_PAPERS_LINE in text, text
+    assert "Pick a longer window, or ask without one." in text, text
+    assert "I could not find grounded evidence" not in text, text
+    assert "10026184" not in text
+
+
+@pytest.mark.asyncio
+async def test_a_failed_windowed_search_never_says_no_papers_were_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A search that did not finish found nothing out: the failure note shows
+    and the empty-window line does not."""
+    events = await _ask_brca1(monkeypatch, pick_window=True, pubmed_search_fails=True)
+
+    text = _all_text(events)
+    assert "No PubMed papers" not in text, text
+    assert "did not finish" in text, text
+
+
+@pytest.mark.asyncio
+async def test_a_picked_window_on_a_gene_typed_as_a_curie_keeps_the_graph_papers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-105-01: a gene typed as a CURIE has no symbol, so no PubMed search is
+    planned. Nothing would replace the graph's papers, so they stay, as on
+    develop."""
+    events = await _ask_brca1(
+        monkeypatch, pick_window=True, articles_only=True, ask="recent papers on NCBIGene:672"
+    )
+
+    text = _cited_and_written(events)
+    assert "10026184" in text, text
+    assert "No PubMed papers" not in text, text
 
 
 @pytest.mark.asyncio
