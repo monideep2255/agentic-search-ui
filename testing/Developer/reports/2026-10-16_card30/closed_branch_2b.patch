@@ -1,0 +1,1479 @@
+diff --git a/docs/build/Debugging_guide.md b/docs/build/Debugging_guide.md
+index 83be2aad..d6cf8e2a 100644
+--- a/docs/build/Debugging_guide.md
++++ b/docs/build/Debugging_guide.md
+@@ -529,6 +529,7 @@ This is the Write step's deterministic half, Sections 8 and 9. Nothing in this p
+ | `src/system_03_search_agent/synthesis/conflict_detection.py` | Section 7.2: normalized equality check between a Layer 1 value and a live Layer 2/3 value, routing a mismatch to the `flag` trust outcome. | A conflicting value gets silently picked instead of flagged |
+ | `src/system_03_search_agent/synthesis/disease_names.py` | Build phase 6.2: resolves a MedGen concept id to a disease name over Layer 2, because the graph's Disease `name` holds the source vocabulary rather than the name. Two E-utilities calls total for any number of ids, ESearch on `[ConceptId]` then one batched ESummary, mapped back by the payload's own `conceptid`. Never invents a name and never raises into the loop. | An answer names a disease the record does not, or falls back to `MedGen:C0346153` where a name should be |
+ | `src/system_03_search_agent/synthesis/mesh_terms.py` | 2026-09-23: resolves a MeSH descriptor id to its preferred heading over Layer 2, because every one of the graph's 30,790 `OntologyClass` vertices carries the identifier (`[MeSH] D000818`) in its `name`. Two E-utilities calls total for any number of ids, ESearch on `[MHUI]` then one batched ESummary, mapped back by the payload's own `ds_meshui`. Never invents a heading and never raises into the loop. | An answer to "what MeSH terms are assigned to this article" shows `MeSH:D000818` where a term should be, or shows a term that belongs to a different id |
++| `src/system_03_search_agent/synthesis/variant_classifications.py` | Card 30 step 2b, 2026-10-17: reads ClinVar's germline classification of each listed graph `SequenceVariant` from its live ClinVar record, because the graph loads no classification. One ESummary per 50 `ClinVar:` CURIEs, joined by record id, never by position, with a 1.5 s timeout and calls reserved for the name lookups under the 20-call ceiling. Shows ClinVar's own words or nothing; never raises into the loop. | A variant shows another variant's classification, a reworded classification, a classification on the variant-to-disease table, or step 1's "not retrieved" line missing while a listed row shows none |
+ | `src/system_03_search_agent/synthesis/article_titles.py` | Card 38, 2026-10-17: names a graph paper by its PubMed title, read live over the `ncbi_efetch` tool's PubMed EFetch, because the graph's `Article` titles are quarantined as untrusted text. At most two requests of 50 PMIDs, joined by the returned record's PMID, never by position; each title cleaned to one line, marker-shaped brackets defused, exact markup tags neutralised, and a placeholder, cut or over-long title withheld. Never invents a title and never raises into the loop; every failure leaves the PMID. | A paper shows a title that belongs to a different PMID, a title with altered variant notation, a paper listed twice, or `PMID:...` where a title should be |
+ | `src/system_03_search_agent/synthesis/findings.py` | Section 8.1: the code-built findings list Synth is given, compressed from tool results, with no raw record reachable outside it. Also `apply_resolved_disease_names` and the `name_resolved` render branch, which decide whether the model is handed an identifier or a name. | A finding cites the wrong value, Synth seems to reach outside its list, or an identifier appears in prose beside a resolved name |
+ | `src/system_03_search_agent/synthesis/freshness.py` | Section 7: live-wins-for-currency, the as-of marker, and the 30/90-day staleness thresholds for Layer 1 only. | A stale graph value is stated as current, or an as-of marker is missing |
+diff --git a/src/system_03_search_agent/core/graph.py b/src/system_03_search_agent/core/graph.py
+index f4bf0a39..d56d1b3a 100644
+--- a/src/system_03_search_agent/core/graph.py
++++ b/src/system_03_search_agent/core/graph.py
+@@ -543,6 +543,7 @@ from system_03_search_agent.harness.jev_client import (
+ from system_03_search_agent.harness.tiers import Tier, resolve_jev_model
+ from system_03_search_agent.observability import audit
+ from system_03_search_agent.synthesis.answer_layout import (
++    _CLASSIFICATION_FIELDS,
+     IDENTIFIER_COLUMN_LABEL,
+     ISOLATE_ENTITY_TYPE,
+     LABEL_FIELDS,
+@@ -554,6 +555,7 @@ from system_03_search_agent.synthesis.answer_layout import (
+     AskedField,
+     GroundingInput,
+     answer_summary_sentence,
++    classification_text_suffix,
+     collected_placeholder,
+     collected_with_place,
+     condition_ids_for_row,
+@@ -578,6 +580,7 @@ from system_03_search_agent.synthesis.answer_layout import (
+     table_second_cell,
+     variant_classification_note,
+     variant_to_disease_source_note,
++    with_variant_classification,
+ )
+ from system_03_search_agent.synthesis.article_titles import (
+     apply_resolved_article_titles,
+@@ -639,6 +642,9 @@ from system_03_search_agent.synthesis.trust import (
+     answer_trust_line,
+     trust_for_claims,
+ )
++from system_03_search_agent.synthesis.variant_classifications import (
++    resolve_variant_classifications,
++)
+ from system_03_search_agent.tools.clinicaltrials_search import (
+     build_citation as clinicaltrials_build_citation,
+ )
+@@ -1286,6 +1292,9 @@ class _RunDecisions:
+     #: `think.asks_classification` (card 30), started at Think beside the
+     #: features decision and read once by Write.
+     classification_task: asyncio.Task[DecisionRecord | None] | None = None
++    #: Card 30 step 2b: Write's ClinVar classification lookup while it runs,
++    #: so a Write that ends early stops it.
++    variant_lookup_task: asyncio.Task[dict[str, str]] | None = None
+ 
+ 
+ #: One entry per live run, keyed by the run's `Harness`. `core/run.py`
+@@ -1576,6 +1585,14 @@ def _drop_classification_decision(harness: Any) -> None:
+     _cancel_if_pending(task)
+ 
+ 
++def _drop_variant_lookup(harness: Any) -> None:
++    """Stop Write's ClinVar classification lookup if Write ended before
++    reading it. Never awaits."""
++    entry = _run_decisions(harness)
++    task, entry.variant_lookup_task = entry.variant_lookup_task, None
++    _cancel_if_pending(task)
++
++
+ def _drop_features_decision(harness: Any) -> None:
+     """Stop `think.asks_features` on a path that ends the run without
+     reading it (a refusal or error Write ships early). Never awaits."""
+@@ -13231,6 +13248,7 @@ def _answer_parts(
+     classification_note: str | None = None,
+     summary_sentence: str | None = None,
+     condition_names: dict[str, str | None] | None = None,
++    variant_classifications: dict[str, str] | None = None,
+     lead_index: int | None = None,
+     listing_sentences: tuple[str, ...] = (),
+ ) -> _AnswerParts:
+@@ -13285,6 +13303,13 @@ def _answer_parts(
+     depth, and on other Researcher prose sentences only, from the run's
+     resolved entity mentions and record names.
+     """
++    def shown_row_fields(finding: SynthFinding) -> dict[str, Any] | None:
++        # Card 30 step 2b: a graph variant row also carries its looked up
++        # ClinVar classification, on a copy; every other row is as stored.
++        return with_variant_classification(
++            finding, _row_fields_for(finding, findings), variant_classifications
++        )
++
+     citation_by_display = {citation.display_index: citation for citation in citations}
+     citation_by_id = {citation.citation_id: citation for citation in citations}
+     finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
+@@ -13321,8 +13346,12 @@ def _answer_parts(
+         cells: list[str] | None = None,
+         emphasize: bool = False,
+         extra_marker_ids: list[str] | None = None,
++        suffix: str = "",
+     ) -> None:
+-        text = (sentence if sentence.endswith(" ") else sentence + " ")[:1000]
++        text = (sentence if sentence.endswith(" ") else sentence + " ")
++        # Card 30 step 2b: a graph variant row's classification also rides in
++        # its text, inside the token's cap.
++        text = text[: 1000 - len(suffix)] + suffix
+         emphasis = emphasis_for(text, terms) if emphasize and terms else []
+         ids = marker_ids(sentence)
+         for extra in extra_marker_ids or []:
+@@ -13581,14 +13610,19 @@ def _answer_parts(
+                 sentence_token(sentence)
+                 continue
+             identifier = identifier_for(finding)
+-            label = plain_record_label(finding, _row_fields_for(finding, findings), identifier)
++            label = plain_record_label(finding, shown_row_fields(finding), identifier)
+             # One row per record: two claims about the same record (its title
+             # and its symbol) are one row, not two identical ones. Card 104:
+             # keyed on the page, as Sources is, with citations merged.
+             record_key = record_merge_key(finding, identifier)
+             if merge_into(listed_records, record_key, sentence, [label]):
+                 continue
+-            sentence_token(sentence, kind="list_item", cells=[label])
++            sentence_token(
++                sentence,
++                kind="list_item",
++                cells=[label],
++                suffix=classification_text_suffix(finding, shown_row_fields(finding)),
++            )
+             remember(listed_records, record_key, [label])
+         # Beneath the one list, so the list itself stays one list: each
+         # disease's features under a heading that names the disease.
+@@ -13657,7 +13691,7 @@ def _answer_parts(
+             entries = groups[noun]
+             entity_type = type_for_group[noun]
+             row_fields_by_entry = [
+-                _row_fields_for(finding, findings) if finding is not None else None
++                shown_row_fields(finding) if finding is not None else None
+                 for _, finding in entries
+             ]
+             second_cells = [
+@@ -13766,7 +13800,12 @@ def _answer_parts(
+                 record_key = record_merge_key(finding, identifier)
+                 if not as_table:
+                     if not merge_into(listed_records, record_key, sentence, cells):
+-                        sentence_token(sentence, kind="list_item", cells=cells)
++                        sentence_token(
++                            sentence,
++                            kind="list_item",
++                            cells=cells,
++                            suffix=classification_text_suffix(finding, row_fields),
++                        )
+                         remember(listed_records, record_key, cells)
+                     continue
+                 mapping = (
+@@ -13777,7 +13816,13 @@ def _answer_parts(
+                 if merge_into(listed_records, record_key, sentence, cells, mapping):
+                     continue
+                 linked = linked_disease_ids(entity_type, row_fields) if mapped else []
+-                sentence_token(sentence, kind="table_row", cells=cells, extra_marker_ids=linked)
++                sentence_token(
++                    sentence,
++                    kind="table_row",
++                    cells=cells,
++                    extra_marker_ids=linked,
++                    suffix=classification_text_suffix(finding, row_fields),
++                )
+                 remember(listed_records, record_key, cells, row_fields)
+ 
+             # Card 23 (owner, 2026-10-06): directly under the
+@@ -13922,6 +13967,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
+     finally:
+         _drop_features_decision(state["harness"])
+         _drop_classification_decision(state["harness"])
++        _drop_variant_lookup(state["harness"])
+         # Build phase 8.7, card 50: a second draft started beside the first
+         # never outlives the Write step, however it ends.
+         await _drop_second_draft(state["harness"])
+@@ -14168,6 +14214,37 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+     curie_fallback_curies = [
+         f.curie for f in synth_findings if f.curie_fallback and f.curie
+     ]
++    # Card 30 step 2b: ClinVar's classification of each listed graph
++    # variant starts here, beside the name lookups, and is awaited after
++    # them, so the two run together. Never raises; a CURIE it could not read
++    # is absent and keeps today's row.
++    #
++    # A variant row that carries a variant-to-disease mapping is left out:
++    # card 23's table shows no classification, and its line says so. The
++    # lookup also leaves the calls the name lookups below can need (two per
++    # MedGen or MeSH round, up to four for the fallback names and two for the
++    # fold's), so it never takes a call they need from the 20-call budget.
++    classification_task: asyncio.Task[dict[str, str]] | None = None
++    variant_curies = [
++        f.curie
++        for f in synth_findings
++        if f.layer == "layer_1_graph"
++        and f.entity_type == "SequenceVariant"
++        and f.curie
++        and not condition_ids_for_row(f.entity_type, _row_fields_for(f, findings))
++    ]
++    folds_conditions = any(
++        condition_ids_for_row(f.entity_type, _row_fields_for(f, findings)) for f in synth_findings
++    )
++    if variant_curies:
++        classification_task = asyncio.create_task(
++            resolve_variant_classifications(
++                variant_curies,
++                reserve_calls=(4 if curie_fallback_curies else 0) + (2 if folds_conditions else 0),
++            )
++        )
++        # Stopped by `write_node` if Write ends before it is read.
++        _run_decisions(harness).variant_lookup_task = classification_task
+     resolved_names = await resolve_concept_ids(curie_fallback_curies)
+     resolved_names.update(
+         {
+@@ -14209,6 +14286,10 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+     synth_findings, placeholder_findings_dropped = drop_placeholder_condition_findings(
+         synth_findings
+     )
++    variant_classifications: dict[str, str] = (
++        await classification_task if classification_task is not None else {}
++    )
++    _run_decisions(harness).variant_lookup_task = None
+ 
+     # Card 38, slice C (G-021). A graph paper is a `curie_fallback` finding
+     # because its title is quarantined as untrusted text
+@@ -14399,6 +14480,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+             mentions=answer_mentions,
+             notes=[],
+             condition_names=condition_names,
++            variant_classifications=variant_classifications,
+         ).listing
+         return listed_citations, part
+ 
+@@ -15157,7 +15239,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+     # classification. The note is true on every such listing; the verdict
+     # floor needs the classifier's reading that the question asked for one.
+     # Floors the answer-level outcome only, never a claim's trust.
+-    classification_note = variant_classification_note(synth_findings)
++    classification_note = variant_classification_note(
++        synth_findings, set(variant_classifications)
++    )
+     # The code-built listing may already have left (or be about to leave)
+     # with card 23's line under its table; that line says the same thing.
+     if any(
+@@ -15166,7 +15250,14 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+         note_for_notes: str | None = None
+     else:
+         note_for_notes = classification_note
+-    if classification_note is not None and classification_asked and trust_outcome != "refuse":
++    # Owner decision 2026-10-17: the floor stands on the classifier's reading
++    # and a listed graph variant, whether or not the line still shows.
++    # A finding that cites a classification field (card 30 step 1's
++    # stand-down) still lifts it.
++    lists_graph_variant = any(
++        f.layer == "layer_1_graph" and f.entity_type == "SequenceVariant" for f in synth_findings
++    ) and not any(f.field in _CLASSIFICATION_FIELDS for f in synth_findings)
++    if lists_graph_variant and classification_asked and trust_outcome != "refuse":
+         trust_outcome = aggregate([trust_outcome, "ask"])
+     if repair_cap_exceeded and trust_outcome != "refuse":
+         repair_cap_note = _build_repair_cap_note(omission_remains=bool(omitted_findings))
+@@ -15499,6 +15590,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
+             classification_note=note_for_notes,
+             summary_sentence=summary_sentence,
+             condition_names=condition_names,
++            variant_classifications=variant_classifications,
+             lead_index=lead_index,
+             listing_sentences=listing_shown,
+         )
+diff --git a/src/system_03_search_agent/synthesis/answer_layout.py b/src/system_03_search_agent/synthesis/answer_layout.py
+index 5d1c9d7b..a3760d49 100644
+--- a/src/system_03_search_agent/synthesis/answer_layout.py
++++ b/src/system_03_search_agent/synthesis/answer_layout.py
+@@ -63,7 +63,7 @@ Writes:
+ from __future__ import annotations
+ 
+ import re
+-from collections.abc import Sequence
++from collections.abc import Collection, Sequence
+ from dataclasses import dataclass
+ from typing import Any, Literal
+ 
+@@ -93,6 +93,7 @@ from system_03_search_agent.synthesis.grounding import (
+     short_forms_by_page,
+     title_words_shared,
+ )
++from system_03_search_agent.synthesis.variant_classifications import CLASSIFICATION_ROW_FIELD
+ 
+ BlockKind = Literal["heading", "paragraph"]
+ 
+@@ -397,23 +398,69 @@ _CLASSIFICATION_FIELDS: frozenset[str] = frozenset(
+ )
+ 
+ 
+-def variant_classification_note(findings: Sequence[Any]) -> str | None:
++def variant_classification_note(
++    findings: Sequence[Any], classified: Collection[str] | None = None
++) -> str | None:
+     """The card 30 line, or None when it would not be true.
+ 
+     Keyed on record type and field only, never on the question's words: at
+     least one finding is a knowledge graph `SequenceVariant` record, and no
+-    finding cites a classification field.
++    finding cites a classification field. Step 2b: `classified` holds the
++    CURIEs whose ClinVar classification the answer shows, and the line is
++    dropped only when every graph variant finding is among them and no live
++    ClinVar variant record sits on the page, since a live row shows no
++    classification of its own (a classification field it cites is handled
++    above).
+     """
+-    has_graph_variant = any(
+-        f.layer == "layer_1_graph" and f.entity_type == "SequenceVariant" for f in findings
+-    )
+-    if not has_graph_variant:
++    graph_variants = [
++        f for f in findings if f.layer == "layer_1_graph" and f.entity_type == "SequenceVariant"
++    ]
++    if not graph_variants:
+         return None
+     if any(f.field in _CLASSIFICATION_FIELDS for f in findings):
+         return None
++    live_variant_rows = any(
++        f.layer != "layer_1_graph" and f.entity_type.lower().startswith("clinvar")
++        for f in findings
++    )
++    if (
++        classified
++        and not live_variant_rows
++        and all(f.curie and f.curie in classified for f in graph_variants)
++    ):
++        return None
+     return VARIANT_CLASSIFICATION_NOTE
+ 
+ 
++def classification_text_suffix(finding: Any, row_fields: dict[str, Any] | None) -> str:
++    """The words a graph variant row's token text carries after its cited
++    sentence, so a surface that prints the text (the command line, MCP,
++    GraphQL) shows the classification the table cell shows. Empty for every
++    other row."""
++    value = (row_fields or {}).get(CLASSIFICATION_ROW_FIELD)
++    if finding.entity_type == "SequenceVariant" and isinstance(value, str) and value.strip():
++        return f"ClinVar classification: {value.strip()}. "
++    return ""
++
++
++def with_variant_classification(
++    finding: Any,
++    row_fields: dict[str, Any] | None,
++    classifications: dict[str, str] | None,
++) -> dict[str, Any] | None:
++    """`row_fields` of a graph variant row plus its looked up ClinVar
++    classification, as a copy. Any other row, and a variant with none, comes
++    back unchanged."""
++    if not classifications or finding.layer != "layer_1_graph":
++        return row_fields
++    if finding.entity_type != "SequenceVariant" or not finding.curie:
++        return row_fields
++    value = classifications.get(finding.curie)
++    if not value:
++        return row_fields
++    return {**(row_fields or {}), CLASSIFICATION_ROW_FIELD: value}
++
++
+ # ---------------------------------------------------------------------------
+ # Item 12.9 (2026-09-23): what each depth's reader is shown.
+ # ---------------------------------------------------------------------------
+@@ -624,6 +671,9 @@ _ROW_TYPE_COLUMNS: dict[tuple[str, str], str] = {
+     # (V-37-01). Read only when the significance is absent: the loop returns
+     # the first match in this order.
+     ("Variant record", "functional_consequence"): "Consequence",
++    # Card 30 step 2b: ClinVar's own word for a graph variant, looked up at
++    # Write (`synthesis/variant_classifications`) and shown verbatim.
++    ("SequenceVariant", CLASSIFICATION_ROW_FIELD): "ClinVar classification",
+     # Card 38 slice B: a graph ortholog gene row carries its taxon names. The
+     # exact graph type `Gene` only; the Layer 2 `gene` type is a different key.
+     ("Gene", "organism"): "Organism",
+@@ -982,6 +1032,20 @@ def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> st
+ 
+ def plain_record_label(
+     finding: SynthFinding, row_fields: dict[str, Any] | None, identifier: str = ""
++) -> str:
++    """The plain-language list cell: the record's title (`_plain_title`),
++    and for a graph variant with a looked up ClinVar classification, that
++    classification after the name, verbatim."""
++    label = _plain_title(finding, row_fields, identifier)
++    value = (row_fields or {}).get(CLASSIFICATION_ROW_FIELD)
++    if finding.entity_type == "SequenceVariant" and isinstance(value, str) and value.strip():
++        suffix = f", ClinVar classification: {value.strip()}"
++        return clip_to_word(label, MAX_LABEL_CHARS - len(suffix)) + suffix
++    return label
++
++
++def _plain_title(
++    finding: SynthFinding, row_fields: dict[str, Any] | None, identifier: str = ""
+ ) -> str:
+     """The one cell a plain-language list row shows: the record's title.
+ 
+diff --git a/src/system_03_search_agent/synthesis/variant_classifications.py b/src/system_03_search_agent/synthesis/variant_classifications.py
+new file mode 100644
+index 00000000..1620c811
+--- /dev/null
++++ b/src/system_03_search_agent/synthesis/variant_classifications.py
+@@ -0,0 +1,176 @@
++"""Look up ClinVar's classification of each graph variant an answer lists.
++
++Card 30, step 2b (owner decision, 2026-10-16): "one ClinVar ESummary call per
++50 listed graph variants, about a second, and every listed variant shows its
++ClinVar classification."
++
++## Why this exists
++
++A knowledge graph `SequenceVariant` row carries no classification (the graph
++loads neither ClinVar's ClinicalSignificance nor its review status), so a
++list under "Which BRCA1 variants are pathogenic?" cannot say which are. The
++classification lives on the variant's live ClinVar record, one ESummary away.
++This module reads it there, the way `disease_names` reads a MedGen title.
++
++## What it will not do
++
++- It shows ClinVar's own words. The value is `germline_classification.
++  description` of the record, stripped and nothing else. A value it cannot
++  read as one short line (missing, not text, over `_MAX_CLASSIFICATION_CHARS`,
++  holding a control character) is treated as unread, never cut or tidied,
++  because a clipped classification is a paraphrase of clinical text.
++- It joins by record id, never by position. A CURIE whose record did not
++  come back, or came back twice with different values, is absent from the
++  result, and the caller keeps today's row for it.
++- It never raises into the agent loop and never invents a value. Timeout,
++  transport error, rate limit, a refused call: each leaves the affected
++  CURIEs out of the result.
++- It never spends past the per-query ceiling. At the ceiling it makes no
++  request at all.
++
++## Budgets
++
++One request per `_IDS_PER_REQUEST` (50, the tool schema's own bound) CURIEs,
++at most `_MAX_REQUESTS` requests (the display cap is 100 rows). Every call
++goes through `tools.ncbi_eutils_actions`, so it inherits the shared token
++bucket, the wait queue and the Layer 2/3 call ceiling.
++
++Depends on:
++    - system_03_search_agent.tools.ncbi_eutils_actions (summary)
++    - system_03_search_agent.harness.call_budget (calls_made)
++
++Reads:
++    - Live ClinVar over E-utilities, through the shared rate pool.
++
++Writes:
++    - Nothing.
++"""
++
++from __future__ import annotations
++
++import asyncio
++import logging
++import re
++from collections.abc import Sequence
++from typing import Any
++
++from system_03_search_agent.harness import call_budget
++
++logger = logging.getLogger(__name__)
++
++__all__ = ["CLASSIFICATION_ROW_FIELD", "resolve_variant_classifications"]
++
++#: The row field name the layout reads a looked up classification under. It
++#: is set on a copy of the row at display time, never on a stored record.
++CLASSIFICATION_ROW_FIELD = "clinvar_classification"
++
++# A graph ClinVar CURIE: `ClinVar:` then the numeric variation id, which is
++# the uid of the record in ClinVar's ESummary.
++_CLINVAR_CURIE = re.compile(r"^ClinVar:(\d{1,20})$", re.ASCII)
++
++_IDS_PER_REQUEST = 50
++_MAX_REQUESTS = 2
++# Per request. About 0.3 s is typical (measured), so a hung reply costs at
++# most this, inside the owner's "about a second" at the median.
++_REQUEST_TIMEOUT_S = 1.5
++# ClinVar's longest germline description is "Conflicting classifications of
++# pathogenicity" (44 characters).
++_MAX_CLASSIFICATION_CHARS = 100
++_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
++
++
++def _local_id(curie: str) -> str | None:
++    match = _CLINVAR_CURIE.match(curie.strip())
++    return match.group(1) if match else None
++
++
++def _classification_of(fields: Any) -> str | None:
++    """The record's germline classification text, or None if unreadable."""
++    if not isinstance(fields, dict):
++        return None
++    block = fields.get("germline_classification")
++    if not isinstance(block, dict):
++        return None
++    text = block.get("description")
++    if not isinstance(text, str):
++        return None
++    text = text.strip()
++    if not text or len(text) > _MAX_CLASSIFICATION_CHARS or _CONTROL.search(text):
++        return None
++    return text
++
++
++def _requests_allowed(wanted: int, reserve: int = 0) -> int:
++    """How many requests the query's call ceiling still permits, leaving
++    `reserve` calls for lookups that need them more (the name lookups)."""
++    made = call_budget.calls_made()
++    if made is None:
++        return wanted
++    left = call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY - made - reserve
++    return max(0, min(wanted, left))
++
++
++async def _summary_classifications(ids: list[str]) -> dict[str, str | None]:
++    """One ESummary over `ids`, keyed by the record's own id. Never raises.
++
++    A uid seen twice with different values maps to None (ambiguous).
++    """
++    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchSummaryInput
++    from system_03_search_agent.tools.ncbi_eutils_actions import summary
++
++    try:
++        result = await asyncio.wait_for(
++            summary(NcbiEfetchSummaryInput(action="summary", db="clinvar", ids=ids)),
++            timeout=_REQUEST_TIMEOUT_S,
++        )
++    except Exception as exc:  # noqa: BLE001
++        # Deliberately broad: a failed lookup leaves the list as it was.
++        logger.warning("ClinVar classification lookup failed: %s", type(exc).__name__)
++        return {}
++    if result.status != "ok":
++        return {}
++    found: dict[str, str | None] = {}
++    for record in result.records:
++        uid = str(record.id).strip()
++        value = _classification_of(record.fields)
++        if uid in found and found[uid] != value:
++            value = None
++        found[uid] = value
++    return found
++
++
++async def resolve_variant_classifications(
++    curies: Sequence[str], *, reserve_calls: int = 0
++) -> dict[str, str]:
++    """Map each `ClinVar:` CURIE to ClinVar's classification of it.
++
++    Only CURIEs whose classification was read appear in the result. A CURIE
++    of another vocabulary, a duplicate, or one whose record could not be
++    read is simply absent. No request is made when there is nothing to ask
++    or the per-query call ceiling is spent. `reserve_calls` leaves that many
++    calls of the ceiling for the name lookups that run beside this one.
++    """
++    by_local: dict[str, list[str]] = {}
++    for curie in curies:
++        local = _local_id(str(curie))
++        if local is not None and str(curie) not in by_local.get(local, []):
++            by_local.setdefault(local, []).append(str(curie))
++    if not by_local:
++        return {}
++    locals_sorted = sorted(by_local)
++    chunks = [
++        locals_sorted[i : i + _IDS_PER_REQUEST]
++        for i in range(0, len(locals_sorted), _IDS_PER_REQUEST)
++    ][:_MAX_REQUESTS]
++    chunks = chunks[: _requests_allowed(len(chunks), reserve_calls)]
++    if not chunks:
++        return {}
++    replies = await asyncio.gather(*(_summary_classifications(chunk) for chunk in chunks))
++    resolved: dict[str, str] = {}
++    for chunk, reply in zip(chunks, replies, strict=True):
++        for local in chunk:
++            value = reply.get(local)
++            if value:
++                for curie in by_local[local]:
++                    resolved[curie] = value
++    return resolved
+diff --git a/testing/Test_queries_and_workflows.md b/testing/Test_queries_and_workflows.md
+index 5e813250..6452e54f 100644
+--- a/testing/Test_queries_and_workflows.md
++++ b/testing/Test_queries_and_workflows.md
+@@ -540,8 +540,9 @@ Queries to try:
+ What you should see:
+ 
+ - The answer still lists CFTR's variant records, with the same sources as before.
+-- Below the answer, one line reads "ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification."
+-- The answer is not marked as a confirmed answer, because the question asks which variants are clinically significant and the list does not say. If a run marks it confirmed anyway, report it: the check that reads the question's meaning missed it.
++- Each listed knowledge graph variant shows ClinVar's classification of it, word for word ("Pathogenic", "Uncertain significance", "Conflicting classifications of pathogenicity"): a "ClinVar classification" column in Researcher, after the name in Plain language, and in the text the command line prints. ClinVar's own wording such as "no classification for the single variant" appears as it is.
++- The live ClinVar records listed beside them show no classification, so while any listed ClinVar variant shows none, one line below the answer reads "ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification." It disappears only when every listed variant shows a classification.
++- The answer is not marked as a confirmed answer, because the question asks which variants are clinically significant, even when every variant shows a classification. If a run marks it confirmed anyway, report it: the check that reads the question's meaning missed it.
+ - Why it matters: someone checking CFTR before an appointment needs this answer to keep working exactly as it did last time, not to quietly go missing because some unrelated part of the product changed.
+ 
+ ### 23. rs334 without invented conditions
+@@ -624,7 +625,7 @@ What you should see:
+ 
+ - Variant-to-disease and gene-to-disease tables over the graph's ClinVar links, in every mode.
+ - The HNF1A answer shows "Variant-to-disease mapping".
+-- With that table, and with no other, one line reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI." (card 23). Directly under that table, at 1280 and 390, whether more records follow it or the table ends the answer; never in the Notes list. Plain language shows no table, so no card 23 line, but its Notes list carries card 30's line that ClinVar's classification was not retrieved (the variant list is unclassified).
++- With that table, and with no other, one line reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI." (card 23). Directly under that table, at 1280 and 390, whether more records follow it or the table ends the answer; never in the Notes list. The table has three columns, as before, and no classification column, so card 23's line stays true. Plain language shows no table, so no card 23 line, but its Notes list carries card 30's line that ClinVar's classification was not retrieved, because these variants are not looked up.
+ - When checked live on 2026-09-14 the table stopped at 5 rows where the reference prototype shows 13, because an answer cites at most 20 sources. Whether that ceiling is right is the product owner's call, a card in the board's To do column.
+ - No disease cell is blank without a reason: a row whose ClinVar record names only a placeholder reads "None named: the ClinVar record says not provided" (or "not specified", or "gives only a placeholder"), and a row whose disease name could not be looked up reads "Name could not be looked up" (card 103).
+ - Why it matters: a person asking which diseases a gene's variants cause wants the variant and the disease side by side, not two lists to match up themselves.
+@@ -655,11 +656,12 @@ Queries to try:
+ What you should see:
+ 
+ - The BRCA1 answer still lists BRCA1's variant records, each linked to its ClinVar record.
+-- Below the answer, one line reads "ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification."
+-- The BRCA1 answer is never marked as a confirmed answer, and no sentence calls the listed variants pathogenic.
+-- Both modes carry the same line, once.
++- Each BRCA1 variant from the knowledge graph shows ClinVar's classification of it, word for word, in a "ClinVar classification" column in Researcher, after the name in Plain language, and in the text the command line, MCP and GraphQL print. Tonight's 40 are 2 Pathogenic, 15 Uncertain significance and 23 Conflicting classifications of pathogenicity.
++- The line "ClinVar's classification of these variants ... was not retrieved" appears only if some listed variant, including a live ClinVar record listed beside them, shows no classification. A variant whose classification could not be read keeps its row without one.
++- The BRCA1 answer is never marked as a confirmed answer, even when every variant shows its classification, and no sentence calls the listed variants pathogenic.
++- Both modes show the same classifications, and when the line appears it appears once.
+ - The rs334 answer shows dbSNP's clinical significance and carries no such line.
+-- Why it matters: of the first 40 BRCA1 variants this question listed on 2026-10-05, ClinVar classifies 2 as pathogenic. A person asking which variants are pathogenic reads any list under that question as the answer, and an unmarked list of unclassified variants is a confident wrong answer about cancer risk.
++- Why it matters: of the first 40 BRCA1 variants this question listed on 2026-10-05, ClinVar classifies 2 as pathogenic. A person asking which variants are pathogenic reads any list under that question as the answer, and a list of unclassified variants with no word on it is a confident wrong answer about cancer risk.
+ 
+ ## 4. Chromosome windows and accessions
+ 
+diff --git a/tests/system_03_search_agent/core/test_graph.py b/tests/system_03_search_agent/core/test_graph.py
+index 9285c0db..42f705eb 100644
+--- a/tests/system_03_search_agent/core/test_graph.py
++++ b/tests/system_03_search_agent/core/test_graph.py
+@@ -7678,3 +7678,60 @@ async def test_card30_no_floor_when_the_answer_shows_a_classification(
+     assert "Pathogenic" in seen, "populate-check: the classification is on the page"
+     assert "classification of these variants" not in seen
+     assert floors[0] == floors_without_the_decision
++
++
++async def _classified_write(
++    monkeypatch: pytest.MonkeyPatch, mapping: dict[str, str], pick: str | None
++) -> dict[str, object]:
++    async def _lookup(curies: list[str], **_kw: object) -> dict[str, str]:
++        return {c: mapping[c] for c in curies if c in mapping}
++
++    monkeypatch.setattr(graph_module, "resolve_variant_classifications", _lookup)
++    return await _classification_write(pick)
++
++
++@pytest.mark.asyncio
++async def test_card30b_a_partly_read_list_keeps_the_line_and_the_floor(
++    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
++) -> None:
++    """Two of three variants show ClinVar's word; the third could not be read.
++    Step 1's line stays, the floor still holds, claim trust is untouched."""
++    baseline = await _classified_write(monkeypatch, {}, None)
++    result = await _classified_write(
++        monkeypatch, {"ClinVar:1": "Pathogenic", "ClinVar:2": "Benign"}, "asks_classification"
++    )
++    seen = _everything_the_reader_sees(result["events"])
++    assert "Pathogenic" in seen, "populate-check: a read classification is on the page"
++    assert "classification of these variants" in seen
++    assert _answer_scope_outcome(result) == "ask"
++    assert _claim_outcomes(result) == _claim_outcomes(baseline)
++
++
++_ALL_READ = {"ClinVar:1": "Pathogenic", "ClinVar:2": "Uncertain significance", "ClinVar:3": "Benign"}
++
++
++@pytest.mark.asyncio
++async def test_card30b_a_fully_read_list_drops_the_line_and_keeps_the_ask(
++    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
++) -> None:
++    """Owner decision 2026-10-17: every variant shows its classification, the
++    line goes, the classification question still answers "ask"; claim trust
++    is untouched."""
++    baseline = await _classified_write(monkeypatch, {}, None)
++    result = await _classified_write(monkeypatch, _ALL_READ, "asks_classification")
++    seen = _everything_the_reader_sees(result["events"])
++    for word in _ALL_READ.values():
++        assert word in seen
++    assert "classification of these variants" not in seen
++    assert _answer_scope_outcome(result) == "ask"
++    assert _claim_outcomes(result) == _claim_outcomes(baseline)
++
++
++@pytest.mark.asyncio
++async def test_card30b_a_fully_read_list_not_asked_keeps_develops_verdict(
++    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
++) -> None:
++    baseline = await _classified_write(monkeypatch, {}, None)
++    result = await _classified_write(monkeypatch, _ALL_READ, "not_applicable")
++    assert "classification of these variants" not in _everything_the_reader_sees(result["events"])
++    assert _answer_scope_outcome(result) == _answer_scope_outcome(baseline) == "answer"
+diff --git a/tests/system_03_search_agent/core/test_write_answer_structure.py b/tests/system_03_search_agent/core/test_write_answer_structure.py
+index e8e4790e..a89d4417 100644
+--- a/tests/system_03_search_agent/core/test_write_answer_structure.py
++++ b/tests/system_03_search_agent/core/test_write_answer_structure.py
+@@ -36,6 +36,7 @@ by the same `is_plain_language` test the plain arms exercise.
+ 
+ from __future__ import annotations
+ 
++import asyncio
+ import re
+ import time
+ from types import SimpleNamespace
+@@ -1103,7 +1104,9 @@ async def test_card23_the_source_note_sits_directly_under_the_variant_table(monk
+     assert "Variant-to-disease mapping" in headings and "Gene-to-disease mapping" in headings
+     (note_at,) = _source_notes(tokens)
+     variant_heading = next(
+-        i for i, t in enumerate(tokens) if t["kind"] == "heading" and "Variant-to-disease" in t["text"]
++        i
++        for i, t in enumerate(tokens)
++        if t["kind"] == "heading" and "Variant-to-disease" in t["text"]
+     )
+     # Everything between the variant heading and the note is that table.
+     between = [t["kind"] for t in tokens[variant_heading + 1 : note_at]]
+@@ -1413,9 +1416,7 @@ def _numbers(result, tokens: list[dict]) -> tuple[str, str, int]:
+     done = next(e.payload for e in result["events"] if e.type == "done")
+     opening = next(t["text"] for t in tokens if t["kind"] == "claim")
+     pages = {
+-        source_page_key(e.payload["source_url"])
+-        for e in result["events"]
+-        if e.type == "citation"
++        source_page_key(e.payload["source_url"]) for e in result["events"] if e.type == "citation"
+     }
+     return opening, done["trust_line"], len(pages)
+ 
+@@ -1826,12 +1827,16 @@ def test_two_records_with_no_identifier_merge_only_on_the_same_name(depth: str)
+     identifier merge without comparing names, and 'second thing' is lost
+     under 'first thing'."""
+     different = _rows_of(
+-        _direct_tokens(depth, [_nameless("g-1", 1, "first thing"), _nameless("g-2", 2, "second thing")]),
++        _direct_tokens(
++            depth, [_nameless("g-1", 1, "first thing"), _nameless("g-2", 2, "second thing")]
++        ),
+         "list_item",
+     )
+     assert [t.cells for t in different] == [["first thing"], ["second thing"]], different
+     same = _rows_of(
+-        _direct_tokens(depth, [_nameless("g-1", 1, "DNA repair"), _nameless("g-2", 2, "DNA repair")]),
++        _direct_tokens(
++            depth, [_nameless("g-1", 1, "DNA repair"), _nameless("g-2", 2, "DNA repair")]
++        ),
+         "list_item",
+     )
+     assert [(t.cells, t.marker_ids) for t in same] == [(["DNA repair"], ["g-1", "g-2"])], same
+@@ -1877,8 +1882,7 @@ async def test_the_command_line_prints_every_citation_of_a_merged_row(monkeypatc
+     out, err = io.StringIO(), io.StringIO()
+     renderer = Renderer(out, err, operator=False)
+     assert any(event.type == "done" for event in result["events"]), (
+-        "populate-check failed: the run sent no `done`, so the held listing "
+-        "would never print."
++        "populate-check failed: the run sent no `done`, so the held listing would never print."
+     )
+     for event in result["events"]:
+         if event.type in ("token", "citation", "done"):
+@@ -2015,7 +2019,6 @@ async def test_card30_beside_the_variant_table_only_card_23s_line_shows(monkeypa
+     assert _classification_notes(tokens) == []
+ 
+ 
+-
+ @pytest.mark.asyncio
+ async def test_card30_answer_parts_skips_its_line_beside_card_23s_table(monkeypatch) -> None:
+     """On a request that does not read `placement` the table is built in the
+@@ -2045,3 +2048,378 @@ async def test_card30_answer_parts_skips_its_line_beside_card_23s_table(monkeypa
+         everything = [t.model_dump() for t in (*parts.summary, *parts.listing, *parts.notes)]
+         assert len(_source_notes(everything)) == 1
+         assert _classification_notes(everything) == []
++
++
++# ---------------------------------------------------------------------------
++# Card 30 step 2b (owner decision, 2026-10-16): one ClinVar ESummary per 50
++# listed graph variants, and every listed variant shows ClinVar's
++# classification, read verbatim from its record.
++# ---------------------------------------------------------------------------
++
++_CLASSES = {
++    "ClinVar:1": "Pathogenic",
++    "ClinVar:2": "Uncertain significance",
++    "ClinVar:3": "Conflicting classifications of pathogenicity",
++}
++
++
++def _install_classifications(monkeypatch, mapping, calls: list | None = None) -> None:
++    async def _fake(curies, **_kw):
++        if calls is not None:
++            calls.append(list(curies))
++        return {c: mapping[c] for c in curies if c in mapping}
++
++    monkeypatch.setattr(graph_module, "resolve_variant_classifications", _fake)
++
++
++async def _variant_list(monkeypatch, depth: str, mapping, rows=None, calls=None):
++    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
++    _install_classifications(monkeypatch, mapping, calls)
++    _install(monkeypatch, _no_prose)
++    result = await graph_module.write_node(
++        _state(depth, rows=rows if rows is not None else _UNCLASSIFIED_VARIANT_ROWS)
++    )
++    return result, _read_tokens(result)
++
++
++@pytest.mark.asyncio
++async def test_card30b_researcher_table_shows_each_classification_and_drops_the_line(
++    monkeypatch,
++) -> None:
++    """Red on develop: no column and the step 1 line stays."""
++    calls: list = []
++    _, tokens = await _variant_list(monkeypatch, "researcher", _CLASSES, calls=calls)
++    ((header, rows),) = _tables(tokens)
++    assert header[-1] == "ClinVar classification"
++    assert len(header) <= 4
++    assert [row["cells"][-1] for row in rows] == [
++        "Pathogenic",
++        "Uncertain significance",
++        "Conflicting classifications of pathogenicity",
++    ]
++    assert all(len(row["cells"]) <= 4 for row in rows)
++    assert _classification_notes(tokens) == []
++    assert calls == [["ClinVar:1", "ClinVar:2", "ClinVar:3"]]
++
++
++@pytest.mark.asyncio
++async def test_card30b_a_row_is_joined_by_record_not_position(monkeypatch) -> None:
++    """The mapping arrives in the opposite order to the rows."""
++    reversed_map = dict(reversed(list(_CLASSES.items())))
++    _, tokens = await _variant_list(monkeypatch, "researcher", reversed_map)
++    ((_, rows),) = _tables(tokens)
++    by_label = {row["cells"][0]: row["cells"][-1] for row in rows}
++    assert by_label["c.1A>G (p.Xaa1Yaa)"] == "Pathogenic"
++    assert by_label["c.2A>G (p.Xaa2Yaa)"] == "Uncertain significance"
++
++
++@pytest.mark.asyncio
++async def test_card30b_plain_language_keeps_the_classification_after_the_name(
++    monkeypatch,
++) -> None:
++    _, tokens = await _variant_list(monkeypatch, "plain_language", _CLASSES)
++    labels = [t["cells"][0] for t in tokens if t["kind"] == "list_item"]
++    assert "c.1A>G (p.Xaa1Yaa), ClinVar classification: Pathogenic" in labels
++    assert (
++        "c.3A>G (p.Xaa3Yaa), ClinVar classification: Conflicting classifications of pathogenicity"
++    ) in labels
++    assert _classification_notes(tokens) == []
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("depth", ["plain_language", "researcher"])
++async def test_card30b_one_unread_variant_keeps_its_row_and_the_line(monkeypatch, depth) -> None:
++    partial = {k: v for k, v in _CLASSES.items() if k != "ClinVar:2"}
++    _, tokens = await _variant_list(monkeypatch, depth, partial)
++    assert len(_classification_notes(tokens)) == 1
++    if depth == "researcher":
++        ((_, rows),) = _tables(tokens)
++        assert [row["cells"][-1] for row in rows] == [
++            "Pathogenic",
++            "",
++            "Conflicting classifications of pathogenicity",
++        ]
++    else:
++        labels = [t["cells"][0] for t in tokens if t["kind"] == "list_item"]
++        assert "c.2A>G (p.Xaa2Yaa)" in labels
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("depth", ["plain_language", "researcher"])
++async def test_card30b_no_classification_at_all_is_todays_answer(monkeypatch, depth) -> None:
++    """Every failure class returns an empty mapping: the tokens equal those
++    of a run where the lookup never existed."""
++    _, with_lookup = await _variant_list(monkeypatch, depth, {})
++    monkeypatch.setattr(
++        graph_module, "resolve_variant_classifications", lambda curies, **_kw: _async_empty()
++    )
++    _, again = await _variant_list(monkeypatch, depth, {})
++    assert with_lookup == again
++    assert len(_classification_notes(with_lookup)) == 1
++    assert not any("ClinVar classification" in str(t.get("cells") or "") for t in with_lookup)
++
++
++async def _async_empty() -> dict:
++    return {}
++
++
++@pytest.mark.asyncio
++async def test_card30b_no_graph_variants_makes_no_request(monkeypatch) -> None:
++    calls: list = []
++    _, tokens = await _variant_list(monkeypatch, "researcher", _CLASSES, rows=_ROWS, calls=calls)
++    assert calls == []
++    assert _classification_notes(tokens) == []
++
++
++@pytest.mark.asyncio
++async def test_card30b_a_question_without_variants_is_byte_identical(monkeypatch) -> None:
++    """A gene to disease answer never reaches the lookup (a lookup that
++    raises is not called) and its payloads repeat exactly. The comparison
++    with develop's code is in the build report's probe."""
++
++    def _tokens_of(result):
++        return [e.payload for e in result["events"] if e.type in ("token", "citation")]
++
++    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
++    _install(monkeypatch, _no_prose)
++
++    async def _boom(curies, **_kw):
++        raise AssertionError("no lookup without graph variants")
++
++    monkeypatch.setattr(graph_module, "resolve_variant_classifications", _boom)
++    first = _tokens_of(await graph_module.write_node(_state("researcher", rows=_ROWS)))
++    second = _tokens_of(await graph_module.write_node(_state("researcher", rows=_ROWS)))
++    assert first and first == second
++
++
++@pytest.mark.asyncio
++async def test_card30b_rs334_style_answer_is_unchanged(monkeypatch) -> None:
++    """Query 23's shape: a dbSNP record row, no graph variant. The lookup is
++    not asked and the Clinical significance column stays."""
++    calls: list = []
++    rows = [
++        {
++            "node_or_edge_type": "Variant record",
++            "curie": "dbSNP:rs334",
++            "fields": {"rsid": "rs334", "clinical_significance": "Pathogenic, risk-factor"},
++            "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
++            "graph_snapshot_version": "v1",
++        }
++    ]
++    _, tokens = await _variant_list(monkeypatch, "researcher", _CLASSES, rows=rows, calls=calls)
++    assert calls == []
++    ((header, _),) = _tables(tokens)
++    assert "ClinVar classification" not in header
++    assert _classification_notes(tokens) == []
++
++
++# ---- card 30 step 2b fix round (judge J-30b-01..06, adversary A-30-01..05)
++
++
++def _text_surface(result) -> str:
++    """What the command line, MCP and GraphQL print: the tokens' text only."""
++    from system_03_search_agent.contracts.token_order import joined_text
++
++    return joined_text(_tokens(result))
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("depth", ["plain_language", "researcher"])
++async def test_card30b_the_text_surfaces_carry_each_classification(monkeypatch, depth) -> None:
++    """J-30b-01: the text a surface without cells prints holds every value."""
++    result, _ = await _variant_list(monkeypatch, depth, _CLASSES)
++    text = _text_surface(result)
++    # Each value follows its own row's citation marker, not another row's.
++    for index, value in enumerate(_CLASSES.values(), start=1):
++        assert f"[{index}]. ClinVar classification: {value}." in text, index
++
++
++@pytest.mark.asyncio
++async def test_card30b_the_text_suffix_stays_inside_the_token_cap(monkeypatch) -> None:
++    long_name = "c." + "A" * 990
++    rows = [{**_UNCLASSIFIED_VARIANT_ROWS[0], "fields": {"name": long_name}}]
++    result, _ = await _variant_list(monkeypatch, "researcher", _CLASSES, rows=rows)
++    assert all(len(t["text"]) <= 1000 for t in _tokens(result))
++    assert "ClinVar classification: Pathogenic." in _text_surface(result)
++
++
++@pytest.mark.asyncio
++async def test_card30b_the_variant_to_disease_table_has_no_classification(monkeypatch) -> None:
++    """J-30b-02, A-30-01: query 79's table keeps its three columns and card
++    23's line stays true; the variants of that table are not looked up."""
++    calls: list = []
++    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
++    _install_classifications(monkeypatch, {"ClinVar:1": "Pathogenic", "ClinVar:2": "Benign"}, calls)
++    _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
++    rows = [*_FOLDED_VARIANT_ROWS, _FOLDED_GENE_ROW]
++    result = await graph_module.write_node(_state("researcher", rows=rows))
++    tokens = _read_tokens(result)
++    variant_table = next(t for t in _tables(tokens) if "Associated disease(s)" in t[0])
++    assert len(variant_table[0]) == 3 and "ClinVar classification" not in variant_table[0]
++    assert len(_source_notes(tokens)) == 1
++    assert "Pathogenic" not in _text_surface(result)
++    assert calls == []
++
++
++def _live_clinvar_state(monkeypatch):
++    from system_03_search_agent.harness.coordinator_worker import Finding
++    from system_03_search_agent.tools.ncbi_efetch_schemas import (
++        NcbiEfetchOutput,
++        NcbiEfetchRecord,
++    )
++
++    record = NcbiEfetchRecord(
++        id="900",
++        db="clinvar",
++        fields={"title": "NM_000000.1(BRCA1):c.9A>G", "accession": "VCV000000900"},
++        source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/900/",
++    )
++    output = NcbiEfetchOutput(
++        status="ok",
++        action="summary",
++        records=[record],
++        record_count=1,
++        total_available=1,
++        truncated=False,
++    )
++    state = _state("researcher", rows=_UNCLASSIFIED_VARIANT_ROWS)
++    state["findings"].append(
++        Finding(
++            call_id="ne-live-clinvar",
++            tool="ncbi_efetch",
++            layer="layer_2_api",
++            source="structured_pass_through",
++            structured_fields=graph_module._ncbi_efetch_output_to_structured_fields(
++                output, "clinvar_summary"
++            ),
++            extracted_entities=None,
++            normalized_ids=None,
++            evidence_summary=None,
++        )
++    )
++    state["findings_count"] = len(state["findings"])
++    state["layer2_raw_outputs"] = {"ne-live-clinvar": output}
++    return state
++
++
++@pytest.mark.asyncio
++async def test_card30b_a_live_clinvar_row_keeps_the_line(monkeypatch) -> None:
++    """A-30-02: graph rows all classified, one live ClinVar row without a
++    classification on the page: the line stays."""
++    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
++    _install_classifications(monkeypatch, _CLASSES)
++    _install(monkeypatch, _no_prose)
++    result = await graph_module.write_node(_live_clinvar_state(monkeypatch))
++    tokens = _read_tokens(result)
++    assert "BRCA1):c.9A>G" in _text_surface(result), "populate-check: the live row is listed"
++    assert "ClinVar classification: Pathogenic." in _text_surface(result)
++    assert len(_classification_notes(tokens)) == 1
++
++
++@pytest.mark.asyncio
++async def test_card30b_the_lookup_is_stopped_when_write_ends_early(monkeypatch) -> None:
++    """J-30b-04: a Write that ends before reading the lookup cancels it."""
++    started = asyncio.Event()
++    seen: list[asyncio.Task] = []
++
++    async def _slow(curies, **_kw):
++        seen.append(asyncio.current_task())
++        started.set()
++        await asyncio.sleep(30)
++        return {}
++
++    monkeypatch.setattr(graph_module, "resolve_variant_classifications", _slow)
++    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
++    _install(monkeypatch, _no_prose)
++    state = _state("researcher", rows=_UNCLASSIFIED_VARIANT_ROWS)
++
++    # Fail the first await after the task starts: the name lookup.
++    async def _fail(_ids):
++        await asyncio.sleep(0)
++        raise RuntimeError("write ends here")
++
++    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fail)
++    with pytest.raises(RuntimeError):
++        await graph_module.write_node(state)
++    await asyncio.sleep(0)
++    assert seen and seen[0].cancelled()
++
++
++@pytest.mark.asyncio
++async def test_card30b_at_18_calls_used_the_name_lookup_still_gets_its_call(monkeypatch) -> None:
++    """J-30b-03, A-30-03: the classification lookup leaves the MedGen lookup
++    its two calls. Faked tool actions charge the budget as the transport does."""
++    from system_03_search_agent.harness import call_budget
++    from system_03_search_agent.synthesis import disease_names
++    from system_03_search_agent.tools import ncbi_eutils_actions as actions
++    from system_03_search_agent.tools.ncbi_efetch_schemas import (
++        NcbiEfetchOutput,
++        NcbiEfetchRecord,
++    )
++
++    disease_names.reset_cache_for_tests()
++    reached: list[str] = []
++
++    def _out(action, *records):
++        return NcbiEfetchOutput(
++            status="ok",
++            action=action,
++            records=list(records),
++            record_count=len(records),
++            truncated=False,
++        )
++
++    async def _search(params):
++        call_budget.charge_one_call(tool="medgen_search", layer=2)
++        await asyncio.sleep(0.02)  # the network wait, where the other lookup charges
++        reached.append("medgen_search")
++        return _out("search", NcbiEfetchRecord(id="x", db="medgen", fields={"idlist": ["77"]}))
++
++    async def _summary(params):
++        call_budget.charge_one_call(tool=params.db + "_summary", layer=2)
++        await asyncio.sleep(0.02)
++        reached.append(params.db + "_summary")
++        if params.db == "medgen":
++            return _out(
++                "summary",
++                NcbiEfetchRecord(
++                    id="77", db="medgen", fields={"conceptid": "C0346153", "title": "A disease"}
++                ),
++            )
++        return _out(
++            "summary",
++            *[
++                NcbiEfetchRecord(
++                    id=i,
++                    db="clinvar",
++                    fields={"germline_classification": {"description": "Benign"}},
++                )
++                for i in params.ids
++            ],
++        )
++
++    monkeypatch.setattr(actions, "search", _search)
++    monkeypatch.setattr(actions, "summary", _summary)
++    _install(monkeypatch, _no_prose)
++    disease = {
++        "node_or_edge_type": "Disease",
++        "curie": "MedGen:C0346153",
++        "fields": {"name": "MedGen"},
++        "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
++        "graph_snapshot_version": "v1",
++    }
++    rows = [*_UNCLASSIFIED_VARIANT_ROWS, disease]
++
++    async def _go(used: int):
++        reached.clear()
++        disease_names.reset_cache_for_tests()
++        with call_budget.query_budget_scope("lookup"):
++            for _ in range(used):
++                call_budget.charge_one_call(tool="t", layer=2)
++            await graph_module.write_node(_state("researcher", rows=rows))
++        return list(reached)
++
++    at_18 = await _go(18)
++    assert at_18 == ["medgen_search", "medgen_summary"], at_18
++    at_10 = await _go(10)
++    assert "clinvar_summary" in at_10 and "medgen_summary" in at_10, at_10
+diff --git a/tests/system_03_search_agent/fixtures/debugging_guide_manifest.json b/tests/system_03_search_agent/fixtures/debugging_guide_manifest.json
+index 6bf8baeb..4e787b59 100644
+--- a/tests/system_03_search_agent/fixtures/debugging_guide_manifest.json
++++ b/tests/system_03_search_agent/fixtures/debugging_guide_manifest.json
+@@ -115,6 +115,7 @@
+     "src/system_03_search_agent/synthesis/refuse.py": "951119a3072a9cb7266aa1538a11b38af71e39dc06d8a70b175d2926d9fe5054",
+     "src/system_03_search_agent/synthesis/sentence_check.py": "c707a7a0ef9d8613870b4b04779870c8cf9303718fe0d11c5fd95bde94fc2988",
+     "src/system_03_search_agent/synthesis/trust.py": "ded0f214c009e15af1e2deb5a070d2ec713205207d721d6f9ebed6cec51018bb",
++    "src/system_03_search_agent/synthesis/variant_classifications.py": "fb2e73bc7d7f97148832331d53fd74529cbd5ececce01a0011d86243f2af0141",
+     "src/system_03_search_agent/tools/__init__.py": "d22e1c348d091c7c6ccd332f479ea472f799c450c93c1bb4437ddc8e46651d02",
+     "src/system_03_search_agent/tools/agtype.py": "0dfcdd279242f49c7fdc6cb93fc76dac49349a24474c3548a1a69e89d10ce86f",
+     "src/system_03_search_agent/tools/catalogue.py": "032fa8facf9f437b37d099a1608d605b7218e1fe783352f6d32f61565e6d7ab2",
+diff --git a/tests/system_03_search_agent/synthesis/test_variant_classifications.py b/tests/system_03_search_agent/synthesis/test_variant_classifications.py
+new file mode 100644
+index 00000000..0b4e32cb
+--- /dev/null
++++ b/tests/system_03_search_agent/synthesis/test_variant_classifications.py
+@@ -0,0 +1,323 @@
++"""Card 30 step 2b: ClinVar's classification of each listed graph variant.
++
++The resolver reads `germline_classification.description` from one ESummary
++per 50 `ClinVar:` CURIEs and joins it back by the record's own id. Every
++failure class leaves the CURIE out, so the caller keeps today's row. The fake
++transport stands in for `ncbi_eutils_actions.summary`, which is where the
++rate pool and the 20-call ceiling live.
++"""
++
++from __future__ import annotations
++
++import asyncio
++
++import pytest
++
++from system_03_search_agent.harness import call_budget
++from system_03_search_agent.synthesis import variant_classifications as vc
++from system_03_search_agent.synthesis.answer_layout import (
++    VARIANT_CLASSIFICATION_NOTE,
++    variant_classification_note,
++    with_variant_classification,
++)
++from system_03_search_agent.synthesis.findings import SynthFinding
++from system_03_search_agent.tools import ncbi_eutils_actions
++from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchOutput, NcbiEfetchRecord
++
++
++def _record(uid: str, description: object = "Pathogenic") -> NcbiEfetchRecord:
++    fields = (
++        {} if description is None else {"germline_classification": {"description": description}}
++    )
++    return NcbiEfetchRecord(id=uid, db="clinvar", fields=fields)
++
++
++def _ok(*records: NcbiEfetchRecord) -> NcbiEfetchOutput:
++    return NcbiEfetchOutput(
++        status="ok",
++        action="summary",
++        records=list(records),
++        record_count=len(records),
++        truncated=False,
++    )
++
++
++class _Transport:
++    def __init__(self, reply) -> None:
++        self.reply = reply
++        self.calls: list[list[str]] = []
++
++    async def __call__(self, params):
++        self.calls.append(list(params.ids))
++        reply = self.reply
++        if callable(reply):
++            reply = reply(params.ids)
++        if isinstance(reply, BaseException):
++            raise reply
++        if asyncio.iscoroutine(reply):
++            return await reply
++        return reply
++
++
++def _install(monkeypatch, reply) -> _Transport:
++    fake = _Transport(reply)
++    monkeypatch.setattr(ncbi_eutils_actions, "summary", fake)
++    return fake
++
++
++def _run(curies):
++    return asyncio.run(vc.resolve_variant_classifications(curies))
++
++
++def test_classification_joins_by_record_id_with_records_shuffled(monkeypatch) -> None:
++    fake = _install(
++        monkeypatch,
++        _ok(
++            _record("3", "Uncertain significance"),
++            _record("1", "Pathogenic"),
++            _record("2", "Benign"),
++        ),
++    )
++    got = _run(["ClinVar:1", "ClinVar:2", "ClinVar:3"])
++    assert got == {
++        "ClinVar:1": "Pathogenic",
++        "ClinVar:2": "Benign",
++        "ClinVar:3": "Uncertain significance",
++    }
++    assert len(fake.calls) == 1
++
++
++def test_a_dropped_record_is_absent_not_shifted(monkeypatch) -> None:
++    _install(monkeypatch, _ok(_record("3", "Benign"), _record("1", "Pathogenic")))
++    got = _run(["ClinVar:1", "ClinVar:2", "ClinVar:3"])
++    assert got == {"ClinVar:1": "Pathogenic", "ClinVar:3": "Benign"}
++    assert "ClinVar:2" not in got
++
++
++def test_two_records_with_one_id_and_different_values_are_ambiguous(monkeypatch) -> None:
++    _install(monkeypatch, _ok(_record("1", "Pathogenic"), _record("1", "Benign"), _record("2")))
++    got = _run(["ClinVar:1", "ClinVar:2"])
++    assert got == {"ClinVar:2": "Pathogenic"}
++
++
++def test_two_records_with_one_id_and_one_value_are_kept(monkeypatch) -> None:
++    _install(monkeypatch, _ok(_record("1", "Pathogenic"), _record("1", "Pathogenic")))
++    assert _run(["ClinVar:1"]) == {"ClinVar:1": "Pathogenic"}
++
++
++def test_the_value_is_verbatim_apart_from_surrounding_space(monkeypatch) -> None:
++    text = "Conflicting classifications of pathogenicity"
++    _install(monkeypatch, _ok(_record("1", f"  {text} ")))
++    assert _run(["ClinVar:1"]) == {"ClinVar:1": text}
++
++
++@pytest.mark.parametrize(
++    "reply",
++    [
++        TimeoutError("slow"),
++        RuntimeError("boom"),
++        ncbi_eutils_actions._error_output("summary", "bad"),
++        ncbi_eutils_actions._empty_output("summary"),
++    ],
++    ids=["timeout", "exception", "error", "empty"],
++)
++def test_every_failure_class_leaves_the_row_alone(monkeypatch, reply) -> None:
++    _install(monkeypatch, reply)
++    assert _run(["ClinVar:1", "ClinVar:2"]) == {}
++
++
++@pytest.mark.parametrize(
++    "description",
++    [None, "", "   ", 7, ["Pathogenic"], {"a": 1}, "x" * 101, "Patho\ngenic", "Patho\x00genic"],
++)
++def test_an_empty_or_odd_value_is_unread(monkeypatch, description) -> None:
++    _install(monkeypatch, _ok(_record("1", description), _record("2", "Benign")))
++    assert _run(["ClinVar:1", "ClinVar:2"]) == {"ClinVar:2": "Benign"}
++
++
++def test_a_block_that_is_not_a_mapping_is_unread(monkeypatch) -> None:
++    odd = NcbiEfetchRecord(id="1", db="clinvar", fields={"germline_classification": "Pathogenic"})
++    _install(monkeypatch, _ok(odd))
++    assert _run(["ClinVar:1"]) == {}
++
++
++def test_a_hung_request_is_cut_off(monkeypatch) -> None:
++    async def _hang():
++        await asyncio.sleep(30)
++
++    monkeypatch.setattr(vc, "_REQUEST_TIMEOUT_S", 0.05)
++    _install(monkeypatch, lambda ids: _hang())
++    assert _run(["ClinVar:1"]) == {}
++
++
++def test_one_request_per_fifty_and_no_more_than_two(monkeypatch) -> None:
++    fake = _install(monkeypatch, lambda ids: _ok(*(_record(i, "Benign") for i in ids)))
++    got = _run([f"ClinVar:{n}" for n in range(1, 41)])
++    assert len(fake.calls) == 1 and len(got) == 40
++    fake.calls.clear()
++    got = _run([f"ClinVar:{n}" for n in range(1, 52)])
++    assert sorted(len(c) for c in fake.calls) == [1, 50] and len(got) == 51
++    fake.calls.clear()
++    _run([f"ClinVar:{n}" for n in range(1, 400)])
++    assert len(fake.calls) == 2
++
++
++def test_duplicates_and_other_vocabularies_cost_nothing(monkeypatch) -> None:
++    fake = _install(monkeypatch, _ok(_record("1")))
++    assert _run(["ClinVar:1", "ClinVar:1", "dbSNP:rs1", "ClinVar:abc", ""]) == {
++        "ClinVar:1": "Pathogenic"
++    }
++    assert fake.calls == [["1"]]
++
++
++def test_no_variants_makes_no_request(monkeypatch) -> None:
++    fake = _install(monkeypatch, _ok())
++    assert _run([]) == {}
++    assert _run(["MedGen:C0346153"]) == {}
++    assert fake.calls == []
++
++
++def test_at_the_ceiling_no_request_is_made(monkeypatch) -> None:
++    fake = _install(monkeypatch, _ok(_record("1")))
++
++    async def _at_ceiling():
++        with call_budget.query_budget_scope("lookup"):
++            for _ in range(call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY):
++                call_budget.charge_one_call(tool="t", layer=2)
++            return await vc.resolve_variant_classifications(["ClinVar:1"])
++
++    assert asyncio.run(_at_ceiling()) == {}
++    assert fake.calls == []
++
++
++def test_one_call_under_the_ceiling_still_asks(monkeypatch) -> None:
++    fake = _install(monkeypatch, _ok(_record("1")))
++
++    async def _below():
++        with call_budget.query_budget_scope("lookup"):
++            for _ in range(call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY - 1):
++                call_budget.charge_one_call(tool="t", layer=2)
++            return await vc.resolve_variant_classifications(["ClinVar:1"])
++
++    assert asyncio.run(_below()) == {"ClinVar:1": "Pathogenic"}
++    assert len(fake.calls) == 1
++
++
++# ---------------------------------------------------------------- the note
++
++
++def _finding(curie: str, *, field: str = "name", layer: str = "layer_1_graph") -> SynthFinding:
++    return SynthFinding(
++        ref_index=1,
++        citation_id=f"c-{curie}",
++        layer=layer,
++        tool="t",
++        field=field,
++        field_value="v",
++        source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/1",
++        entity_type="SequenceVariant" if layer == "layer_1_graph" else "ClinVar record",
++        curie=curie,
++    )
++
++
++def test_the_line_stays_until_every_shown_variant_has_a_classification() -> None:
++    findings = [_finding("ClinVar:1"), _finding("ClinVar:2")]
++    assert variant_classification_note(findings) == VARIANT_CLASSIFICATION_NOTE
++    assert variant_classification_note(findings, set()) == VARIANT_CLASSIFICATION_NOTE
++    assert variant_classification_note(findings, {"ClinVar:1"}) == VARIANT_CLASSIFICATION_NOTE
++    assert variant_classification_note(findings, {"ClinVar:1", "ClinVar:2"}) is None
++
++
++def test_a_classified_curie_that_is_not_shown_does_not_count() -> None:
++    findings = [_finding("ClinVar:1"), _finding("ClinVar:2")]
++    assert variant_classification_note(findings, {"ClinVar:1", "ClinVar:9"}) == (
++        VARIANT_CLASSIFICATION_NOTE
++    )
++
++
++def test_a_variant_without_a_curie_keeps_the_line() -> None:
++    findings = [_finding("ClinVar:1"), _finding("")]
++    assert variant_classification_note(findings, {"ClinVar:1", ""}) == VARIANT_CLASSIFICATION_NOTE
++
++
++def test_row_fields_gain_the_classification_only_for_a_graph_variant() -> None:
++    row = {"name": "c.1A>G"}
++    graph = _finding("ClinVar:1")
++    live = _finding("ClinVar:1", layer="layer_2_api")
++    got = with_variant_classification(graph, row, {"ClinVar:1": "Pathogenic"})
++    assert got == {"name": "c.1A>G", vc.CLASSIFICATION_ROW_FIELD: "Pathogenic"}
++    assert row == {"name": "c.1A>G"}
++    assert with_variant_classification(live, row, {"ClinVar:1": "Pathogenic"}) is row
++    assert with_variant_classification(graph, row, {"ClinVar:2": "Benign"}) is row
++    assert with_variant_classification(graph, row, None) is row
++
++
++# ---------------------------------------------------------- fix round
++
++
++def test_a_hung_reply_costs_at_most_one_and_a_half_seconds(monkeypatch) -> None:
++    """J-30b-05, A-30-04: the product's own timeout, not a patched one."""
++    import time
++
++    async def _hang():
++        await asyncio.sleep(30)
++
++    _install(monkeypatch, lambda ids: _hang())
++    started = time.monotonic()
++    assert _run(["ClinVar:1"]) == {}
++    assert time.monotonic() - started < 2.5
++    assert vc._REQUEST_TIMEOUT_S <= 1.5
++
++
++def _with_calls_used(used: int, coro_fn):
++    async def _go():
++        with call_budget.query_budget_scope("lookup"):
++            for _ in range(used):
++                call_budget.charge_one_call(tool="t", layer=2)
++            return await coro_fn()
++
++    return asyncio.run(_go())
++
++
++def test_the_lookup_leaves_the_calls_the_name_lookups_need(monkeypatch) -> None:
++    """J-30b-03, A-30-03: 18 used and 2 reserved leaves nothing for it."""
++    fake = _install(monkeypatch, _ok(_record("1")))
++    got = _with_calls_used(
++        18, lambda: vc.resolve_variant_classifications(["ClinVar:1"], reserve_calls=2)
++    )
++    assert got == {} and fake.calls == []
++    got = _with_calls_used(18, lambda: vc.resolve_variant_classifications(["ClinVar:1"]))
++    assert got == {"ClinVar:1": "Pathogenic"} and len(fake.calls) == 1
++
++
++def test_only_the_germline_block_is_read(monkeypatch) -> None:
++    """J-30b-06: a record with both blocks shows the germline word; one with
++    an oncogenicity block alone is unread."""
++    both = NcbiEfetchRecord(
++        id="1",
++        db="clinvar",
++        fields={
++            "germline_classification": {"description": "Pathogenic"},
++            "oncogenicity_classification": {"description": "Likely oncogenic"},
++        },
++    )
++    onco_only = NcbiEfetchRecord(
++        id="2",
++        db="clinvar",
++        fields={
++            "germline_classification": {"description": ""},
++            "oncogenicity_classification": {"description": "Likely oncogenic"},
++        },
++    )
++    _install(monkeypatch, _ok(both, onco_only))
++    assert _run(["ClinVar:1", "ClinVar:2"]) == {"ClinVar:1": "Pathogenic"}
++
++
++def test_a_live_clinvar_row_keeps_the_line() -> None:
++    """A-30-02: every graph variant classified, a live ClinVar row beside."""
++    graph = [_finding("ClinVar:1")]
++    live = _finding("ClinVar:900", layer="layer_2_api")
++    assert variant_classification_note([*graph, live], {"ClinVar:1"}) == (
++        VARIANT_CLASSIFICATION_NOTE
++    )
++    assert variant_classification_note(graph, {"ClinVar:1"}) is None

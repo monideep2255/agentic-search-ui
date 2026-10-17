@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-10-16.
+Last updated: 2026-10-17.
 
 ## Table of contents
 
@@ -56,6 +56,17 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+### The night of 16 to 17 October
+
+NEW OVERNIGHT, 16 TO 17 OCTOBER, on the practice site, each change read by fresh reviewers before it went in, and tried on the site itself at desktop and phone width:
+
+- A list of a gene's genetic variants now says in its notes that the medical classification of each variant was not retrieved, so it is not a list of dangerous variants. A question that asks which variants are dangerous is no longer marked as confirmed.
+- The record for the variant rs334 is now called rs334, with its gene and its clinical significance in their own columns, instead of a long unlabelled line.
+- The line under an answer now names the databases it rests on, for example "Based on 21 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases", instead of saying "not yet confirmed". The small card that explains it was rewritten.
+- A list of a gene's counterparts in other species now shows which species each one belongs to.
+- After you pick a "How far back" window, papers with no date are left out and the papers from that window come first. If none are found, a line says so.
+- A gene's papers from our own database are now listed by their real titles, with names such as variant notation kept exactly.
 
 ### 16 October
 
@@ -326,6 +337,21 @@ All six live-government-API connections the plan called for are now built. That 
 - Give it a stretch of chromosome coordinates with the genome build, and it names the genes under that stretch without being told them, then lists the structural and clinical variants recorded there, each with a link. Leave the build out and it asks which one, rather than guessing. On the practice site since the night of 22 September, waiting for the product owner to try it.
 
 ## What does not work yet
+
+### The night of 16 to 17 October
+
+THE HONEST HEADLINE AS OF 17 OCTOBER, in one sentence:
+
+- six changes went live, but three others were taken back and three first tries had to be rebuilt, and the biggest gap is still that a question about a single variant such as rs334 does not name the condition it causes.
+
+What the night found, in plain words:
+
+- Showing the medical classification beside every variant was built and every classification shown was right, but the extra text made long answers too big for programs and AI assistants that read our answers, and they lost five trial records and the new note. It was taken back.
+- Folding several sentences from one paper into one row would have cut about half of a long abstract for those same programs, which nobody had agreed to, so it was taken back.
+- Letting the answer writer know the gene behind a variant could attach the gene to the wrong variant on a question about two variants, and still pass the source check. It was taken back.
+- Three changes failed their first try because their reviewers found a wrong detail (a line naming the wrong subject, a sentence overstating how a fact was checked, and variant notation altered in paper titles). Each was rebuilt once and then passed.
+- A usage limit stopped the session for about ten hours, so the planned close of the night never ran.
+- Six new small problems were found and are listed below.
 
 ### 16 October
 
@@ -676,6 +702,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| A night of six changes, three taken back and three rebuilt | Six changes went live: a note that variant classifications were not retrieved, a properly named rs334 record, a line naming the databases an answer rests on, the species shown beside a gene's counterparts, a date window that leaves out undated papers, and real titles on a gene's papers. Three others were taken back because each could lose part of an answer for programs that read it, or attach a gene to the wrong variant. Three first tries were rebuilt once after their reviewers found a wrong detail. Six new small problems were written down | 17 October |
 | A night of building every parked piece, four changes in and eight taken back | Every piece of half-finished work was finished or taken back, so nothing is left waiting on a side branch. Four changes went live: the read-only reply, the paper named when an answer moves between papers, isolate answers that survive a slow search, and the Plain language and Researcher switch. Eight were taken back because a reviewer found each could show something wrong | 16 October |
 | A day of owner decisions, a hidden price problem caught, and one change taken back | The product owner answered five waiting questions. Three changes went live: answers keep their written summary after the next update, off-topic follow-ups are turned away, and a repeated paper title no longer ends an answer. A fourth, a smarter choice of the answer's first sentence, was rebuilt after its reviewers found it could open on a paper title | 15 October |
 | A night of six fixes and the faster answer built | Six changes went live, each read by three reviewers: reopened answers keep their warning and trust words, rs334 lists only itself, a lost date range is named, the About page is corrected, and crashes are logged with their search. The faster answer, records within seconds and a first sentence that answers, was built in full and checked for $3.67, and waits for the owner because its last review found two small things worse. Three other pieces were held back after their reviews | 8 October |
@@ -1192,16 +1219,17 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. The product owner retests what went live overnight on 16 October, then 15 October, then 8 and 9 October, newest first.
+1. The product owner retests what went live overnight on 17 October, then 16 October, then 15 October, then 8 and 9 October, newest first.
 2. On 23 October, a week of the new freeze count decides whether the gatekeeper's freeze fix is worth building.
-3. New designs for the changes taken back: reading a year and a place for isolate questions in a way that matches how the records write places; looking up one named isolate; the checked database searches; where a quoted record sentence ends; the answer's first sentence; the one-sentence paper quotes; and asking which aspect a broad subject means.
+3. New designs for the changes taken back: reading a year and a place for isolate questions in a way that matches how the records write places; looking up one named isolate; the checked database searches; where a quoted record sentence ends; the answer's first sentence; the one-sentence paper quotes; asking which aspect a broad subject means; keeping every sentence of a long abstract for programs that read our answers; showing each variant's classification without making long answers too big; and keeping a variant tied to its gene in the source check.
 4. Factory, the second building agent, works again on four small screen fixes, including the two small marks on the new mode switch and a top bar that runs off the screen with a long email address.
-5. Finish the coronavirus question: the unusual spellings and the follow-up cases the first fix left open.
-6. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
-7. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting.
-8. Build the step where the system checks its own results and tries once more when they do not answer the question.
-9. Tell the reader when the system wrote its own search rather than using a checked one.
-10. Build the connections between facts the product owner chose on 25 September: facts cited as paths through the graph.
+5. Fix the six small problems found overnight on 17 October, listed in the table below: more than five papers after picking a date window, the condition for rs334, a repeated word in an opening sentence, unrelated papers for the RS1 gene, the explainer card running off a phone, and a stray old paper in a date window.
+6. Finish the coronavirus question: the unusual spellings and the follow-up cases the first fix left open.
+7. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
+8. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting.
+9. Build the step where the system checks its own results and tries once more when they do not answer the question.
+10. Tell the reader when the system wrote its own search rather than using a checked one.
+11. Build the connections between facts the product owner chose on 25 September: facts cited as paths through the graph.
 
 Done since this list was last written, overnight on 23 September, while nobody was watching:
 
@@ -1318,13 +1346,22 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| After you pick a "How far back" window, an answer lists at most five papers from that window | On the list of work to do, found on 17 October |
+| A question about rs334 and its condition names no condition, although sickle cell disease is on record | On the list of work to do, found on 17 October |
+| An answer to a variant question can repeat a word in its opening sentence and table heading, such as "variant record record" | On the list of work to do, found on 17 October |
+| The question "What does the RS1 gene do?" lists papers that are not about that gene | On the list of work to do, found on 17 October; the cause is not yet known |
+| On a phone, opening the small card beside the line under an answer makes the page scroll sideways | On the list of work to do, found on 17 October; it was already true before the line under the answer was changed |
+| After picking a "How far back" window, one older paper from our extra context services can still be listed from outside the window | On the list of work to do, found on 17 October |
+| A list of a gene's variants does not show each variant's medical classification | Taken back on 17 October after it made long answers too big for programs; waits for a smaller version |
+| A record with several sentences shows as several rows | Taken back on 16 October after it would have cut long abstracts for programs; waits for a new design with the product owner |
+| A question about two variants could attach a gene to the wrong variant if the writer were given the gene | Taken back on 17 October before it went live; waits for a new design |
 | Asking for isolates from one place can count the wrong place, and miss records that write a state as two letters | Taken back on 16 October before it went live; waits for a new design |
 | After a question about one disease, a new question could get the first disease's variants | Taken back on 16 October before it went live; waits for a new design |
 | On the new mode switch, an answer last asked from a terminal can show the raw name "clinical_brief", and there is a little blank space above the answer | On the list of work to do, found on 16 October |
 | The model that writes answers on the practice site was no longer on the outside price list, so its next update would have dropped every written summary | ~~Fixed on 15 October~~, on the practice site, waiting for the product owner's retest |
 | ~~After an answer, a follow-up asking to change the database can be told the system answers biomedical questions instead of that the database is read-only~~ | Fixed overnight on 16 October; on the practice site, waiting for the product owner's retest |
 | An answer can open on a count of records when a sentence that answers the question comes third or later | Rebuilt after its first version was taken back on 15 October |
-| Picking a date range limits only the live paper search; the papers the system already holds are not filtered, so old ones can lead the answer | On the list of work to do, found on 8 October |
+| ~~Picking a date range limits only the live paper search; the papers the system already holds are not filtered, so old ones can lead the answer~~ | Fixed overnight on 17 October; on the practice site, waiting for the product owner's retest |
 | On a phone, the "High-risk claim" warning on a reopened answer breaks across two lines | On the list of work to do, found on 8 October |
 | When the checker rejects a reworded part of a sentence, the start of that sentence can still show | On the list of work to do, found on 8 October |
 | ~~A reopened answer could look more certain than the one you read, and lost its "High-risk claim" warning~~ | Fixed overnight on 8 October; on the practice site, waiting for the product owner's retest |

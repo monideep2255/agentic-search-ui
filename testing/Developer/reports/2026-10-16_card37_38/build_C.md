@@ -11,6 +11,7 @@ Branch `fix/card38-graph-papers-by-title`, from develop `78c68c1c`. Ticket T-8.9
 - [Timing](#timing)
 - [Commands run](#commands-run)
 - [Unsure about, and seen outside the ticket](#unsure-about-and-seen-outside-the-ticket)
+- [Fix round](#fix-round)
 
 ## What changed, in the person's words
 

@@ -20,7 +20,7 @@ Nothing here requires a document to carry today's date:
 - Build harness review item D2 removed the column and the gate, delegated by the product owner on 2026-09-25 (DECISIONS.md, the lead implements both harness reviews' takeaways).
 - Now `HANDOFF.md` is rewritten at every session end, and every other document is edited when its fact changes.
 
-Last updated: 2026-10-16.
+Last updated: 2026-10-17.
 
 ## Table of contents
 
@@ -68,7 +68,7 @@ Last updated: 2026-10-16.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-10-16 that begins "The Factory review loop is paused before review, at the owner's call", the last row at the afternoon checkpoint of 2026-10-16. Of the seven rows read since the daytime checkpoint, one changes a registered document's shape: the board's To do table gains a Next move column, cited in the board's row above. The rest record Factory's lane and the Factory review loop, approved and then paused, which change no registered document.
+Guarded through the DECISIONS.md row dated 2026-10-17 that begins "Card 30 step 2b's pull request #269 is closed under the owner's call", the last row at the checkpoint closing the night of 2026-10-16 to 17. None of the rows read since the afternoon checkpoint changes a registered document's shape: they record the night's rules, its card decisions, merges and closures, and one reading of the failure rule, none of which adds, removes or renames a registered section.
 
 ## Why the registry lives here
 
