@@ -200,6 +200,6 @@
       "3": 5
     },
     "meta": "13 tool calls · 16 sources cited from 3 layers",
-    "trust_line": "Based on 16 sources cited, not yet confirmed"
+    "trust_line": "Based on 16 sources cited from ClinicalTrials.gov, ClinVar, MedGen and 2 other databases; their values could not be compared"
   }
 }

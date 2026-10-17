@@ -1905,35 +1905,36 @@ async def _hnf1a_answer(monkeypatch, depth: str):
 
 _SEVEN = "[1][2][3][4][5][6][7]"
 # Read by running exactly these inputs against develop 2182aff3's source.
+# The trust-line text names its databases since card 8; every count is unchanged.
 _DEVELOP_NUMBERS = {
     ("hnf1a", "researcher"): (
         f"Found 7 sequence variant records for BRCA1 {_SEVEN}, linked to 1 disease. ",
-        "Based on 7 sources cited",
+        "Based on 7 sources cited, all from ClinVar",
         7,
     ),
     ("hnf1a", "plain_language"): (
         f"I found 7 genetic variants related to BRCA1 {_SEVEN}, linked to 1 condition. ",
-        "Based on 7 sources cited",
+        "Based on 7 sources cited, all from ClinVar",
         7,
     ),
     ("case_a", "researcher"): (
         "Found 1 gene record for BRCA1: BRCA1 [1]. ",
-        "Based on 1 source cited",
+        "Based on 1 source cited, from NCBI Gene",
         1,
     ),
     ("case_a", "plain_language"): (
         "I found 1 gene related to BRCA1 [1]. ",
-        "Based on 1 source cited",
+        "Based on 1 source cited, from NCBI Gene",
         1,
     ),
     ("case_b", "researcher"): (
         "Found 1 gene record for BRCA1: BRCA1 DNA repair associated [1]. ",
-        "Based on 1 source cited",
+        "Based on 1 source cited, from NCBI Gene",
         1,
     ),
     ("case_b", "plain_language"): (
         "I found 1 gene related to BRCA1 [1]. ",
-        "Based on 1 source cited",
+        "Based on 1 source cited, from NCBI Gene",
         1,
     ),
 }
