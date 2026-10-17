@@ -372,7 +372,7 @@ describe("the trust line's info card", () => {
     expect(TRUST_LINE_EXPLAINER).not.toMatch(/not yet confirmed/i);
     expect(TRUST_LINE_EXPLAINER).toContain("names the databases");
     expect(TRUST_LINE_EXPLAINER).toContain(
-      "When an answer rests on two or more databases and a high-stakes fact could not be checked against a second one",
+      "When an answer rests on two or more databases and the values behind one of its high-stakes facts could not be compared",
     );
     expect(TRUST_LINE_EXPLAINER).toContain("their values could not be compared");
   });

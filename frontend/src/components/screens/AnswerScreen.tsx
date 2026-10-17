@@ -125,16 +125,15 @@ export function summarySentencesShown(claims: Claim[]): number {
  *
  * Card 8 (2026-10-16): the "Based on" lines name their databases and no
  * longer say "not yet confirmed", so the last sentence describes them: which
- * databases, and when values could not be compared (an answer from two or
- * more databases with a high-stakes fact that had no second database to check
- * it against; the backend adds the clause on exactly that).
+ * databases, and when values could not be compared. It describes only what
+ * the reader sees, not how the backend checks a fact.
  */
 export const TRUST_LINE_EXPLAINER =
   "Sources cited counts the record pages this answer cites, the same pages listed under " +
   "Sources; two links to one page count once. Confirmed means two or more independent " +
   "databases agree on the same high-stakes fact. A Based on line names the databases the " +
   "cited pages come from, the three most cited when there are four or more. When an answer rests " +
-  "on two or more databases and a high-stakes fact could not be checked against a second one, " +
+  "on two or more databases and the values behind one of its high-stakes facts could not be compared, " +
   "the line adds \"their values could not be compared\".";
 
 /*
