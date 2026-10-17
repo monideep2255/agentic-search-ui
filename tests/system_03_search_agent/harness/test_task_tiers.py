@@ -37,13 +37,14 @@ _CLASSIFIER_CALL_SITES = {
     "plan.resource",
     "guardrail.injection",
     "think.asks_features",
+    "think.asks_classification",
 }
 
 
-def test_all_fifteen_call_sites_are_present() -> None:
+def test_all_sixteen_call_sites_are_present() -> None:
     names = {entry.call_site for entry in ALL_TASK_TIERS}
     assert names == _TIER_CALL_SITES | _CLASSIFIER_CALL_SITES
-    assert len(ALL_TASK_TIERS) == 15
+    assert len(ALL_TASK_TIERS) == 16
 
 
 def test_table_is_sorted_by_call_site() -> None:

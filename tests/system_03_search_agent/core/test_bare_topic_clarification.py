@@ -244,6 +244,7 @@ _SAFE_PICKS: dict[str, str] = {
     "think.recent_years": "not_applicable",
     "plan.literature": "not_literature",
     "think.asks_features": "not_applicable",
+    "think.asks_classification": "not_applicable",
 }
 
 
@@ -1150,6 +1151,37 @@ async def test_a_searched_question_asks_whether_it_is_about_features_and_carries
 
 
 @pytest.mark.asyncio
+async def test_card30_a_searched_question_asks_about_classification_and_carries_it_on_done(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 30: `think.asks_classification` is asked at Think with its fixed
+    description, and its record rides on the `done` event."""
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    asked = _install_decide(monkeypatch, {"think.asks_classification": "asks_classification"})
+
+    events = await _run("which papers discuss statin side effects")
+    assert "think.asks_classification" in asked, asked
+    done = _payload(events, "done")
+    assert done is not None
+    record = next(d for d in done["decisions"] if d["name"] == "think.asks_classification")
+    assert record["options"] == ["asks_classification", "not_applicable"]
+    assert record["chosen"] == "asks_classification"
+
+
+@pytest.mark.asyncio
+async def test_card30_small_talk_is_never_asked_about_classification(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_tools(monkeypatch)
+    _install_models(monkeypatch, clarify_reply=None)
+    asked = _install_decide(monkeypatch)
+
+    await _run("what can you do")
+    assert "think.asks_classification" not in asked, asked
+
+
+@pytest.mark.asyncio
 async def test_small_talk_is_never_asked_whether_it_is_about_features(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1359,3 +1391,37 @@ async def test_the_literature_decision_is_under_way_before_thinks_call(
     await _run("which papers discuss statin side effects")
     assert order.index("plan.literature") < order.index("think"), order
     assert order.index("think.recent_years") < order.index("think"), order
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "ends", [{"clarification_needed": True}, {"cap_exceeded": True}, {"step_error": {"message": "stand-in"}}]
+)
+async def test_card30_think_ending_the_search_stops_the_classification_decision(
+    monkeypatch: pytest.MonkeyPatch, ends: dict[str, Any]
+) -> None:
+    """Think itself stops `think.asks_classification` when the search does not
+    go ahead (Write's own drop would also catch it, so Think is called alone).
+    Red when Think's `finally` leaves the task running."""
+    stopped = _hang_one_point(monkeypatch, "think.asks_classification")
+
+    async def _ended(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+        await asyncio.sleep(0.05)
+        return dict(ends)
+
+    monkeypatch.setattr(graph_module, "_think", _ended)
+    from system_03_search_agent.contracts.query import Query
+    from system_03_search_agent.harness import harness as harness_module
+
+    query = Query(
+        text="tell me about brca1 variants",
+        session_id="s-card30",
+        trace_id="t-card30",
+        user_id=None,
+        audience_depth="researcher",
+    )
+    state = {"query": query, "harness": harness_module.Harness(trace_id=query.trace_id)}
+    await graph_module.think_node(state)  # type: ignore[arg-type]
+    await asyncio.sleep(0)
+    assert stopped.is_set()
+    assert graph_module._run_decisions(state["harness"]).classification_task is None
