@@ -4771,6 +4771,12 @@ class _PlannedToolCall:
     #: rather than the answer to the question's own shape. `_answer_call_ids`
     #: skips it, so its rows are never numbered as answer findings.
     context_only: bool = False
+    #: Card 105: True only on the gene path's own graph call when the person
+    #: picked a "How far back" window. The graph's Article rows carry no
+    #: publication date, so Act leaves them out and the windowed PubMed
+    #: papers answer instead. False everywhere else, so a question with no
+    #: picked window runs the code it always did.
+    undated_papers_left_out: bool = False
 
 
 @dataclass(frozen=True)
@@ -7361,6 +7367,18 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         ):
             planned_tool_calls.append(_build_planned_go_terms_call(gene_curie, query_class))
 
+        # Card 105: the graph's paper links carry no date, so a picked window
+        # leaves them out and the windowed PubMed papers lead. Only when this
+        # plan really holds a windowed PubMed search (a gene typed as a CURIE
+        # has no symbol to search on), so nothing is dropped that nothing
+        # replaces.
+        if publication_window is not None and any(
+            getattr(c, "purpose", "") == "pubmed_search" for c in planned_tool_calls
+        ):
+            planned_tool_calls[0] = dataclasses.replace(
+                planned_tool_calls[0], undated_papers_left_out=True
+            )
+
         # UI fix set 8 (R30): one helper scientist per layer, none the lead,
         # drawn afresh on every run. Stamped onto copies of the ToolCalls,
         # so the planned inputs above are untouched and nothing below Plan
@@ -7625,6 +7643,32 @@ def _split_rows_by_trust(
         else:
             trusted.append(row)
     return trusted, untrusted
+
+
+def _without_article_rows(output: CypherQueryOutput) -> CypherQueryOutput:
+    """Card 105: `output` with every Article row removed, for a question whose
+    person picked a "How far back" window.
+
+    An Article vertex has no publication date, so the graph cannot say which
+    of its papers fall inside the window; showing them would list papers from
+    outside it. Counts are recomputed from the rows kept, so `row_count` and
+    `total_available` agree (F-2.1-C07) and a truncation note never quotes
+    the graph's full paper count. A result that held only Article rows
+    becomes `empty`, not `ok` with no rows. Other rows are untouched.
+    """
+    kept = [row for row in output.rows if row.node_or_edge_type != "Article"]
+    if len(kept) == len(output.rows):
+        return output
+    status = output.status if kept or output.status != "ok" else "empty"
+    return output.model_copy(
+        update={
+            "rows": kept,
+            "row_count": len(kept),
+            "total_available": len(kept),
+            "truncated": False,
+            "status": status,
+        }
+    )
 
 
 def _untrusted_rows_free_text(rows: list[CypherQueryRow]) -> str:
@@ -8311,6 +8355,10 @@ class _CallOutcome:
     #: input's own `db`, schema-validated), so the note under the answer can
     #: name it; "" for every other call.
     failure_source: str = ""
+    #: Card 105: True when a picked window made Act remove graph Article rows
+    #: from this call's result, so the empty-window line may say they were
+    #: left out.
+    undated_articles_dropped: bool = False
 
 
 #: Card 63 (2026-09-27): a failed call's kind in the words a `tool_result`
@@ -8627,6 +8675,11 @@ async def _execute_planned_call(
     # rows' own free-text content is separately quarantined into a second,
     # reader-bound tool_call/result pair, so that content still never
     # reaches structured_fields or a citation's claim_text unmediated.
+    articles_dropped = False
+    if getattr(planned, "undated_papers_left_out", False):
+        kept_output = _without_article_rows(output)
+        articles_dropped = kept_output is not output
+        output = kept_output
     _, untrusted_rows = _split_rows_by_trust(output.rows)
     pairs: list[tuple[ToolCall, ToolExecutionResult]] = [
         (
@@ -8681,6 +8734,7 @@ async def _execute_planned_call(
         result_count=output.row_count,
         truncated=output.truncated,
         pairs=pairs,
+        undated_articles_dropped=articles_dropped,
     )
 
 
@@ -9090,6 +9144,8 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             layer2_raw_outputs[planned.tool_call.call_id] = outcome.raw_output
         if outcome.layer_raw_output is not None:
             layer3_raw_outputs[planned.tool_call.call_id] = outcome.layer_raw_output
+        if outcome.undated_articles_dropped:
+            layer3_raw_outputs[planned.tool_call.call_id + _ARTICLES_DROPPED_SUFFIX] = True
         cap_exceeded = cap_exceeded or outcome.cap_exceeded
 
     # Build phase 8.7, step 8 (card 50, option K; the owner's yes of
@@ -10020,6 +10076,87 @@ def _paper_link_notes(state: GraphState) -> list[str]:
             if count is not None:
                 notes.append(count)
     return notes
+
+
+#: Card 105: the key suffix under which Act records, in `layer3_raw_outputs`,
+#: that it removed graph Article rows from a call's result. No finding's
+#: `call_id` ends with it, so no citation lookup meets it.
+_ARTICLES_DROPPED_SUFFIX: Final[str] = ":undated-articles-dropped"
+
+_WINDOW_NO_PAPERS_NEXT_STEP: Final[str] = "Pick a longer window, or ask without one."
+
+
+def _window_no_papers_line(state: GraphState, query: Any) -> str | None:
+    """Card 105: when the person picked a window, the graph's undated papers
+    were left out and the windowed PubMed search found none, the plain line
+    that says so.
+
+    None for every question without a picked window, and whenever the
+    windowed search returned papers, failed or never ran (a failed search
+    has its own note, and no claim of "none found" is made over it).
+    """
+    planned_calls = state.get("tool_calls") or []
+    graph_call = next((p for p in planned_calls if getattr(p, "undated_papers_left_out", False)), None)
+    if graph_call is None:
+        return None
+    window = _picked_publication_window(query)
+    if window is None:
+        return None
+    raw_outputs: dict[str, NcbiEfetchOutput] = state.get("layer2_raw_outputs") or {}
+    searches = [p for p in planned_calls if getattr(p, "purpose", "") == "pubmed_search"]
+    if not searches:
+        return None
+    for search in searches:
+        output = raw_outputs.get(search.tool_call.call_id)
+        if output is None or output.status == "error" or _search_ids(output):
+            return None
+    # The gene the windowed search was planned from, named as the count line
+    # writes it: Think's resolved text for that gene, not the uppercased
+    # search term and not whichever entity Think listed first (a typed rs id
+    # or PMID can come before the gene).
+    searched_curie = _first_gene_curie(list(graph_call.cypher_input.target_entities))
+    symbol = next(
+        (
+            getattr(e, "text", "")
+            for e in state.get("resolved_entities") or []
+            if searched_curie is not None
+            and getattr(e, "curie", None) == searched_curie
+            and getattr(e, "text", "")
+        ),
+        None,
+    ) or next(
+        (
+            p.gene_symbol
+            for p in planned_calls
+            if getattr(p, "purpose", "") == _PUBMED_ABSTRACTS_PURPOSE and p.gene_symbol
+        ),
+        None,
+    )
+    subject = f" for {symbol}" if symbol else ""
+    left_out = bool(
+        (state.get("layer3_raw_outputs") or {}).get(
+            graph_call.tool_call.call_id + _ARTICLES_DROPPED_SUFFIX
+        )
+    )
+    reason = (
+        " Papers in the knowledge graph carry no publication date, so they are not listed here."
+        if left_out
+        else ""
+    )
+    return (
+        f"No PubMed papers from {window.label} were found{subject}.{reason}"
+    )
+
+
+def _window_no_papers_note(state: GraphState, query: Any) -> str | None:
+    """The line, as a note under an answer that stands."""
+    return _window_no_papers_line(state, query)
+
+
+def _window_no_papers_refusal(state: GraphState, query: Any) -> str | None:
+    """The line plus one next step, for a refusal the left-out papers caused."""
+    line = _window_no_papers_line(state, query)
+    return f"{line} {_WINDOW_NO_PAPERS_NEXT_STEP}" if line else None
 
 
 def _isolate_count_note(state: GraphState) -> str | None:
@@ -12748,6 +12885,15 @@ def _answer_call_ids(planned_tool_calls: list[Any], question: str) -> frozenset[
         ) or (call.tool == "clinicaltrials_search" and asks_for_trials)
         if answers:
             ids.add(call.call_id)
+    # Card 105: when the graph's undated papers were left out for a picked
+    # window, the windowed PubMed papers are the answer, so their abstracts
+    # call answers too and its records lead the page and the count line.
+    if any(getattr(planned, "undated_papers_left_out", False) for planned in planned_tool_calls):
+        for planned in planned_tool_calls:
+            if getattr(planned, "purpose", "") == _PUBMED_ABSTRACTS_PURPOSE and (
+                getattr(planned, "source_purpose", "") == "pubmed_search"
+            ):
+                ids.add(planned.tool_call.call_id)
     return frozenset(ids)
 
 
@@ -15167,7 +15313,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         refusal_message = refusal_message_for(
             state.get("failed_searches", []),
             state.get("topic_search_term") or None,
-            _paper_link_none_message(state),
+            _paper_link_none_message(state) or _window_no_papers_refusal(state, query),
         )
         sink.emit(
             "token",
@@ -15206,6 +15352,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
                 truncation_note,
                 _isolate_count_note(state),
                 *_paper_link_notes(state),
+                _window_no_papers_note(state, query),
                 _isolate_disclosure_note(state),
                 _disease_lookup_failed_note(state),
                 structured_fallback_note,
