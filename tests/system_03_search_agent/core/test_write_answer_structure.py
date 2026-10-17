@@ -2044,3 +2044,169 @@ async def test_card30_answer_parts_skips_its_line_beside_card_23s_table(monkeypa
         everything = [t.model_dump() for t in (*parts.summary, *parts.listing, *parts.notes)]
         assert len(_source_notes(everything)) == 1
         assert _classification_notes(everything) == []
+
+
+# ---------------------------------------------------------------------------
+# Card 30 step 2b (owner decision, 2026-10-16): one ClinVar ESummary per 50
+# listed graph variants, and every listed variant shows ClinVar's
+# classification, read verbatim from its record.
+# ---------------------------------------------------------------------------
+
+_CLASSES = {
+    "ClinVar:1": "Pathogenic",
+    "ClinVar:2": "Uncertain significance",
+    "ClinVar:3": "Conflicting classifications of pathogenicity",
+}
+
+
+def _install_classifications(monkeypatch, mapping, calls: list | None = None) -> None:
+    async def _fake(curies):
+        if calls is not None:
+            calls.append(list(curies))
+        return {c: mapping[c] for c in curies if c in mapping}
+
+    monkeypatch.setattr(graph_module, "resolve_variant_classifications", _fake)
+
+
+async def _variant_list(monkeypatch, depth: str, mapping, rows=None, calls=None):
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+    _install_classifications(monkeypatch, mapping, calls)
+    _install(monkeypatch, _no_prose)
+    result = await graph_module.write_node(
+        _state(depth, rows=rows if rows is not None else _UNCLASSIFIED_VARIANT_ROWS)
+    )
+    return result, _read_tokens(result)
+
+
+@pytest.mark.asyncio
+async def test_card30b_researcher_table_shows_each_classification_and_drops_the_line(
+    monkeypatch,
+) -> None:
+    """Red on develop: no column and the step 1 line stays."""
+    calls: list = []
+    _, tokens = await _variant_list(monkeypatch, "researcher", _CLASSES, calls=calls)
+    ((header, rows),) = _tables(tokens)
+    assert header[-1] == "ClinVar classification"
+    assert len(header) <= 4
+    assert [row["cells"][-1] for row in rows] == [
+        "Pathogenic",
+        "Uncertain significance",
+        "Conflicting classifications of pathogenicity",
+    ]
+    assert all(len(row["cells"]) <= 4 for row in rows)
+    assert _classification_notes(tokens) == []
+    assert calls == [["ClinVar:1", "ClinVar:2", "ClinVar:3"]]
+
+
+@pytest.mark.asyncio
+async def test_card30b_a_row_is_joined_by_record_not_position(monkeypatch) -> None:
+    """The mapping arrives in the opposite order to the rows."""
+    reversed_map = dict(reversed(list(_CLASSES.items())))
+    _, tokens = await _variant_list(monkeypatch, "researcher", reversed_map)
+    ((_, rows),) = _tables(tokens)
+    by_label = {row["cells"][0]: row["cells"][-1] for row in rows}
+    assert by_label["c.1A>G (p.Xaa1Yaa)"] == "Pathogenic"
+    assert by_label["c.2A>G (p.Xaa2Yaa)"] == "Uncertain significance"
+
+
+@pytest.mark.asyncio
+async def test_card30b_plain_language_keeps_the_classification_after_the_name(
+    monkeypatch,
+) -> None:
+    _, tokens = await _variant_list(monkeypatch, "plain_language", _CLASSES)
+    labels = [t["cells"][0] for t in tokens if t["kind"] == "list_item"]
+    assert "c.1A>G (p.Xaa1Yaa), ClinVar classification: Pathogenic" in labels
+    assert (
+        "c.3A>G (p.Xaa3Yaa), ClinVar classification: "
+        "Conflicting classifications of pathogenicity"
+    ) in labels
+    assert _classification_notes(tokens) == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("depth", ["plain_language", "researcher"])
+async def test_card30b_one_unread_variant_keeps_its_row_and_the_line(monkeypatch, depth) -> None:
+    partial = {k: v for k, v in _CLASSES.items() if k != "ClinVar:2"}
+    _, tokens = await _variant_list(monkeypatch, depth, partial)
+    assert len(_classification_notes(tokens)) == 1
+    if depth == "researcher":
+        ((_, rows),) = _tables(tokens)
+        assert [row["cells"][-1] for row in rows] == [
+            "Pathogenic",
+            "",
+            "Conflicting classifications of pathogenicity",
+        ]
+    else:
+        labels = [t["cells"][0] for t in tokens if t["kind"] == "list_item"]
+        assert "c.2A>G (p.Xaa2Yaa)" in labels
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("depth", ["plain_language", "researcher"])
+async def test_card30b_no_classification_at_all_is_todays_answer(monkeypatch, depth) -> None:
+    """Every failure class returns an empty mapping: the tokens equal those
+    of a run where the lookup never existed."""
+    _, with_lookup = await _variant_list(monkeypatch, depth, {})
+    monkeypatch.setattr(
+        graph_module, "resolve_variant_classifications", lambda curies: _async_empty()
+    )
+    _, again = await _variant_list(monkeypatch, depth, {})
+    assert with_lookup == again
+    assert len(_classification_notes(with_lookup)) == 1
+    assert not any(
+        "ClinVar classification" in str(t.get("cells") or "") for t in with_lookup
+    )
+
+
+async def _async_empty() -> dict:
+    return {}
+
+
+@pytest.mark.asyncio
+async def test_card30b_no_graph_variants_makes_no_request(monkeypatch) -> None:
+    calls: list = []
+    _, tokens = await _variant_list(monkeypatch, "researcher", _CLASSES, rows=_ROWS, calls=calls)
+    assert calls == []
+    assert _classification_notes(tokens) == []
+
+
+@pytest.mark.asyncio
+async def test_card30b_a_question_without_variants_is_byte_identical(monkeypatch) -> None:
+    """A gene to disease answer never reaches the lookup (a lookup that
+    raises is not called) and its payloads repeat exactly. The comparison
+    with develop's code is in the build report's probe."""
+
+    def _tokens_of(result):
+        return [e.payload for e in result["events"] if e.type in ("token", "citation")]
+
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+    _install(monkeypatch, _no_prose)
+
+    async def _boom(curies):
+        raise AssertionError("no lookup without graph variants")
+
+    monkeypatch.setattr(graph_module, "resolve_variant_classifications", _boom)
+    first = _tokens_of(await graph_module.write_node(_state("researcher", rows=_ROWS)))
+    second = _tokens_of(await graph_module.write_node(_state("researcher", rows=_ROWS)))
+    assert first and first == second
+
+
+@pytest.mark.asyncio
+async def test_card30b_rs334_style_answer_is_unchanged(monkeypatch) -> None:
+    """Query 23's shape: a dbSNP record row, no graph variant. The lookup is
+    not asked and the Clinical significance column stays."""
+    calls: list = []
+    rows = [
+        {
+            "node_or_edge_type": "Variant record",
+            "curie": "dbSNP:rs334",
+            "fields": {"rsid": "rs334", "clinical_significance": "Pathogenic, risk-factor"},
+            "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
+            "graph_snapshot_version": "v1",
+        }
+    ]
+    _, tokens = await _variant_list(monkeypatch, "researcher", _CLASSES, rows=rows, calls=calls)
+    assert calls == []
+    ((header, _),) = _tables(tokens)
+    assert "ClinVar classification" not in header
+    assert _classification_notes(tokens) == []

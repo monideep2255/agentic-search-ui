@@ -63,7 +63,7 @@ Writes:
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -93,6 +93,7 @@ from system_03_search_agent.synthesis.grounding import (
     short_forms_by_page,
     title_words_shared,
 )
+from system_03_search_agent.synthesis.variant_classifications import CLASSIFICATION_ROW_FIELD
 
 BlockKind = Literal["heading", "paragraph"]
 
@@ -397,21 +398,45 @@ _CLASSIFICATION_FIELDS: frozenset[str] = frozenset(
 )
 
 
-def variant_classification_note(findings: Sequence[Any]) -> str | None:
+def variant_classification_note(
+    findings: Sequence[Any], classified: Collection[str] | None = None
+) -> str | None:
     """The card 30 line, or None when it would not be true.
 
     Keyed on record type and field only, never on the question's words: at
     least one finding is a knowledge graph `SequenceVariant` record, and no
-    finding cites a classification field.
+    finding cites a classification field. Step 2b: `classified` holds the
+    CURIEs whose ClinVar classification the answer shows, and the line is
+    dropped only when every graph variant finding is among them.
     """
-    has_graph_variant = any(
-        f.layer == "layer_1_graph" and f.entity_type == "SequenceVariant" for f in findings
-    )
-    if not has_graph_variant:
+    graph_variants = [
+        f for f in findings if f.layer == "layer_1_graph" and f.entity_type == "SequenceVariant"
+    ]
+    if not graph_variants:
         return None
     if any(f.field in _CLASSIFICATION_FIELDS for f in findings):
         return None
+    if classified and all(f.curie and f.curie in classified for f in graph_variants):
+        return None
     return VARIANT_CLASSIFICATION_NOTE
+
+
+def with_variant_classification(
+    finding: Any,
+    row_fields: dict[str, Any] | None,
+    classifications: dict[str, str] | None,
+) -> dict[str, Any] | None:
+    """`row_fields` of a graph variant row plus its looked up ClinVar
+    classification, as a copy. Any other row, and a variant with none, comes
+    back unchanged."""
+    if not classifications or finding.layer != "layer_1_graph":
+        return row_fields
+    if finding.entity_type != "SequenceVariant" or not finding.curie:
+        return row_fields
+    value = classifications.get(finding.curie)
+    if not value:
+        return row_fields
+    return {**(row_fields or {}), CLASSIFICATION_ROW_FIELD: value}
 
 
 # ---------------------------------------------------------------------------
@@ -624,6 +649,9 @@ _ROW_TYPE_COLUMNS: dict[tuple[str, str], str] = {
     # (V-37-01). Read only when the significance is absent: the loop returns
     # the first match in this order.
     ("Variant record", "functional_consequence"): "Consequence",
+    # Card 30 step 2b: ClinVar's own word for a graph variant, looked up at
+    # Write (`synthesis/variant_classifications`) and shown verbatim.
+    ("SequenceVariant", CLASSIFICATION_ROW_FIELD): "ClinVar classification",
 }
 
 #: Card 37, slice A1: the row field that names a record of this exact type.
@@ -975,6 +1003,20 @@ def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> st
 
 
 def plain_record_label(
+    finding: SynthFinding, row_fields: dict[str, Any] | None, identifier: str = ""
+) -> str:
+    """The plain-language list cell: the record's title (`_plain_title`),
+    and for a graph variant with a looked up ClinVar classification, that
+    classification after the name, verbatim."""
+    label = _plain_title(finding, row_fields, identifier)
+    value = (row_fields or {}).get(CLASSIFICATION_ROW_FIELD)
+    if finding.entity_type == "SequenceVariant" and isinstance(value, str) and value.strip():
+        suffix = f", ClinVar classification: {value.strip()}"
+        return clip_to_word(label, MAX_LABEL_CHARS - len(suffix)) + suffix
+    return label
+
+
+def _plain_title(
     finding: SynthFinding, row_fields: dict[str, Any] | None, identifier: str = ""
 ) -> str:
     """The one cell a plain-language list row shows: the record's title.

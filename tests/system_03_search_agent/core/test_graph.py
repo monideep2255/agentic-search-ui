@@ -7678,3 +7678,52 @@ async def test_card30_no_floor_when_the_answer_shows_a_classification(
     assert "Pathogenic" in seen, "populate-check: the classification is on the page"
     assert "classification of these variants" not in seen
     assert floors[0] == floors_without_the_decision
+
+
+async def _classified_write(
+    monkeypatch: pytest.MonkeyPatch, mapping: dict[str, str], pick: str | None
+) -> dict[str, object]:
+    async def _lookup(curies: list[str]) -> dict[str, str]:
+        return {c: mapping[c] for c in curies if c in mapping}
+
+    monkeypatch.setattr(graph_module, "resolve_variant_classifications", _lookup)
+    return await _classification_write(pick)
+
+
+@pytest.mark.asyncio
+async def test_card30b_a_partly_read_list_keeps_the_line_and_the_floor(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two of three variants show ClinVar's word; the third could not be read.
+    Step 1's line stays, the floor still holds, claim trust is untouched."""
+    baseline = await _classified_write(monkeypatch, {}, None)
+    result = await _classified_write(
+        monkeypatch, {"ClinVar:1": "Pathogenic", "ClinVar:2": "Benign"}, "asks_classification"
+    )
+    seen = _everything_the_reader_sees(result["events"])
+    assert "Pathogenic" in seen, "populate-check: a read classification is on the page"
+    assert "classification of these variants" in seen
+    assert _answer_scope_outcome(result) == "ask"
+    assert _claim_outcomes(result) == _claim_outcomes(baseline)
+
+
+@pytest.mark.asyncio
+async def test_card30b_a_fully_read_list_drops_the_line_and_leaves_claim_trust(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every listed variant shows its classification: the line no longer
+    appears (step 1's floor is tied to the line's condition), and no claim's
+    trust signal moves."""
+    baseline = await _classified_write(monkeypatch, {}, None)
+    mapping = {
+        "ClinVar:1": "Pathogenic",
+        "ClinVar:2": "Uncertain significance",
+        "ClinVar:3": "Benign",
+    }
+    result = await _classified_write(monkeypatch, mapping, "asks_classification")
+    seen = _everything_the_reader_sees(result["events"])
+    for word in mapping.values():
+        assert word in seen
+    assert "classification of these variants" not in seen
+    assert _claim_outcomes(result) == _claim_outcomes(baseline)
+    assert _answer_scope_outcome(result) == _answer_scope_outcome(baseline)

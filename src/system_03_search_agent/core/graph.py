@@ -578,6 +578,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     table_second_cell,
     variant_classification_note,
     variant_to_disease_source_note,
+    with_variant_classification,
 )
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
 from system_03_search_agent.synthesis.disease_names import (
@@ -633,6 +634,9 @@ from system_03_search_agent.synthesis.trust import (
     aggregate,
     answer_trust_line,
     trust_for_claims,
+)
+from system_03_search_agent.synthesis.variant_classifications import (
+    resolve_variant_classifications,
 )
 from system_03_search_agent.tools.clinicaltrials_search import (
     build_citation as clinicaltrials_build_citation,
@@ -13076,6 +13080,7 @@ def _answer_parts(
     classification_note: str | None = None,
     summary_sentence: str | None = None,
     condition_names: dict[str, str | None] | None = None,
+    variant_classifications: dict[str, str] | None = None,
     lead_index: int | None = None,
     listing_sentences: tuple[str, ...] = (),
 ) -> _AnswerParts:
@@ -13130,6 +13135,13 @@ def _answer_parts(
     depth, and on other Researcher prose sentences only, from the run's
     resolved entity mentions and record names.
     """
+    def shown_row_fields(finding: SynthFinding) -> dict[str, Any] | None:
+        # Card 30 step 2b: a graph variant row also carries its looked up
+        # ClinVar classification, on a copy; every other row is as stored.
+        return with_variant_classification(
+            finding, _row_fields_for(finding, findings), variant_classifications
+        )
+
     citation_by_display = {citation.display_index: citation for citation in citations}
     citation_by_id = {citation.citation_id: citation for citation in citations}
     finding_by_citation_id = {finding.citation_id: finding for finding in synth_findings}
@@ -13426,7 +13438,7 @@ def _answer_parts(
                 sentence_token(sentence)
                 continue
             identifier = identifier_for(finding)
-            label = plain_record_label(finding, _row_fields_for(finding, findings), identifier)
+            label = plain_record_label(finding, shown_row_fields(finding), identifier)
             # One row per record: two claims about the same record (its title
             # and its symbol) are one row, not two identical ones. Card 104:
             # keyed on the page, as Sources is, with citations merged.
@@ -13502,7 +13514,7 @@ def _answer_parts(
             entries = groups[noun]
             entity_type = type_for_group[noun]
             row_fields_by_entry = [
-                _row_fields_for(finding, findings) if finding is not None else None
+                shown_row_fields(finding) if finding is not None else None
                 for _, finding in entries
             ]
             second_cells = [
@@ -14013,6 +14025,18 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     curie_fallback_curies = [
         f.curie for f in synth_findings if f.curie_fallback and f.curie
     ]
+    # Card 30 step 2b: ClinVar's classification of each listed graph
+    # variant starts here, beside the name lookups, and is awaited after
+    # them, so the two run together. Never raises; a CURIE it could not read
+    # is absent and keeps today's row.
+    classification_task: asyncio.Task[dict[str, str]] | None = None
+    variant_curies = [
+        f.curie
+        for f in synth_findings
+        if f.layer == "layer_1_graph" and f.entity_type == "SequenceVariant" and f.curie
+    ]
+    if variant_curies:
+        classification_task = asyncio.create_task(resolve_variant_classifications(variant_curies))
     resolved_names = await resolve_concept_ids(curie_fallback_curies)
     resolved_names.update(
         {
@@ -14053,6 +14077,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         condition_names = await resolve_concept_ids(fold_condition_ids)
     synth_findings, placeholder_findings_dropped = drop_placeholder_condition_findings(
         synth_findings
+    )
+    variant_classifications: dict[str, str] = (
+        await classification_task if classification_task is not None else {}
     )
 
     # Build phase 8.6, T-8.6-06: what is said about a condition's clinical
@@ -14230,6 +14257,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             mentions=answer_mentions,
             notes=[],
             condition_names=condition_names,
+            variant_classifications=variant_classifications,
         ).listing
         return listed_citations, part
 
@@ -14988,7 +15016,9 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     # classification. The note is true on every such listing; the verdict
     # floor needs the classifier's reading that the question asked for one.
     # Floors the answer-level outcome only, never a claim's trust.
-    classification_note = variant_classification_note(synth_findings)
+    classification_note = variant_classification_note(
+        synth_findings, set(variant_classifications)
+    )
     # The code-built listing may already have left (or be about to leave)
     # with card 23's line under its table; that line says the same thing.
     if any(
@@ -15329,6 +15359,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             classification_note=note_for_notes,
             summary_sentence=summary_sentence,
             condition_names=condition_names,
+            variant_classifications=variant_classifications,
             lead_index=lead_index,
             listing_sentences=listing_shown,
         )
