@@ -8355,6 +8355,10 @@ class _CallOutcome:
     #: input's own `db`, schema-validated), so the note under the answer can
     #: name it; "" for every other call.
     failure_source: str = ""
+    #: Card 105: True when a picked window made Act remove graph Article rows
+    #: from this call's result, so the empty-window line may say they were
+    #: left out.
+    undated_articles_dropped: bool = False
 
 
 #: Card 63 (2026-09-27): a failed call's kind in the words a `tool_result`
@@ -8671,8 +8675,11 @@ async def _execute_planned_call(
     # rows' own free-text content is separately quarantined into a second,
     # reader-bound tool_call/result pair, so that content still never
     # reaches structured_fields or a citation's claim_text unmediated.
+    articles_dropped = False
     if getattr(planned, "undated_papers_left_out", False):
-        output = _without_article_rows(output)
+        kept_output = _without_article_rows(output)
+        articles_dropped = kept_output is not output
+        output = kept_output
     _, untrusted_rows = _split_rows_by_trust(output.rows)
     pairs: list[tuple[ToolCall, ToolExecutionResult]] = [
         (
@@ -8727,6 +8734,7 @@ async def _execute_planned_call(
         result_count=output.row_count,
         truncated=output.truncated,
         pairs=pairs,
+        undated_articles_dropped=articles_dropped,
     )
 
 
@@ -9136,6 +9144,8 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             layer2_raw_outputs[planned.tool_call.call_id] = outcome.raw_output
         if outcome.layer_raw_output is not None:
             layer3_raw_outputs[planned.tool_call.call_id] = outcome.layer_raw_output
+        if outcome.undated_articles_dropped:
+            layer3_raw_outputs[planned.tool_call.call_id + _ARTICLES_DROPPED_SUFFIX] = True
         cap_exceeded = cap_exceeded or outcome.cap_exceeded
 
     # Build phase 8.7, step 8 (card 50, option K; the owner's yes of
@@ -10068,6 +10078,11 @@ def _paper_link_notes(state: GraphState) -> list[str]:
     return notes
 
 
+#: Card 105: the key suffix under which Act records, in `layer3_raw_outputs`,
+#: that it removed graph Article rows from a call's result. No finding's
+#: `call_id` ends with it, so no citation lookup meets it.
+_ARTICLES_DROPPED_SUFFIX: Final[str] = ":undated-articles-dropped"
+
 _WINDOW_NO_PAPERS_NEXT_STEP: Final[str] = "Pick a longer window, or ask without one."
 
 
@@ -10095,14 +10110,18 @@ def _window_no_papers_line(state: GraphState, query: Any) -> str | None:
         output = raw_outputs.get(search.tool_call.call_id)
         if output is None or output.status == "error" or _search_ids(output):
             return None
-    # The symbol as the count line writes it: Think's resolved text for the
-    # question's gene, not the uppercased search term.
-    targets = set(graph_call.cypher_input.target_entities)
+    # The gene the windowed search was planned from, named as the count line
+    # writes it: Think's resolved text for that gene, not the uppercased
+    # search term and not whichever entity Think listed first (a typed rs id
+    # or PMID can come before the gene).
+    searched_curie = _first_gene_curie(list(graph_call.cypher_input.target_entities))
     symbol = next(
         (
             getattr(e, "text", "")
             for e in state.get("resolved_entities") or []
-            if getattr(e, "curie", None) in targets and getattr(e, "text", "")
+            if searched_curie is not None
+            and getattr(e, "curie", None) == searched_curie
+            and getattr(e, "text", "")
         ),
         None,
     ) or next(
@@ -10114,9 +10133,18 @@ def _window_no_papers_line(state: GraphState, query: Any) -> str | None:
         None,
     )
     subject = f" for {symbol}" if symbol else ""
+    left_out = bool(
+        (state.get("layer3_raw_outputs") or {}).get(
+            graph_call.tool_call.call_id + _ARTICLES_DROPPED_SUFFIX
+        )
+    )
+    reason = (
+        " Papers in the knowledge graph carry no publication date, so they are not listed here."
+        if left_out
+        else ""
+    )
     return (
-        f"No PubMed papers from {window.label} were found{subject}. Papers in the "
-        "knowledge graph carry no publication date, so they are not listed here."
+        f"No PubMed papers from {window.label} were found{subject}.{reason}"
     )
 
 

@@ -129,7 +129,13 @@ def test_the_windowed_abstracts_call_answers_only_when_the_flag_is_set() -> None
         assert graph_module._answer_call_ids(calls, "recent papers on BRCA1") == expected
 
 
-def _line_state(flag: bool, resolved_text: str | None = "C9orf43") -> dict[str, Any]:
+def _line_state(
+    flag: bool,
+    resolved_text: str | None = "C9orf43",
+    targets: list[str] | None = None,
+    entities: list[Any] | None = None,
+    dropped: bool = True,
+) -> dict[str, Any]:
     from types import SimpleNamespace
 
     from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchOutput
@@ -139,7 +145,7 @@ def _line_state(flag: bool, resolved_text: str | None = "C9orf43") -> dict[str, 
         cypher_input=CypherQueryInput(
             query_intent="recent papers on C9orf43",
             query_class="single_hop",
-            target_entities=["NCBIGene:119"],
+            target_entities=targets or ["NCBIGene:119"],
         ),
         undated_papers_left_out=flag,
     )
@@ -161,10 +167,12 @@ def _line_state(flag: bool, resolved_text: str | None = "C9orf43") -> dict[str, 
         total_available=None,
         truncated=False,
     )
-    entities = [SimpleNamespace(text=resolved_text, curie="NCBIGene:119")] if resolved_text else []
+    if entities is None:
+        entities = [SimpleNamespace(text=resolved_text, curie="NCBIGene:119")] if resolved_text else []
     return {
         "tool_calls": [graph, search, abstracts],
         "layer2_raw_outputs": {"ne-s": empty},
+        "layer3_raw_outputs": {"cq-1" + graph_module._ARTICLES_DROPPED_SUFFIX: True} if dropped else {},
         "resolved_entities": entities,
     }
 
@@ -200,3 +208,67 @@ def test_the_line_needs_the_flag(monkeypatch: pytest.MonkeyPatch) -> None:
     _window(monkeypatch)
     assert graph_module._window_no_papers_line(_line_state(False), object()) is None  # type: ignore[arg-type]
     assert graph_module._window_no_papers_line(_line_state(True), object()) is not None  # type: ignore[arg-type]
+
+
+def _ent(text: str, curie: str) -> Any:
+    from types import SimpleNamespace
+
+    return SimpleNamespace(text=text, curie=curie)
+
+
+def test_an_rs_id_typed_before_the_gene_does_not_become_the_searched_gene(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """V-105-01: only the gene was searched, so the line names the gene."""
+    _window(monkeypatch)
+    state = _line_state(
+        True,
+        targets=["dbSNP:rs80357906", "NCBIGene:672"],
+        entities=[_ent("rs80357906", "dbSNP:rs80357906"), _ent("BRCA1", "NCBIGene:672")],
+    )
+    line = graph_module._window_no_papers_line(state, object())  # type: ignore[arg-type]
+    assert line is not None and "for BRCA1." in line and "rs80357906" not in line, line
+
+
+def test_a_pmid_typed_before_the_gene_does_not_become_the_searched_gene(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _window(monkeypatch)
+    state = _line_state(
+        True,
+        targets=["PMID:12345678", "NCBIGene:672"],
+        entities=[_ent("PMID:12345678", "PMID:12345678"), _ent("BRCA1", "NCBIGene:672")],
+    )
+    line = graph_module._window_no_papers_line(state, object())  # type: ignore[arg-type]
+    assert line is not None and "for BRCA1." in line and "12345678" not in line, line
+
+
+def test_the_plain_gene_case_names_the_gene(monkeypatch: pytest.MonkeyPatch) -> None:
+    _window(monkeypatch)
+    state = _line_state(True, targets=["NCBIGene:672"], entities=[_ent("BRCA1", "NCBIGene:672")])
+    line = graph_module._window_no_papers_line(state, object())  # type: ignore[arg-type]
+    assert line is not None and "for BRCA1." in line, line
+
+
+def test_the_second_sentence_shows_only_when_graph_papers_were_left_out(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """V-105-02: the sentence about undated graph papers needs rows removed."""
+    _window(monkeypatch)
+    sentence = "carry no publication date"
+    on = graph_module._window_no_papers_line(_line_state(True, dropped=True), object())  # type: ignore[arg-type]
+    off = graph_module._window_no_papers_line(_line_state(True, dropped=False), object())  # type: ignore[arg-type]
+    assert on is not None and sentence in on, on
+    assert off is not None and sentence not in off and off.endswith("for C9orf43."), off
+
+
+@pytest.mark.asyncio
+async def test_act_records_the_left_out_papers_only_when_articles_were_removed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_graph(monkeypatch, _MIXED, total=2)
+    removed = await graph_module._execute_planned_call(_DirectHarness(), "single_hop", _planned(True))  # type: ignore[arg-type]
+    assert removed.undated_articles_dropped is True
+    _install_graph(monkeypatch, [_row("Gene", "NCBIGene:672")], total=1)
+    none_removed = await graph_module._execute_planned_call(_DirectHarness(), "single_hop", _planned(True))  # type: ignore[arg-type]
+    assert none_removed.undated_articles_dropped is False
