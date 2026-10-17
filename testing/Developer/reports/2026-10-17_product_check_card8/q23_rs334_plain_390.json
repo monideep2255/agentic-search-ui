@@ -1,0 +1,66 @@
+{
+  "name": "q23_rs334_plain_390",
+  "mode": "Plain language",
+  "question": "What is rs334 and what condition is it associated with?",
+  "width": 390,
+  "wall_seconds_to_meta": 30.796,
+  "meta": "? Answered30.2s · 3 tool calls · 1 source cited from 1 layer",
+  "trust_line": "Based on 1 source cited, from dbSNP\n·\nHigh-risk claim",
+  "trust_spans": [
+    {
+      "testid": "trust-plain",
+      "text": "Based on 1 source cited, from dbSNP",
+      "rects": 1,
+      "height": 21,
+      "lineHeight": 20.625,
+      "right": 253
+    },
+    {
+      "testid": "trust-risk",
+      "text": "High-risk claim",
+      "rects": 1,
+      "height": 21,
+      "lineHeight": 20.625,
+      "right": 123
+    }
+  ],
+  "trust_line_box": {
+    "left": 35,
+    "right": 355,
+    "width": 320,
+    "height": 47,
+    "scrollWidth": 320,
+    "clientWidth": 320
+  },
+  "overflow": {
+    "scroll_width": 390,
+    "client_width": 390
+  },
+  "group_summaries": 2,
+  "sources_html_tags": [
+    "▶ [1] dbsnp rs334 L2 · live Flag: does not support TOOL clinical_significance EVIDENCE primary_assertion CONFIDENCE hedged LICENSE public_domain_us_gov RECORD https://www.ncbi.nlm.nih.gov/snp/rs334"
+  ],
+  "sources_text": "▶\nSOURCES\n1\n▶\nLIVE NCBI APIS\n1\n▶\n[1]\n\ndbsnp rs334\n\nL2 · live\nFlag: does not support\nTOOL\nclinical_significance\nEVIDENCE\nprimary_assertion\nCONFIDENCE\nhedged\nLICENSE\npublic_domain_us_gov\nRECORD\nhttps://www.ncbi.nlm.nih.gov/snp/rs334",
+  "source_groups": [
+    {
+      "id": "sources-group-2",
+      "text": "▶\nLIVE NCBI APIS\n1\n▶\n[1]\n\ndbsnp rs334\n\nL2 · live\nFlag: does not support\nTOOL\nclinical_significance\nEVIDENCE\nprimary_assertion\nCONFIDENCE\nhedged\nLICENSE\npublic_domain_us_gov\nRECORD\nhttps://www.ncbi.nlm.nih.gov/snp/rs334"
+    },
+    {
+      "id": "sources-group-2-count",
+      "text": "1"
+    }
+  ],
+  "explainer_text": "Trust signals\n\nSources cited counts the record pages this answer cites, the same pages listed under Sources; two links to one page count once. Confirmed means two or more independent databases agree on the same high-stakes fact. A Based on line names the databases the cited pages come from, the three most cited when there are four or more. When an answer rests on two or more databases and the values behind one of its high-stakes facts could not be compared, the line adds \"their values could not be compared\".",
+  "explainer_box": {
+    "left": 129,
+    "right": 487,
+    "top": 695,
+    "bottom": 962,
+    "width": 358
+  },
+  "overflow_explainer_open": {
+    "scroll_width": 487,
+    "client_width": 390
+  }
+}

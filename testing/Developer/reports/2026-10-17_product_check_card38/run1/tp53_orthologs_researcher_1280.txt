@@ -1,0 +1,68 @@
+What are the known orthologs of TP53 in other species?
+New search
+
+? Answered22.3s · 13 tool calls · 58 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Found 41 gene records for TP53, of 715 available.⁠1–20
+
+GENE RECORDS FOUND
+GENE	IDENTIFIER	ORGANISM	
+tumor protein p53	NCBIGene:100009292	Oryctolagus cuniculus	⁠1
+tumor protein p53	NCBIGene:100049321	Oryzias latipes	⁠2
+tumor protein p53	NCBIGene:100062044	Equus caballus	⁠3
+tumor protein p53	NCBIGene:100092821	Ornithorhynchus anatinus	⁠4
+tumor protein p53	NCBIGene:100136737	Oncorhynchus mykiss	⁠5
+tumor protein p53	NCBIGene:100304476	Ictalurus punctatus	⁠6
+tumor protein p53	NCBIGene:100379269	Cavia porcellus	⁠7
+tumor protein p53	NCBIGene:100415710	Callithrix jacchus	⁠8
+tumor protein p53	NCBIGene:100435218	Pongo abelii	⁠9
+tumor protein p53	NCBIGene:100468516	Ailuropoda melanoleuca	⁠10
+Showing 1–10 of 42
+‹ Previous
+Page 1 of 5
+Next ›
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data.	PMID:27328919	⁠43
+New surveillance guidelines for Li-Fraumeni and hereditary TP53 related cancer syndrome: implications for germline TP53 testing in breast cancer.	PMID:32984917	⁠48
+Specifications of the ACMG/AMP variant interpretation guidelines for germline TP53 variants.	PMID:33300245	⁠51
+The Role of TP53 in Adaptation and Evolution.	PMID:36766853	⁠54
+A clinical guide to TP53 mutations in myeloid neoplasms.	PMID:40729726	⁠57
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_000546.6(TP53):c.247G>T (p.Ala83Ser)	VCV003898631	⁠44
+NC_000017.11:g.7666193C>T	VCV003905024	⁠49
+NM_000546.6(TP53):c.816_864del (p.Arg273fs)	VCV004055875	⁠52
+NM_000546.6(TP53):c.1101-73G>C	VCV004083530	⁠55
+NM_000546.6(TP53):c.-28-3132T>C	VCV004083687	⁠58
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+TUMOR PROTEIN p53; TP53	omim 191170	⁠45
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Biomarker Monitoring in TP53 Mutation Carriers	NCT02289326	COMPLETED	⁠47
+Study of SNX-5422 in TP53 Null Cancers	NCT02612285	TERMINATED	⁠50
+The p53 Colorectal Cancer Trial	NCT03149679	TERMINATED	⁠53
+The Role of Hypoxia as a Selective Pressure for TP53 Mutations	NCT03466034	TERMINATED	⁠56
+Treatment of Carrying TP53 Harmful Mutations	NCT03645200	UNKNOWN	⁠59
+NOTES
+Note: this answer was truncated because only 159 of the 715 records that matched this question in the graph were retrieved
+Note: no written summary could be checked against the records, so the records found are listed below with their sources
+▶
+SOURCES
+58
+Based on 58 sources cited from NCBI Gene, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

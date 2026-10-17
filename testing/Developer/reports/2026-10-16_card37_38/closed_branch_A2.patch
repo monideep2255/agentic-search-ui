@@ -1,0 +1,291 @@
+diff --git a/src/system_03_search_agent/core/graph.py b/src/system_03_search_agent/core/graph.py
+index 206135ac..df83ebe4 100644
+--- a/src/system_03_search_agent/core/graph.py
++++ b/src/system_03_search_agent/core/graph.py
+@@ -12463,7 +12463,9 @@ def _layer3_base_citation(
+                 raw_output = raw_output.model_copy(update={"variant_matches": own[:1]})
+             return litvar2_build_citation(raw_output, display_index=display_index)
+         if synth_finding.tool == "ncbi_dbsnp":
+-            return dbsnp_build_citation(raw_output, synth_finding.field, display_index=display_index)
++            # The gene companion (card 37) is the output's `genes` field.
++            field = "genes" if synth_finding.field == "gene" else synth_finding.field
++            return dbsnp_build_citation(raw_output, field, display_index=display_index)
+         if synth_finding.tool == "pathogen_detection":
+             # The isolate search (G-035, 2026-09-22). The row's `name` is the
+             # strain, which the tool's builder knows under its own field.
+diff --git a/src/system_03_search_agent/synthesis/findings.py b/src/system_03_search_agent/synthesis/findings.py
+index 84e3e23c..a12f07e0 100644
+--- a/src/system_03_search_agent/synthesis/findings.py
++++ b/src/system_03_search_agent/synthesis/findings.py
+@@ -127,6 +127,14 @@ MAX_CITATION_ID_CHARS = 64
+ # which findings exist.
+ _EXPLANATORY_FIELDS: tuple[str, ...] = ("summary",)
+ 
++# Card 37, slice A2 (2026-10-16): a closed table of companion findings, keyed
++# by (row type, row field), value the field the companion is emitted under.
++# A dbSNP record's gene reaches the writer as its own low-risk finding
++# beside the record's `clinical_significance` finding, so a sentence "rs334
++# is in the HBB gene" can be licensed by the unchanged grounding gate and
++# cited to the same dbSNP record. Only the listed rows gain a finding.
++_COMPANION_FIELDS: dict[tuple[str, str], str] = {("Variant record", "genes"): "gene"}
++
+ # Below this a "summary" is a label rather than an explanation, and pairing
+ # a second finding with a row for a few words duplicates the first one.
+ _MIN_EXPLANATORY_CHARS = 80
+@@ -652,6 +660,14 @@ def build_synth_findings(
+         # rest behind them. Admission above is already decided.
+         collected.sort(key=lambda entry: entry[3].call_id not in lead_call_ids)
+ 
++    # Card 37, slice A2: companions are added AFTER admission is decided and
++    # only into slots still free, so one never pushes out a record the list
++    # showed before. A companion that finds the prompt full is not counted
++    # either, so `capped` is exactly what it was.
++    collected, total_citable = _with_companion_findings(
++        collected, seen, total_citable, max_findings
++    )
++
+     synth_findings: list[SynthFinding] = []
+     for source_url, row, (field_name, field_value, is_suspect, curie_fallback), finding in collected:
+         ref_index = len(synth_findings) + 1
+@@ -675,6 +691,44 @@ def build_synth_findings(
+     return synth_findings, total_citable > len(synth_findings)
+ 
+ 
++def _with_companion_findings(
++    collected: list[Any], seen: set[tuple[str, str, str]], total_citable: int, max_findings: int
++) -> tuple[list[Any], int]:
++    """Insert each admitted row's companion finding right after the row's
++    last finding (see `_COMPANION_FIELDS`). Nothing is emitted when the
++    value is not a non-blank string, when the row's own finding already
++    uses that field, when the identity was seen already, or when the prompt
++    is full."""
++    last_index: dict[int, int] = {id(entry[1]): i for i, entry in enumerate(collected)}
++    out: list[Any] = []
++    used = len(collected)
++    for i, entry in enumerate(collected):
++        out.append(entry)
++        source_url, row, _picked, finding = entry
++        if last_index[id(row)] != i:
++            continue
++        fields = row.get("fields") or {}
++        row_type = str(row.get("node_or_edge_type") or "")
++        if not isinstance(fields, dict):
++            continue
++        for (companion_type, row_field), name in _COMPANION_FIELDS.items():
++            if companion_type != row_type:
++                continue
++            value = fields.get(row_field)
++            if not isinstance(value, str) or not value.strip():
++                continue
++            if any(e[1] is row and e[2][0] in (row_field, name) for e in collected):
++                continue
++            identity = (source_url, name, value.strip())
++            if identity in seen or used >= max_findings:
++                continue
++            seen.add(identity)
++            total_citable += 1
++            used += 1
++            out.append((source_url, row, (name, value.strip(), False, False), finding))
++    return out, total_citable
++
++
+ def _allot_with_lead_quota(
+     collected: list[Any], lead_call_ids: frozenset[str], lead_quota: int, max_findings: int
+ ) -> list[Any]:
+diff --git a/tests/system_03_search_agent/synthesis/test_gene_companion_finding.py b/tests/system_03_search_agent/synthesis/test_gene_companion_finding.py
+new file mode 100644
+index 00000000..95387383
+--- /dev/null
++++ b/tests/system_03_search_agent/synthesis/test_gene_companion_finding.py
+@@ -0,0 +1,191 @@
++"""Card 37, slice A2: the writer is given a variant's gene.
++
++A dbSNP record's `genes` field reaches the writer as one low-risk
++companion finding (field `gene`) right after the record's own finding, so
++"rs334 is in the HBB gene [1]." can pass the unchanged grounding gate and
++be cited to rs334's dbSNP record. Only row type `Variant record` gains a
++companion; every other row type's findings are unchanged.
++"""
++
++from __future__ import annotations
++
++from typing import Any
++
++from system_03_search_agent.core import graph as graph_module
++from system_03_search_agent.harness.coordinator_worker import Finding
++from system_03_search_agent.synthesis.findings import SynthFinding, build_synth_findings
++from system_03_search_agent.synthesis.grounding import run_grounding_pass
++from system_03_search_agent.synthesis.trust import aggregate, risk_tier_for, trust_for_claims
++from system_03_search_agent.tools.ncbi_dbsnp_schemas import NcbiDbsnpOutput
++
++_URL = "https://www.ncbi.nlm.nih.gov/snp/rs334"
++_QUESTION = "What is rs334 and what condition is it associated with?"
++
++
++def _dbsnp_output(genes: Any = None) -> NcbiDbsnpOutput:
++    return NcbiDbsnpOutput(
++        status="ok",
++        rsid="rs334",
++        spdi_canonical="NC_000011.10:5227001:T:A",
++        clinical_significance=["pathogenic"],
++        genes=genes if genes is not None else [{"name": "HBB", "gene_id": "3043"}],
++        source_url=_URL,
++    )
++
++
++def _finding(out: NcbiDbsnpOutput, call_id: str = "db-1") -> Finding:
++    return Finding(
++        call_id=call_id,
++        tool="ncbi_dbsnp",
++        layer="layer_2_api",
++        source="structured_pass_through",
++        structured_fields=graph_module._layer_tool_output_to_structured_fields("ncbi_dbsnp", out),
++        extracted_entities=None,
++        normalized_ids=None,
++        evidence_summary=None,
++    )
++
++
++def _build(findings: list[Finding], **kw: Any) -> tuple[list[SynthFinding], bool]:
++    return build_synth_findings(findings, graph_module._pick_representative_field, **kw)
++
++
++def _generic_finding(tool: str, layer: str, row: dict[str, Any], call_id: str) -> Finding:
++    return Finding(
++        call_id=call_id,
++        tool=tool,
++        layer=layer,
++        source="structured_pass_through",
++        structured_fields={"status": "ok", "row_count": 1, "rows": [row]},
++        extracted_entities=None,
++        normalized_ids=None,
++        evidence_summary=None,
++    )
++
++
++def test_rs334_row_gives_its_own_finding_first_then_the_gene() -> None:
++    synth, capped = _build([_finding(_dbsnp_output())])
++    assert [(f.field, f.field_value) for f in synth] == [
++        ("clinical_significance", "pathogenic"),
++        ("gene", "HBB"),
++    ]
++    first, companion = synth
++    assert companion.source_url == first.source_url == _URL
++    assert companion.entity_type == "Variant record"
++    assert companion.tool == "ncbi_dbsnp" and companion.call_id == "db-1"
++    assert companion.citation_id == "db-1-2" and first.citation_id == "db-1-1"
++    assert risk_tier_for(companion.field, companion.entity_type) == "low"
++    assert capped is False
++
++
++def test_gene_companion_citation_resolves_to_the_dbsnp_record() -> None:
++    out = _dbsnp_output()
++    synth, _ = _build([_finding(out)])
++    companion = synth[1]
++    citation = graph_module._layer3_base_citation(companion, out, 2)
++    assert citation is not None
++    assert citation.source == "dbsnp" and citation.source_id == "rs334"
++    assert citation.source_url == _URL
++
++
++def test_a_gene_sentence_passes_the_unchanged_gate_and_cites_the_record() -> None:
++    synth, _ = _build([_finding(_dbsnp_output())])
++    result = run_grounding_pass("rs334 is in the HBB gene [2].", synth, question=_QUESTION)
++    assert result.grounded
++    assert result.narrative == "rs334 is in the HBB gene [1]."
++    assert [c.finding.field for c in result.claims] == ["gene"]
++
++
++def test_only_the_gene_sentence_surviving_still_answers_and_the_most_restrictive_governs() -> None:
++    synth, _ = _build([_finding(_dbsnp_output())])
++    result = run_grounding_pass("rs334 is in the HBB gene [2].", synth, question=_QUESTION)
++    trust = trust_for_claims(
++        result.claims, synth, {f.citation_id: ("Variant record", False) for f in synth}
++    )
++    # The gene claim is low risk, so on its own the verdict is `answer`
++    # instead of the fallback's refusal.
++    assert [t.outcome for t in trust] == ["answer"]
++    assert aggregate([t.outcome for t in trust]) == "answer"
++    # With the significance claim also surviving, the most restrictive
++    # claim still governs, exactly as before this change.
++    both = run_grounding_pass(
++        "rs334 is pathogenic [1]. rs334 is in the HBB gene [2].", synth, question=_QUESTION
++    )
++    outcomes = [
++        t.outcome
++        for t in trust_for_claims(
++            both.claims, synth, {f.citation_id: ("Variant record", False) for f in synth}
++        )
++    ]
++    assert len(outcomes) == 2
++    assert aggregate(outcomes) == min(outcomes, key=["refuse", "ask", "flag", "answer"].index)
++
++
++def test_a_dbsnp_row_without_genes_yields_no_companion() -> None:
++    synth, _ = _build([_finding(_dbsnp_output(genes=[]))])
++    assert [f.field for f in synth] == ["clinical_significance"]
++
++
++def test_a_blank_or_non_string_genes_value_yields_no_companion() -> None:
++    for value in ("   ", None, ["HBB"], 7):
++        row = {
++            "curie": "",
++            "source_url": _URL,
++            "node_or_edge_type": "Variant record",
++            "fields": {"clinical_significance": "pathogenic", "genes": value},
++        }
++        synth, _ = _build([_generic_finding("ncbi_dbsnp", "layer_2_api", row, "db-1")])
++        assert [f.field for f in synth] == ["clinical_significance"], value
++
++
++def test_other_row_types_are_unchanged() -> None:
++    cases = [
++        ("ncbi_efetch", "layer_2_api", "Gene", {"name": "TP53", "gene": "TP53"}),
++        (
++            "litvar2_lookup",
++            "layer_3_enrichment",
++            "Literature variant",
++            {"name": "rs334", "gene": "HBB"},
++        ),
++        ("cypher_query", "layer_1_graph", "SequenceVariant", {"name": "rs334", "genes": "HBB"}),
++        (
++            "ncbi_efetch",
++            "layer_2_api",
++            "ClinVar record",
++            {"clinical_significance": "pathogenic", "genes": "HBB"},
++        ),
++    ]
++    for tool, layer, row_type, fields in cases:
++        row = {
++            "curie": "",
++            "source_url": "https://www.ncbi.nlm.nih.gov/x/1",
++            "node_or_edge_type": row_type,
++            "fields": fields,
++        }
++        synth, _ = _build([_generic_finding(tool, layer, row, "c-1")])
++        assert len(synth) == 1, (row_type, [f.field for f in synth])
++        assert all(f.field not in ("gene",) or row_type == "Literature variant" for f in synth)
++
++
++def test_the_companion_never_pushes_a_record_out_at_the_cap() -> None:
++    def other(n: int) -> Finding:
++        row = {
++            "curie": f"NCBIGene:{n}",
++            "source_url": f"https://www.ncbi.nlm.nih.gov/gene/{n}",
++            "node_or_edge_type": "Gene",
++            "fields": {"name": f"G{n}"},
++        }
++        return _generic_finding("ncbi_efetch", "layer_2_api", row, f"g-{n}")
++
++    findings = [_finding(_dbsnp_output())] + [other(n) for n in range(1, 4)]
++    # Develop shows the dbSNP finding and two genes at a cap of 3.
++    bare, bare_capped = _build(findings, max_findings=3)
++    assert [f.field_value for f in bare] == ["pathogenic", "G1", "G2"]
++    assert bare_capped is True
++    # Room for one more: the companion takes the free slot.
++    roomy, _ = _build(findings, max_findings=5)
++    assert [f.field_value for f in roomy] == ["pathogenic", "HBB", "G1", "G2", "G3"]
++    # A list exactly at the cap keeps every record develop shows.
++    full, full_capped = _build(findings[:3], max_findings=3)
++    assert [f.field_value for f in full] == ["pathogenic", "G1", "G2"]
++    assert full_capped is False

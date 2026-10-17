@@ -1,0 +1,346 @@
+▶
+recent papers on BRCA1
+0 tool calls · 0 sources cited
+Plain language
+Show answer
+Recent papers on BRCA1 from the last 5 years?
+New search
+
+✓ Answered12.9s · 13 tool calls · 17 sources cited from 2 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 4 published papers related to BRCA1.⁠1–4
+
+BRCA1 is a gene that acts as a tumor suppressor and helps keep the genome stable.⁠19 Its protein helps repair DNA damage and is involved in transcription and recombination.⁠19 Changes in this gene account for about 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers.⁠19
+
+WHERE THIS ANSWER COMES FROM
+BRCA1: An Endocrine and Metabolic Regulator.⁠1
+EXO1 protects BRCA1-deficient cells against toxic DNA lesions.⁠2
+BRCA1, BRCA2, and Associated Cancer Risks and Management for Male Patients: A Review.⁠3
+BRCA1 and BRCA2: from cancer susceptibility to synthetic lethality.⁠4
+BRCA1⁠5, 8
+NM_007294.4(BRCA1):c.5243_5277+2788del⁠6
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠7
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠9
+Published paper⁠10
+NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG⁠11
+Showing 1–10 of 17
+‹ Previous
+Page 1 of 2
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+17
+▶
+LIVE NCBI APIS
+11
+▶
+[1]
+
+pubmed 35432218
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/35432218/
+▶
+[2]
+
+pubmed 38266640
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/38266640/
+▶
+[3]
+
+pubmed 39052257
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/39052257/
+▶
+[4]
+
+pubmed 39510841
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/39510841/
+▶
+[5][8][19]
+
+gene 672
+
+L2 · live
+Flag: does not support
+TOOL
+symbol, name, summary
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/gene/672/
+▶
+[6]
+
+clinvar 267740
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/
+▶
+[7]
+
+omim 113705
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://omim.org/entry/113705
+Not linked: this URL is not on a recognised NCBI host.
+▶
+[11]
+
+clinvar 267741
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/
+▶
+[13]
+
+clinvar 373892
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/
+▶
+[15]
+
+clinvar 4823850
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/
+▶
+[17]
+
+clinvar 4848411
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/
+▶
+ENRICHMENT
+6
+▶
+[9]
+
+clinicaltrials.gov NCT00590109
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00590109
+▶
+[10]
+
+pubmed 20301425
+
+L3 · literature
+Flag: does not support
+TOOL
+pmid
+EVIDENCE
+literature_mention
+CONFIDENCE
+asserted
+LICENSE
+publisher_copyright_abstract_only
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/20301425/
+▶
+[12]
+
+clinicaltrials.gov NCT00597987
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00597987
+▶
+[14]
+
+clinicaltrials.gov NCT00617656
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00617656
+▶
+[16]
+
+clinicaltrials.gov NCT00673335
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00673335
+▶
+[18]
+
+clinicaltrials.gov NCT00700778
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00700778
+Based on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

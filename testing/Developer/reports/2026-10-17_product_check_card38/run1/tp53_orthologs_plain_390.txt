@@ -1,0 +1,46 @@
+What are the known orthologs of TP53 in other species?
+New search
+
+? Answered23.4s · 13 tool calls · 58 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 41 genes related to TP53, out of 715 available.⁠1–20
+
+WHERE THIS ANSWER COMES FROM
+tumor protein p53 (Oryctolagus cuniculus)⁠1
+tumor protein p53 (Oryzias latipes)⁠2
+tumor protein p53 (Equus caballus)⁠3
+tumor protein p53 (Ornithorhynchus anatinus)⁠4
+tumor protein p53 (Oncorhynchus mykiss)⁠5
+tumor protein p53 (Ictalurus punctatus)⁠6
+tumor protein p53 (Cavia porcellus)⁠7
+tumor protein p53 (Callithrix jacchus)⁠8
+tumor protein p53 (Pongo abelii)⁠9
+tumor protein p53 (Ailuropoda melanoleuca)⁠10
+Showing 1–10 of 58
+‹ Previous
+Page 1 of 6
+Next ›
+NOTES
+Note: this answer was truncated because only 159 of the 715 records that matched this question in the graph were retrieved
+Note: no written summary could be checked against the records, so the records found are listed below with their sources
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+58
+Based on 58 sources cited from NCBI Gene, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

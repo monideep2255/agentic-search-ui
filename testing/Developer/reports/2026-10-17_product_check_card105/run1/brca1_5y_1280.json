@@ -1,0 +1,60 @@
+{
+  "name": "brca1_5y_1280",
+  "question": "recent papers on BRCA1",
+  "width": 1280,
+  "health": {
+    "status": "ok",
+    "app_env": "develop"
+  },
+  "mode_pressed": "Plain language",
+  "first_screen": "options",
+  "first_seconds": 2.075,
+  "first_text": "recent papers on BRCA1\nNew search\n\n1.5s · 0 tool calls · 0 sources cited\n\nShow work ▾\nOne more detail needed\nHow far back should I search?\nhttps://www.ncbi.nlm.nih.gov/search/all/?term=recent%20papers%20on%20BRCA1\n\nASK ANOTHER QUESTION\n\nAsk\nRecent papers on BRCA1 from the last 12 months?\nRecent papers on BRCA1 from the last 5 years?\nRecent papers on BRCA1 from the last 10 years?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+  "options": [
+    "Recent papers on BRCA1 from the last 12 months?",
+    "Recent papers on BRCA1 from the last 5 years?",
+    "Recent papers on BRCA1 from the last 10 years?"
+  ],
+  "overflow_picker": {
+    "scroll_width": 1280,
+    "client_width": 1280
+  },
+  "picked": "Recent papers on BRCA1 from the last 5 years?",
+  "picked_seconds": 28.443,
+  "meta": [
+    "✓ Answered28.2s · 13 tool calls · 17 sources cited from 2 layers"
+  ],
+  "trust_line": [
+    "Based on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases"
+  ],
+  "overflow": {
+    "scroll_width": 1280,
+    "client_width": 1280
+  },
+  "overflow_sources_open": {
+    "scroll_width": 1280,
+    "client_width": 1280
+  },
+  "links": [
+    {
+      "href": "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+      "text": "https://pubmed.ncbi.nlm.nih.gov/35432218/"
+    },
+    {
+      "href": "https://pubmed.ncbi.nlm.nih.gov/38266640/",
+      "text": "https://pubmed.ncbi.nlm.nih.gov/38266640/"
+    },
+    {
+      "href": "https://pubmed.ncbi.nlm.nih.gov/39052257/",
+      "text": "https://pubmed.ncbi.nlm.nih.gov/39052257/"
+    },
+    {
+      "href": "https://pubmed.ncbi.nlm.nih.gov/39510841/",
+      "text": "https://pubmed.ncbi.nlm.nih.gov/39510841/"
+    },
+    {
+      "href": "https://pubmed.ncbi.nlm.nih.gov/20301425/",
+      "text": "https://pubmed.ncbi.nlm.nih.gov/20301425/"
+    }
+  ]
+}

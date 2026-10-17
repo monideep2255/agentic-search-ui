@@ -1,0 +1,49 @@
+{
+  "name": "brca1_control_390",
+  "question": "Which diseases are associated with BRCA1?",
+  "width": 390,
+  "health": {
+    "status": "ok",
+    "app_env": "develop"
+  },
+  "mode_pressed": "Plain language",
+  "first_screen": "answer",
+  "first_seconds": 8.215,
+  "first_text": "Which diseases are associated with BRCA1?\nNew search\n\n? Answered7.7s · 13 tool calls · 21 sources cited from 3 layers\n\nPlain language\nResearcher\nShow work ▾\n\nBRCA1 is associated with four diseases: familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4 I found 4 conditions related to BRCA1.⁠1–4\n\nBRCA1, and the gene name is BRCA1.⁠8, 9 The gene produces a protein that helps keep DNA stable and acts as a tumor suppressor.⁠23\n\nOne is double-strand break repair via homologous recombination.⁠24 Another is DNA repair.⁠25 Another is regulation of DNA repair.⁠26 Another is DNA damage tolerance.⁠27\n\nWHERE THIS ANSWER COMES FROM\nFamilial cancer of breast⁠1\nFamilial breast-ovarian cancer susceptibility 1⁠2\nPancreatic cancer susceptibility 4⁠3\nFanconi anemia complementation group S⁠4\nBRCA1⁠5, 9\nBRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing.⁠6\nNM_007294.4(BRCA1):c.5243_5277+2788del⁠7\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠8\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠10\nBRCA1: An Endocrine and Metabolic Regulator.⁠11\nShowing 1–10 of 21\n‹ Previous\nPage 1 of 3\nNext ›\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n21\nBased on 21 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases; their values could not be compared\n·\nHigh-risk claim\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+  "meta": [
+    "? Answered7.7s · 13 tool calls · 21 sources cited from 3 layers"
+  ],
+  "trust_line": [
+    "Based on 21 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases; their values could not be compared\n·\nHigh-risk claim"
+  ],
+  "overflow": {
+    "scroll_width": 390,
+    "client_width": 390
+  },
+  "overflow_sources_open": {
+    "scroll_width": 390,
+    "client_width": 390
+  },
+  "links": [
+    {
+      "href": "https://pubmed.ncbi.nlm.nih.gov/28976962/",
+      "text": "https://pubmed.ncbi.nlm.nih.gov/28976962/"
+    },
+    {
+      "href": "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+      "text": "https://pubmed.ncbi.nlm.nih.gov/35432218/"
+    },
+    {
+      "href": "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+      "text": "https://pubmed.ncbi.nlm.nih.gov/36914836/"
+    },
+    {
+      "href": "https://pubmed.ncbi.nlm.nih.gov/39261728/",
+      "text": "https://pubmed.ncbi.nlm.nih.gov/39261728/"
+    },
+    {
+      "href": "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+      "text": "https://pubmed.ncbi.nlm.nih.gov/39265497/"
+    }
+  ]
+}
