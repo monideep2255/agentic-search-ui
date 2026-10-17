@@ -12,6 +12,8 @@ Branch `fix/card125-title-cleaning`, cut from origin/develop 535943bc. Builder r
 - [Citation and sentence checks](#citation-and-sentence-checks)
 - [Decisions and gaps for the lead](#decisions-and-gaps-for-the-lead)
 - [Commit](#commit)
+- [Second commit](#second-commit)
+- [Third commit](#third-commit)
 
 ## Path trace
 

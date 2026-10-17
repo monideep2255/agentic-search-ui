@@ -21,14 +21,15 @@ Last updated: 2026-10-17.
 ## What awaits the product owner
 
 - Retests: the rows at the top of `testing/Retest_product_owner.md`, card 125 first, then the night of 16 to 17 October; each checked by the team on deployed develop.
-- Designs: card 56's next slice (the design and the first slice's reviews: `testing/Developer/reports/2026-10-17_card56/`), card 126, and the other "Design with you first" cards on the board.
+- The poster release: four calls for you in the plan above, each asked on its own tomorrow.
+- Designs, after the event: card 56's next slice (the design and the first slice's reviews: `testing/Developer/reports/2026-10-17_card56/`), card 126, and the other "Design with you first" cards on the board.
 - New cards: 127 (a remembered organism never reaches its sequencing records) and 128 (a CFTR answer with no summary and no note), both buildable.
 - On 23 October, card 84's row: a week of the server's lag lines decides the freeze fix.
 - Every decision taken today: `DECISIONS.md`, rows dated 2026-10-17. What broke: `LEARNINGS.md`.
 
 ## The one next action
 
-Retest card 125 and the night's cards from the top of `testing/Retest_product_owner.md`, then redesign card 56's first slice with the lead: when a single NCBI match can be trusted for a short name, and which replies the second model call fires on (the reviews' reasons are in the card's board row).
+Tomorrow, Sunday 18 October, is a freeze-and-release day for the innovation day poster, by your call: no new features; retest the top rows of `testing/Retest_product_owner.md`, answer the four release calls, then release develop to production and verify the demo questions there. The plan, step by step: `testing/Developer/reports/2026-10-17_poster_release/plan.md`.
 
 How to start a session: read this file, then `git status --short` and `git worktree list`, then `testing/Retest_product_owner.md` and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
 
