@@ -432,3 +432,63 @@ def test_v37_05_a_url_in_the_rs_id_field_is_never_the_label() -> None:
     finding = _synth(row)
     assert record_label(finding, row["fields"]) != "https://example.org/rs1"
     assert record_label(finding, row["fields"]) == "benign"
+
+
+# ------------------------------------- fix round: a table mixing the two
+
+
+async def _table(monkeypatch, rows: list[dict]) -> tuple[list[list[str]], list[list[str]]]:
+    prompts: list[str] = []
+    _install(monkeypatch, prompts)
+    state = _state("researcher")
+    finding = _finding_for(rows[0])
+    finding.structured_fields["rows"] = rows
+    finding.structured_fields["row_count"] = len(rows)
+    finding.structured_fields["total_available"] = len(rows)
+    state["findings"] = [finding]
+    result = await graph_module.write_node(state)
+    tokens = in_reading_order([e.payload for e in result["events"] if e.type == "token"])
+    return (
+        [t["cells"] for t in tokens if t["kind"] == "table_header"],
+        [t["cells"] for t in tokens if t["kind"] == "table_row"],
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_mixed_table_names_each_value_for_what_it_is(monkeypatch) -> None:
+    headers, rows = await _table(monkeypatch, [_rs334_row(), _rs6025_row()])
+    assert headers == [["Variant", "Identifier", "Gene", "Clinical significance or consequence"]]
+    by_id = {row[1]: row for row in rows}
+    assert by_id["rs334"][3] == f"significance: {SIGNIFICANCE}"
+    assert by_id["rs6025"][3] == "consequence: coding_sequence_variant, missense_variant"
+    assert all(len(row) == 4 for row in rows)
+
+
+@pytest.mark.asyncio
+async def test_a_table_of_significance_lists_keeps_its_heading_and_plain_cells(
+    monkeypatch,
+) -> None:
+    other = _real_row("rs7412", significance=["benign"], genes=["APOE"])
+    headers, rows = await _table(monkeypatch, [_rs334_row(), other])
+    assert headers == [["Variant", "Identifier", "Gene", "Clinical significance"]]
+    assert {row[3] for row in rows} == {SIGNIFICANCE, "benign"}
+
+
+@pytest.mark.asyncio
+async def test_a_table_of_consequences_keeps_its_heading_and_plain_cells(monkeypatch) -> None:
+    other = _real_row("rs429358", consequence=["missense_variant"], genes=["APOE"])
+    headers, rows = await _table(monkeypatch, [_rs6025_row(), other])
+    assert headers == [["Variant", "Identifier", "Gene", "Consequence"]]
+    assert {row[3] for row in rows} == {
+        "coding_sequence_variant, missense_variant",
+        "missense_variant",
+    }
+
+
+def test_another_row_type_with_mixed_extras_follows_the_first_label_rule() -> None:
+    from system_03_search_agent.synthesis.answer_layout import name_mixed_variant_extras
+
+    extras = [("Status", "RECRUITING"), ("Published", "2020")]
+    assert name_mixed_variant_extras("Clinical trial", extras) is extras
+    mixed = [("Clinical significance", "x"), ("Consequence", "y")]
+    assert name_mixed_variant_extras("Clinical trial", mixed) is mixed

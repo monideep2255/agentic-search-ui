@@ -634,6 +634,42 @@ def _clip_terms(value: str, limit: int) -> str:
     return ", ".join(kept) + "\u2026"
 
 
+#: Card 37, slice A1 fix round: the heading over a `Variant record` table
+#: whose rows mix a significance list and a consequence alone.
+MIXED_VARIANT_COLUMN = "Clinical significance or consequence"
+
+
+def name_mixed_variant_extras(
+    entity_type: str, extras: list[tuple[str, str] | None]
+) -> list[tuple[str, str] | None]:
+    """`extras` (one `record_status_or_year` result per row of a group)
+    with a mixed `Variant record` table made honest.
+
+    When a table's rows carry both "Clinical significance" and
+    "Consequence", one heading cannot name both, and the later rows' values
+    would be dropped for not matching the first row's label. Every row then
+    shows under `MIXED_VARIANT_COLUMN` with its own kind said in its cell
+    ("significance: ..." or "consequence: ..."). Any other group, and a
+    group of one kind, is returned unchanged.
+    """
+    if entity_type not in _ROW_TYPE_LABEL_FIELDS:
+        return extras
+    labels = {extra[0] for extra in extras if extra is not None}
+    kinds = {"Clinical significance": "significance", "Consequence": "consequence"}
+    if not set(kinds) <= labels:
+        return extras
+    named: list[tuple[str, str] | None] = []
+    for extra in extras:
+        if extra is None or extra[0] not in kinds:
+            named.append(extra)
+            continue
+        prefix = f"{kinds[extra[0]]}: "
+        named.append(
+            (MIXED_VARIANT_COLUMN, prefix + _clip_terms(extra[1], MAX_LABEL_CHARS - len(prefix)))
+        )
+    return named
+
+
 def _row_type_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> str | None:
     """The label a closed-table row type is named by, or None."""
     key = _ROW_TYPE_LABEL_FIELDS.get(finding.entity_type)
