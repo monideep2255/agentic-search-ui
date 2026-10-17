@@ -314,6 +314,10 @@ TABLE_COLUMNS: dict[str, tuple[str, str, str]] = {
     # isolates carry the genes, so each row shows its AMR genotype list,
     # read verbatim from the record, beside the isolate's name.
     ISOLATE_ENTITY_TYPE: ("amr_genotypes", "Isolate", "AMR genes"),
+    # Card 37, slice A1 (2026-10-16): a dbSNP record shows its gene beside
+    # its rs id. Exact row type, so a Layer 2 `gene` row, a PubTator3
+    # publication and a LitVar2 `Literature variant` row never match.
+    "Variant record": ("genes", "Variant", "Gene"),
 }
 
 # The code-built heading over a mapping table, per anchor type, in place of
@@ -576,6 +580,35 @@ _YEAR_FIELDS: tuple[tuple[str, str], ...] = (
 )
 _YEAR = re.compile(r"(?<!\d)(1[89]\d{2}|20\d{2})(?!\d)")
 
+#: Card 37, slice A1 (2026-10-16): a closed table of (exact row type, row
+#: field) to the Researcher column that shows the field verbatim. A dbSNP
+#: record lists the clinical significance values dbSNP gives it, so
+#: naming the row by its rs id never hides them. No other type matches.
+_ROW_TYPE_COLUMNS: dict[tuple[str, str], str] = {
+    ("Variant record", "clinical_significance"): "Clinical significance",
+}
+
+#: Card 37, slice A1: the row field that names a record of this exact type.
+#: A dbSNP record is called by its rs id, never by its significance list.
+_ROW_TYPE_LABEL_FIELDS: dict[str, str] = {
+    "Variant record": "rsid",
+}
+
+#: Card 37, slice A1: (exact row type, row field) to the plain-language
+#: label's noun. The field's value follows in brackets: "Genetic variant (HBB)".
+_ROW_TYPE_PLAIN_SUFFIXES: dict[tuple[str, str], str] = {
+    ("Variant record", "genes"): "Genetic variant",
+}
+
+
+def _row_type_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> str | None:
+    """The label a closed-table row type is named by, or None."""
+    key = _ROW_TYPE_LABEL_FIELDS.get(finding.entity_type)
+    value = (row_fields or {}).get(key) if key else None
+    if isinstance(value, str) and value.strip() and not _URL_PREFIX.match(value):
+        return value.strip()[:500]
+    return None
+
 
 def record_status_or_year(
     entity_type: str, row_fields: dict[str, Any] | None, *, mapping_shown: bool = True
@@ -595,6 +628,10 @@ def record_status_or_year(
     if not isinstance(row_fields, dict):
         return None
     mapped = TABLE_COLUMNS.get(entity_type, ("",))[0] if mapping_shown else ""
+    for (row_type, key), column in _ROW_TYPE_COLUMNS.items():
+        value = row_fields.get(key)
+        if row_type == entity_type and isinstance(value, str) and value.strip():
+            return (column, value.strip()[:MAX_IDENTIFIER_CHARS])
     for key in _STATUS_FIELDS:
         value = row_fields.get(key)
         if key != mapped and isinstance(value, str) and value.strip():
@@ -817,6 +854,9 @@ def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> st
     # shown verbatim.
     if finding.name_resolved and finding.field_value.strip():
         return clip_to_word(finding.field_value)
+    by_row_type = _row_type_label(finding, row_fields)
+    if by_row_type is not None:
+        return by_row_type
     for key in _LABEL_FIELDS:
         value = (row_fields or {}).get(key)
         if isinstance(value, str) and value.strip() and not _URL_PREFIX.match(value):
@@ -850,6 +890,15 @@ def plain_record_label(
     where the code lives for anyone who wants it.
     """
     label = record_label(finding, row_fields)
+    if _row_type_label(finding, row_fields) is not None:
+        # The label is the record's own code (an rs id), so a reader sees its
+        # everyday noun and, where the row gives one, its gene.
+        noun = plain_noun(finding.entity_type)
+        for (row_type, key), base in _ROW_TYPE_PLAIN_SUFFIXES.items():
+            suffix = (row_fields or {}).get(key)
+            if row_type == finding.entity_type and isinstance(suffix, str) and suffix.strip():
+                return f"{base} ({suffix.strip()[:100]})"
+        return noun[:1].upper() + noun[1:]
     codes = {
         code
         for code in (
