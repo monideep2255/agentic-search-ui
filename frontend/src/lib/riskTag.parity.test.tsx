@@ -86,7 +86,7 @@ function savedText(outcome: string, trustLine: string | null, stored: string | n
   return screen.getByTestId("saved-answer-trust-line").textContent ?? "";
 }
 
-const TRUST_LINE = "Based on 2 sources cited, not yet confirmed";
+const TRUST_LINE = "Based on 2 sources cited from MedGen and OMIM";
 
 describe("the live and the reopened answer show the same trust words", () => {
   it("the fixture has cases, including an empty tier beside high", () => {
