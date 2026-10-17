@@ -314,6 +314,10 @@ TABLE_COLUMNS: dict[str, tuple[str, str, str]] = {
     # isolates carry the genes, so each row shows its AMR genotype list,
     # read verbatim from the record, beside the isolate's name.
     ISOLATE_ENTITY_TYPE: ("amr_genotypes", "Isolate", "AMR genes"),
+    # Card 37, slice A1 (2026-10-16): a dbSNP record shows its gene beside
+    # its rs id. Exact row type, so a Layer 2 `gene` row, a PubTator3
+    # publication and a LitVar2 `Literature variant` row never match.
+    "Variant record": ("genes", "Variant", "Gene"),
 }
 
 # The code-built heading over a mapping table, per anchor type, in place of
@@ -609,6 +613,104 @@ _YEAR_FIELDS: tuple[tuple[str, str], ...] = (
 )
 _YEAR = re.compile(r"(?<!\d)(1[89]\d{2}|20\d{2})(?!\d)")
 
+#: Card 37, slice A1 (2026-10-16): a closed table of (exact row type, row
+#: field) to the Researcher column that shows the field verbatim. A dbSNP
+#: record lists the clinical significance values dbSNP gives it, so
+#: naming the row by its rs id never hides them. No other type matches.
+_ROW_TYPE_COLUMNS: dict[tuple[str, str], str] = {
+    ("Variant record", "clinical_significance"): "Clinical significance",
+    # dbSNP's tool withholds a significance list with an over long term or
+    # more than ten, so the row's one cited fact is then the consequence
+    # (V-37-01). Read only when the significance is absent: the loop returns
+    # the first match in this order.
+    ("Variant record", "functional_consequence"): "Consequence",
+}
+
+#: Card 37, slice A1: the row field that names a record of this exact type.
+#: A dbSNP record is called by its rs id, never by its significance list.
+_ROW_TYPE_LABEL_FIELDS: dict[str, str] = {
+    "Variant record": "rsid",
+}
+
+#: Card 37, slice A1: (exact row type, row field) to the plain-language
+#: label's noun. The field's value follows in brackets: "Genetic variant (HBB)".
+_ROW_TYPE_PLAIN_SUFFIXES: dict[tuple[str, str], str] = {
+    ("Variant record", "genes"): "Genetic variant",
+}
+
+#: Card 37, slice A1 fix round (V-37-02): after the gene, the plain-language
+#: label keeps dbSNP's own values verbatim, the first field present winning:
+#: "Genetic variant (HBB), clinical significance: pathogenic".
+_ROW_TYPE_PLAIN_DETAILS: dict[str, tuple[tuple[str, str], ...]] = {
+    "Variant record": (
+        ("clinical_significance", "clinical significance"),
+        ("functional_consequence", "consequence"),
+    ),
+}
+
+
+def _clip_terms(value: str, limit: int) -> str:
+    """`value`, a ", " separated list of terms, cut at a term boundary.
+
+    Never mid-term: whole terms are kept while they fit, and an ellipsis
+    says the list continues (V-37-03). The first term alone is kept even if
+    it is over the limit, since a term is one of dbSNP's own words.
+    """
+    text = value.strip()
+    if len(text) <= limit:
+        return text
+    kept: list[str] = []
+    for term in text.split(", "):
+        if len(", ".join([*kept, term])) + 1 > limit and kept:
+            break
+        kept.append(term)
+    return ", ".join(kept) + "\u2026"
+
+
+#: Card 37, slice A1 fix round: the heading over a `Variant record` table
+#: whose rows mix a significance list and a consequence alone.
+MIXED_VARIANT_COLUMN = "Clinical significance or consequence"
+
+
+def name_mixed_variant_extras(
+    entity_type: str, extras: list[tuple[str, str] | None]
+) -> list[tuple[str, str] | None]:
+    """`extras` (one `record_status_or_year` result per row of a group)
+    with a mixed `Variant record` table made honest.
+
+    When a table's rows carry both "Clinical significance" and
+    "Consequence", one heading cannot name both, and the later rows' values
+    would be dropped for not matching the first row's label. Every row then
+    shows under `MIXED_VARIANT_COLUMN` with its own kind said in its cell
+    ("significance: ..." or "consequence: ..."). Any other group, and a
+    group of one kind, is returned unchanged.
+    """
+    if entity_type not in _ROW_TYPE_LABEL_FIELDS:
+        return extras
+    labels = {extra[0] for extra in extras if extra is not None}
+    kinds = {"Clinical significance": "significance", "Consequence": "consequence"}
+    if not set(kinds) <= labels:
+        return extras
+    named: list[tuple[str, str] | None] = []
+    for extra in extras:
+        if extra is None or extra[0] not in kinds:
+            named.append(extra)
+            continue
+        prefix = f"{kinds[extra[0]]}: "
+        named.append(
+            (MIXED_VARIANT_COLUMN, prefix + _clip_terms(extra[1], MAX_LABEL_CHARS - len(prefix)))
+        )
+    return named
+
+
+def _row_type_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> str | None:
+    """The label a closed-table row type is named by, or None."""
+    key = _ROW_TYPE_LABEL_FIELDS.get(finding.entity_type)
+    value = (row_fields or {}).get(key) if key else None
+    if isinstance(value, str) and value.strip() and not _URL_PREFIX.match(value):
+        return value.strip()[:500]
+    return None
+
 
 def record_status_or_year(
     entity_type: str, row_fields: dict[str, Any] | None, *, mapping_shown: bool = True
@@ -628,6 +730,10 @@ def record_status_or_year(
     if not isinstance(row_fields, dict):
         return None
     mapped = TABLE_COLUMNS.get(entity_type, ("",))[0] if mapping_shown else ""
+    for (row_type, key), column in _ROW_TYPE_COLUMNS.items():
+        value = row_fields.get(key)
+        if row_type == entity_type and isinstance(value, str) and value.strip():
+            return (column, _clip_terms(value, MAX_LABEL_CHARS))
     for key in _STATUS_FIELDS:
         value = row_fields.get(key)
         if key != mapped and isinstance(value, str) and value.strip():
@@ -850,6 +956,9 @@ def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> st
     # shown verbatim.
     if finding.name_resolved and finding.field_value.strip():
         return clip_to_word(finding.field_value)
+    by_row_type = _row_type_label(finding, row_fields)
+    if by_row_type is not None:
+        return by_row_type
     for key in _LABEL_FIELDS:
         value = (row_fields or {}).get(key)
         if isinstance(value, str) and value.strip() and not _URL_PREFIX.match(value):
@@ -883,6 +992,21 @@ def plain_record_label(
     where the code lives for anyone who wants it.
     """
     label = record_label(finding, row_fields)
+    if _row_type_label(finding, row_fields) is not None:
+        # The label is the record's own code (an rs id), so a reader sees its
+        # everyday noun and, where the row gives one, its gene.
+        noun = plain_noun(finding.entity_type)
+        head = noun[:1].upper() + noun[1:]
+        for (row_type, key), base in _ROW_TYPE_PLAIN_SUFFIXES.items():
+            gene = (row_fields or {}).get(key)
+            if row_type == finding.entity_type and isinstance(gene, str) and gene.strip():
+                head = f"{base} ({gene.strip()[:100]})"
+        for key, phrase in _ROW_TYPE_PLAIN_DETAILS.get(finding.entity_type, ()):
+            value = (row_fields or {}).get(key)
+            if isinstance(value, str) and value.strip():
+                prefix = f"{head}, {phrase}: "
+                return prefix + _clip_terms(value, MAX_LABEL_CHARS - len(prefix))
+        return head
     codes = {
         code
         for code in (

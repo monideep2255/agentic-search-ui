@@ -566,6 +566,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     is_plain_language,
     isolate_place,
     key_terms,
+    name_mixed_variant_extras,
     name_switched_records,
     parse_synth_layout,
     placeholder_link_count,
@@ -13532,6 +13533,7 @@ def _answer_parts(
                 else None
                 for (_, finding), row_fields in zip(entries, row_fields_by_entry, strict=True)
             ]
+            extras = name_mixed_variant_extras(entity_type, extras)
             extra_label = next((extra[0] for extra in extras if extra is not None), None)
             # Card 94 (2026-10-09): an isolate row shows where it was
             # collected beside when, both read from its own record, in its
