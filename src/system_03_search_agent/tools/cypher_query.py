@@ -1837,11 +1837,54 @@ def _fold_curies(
     return anchor_curie, sorted(found)[:MAX_FOLD_ITEMS]
 
 
+_VALUE_FOLD_OPTIONAL_PATTERN = re.compile(r"\s+OPTIONAL\s+MATCH\b.*?(?=\s+WITH\b)", re.IGNORECASE)
+
+
+def _fold_value_names(
+    raw_row: dict[str, Any],
+    normalized_cypher: str,
+    fold: tuple[str, str, str],
+) -> tuple[str | None, str]:
+    """The anchor's CURIE and one ", " joined string of the list column's
+    names for one raw row of a value-fold template (card 38 slice B).
+
+    The list column holds strings (taxon names). A non-string item is
+    ignored, never rendered with `str()`. Each name is cleaned to one
+    printable line; blanks drop, duplicates collapse, the rest sort and
+    keep at most `MAX_FOLD_ITEMS`, so the text is a property of the record
+    and not of the run. An empty result is `""`: the caller writes nothing.
+    """
+    anchor_var, list_alias, _field = fold
+    column_by_variable = {v: c for c, v in _returned_variable_by_column(normalized_cypher).items()}
+    anchor_column = column_by_variable.get(anchor_var)
+    list_column = column_by_variable.get(list_alias)
+    if anchor_column is None or list_column is None:
+        return None, ""
+    anchor = parse_agtype(raw_row.get(anchor_column))
+    if not isinstance(anchor, dict):
+        return None, ""
+    anchor_curie = str((anchor.get("properties") or {}).get("id") or "")
+    if not anchor_curie:
+        return None, ""
+    listed = parse_agtype(raw_row.get(list_column))
+    if not isinstance(listed, list):
+        return anchor_curie, ""
+    names: set[str] = set()
+    for item in listed:
+        if not isinstance(item, str):
+            continue
+        line = " ".join("".join(ch if ch.isprintable() else " " for ch in item).split())
+        if line:
+            names.add(line)
+    return anchor_curie, ", ".join(sorted(names)[:MAX_FOLD_ITEMS])
+
+
 def _apply_fold(
     raw_row: dict[str, Any],
     shaped_rows: list[dict[str, Any]],
     normalized_cypher: str,
     fold: tuple[str, str, str] | None,
+    value_fold: bool = False,
 ) -> None:
     """Write the fold's CURIE list onto the anchor's shaped row, in place.
 
@@ -1855,13 +1898,17 @@ def _apply_fold(
     """
     if fold is None:
         return
-    anchor_curie, curies = _fold_curies(raw_row, normalized_cypher, fold)
-    if anchor_curie is None or not curies:
+    written: str | list[str]
+    if value_fold:
+        anchor_curie, written = _fold_value_names(raw_row, normalized_cypher, fold)
+    else:
+        anchor_curie, written = _fold_curies(raw_row, normalized_cypher, fold)
+    if anchor_curie is None or not written:
         return
     for shaped in shaped_rows:
         if str(shaped.get("curie") or "") == anchor_curie:
             fields = dict(shaped.get("fields") or {})
-            fields[fold[2]] = curies
+            fields[fold[2]] = written
             shaped["fields"] = fields
             return
 
@@ -2026,6 +2073,7 @@ async def _run_pipeline(
             break
 
     fold = active_template.fold if active_template is not None else None
+    value_fold = active_template.value_fold if active_template is not None else False
     # UI fix 11.21 wiring (2026-09-20): the gene every GO vertex this query
     # returns is annotated to, read from the template's own bound parameter
     # (review F-01: only a code-chosen single-gene template may say so).
@@ -2096,7 +2144,10 @@ async def _run_pipeline(
 
     total_available: int | None
     if hit_cap:
-        if column_count == 1:
+        # A value-fold template (card 38 slice B) returns one extra column
+        # that is a list of strings, so it adds no row: its count query
+        # (rows of the anchor variable) is in the output row's own unit.
+        if column_count == 1 or value_fold:
             # Finding F-2.1-09's fix: recompute the remaining budget here
             # from elapsed time, rather than reusing remaining_budget as
             # computed before the main query ran. Reusing that value gave
@@ -2130,12 +2181,21 @@ async def _run_pipeline(
     # already-validated Cypher text, never per row. See
     # `_traversed_edge_type_by_column`'s own docstring for why this is safe
     # against widening a bare identifier lookup to high risk.
-    traversed_edge_type_by_column = _traversed_edge_type_by_column(normalized_cypher)
+    # Card 38 slice B: a value fold's OPTIONAL MATCH only reads a name off a
+    # taxon, so the anchor's edge is still the one edge the template walks.
+    # Read without that clause, or the ortholog rows would lose their
+    # `orthologous_to` edge type to the extra `in_taxon` touch.
+    edge_text = (
+        _VALUE_FOLD_OPTIONAL_PATTERN.sub("", normalized_cypher, count=1)
+        if value_fold
+        else normalized_cypher
+    )
+    traversed_edge_type_by_column = _traversed_edge_type_by_column(edge_text)
     # F-3.4-A-02: the ambiguous-but-high-risk companion signal, also
     # computed once per query from the same already-validated Cypher text.
     # See `_ambiguous_high_risk_edge_touch_by_column`'s own docstring.
     ambiguous_high_risk_edge_touch_by_column = _ambiguous_high_risk_edge_touch_by_column(
-        normalized_cypher
+        edge_text
     )
     mapped_rows: list[CypherQueryRow] = []
     for raw_row in rows:
@@ -2176,7 +2236,7 @@ async def _run_pipeline(
         # The fold (template path only): the pairing this raw row carried
         # between its anchor and the vertices collected beside it, written
         # onto the anchor's row before the cap and the typed boundary.
-        _apply_fold(raw_row, shaped_rows, normalized_cypher, fold)
+        _apply_fold(raw_row, shaped_rows, normalized_cypher, fold, value_fold)
         for shaped_row in shaped_rows:
             if not shaped_row.get("source_url"):
                 # Finding F-2.1-A1's cite-or-refuse corollary: an entity

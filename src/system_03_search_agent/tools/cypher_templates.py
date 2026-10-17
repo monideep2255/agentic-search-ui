@@ -134,6 +134,10 @@ MAX_FOLD_ITEMS: Final[int] = 12
 # CURIEs come from so a reader of the row knows what it asserts.
 FOLD_FIELD_VARIANT_CONDITIONS: Final[str] = "clinvar_condition_ids"
 FOLD_FIELD_GENE_CONDITIONS: Final[str] = "medgen_condition_ids"
+# Card 38 slice B: the row field a value fold writes, the organism names of
+# the taxa an ortholog gene is `in_taxon` of. The Researcher and Plain
+# language lists read this literal from the row (synthesis/answer_layout).
+FOLD_FIELD_ORGANISM: Final[str] = "organism"
 
 
 @dataclass(frozen=True)
@@ -163,6 +167,12 @@ class CypherTemplate:
     #: on every other template, so no GO vertex reached any other way is
     #: ever attributed.
     go_attribution_param: str | None = None
+    #: Card 38 slice B: True when the fold's list column holds STRINGS (taxon
+    #: names), not vertices. `cypher_query` then writes the cleaned, sorted,
+    #: deduplicated names joined by ", " onto the anchor row, and the list
+    #: adds no row of its own, so the count query still runs and the total
+    #: keeps its unit. False on every other template.
+    value_fold: bool = False
 
 
 # --------------------------------------------------------------------------
@@ -609,6 +619,22 @@ def _hop_template(
             name=name + "_count",
             cypher=f"{match}{where} RETURN count(DISTINCT {_OTHER_VAR}) AS {shape}_count",
             edge_label=hop.edge_label,
+        )
+    if len(param_names) == 1 and (anchor_label, shape) == ("Gene", "orthologs"):
+        # Card 38 slice B: each ortholog carries its organism. OPTIONAL
+        # MATCH keeps an ortholog with no taxon edge; the taxon names fold
+        # onto the ortholog's row, so no taxon becomes a row (phase 8.9
+        # probe 1: 591 of 591 orthologs have an `in_taxon` edge).
+        return CypherTemplate(
+            name=name,
+            cypher=(
+                f"{match} OPTIONAL MATCH ({_OTHER_VAR})-[:in_taxon]->(t:OrganismTaxon) "
+                f"WITH {_OTHER_VAR}, collect(DISTINCT t.name) AS {_FOLD_ALIAS} "
+                f"RETURN {_OTHER_VAR}, {_FOLD_ALIAS} ORDER BY {_OTHER_VAR}.id"
+            ),
+            edge_label=hop.edge_label,
+            fold=(_OTHER_VAR, _FOLD_ALIAS, FOLD_FIELD_ORGANISM),
+            value_fold=True,
         )
     if len(param_names) == 1:
         returns = f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
