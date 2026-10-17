@@ -430,3 +430,75 @@ async def test_the_act_time_lookup_never_raises_when_the_title_fetch_fails(
         },
     )
     await graph_module._prefetch_answer_names(_state(rows), [call], [result])
+
+
+# ---------------------------------------------------------------------------
+# Fix round: a paper found by the graph and by a live PubMed fetch is listed once
+# ---------------------------------------------------------------------------
+
+_LIVE = {"111": "A letter on CFTR chloride channels", "444": "Another live paper on CFTR"}
+_GRAPH = {"111": "A letter on CFTR chloride channels", "222": "A graph only paper on CFTR"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("abstract", [False, True])
+@pytest.mark.parametrize("depth", ["researcher", "plain_language"])
+async def test_a_paper_from_the_graph_and_a_live_fetch_is_listed_once(
+    monkeypatch: pytest.MonkeyPatch, depth: str, abstract: bool
+) -> None:
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    _install_fetch(monkeypatch, _GRAPH)
+
+    async def _dispatch(*_a: object, **kw: object) -> Any:
+        joined = "\n".join(m.get("content") or "" for m in (kw.get("messages") or []))  # type: ignore[union-attr]
+        if SYNTH_SYSTEM_INSTRUCTION in joined:
+            return _fake_response("Nothing here matches any record at all.")
+        return _fake_response("ok")
+
+    monkeypatch.setattr(harness_module.litellm, "acompletion", AsyncMock(side_effect=_dispatch))
+    records = [
+        NcbiEfetchRecord(
+            id=p,
+            db="pubmed",
+            fields={"title": t, **({"abstract": "One sentence abstract."} if abstract else {})},
+            source_url=f"https://pubmed.ncbi.nlm.nih.gov/{p}/",
+        )
+        for p, t in _LIVE.items()
+    ]
+    output = NcbiEfetchOutput(
+        status="ok",
+        action="fetch",
+        records=records,
+        record_count=2,
+        total_available=2,
+        truncated=False,
+    )
+    live = Finding(
+        call_id="ne-papers",
+        tool="ncbi_efetch",
+        layer="layer_2_api",
+        source="structured_pass_through",
+        structured_fields=graph_module._ncbi_efetch_output_to_structured_fields(
+            output, "pubmed_abstracts"
+        ),
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+    state = _state(_paper_rows(list(_GRAPH)), depth)
+    state["findings"] = [live, *state["findings"]]  # type: ignore[misc]
+    state["findings_count"] = 2
+    state["layer2_raw_outputs"] = {"ne-papers": output}
+
+    result = await graph_module.write_node(state)
+
+    rows = [
+        " | ".join(str(c) for c in (e.payload.get("cells") or []))
+        for e in result["events"]
+        if e.type == "token" and e.payload.get("kind") in ("table_row", "list_item")
+    ]
+    assert rows, "populate-check: the list has rows"
+    assert sum(_LIVE["111"] in r for r in rows) == 1, rows
+    assert sum(_GRAPH["222"] in r for r in rows) == 1, "the graph-only paper is still titled"
+    assert sum(_LIVE["444"] in r for r in rows) == 1, rows

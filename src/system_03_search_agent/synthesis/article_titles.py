@@ -121,6 +121,12 @@ _CUT_SUFFIX = " [truncated]"
 # bracketed title ("[Gene therapy in 2019]") does not match.
 _MARKER_SHAPED = re.compile(r"\[(\s*\d{1,3}\s*(?:[#:][^\]]{0,620})?)\]")
 
+# A title that is only a bracketed placeholder, with or without a full stop:
+# PubMed's "[Not Available]." and "[In Process Citation]" stand where a title
+# is missing. A real title that merely starts with a bracketed translation
+# ("[Translated title] Fibrose kystique") does not match.
+_BRACKETED_ONLY = re.compile(r"^\[[^\[\]]*\]\s?\.?$")
+
 _ONE_WEEK_S = 7 * 24 * 60 * 60
 #: A failure is remembered briefly, so Write does not repeat in full the
 #: wait that Act's lookup just spent, and a later question retries soon.
@@ -165,14 +171,20 @@ def clean_article_title(raw: object) -> str | None:
     pair becomes parentheses, so a title cannot carry `[3]` into prose where
     it would read as a citation of finding 3.
 
-    None for a non-string, a blank, a title the fetch already cut, and a
-    title over `_MAX_TITLE_CHARS`. A title is never truncated here.
+    `<` and `>` are removed too, so no title can open or close a prompt
+    block such as `</question>`.
+
+    None for a non-string, a blank, a title the fetch already cut, a title
+    over `_MAX_TITLE_CHARS`, and a title that is only a bracketed
+    placeholder ("[Not Available]."). A title is never truncated here.
     """
     if not isinstance(raw, str) or raw.endswith(_CUT_SUFFIX):
         return None
-    printable = "".join(ch if ch.isprintable() else " " for ch in raw)
+    printable = "".join(ch if ch.isprintable() and ch not in "<>" else " " for ch in raw)
     collapsed = " ".join(printable.split())
     if not collapsed or len(collapsed) > _MAX_TITLE_CHARS:
+        return None
+    if _BRACKETED_ONLY.match(collapsed):
         return None
     return _MARKER_SHAPED.sub(r"(\1)", collapsed)
 
@@ -345,10 +357,23 @@ def apply_resolved_article_titles(
     if not titles:
         return synth_findings
     targets = set(article_curies_to_name(synth_findings))
+    # A paper that already has a live PubMed title row on the same page stays
+    # on its PMID: `one_finding_per_record` folds a page's rows only when
+    # their field names differ, so two `title` rows would list it twice.
+    # Left as `curie` beside the live `title`, develop's fold shows it once.
+    live_title_pages = {
+        (f.source_url or "").strip()
+        for f in synth_findings
+        if f.field == _TITLE_FIELD and f.layer != _GRAPH_LAYER and f.source_url
+    }
     rewritten: list[SynthFinding] = []
     for finding in synth_findings:
         title = titles.get(finding.curie)
-        if finding.curie not in targets or not title:
+        if (
+            finding.curie not in targets
+            or not title
+            or (finding.source_url or "").strip() in live_title_pages
+        ):
             rewritten.append(finding)
             continue
         rewritten.append(
