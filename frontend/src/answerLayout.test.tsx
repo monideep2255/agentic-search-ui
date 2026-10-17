@@ -63,7 +63,7 @@ const DONE = envelope("done", {
   total_tool_calls: 1,
   elapsed_ms: 900,
   trust_outcome: "answer",
-  trust_line: "Based on 4 sources, not yet confirmed",
+  trust_line: "Based on 4 sources cited, all from MedGen",
 });
 
 function tailStream(typed: boolean): AgentEvent[] {

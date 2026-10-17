@@ -270,7 +270,7 @@ def _serve(monkeypatch: pytest.MonkeyPatch, stored: str, created_at: Any) -> Any
         citations=[],
         answer_markdown=stored,
         audience_depth="researcher",
-        answer_trust_line="Based on 9 sources, not yet confirmed",
+        answer_trust_line="Based on 9 sources cited, all from MedGen",
         risk_tier=None,
     )
 

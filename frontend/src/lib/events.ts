@@ -288,7 +288,7 @@ export interface DonePayload {
   trust_outcome: TrustOutcome;
   /**
    * UI fix set 9, item 9.9. The one plain trust line for the answer ("Based
-   * on 1 source, not yet confirmed"), built in code by the backend. Optional
+   * on 1 source cited, from MedGen"), built in code by the backend. Optional
    * and nullable; null on a refusal, absent from an older backend.
    */
   trust_line?: string | null;
