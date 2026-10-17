@@ -576,6 +576,11 @@ from system_03_search_agent.synthesis.answer_layout import (
     table_second_cell,
     variant_to_disease_source_note,
 )
+from system_03_search_agent.synthesis.article_titles import (
+    apply_resolved_article_titles,
+    article_curies_to_name,
+    resolve_article_titles,
+)
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
 from system_03_search_agent.synthesis.disease_names import (
     readable_disease_name,
@@ -8801,18 +8806,22 @@ async def _prefetch_answer_names(
             ):
                 if curie not in fold_condition_ids:
                     fold_condition_ids.append(curie)
-        if not _one_lookup_holds(curie_fallback_curies) or not _one_lookup_holds(
-            fold_condition_ids
-        ):
-            return
-        # Write's order: MedGen, then MeSH, over the same list, then the
-        # linked conditions. The same order keeps each lookup's view of the
-        # question's call count the one Write would have had.
-        if curie_fallback_curies:
-            await resolve_concept_ids(curie_fallback_curies)
-            await resolve_descriptor_ids(curie_fallback_curies)
-        if fold_condition_ids:
-            await resolve_concept_ids(fold_condition_ids)
+        if _one_lookup_holds(curie_fallback_curies) and _one_lookup_holds(fold_condition_ids):
+            # Write's order: MedGen, then MeSH, over the same list, then the
+            # linked conditions. The same order keeps each lookup's view of
+            # the question's call count the one Write would have had.
+            if curie_fallback_curies:
+                await resolve_concept_ids(curie_fallback_curies)
+                await resolve_descriptor_ids(curie_fallback_curies)
+            if fold_condition_ids:
+                await resolve_concept_ids(fold_condition_ids)
+        # Card 38, slice C: the titles of the graph papers Write will list,
+        # last, as in Write. It bounds its own size (two requests of 50) so
+        # it needs no `_one_lookup_holds`; the results land in the
+        # resolver's cache, so Write finds them and makes no request.
+        article_curies = article_curies_to_name(synth_findings)
+        if article_curies:
+            await resolve_article_titles(article_curies)
     except asyncio.CancelledError:
         raise
     except Exception:
@@ -13983,6 +13992,20 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     synth_findings, placeholder_findings_dropped = drop_placeholder_condition_findings(
         synth_findings
     )
+
+    # Card 38, slice C (G-021). A graph paper is a `curie_fallback` finding
+    # because its title is quarantined as untrusted text
+    # (`_sanitized_citeable_row`, unchanged). The title is read again from
+    # PubMed's own record over EFetch and replaces the bare PMID, as a Layer
+    # 2 fact (`synthesis/article_titles.py`). After the placeholder drop, so
+    # a paper titled "Not provided" is never taken for a placeholder
+    # condition; before `row_types` and the prompt slice, which read the
+    # numbering. A failure leaves every paper on its PMID.
+    article_curies = article_curies_to_name(synth_findings)
+    if article_curies:
+        synth_findings = apply_resolved_article_titles(
+            synth_findings, await resolve_article_titles(article_curies)
+        )
 
     # Build phase 8.6, T-8.6-06: what is said about a condition's clinical
     # features follows the `think.asks_features` decision, never the
