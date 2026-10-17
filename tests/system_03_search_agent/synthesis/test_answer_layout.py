@@ -1353,3 +1353,54 @@ def test_card30_no_line_when_a_shown_record_gives_a_classification() -> None:
     ]
     assert variant_classification_note(classified) is None
     assert variant_classification_note([]) is None
+
+
+# Card 38, slice B: an ortholog gene row carries its organism.
+def _ortholog_finding(entity_type: str = "Gene"):
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    return SynthFinding(
+        citation_id="NCBIGene:100009292",
+        entity_type=entity_type,
+        field="name",
+        field_value="tumor protein p53",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/100009292",
+        curie="NCBIGene:100009292",
+        ref_index=1,
+        layer=1,
+        tool="cypher_query",
+    )
+
+
+def test_ortholog_row_shows_its_organism() -> None:
+    from system_03_search_agent.synthesis.answer_layout import (
+        plain_record_label,
+        record_status_or_year,
+    )
+
+    fields = {"name": "tumor protein p53", "organism": "Oryctolagus cuniculus"}
+    assert record_status_or_year("Gene", fields) == ("Organism", "Oryctolagus cuniculus")
+    assert (
+        plain_record_label(_ortholog_finding(), fields)
+        == "tumor protein p53 (Oryctolagus cuniculus)"
+    )
+
+
+def test_gene_rows_without_an_organism_and_other_row_types_are_unchanged() -> None:
+    from system_03_search_agent.synthesis.answer_layout import (
+        plain_record_label,
+        record_status_or_year,
+    )
+
+    plain = {"name": "tumor protein p53"}
+    assert record_status_or_year("Gene", plain) is None
+    assert plain_record_label(_ortholog_finding(), plain) == "tumor protein p53"
+    # The Layer 2 `gene` type is a different key, and a list or dict value
+    # is never rendered.
+    layer2 = {"name": "tumor protein p53", "organism": "Homo sapiens"}
+    assert record_status_or_year("gene", layer2) is None
+    assert plain_record_label(_ortholog_finding("gene"), layer2) == "tumor protein p53"
+    for odd in (["Mus musculus"], {"a": "b"}, 7, ""):
+        odd_fields = {"name": "tumor protein p53", "organism": odd}
+        assert record_status_or_year("Gene", odd_fields) is None
+        assert plain_record_label(_ortholog_finding(), odd_fields) == "tumor protein p53"
