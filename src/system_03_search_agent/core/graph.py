@@ -543,6 +543,7 @@ from system_03_search_agent.harness.jev_client import (
 from system_03_search_agent.harness.tiers import Tier, resolve_jev_model
 from system_03_search_agent.observability import audit
 from system_03_search_agent.synthesis.answer_layout import (
+    _CLASSIFICATION_FIELDS,
     IDENTIFIER_COLUMN_LABEL,
     ISOLATE_ENTITY_TYPE,
     LABEL_FIELDS,
@@ -15027,7 +15028,14 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         note_for_notes: str | None = None
     else:
         note_for_notes = classification_note
-    if classification_note is not None and classification_asked and trust_outcome != "refuse":
+    # Owner decision 2026-10-17: the floor stands on the classifier's reading
+    # and a listed graph variant, whether or not the line still shows.
+    # A finding that cites a classification field (card 30 step 1's
+    # stand-down) still lifts it.
+    lists_graph_variant = any(
+        f.layer == "layer_1_graph" and f.entity_type == "SequenceVariant" for f in synth_findings
+    ) and not any(f.field in _CLASSIFICATION_FIELDS for f in synth_findings)
+    if lists_graph_variant and classification_asked and trust_outcome != "refuse":
         trust_outcome = aggregate([trust_outcome, "ask"])
     if repair_cap_exceeded and trust_outcome != "refuse":
         repair_cap_note = _build_repair_cap_note(omission_remains=bool(omitted_findings))

@@ -7707,23 +7707,31 @@ async def test_card30b_a_partly_read_list_keeps_the_line_and_the_floor(
     assert _claim_outcomes(result) == _claim_outcomes(baseline)
 
 
+_ALL_READ = {"ClinVar:1": "Pathogenic", "ClinVar:2": "Uncertain significance", "ClinVar:3": "Benign"}
+
+
 @pytest.mark.asyncio
-async def test_card30b_a_fully_read_list_drops_the_line_and_leaves_claim_trust(
+async def test_card30b_a_fully_read_list_drops_the_line_and_keeps_the_ask(
     _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Every listed variant shows its classification: the line no longer
-    appears (step 1's floor is tied to the line's condition), and no claim's
-    trust signal moves."""
+    """Owner decision 2026-10-17: every variant shows its classification, the
+    line goes, the classification question still answers "ask"; claim trust
+    is untouched."""
     baseline = await _classified_write(monkeypatch, {}, None)
-    mapping = {
-        "ClinVar:1": "Pathogenic",
-        "ClinVar:2": "Uncertain significance",
-        "ClinVar:3": "Benign",
-    }
-    result = await _classified_write(monkeypatch, mapping, "asks_classification")
+    result = await _classified_write(monkeypatch, _ALL_READ, "asks_classification")
     seen = _everything_the_reader_sees(result["events"])
-    for word in mapping.values():
+    for word in _ALL_READ.values():
         assert word in seen
     assert "classification of these variants" not in seen
+    assert _answer_scope_outcome(result) == "ask"
     assert _claim_outcomes(result) == _claim_outcomes(baseline)
-    assert _answer_scope_outcome(result) == _answer_scope_outcome(baseline)
+
+
+@pytest.mark.asyncio
+async def test_card30b_a_fully_read_list_not_asked_keeps_develops_verdict(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    baseline = await _classified_write(monkeypatch, {}, None)
+    result = await _classified_write(monkeypatch, _ALL_READ, "not_applicable")
+    assert "classification of these variants" not in _everything_the_reader_sees(result["events"])
+    assert _answer_scope_outcome(result) == _answer_scope_outcome(baseline) == "answer"
