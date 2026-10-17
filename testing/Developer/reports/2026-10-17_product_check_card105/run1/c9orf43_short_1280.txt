@@ -1,0 +1,148 @@
+▶
+recent papers on C9orf43
+0 tool calls · 0 sources cited
+Plain language
+Show answer
+Recent papers on C9orf43 from the last 12 months?
+New search
+
+? Answered13.1s · 13 tool calls · 6 sources cited from 1 layer
+
+Plain language
+Researcher
+Show work ▾
+
+I found 1 gene and 5 genetic variants related to C9orf43.⁠1 +5
+
+WHERE THIS ANSWER COMES FROM
+C9orf43	⁠1, 3
+NM_001278629.2(C9orf43):c.293C>T (p.Pro98Leu)	⁠2
+NM_001278629.2(C9orf43):c.556G>A (p.Val186Met)	⁠4
+NM_001278629.2(C9orf43):c.476C>T (p.Ser159Leu)	⁠5
+NM_001278629.2(C9orf43):c.-49-1G>T	⁠6
+NM_001278629.2(C9orf43):c.48G>T (p.Leu16Phe)	⁠7
+NOTES
+No PubMed papers from the last 12 months were found for C9orf43. Papers in the knowledge graph carry no publication date, so they are not listed here.
+Note: no written summary could be checked against the records, so the records found are listed below with their sources
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+6
+▶
+LIVE NCBI APIS
+6
+▶
+[1][3]
+
+gene 257169
+
+L2 · live
+Flag: does not support
+TOOL
+symbol, name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/gene/257169/
+▶
+[2]
+
+clinvar 2252033
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/2252033/
+▶
+[4]
+
+clinvar 2259052
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/2259052/
+▶
+[5]
+
+clinvar 2376280
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/2376280/
+▶
+[6]
+
+clinvar 4350815
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4350815/
+▶
+[7]
+
+clinvar 4350816
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4350816/
+Based on 6 sources cited from ClinVar and NCBI Gene
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

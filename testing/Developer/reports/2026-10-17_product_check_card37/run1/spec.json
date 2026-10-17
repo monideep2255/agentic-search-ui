@@ -1,0 +1,154 @@
+{
+  "topic": "2026-10-17_product_check_card37",
+  "screens": [
+    {
+      "name": "q23_rs334_researcher",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "steps": [
+        {
+          "do": "disclaimer"
+        },
+        {
+          "do": "click",
+          "selector": "[aria-label=\"Answer mode, audience-level depth\"] button:has-text(\"Researcher\")"
+        },
+        {
+          "do": "fill",
+          "selector": "main textarea[aria-label=\"Your question\"]",
+          "text": "What is rs334 and what condition is it associated with?"
+        },
+        {
+          "do": "click",
+          "selector": "main button[aria-label=\"Search the knowledge graph\"]"
+        },
+        {
+          "do": "waitFor",
+          "selector": "[data-testid=\"answer-meta\"]",
+          "timeoutMs": 150000
+        }
+      ],
+      "saveText": "main",
+      "prototype": {
+        "steps": [
+          {
+            "do": "disclaimer"
+          },
+          {
+            "do": "fill",
+            "selector": "#qbox",
+            "text": "What is the clinical significance of rs334?"
+          },
+          {
+            "do": "press",
+            "selector": "#qbox",
+            "key": "Enter"
+          },
+          {
+            "do": "waitFor",
+            "selector": "#tail",
+            "timeoutMs": 60000
+          }
+        ]
+      }
+    },
+    {
+      "name": "q23_rs334_plain",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "steps": [
+        {
+          "do": "disclaimer"
+        },
+        {
+          "do": "click",
+          "selector": "[aria-label=\"Answer mode, audience-level depth\"] button:has-text(\"Plain language\")"
+        },
+        {
+          "do": "fill",
+          "selector": "main textarea[aria-label=\"Your question\"]",
+          "text": "What is rs334 and what condition is it associated with?"
+        },
+        {
+          "do": "click",
+          "selector": "main button[aria-label=\"Search the knowledge graph\"]"
+        },
+        {
+          "do": "waitFor",
+          "selector": "[data-testid=\"answer-meta\"]",
+          "timeoutMs": 150000
+        }
+      ],
+      "saveText": "main"
+    },
+    {
+      "name": "rs334_rs6025_researcher",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "steps": [
+        {
+          "do": "disclaimer"
+        },
+        {
+          "do": "click",
+          "selector": "[aria-label=\"Answer mode, audience-level depth\"] button:has-text(\"Researcher\")"
+        },
+        {
+          "do": "fill",
+          "selector": "main textarea[aria-label=\"Your question\"]",
+          "text": "What are rs334 and rs6025?"
+        },
+        {
+          "do": "click",
+          "selector": "main button[aria-label=\"Search the knowledge graph\"]"
+        },
+        {
+          "do": "waitFor",
+          "selector": "[data-testid=\"answer-meta\"]",
+          "timeoutMs": 150000
+        }
+      ],
+      "saveText": "main"
+    },
+    {
+      "name": "rs1_gene_control",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "steps": [
+        {
+          "do": "disclaimer"
+        },
+        {
+          "do": "click",
+          "selector": "[aria-label=\"Answer mode, audience-level depth\"] button:has-text(\"Plain language\")"
+        },
+        {
+          "do": "fill",
+          "selector": "main textarea[aria-label=\"Your question\"]",
+          "text": "What does the RS1 gene do?"
+        },
+        {
+          "do": "click",
+          "selector": "main button[aria-label=\"Search the knowledge graph\"]"
+        },
+        {
+          "do": "waitFor",
+          "selector": "[data-testid=\"answer-meta\"]",
+          "timeoutMs": 150000
+        }
+      ],
+      "saveText": "main"
+    }
+  ],
+  "widths": [
+    {
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "widths_complete": true
+}

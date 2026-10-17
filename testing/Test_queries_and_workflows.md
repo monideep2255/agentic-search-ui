@@ -542,7 +542,7 @@ What you should see:
 - The answer still lists CFTR's variant records, with the same sources as before.
 - Below the answer, one line reads "ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification."
 - The answer is not marked as a confirmed answer, because the question asks which variants are clinically significant and the list does not say. If a run marks it confirmed anyway, report it: the check that reads the question's meaning missed it.
-- Why it matters: someone checking CFTR before an appointment needs this answer to keep working exactly as it did last time, not to quietly go missing because some unrelated part of the product changed.
+- Why it matters: someone checking CFTR before an appointment needs the same list of records as last time, and needs to be told plainly that the list does not say which variants are clinically significant, not to read it as if it did.
 
 ### 23. rs334 without invented conditions
 
@@ -555,7 +555,8 @@ What you should see:
 - The question's own words are never mistaken for a disease name.
 - The answer ends without a note listing conditions you never mentioned: no "Patient condition unchanged", no "Condition of fetal membrane".
 - Only rs334's own records are listed. Never rs334348, rs334353, rs334558 or rs334773, which are different variants that only start with the same digits.
-- rs334's record is called rs334, never "not-provided, protective, likely-benign, pathogenic, other". In Researcher its row shows the gene HBB and, in a column of its own headed "Clinical significance", the values dbSNP lists. In Plain language it reads "Genetic variant (HBB)".
+- rs334's record is called rs334, never "not-provided, protective, likely-benign, pathogenic, other". In Researcher its row shows the gene HBB and, in a column of its own headed "Clinical significance", the values dbSNP lists. In Plain language it reads "Genetic variant (HBB), clinical significance: ..." with the same values.
+- A record dbSNP gives no clinical significance for (`What are rs334 and rs6025?` shows one) carries its consequence instead, in Researcher under a column that says which each cell is: "Clinical significance or consequence", with each cell starting "significance:" or "consequence:".
 - Why it matters: the person asked about sickle cell trait's variant, not about unrelated MedGen entries that happened to share the word "condition" with their own question; a made-up list of conditions reads as evidence when it is noise.
 
 ### 24. Comparing two genes in a disease context (G-033)
@@ -599,6 +600,7 @@ What you should see:
 - The graph search behind it could never return a row, and it has been removed. What the question reaches INSTEAD was not verified end to end, so what a correct answer looks like here is the thing this test establishes rather than something it checks against.
 - A refusal is worth reporting rather than passing. The open question is whether the question should reach MedGen through the live NCBI records instead, which is a routing decision rather than a defect.
 - What it answers today, from the second tester's fix-2 screenshots: Plain language "Found 1 disease record, 37 sequence variant records and 3 gene records for Marfan syndrome" and researcher "Found 1 disease record for Marfan syndrome: Marfan syndrome." No phenotypic feature is named. That is item 12.14, the one honest gap the overnight session of 2026-09-23 left, in the board's To do column.
+- When the answer lists sequence variant records from the knowledge graph, its Notes carry one line saying ClinVar's classification of these variants was not retrieved (card 30, query 115); that line is expected here too.
 - Why it matters: "I could not find evidence" about a disease whose features are thoroughly documented is the worst shape of wrong answer, because it reads as an authoritative statement that nothing is known.
 
 ### 78. The genes linked to MODY (11.20)
@@ -663,6 +665,33 @@ What you should see:
 
 ## 4. Chromosome windows and accessions
 
+
+### 116. A gene's orthologs name their species (card 38)
+
+Queries to try:
+
+- `What are the known orthologs of TP53 in other species?`: ask it once in Plain language and once in Researcher.
+
+What you should see:
+
+- In Researcher, the table has an Organism column beside each ortholog, for example "Oryctolagus cuniculus".
+- In Plain language, each ortholog reads like "tumor protein p53 (Oryctolagus cuniculus)".
+- Never a list of rows that all read "tumor protein p53" with no species.
+- The count line reads as before (it counts every record the answer found, so it says "of 715" rather than the 591 orthologs alone).
+- Why it matters: the person asked which species carry the gene; a list of identical names answers nothing.
+
+### 117. A gene's papers in the graph are named by their titles (card 38)
+
+Queries to try:
+
+- `Which papers in the graph mention the CFTR gene, and what do they cover?`: ask it once in Plain language and once in Researcher.
+
+What you should see:
+
+- Each paper listed by its PubMed title, linked to its PubMed page, in both depths; never a bare "Article record PMID:..." or "Published paper" row, except a paper whose title PubMed gives only in square brackets, which keeps its number.
+- Titles read exactly as PubMed writes them, variant notation such as "c.3140-26A>G" included.
+- No paper is listed twice.
+- Why it matters: a paper's number tells a person nothing about what it covers; they would have to open every link to learn what the answer found.
 ### 26. A copy number variant window, before the coordinate range feature
 
 Queries to try:
@@ -1525,6 +1554,7 @@ What you should see:
 - Plain language opens "I found 5 clinical trials related to GERD" with a list of titles under "Where this answer comes from".
 - Researcher opens "Found 5 clinical trial records for GERD: ..." with a table that has an identifier column.
 - Both depths list the same records.
+- When a Marfan answer lists sequence variant records from the knowledge graph, both depths carry card 30's line that their ClinVar classification was not retrieved (query 115).
 - The two answers read differently. Plain language uses simpler, everyday wording.
 - Researcher mode reads more technical, and is not thinner in substance than the plain language version.
 - Measured on all 12 full feedback questions, every one differs by depth.
@@ -2125,6 +2155,11 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 38, slice C | A gene's papers in the knowledge graph are listed by their PubMed titles, never as bare numbers | Query 117 |
+| card 105 | After picking a "How far back" window, the knowledge graph's undated papers are left out and the windowed PubMed papers lead; a line says when none were found | Query 108 |
+| card 38, slice B | A gene's orthologs name their species | Query 116 |
+| card 8 | The line under an answer names the databases it rests on, never "not yet confirmed" | Queries 1, 22 and 23 |
+| card 37, slice A1 | rs334's record is called rs334, with its gene and its clinical significance in their own columns | Query 23 |
 | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
 | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
 | card 30 | A list of a gene's variants says ClinVar's classification was not retrieved, and a question about which are pathogenic is never marked confirmed | Queries 22 and 115 |

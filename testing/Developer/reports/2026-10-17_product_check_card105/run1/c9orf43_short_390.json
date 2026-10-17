@@ -1,0 +1,39 @@
+{
+  "name": "c9orf43_short_390",
+  "question": "recent papers on C9orf43",
+  "width": 390,
+  "health": {
+    "status": "ok",
+    "app_env": "develop"
+  },
+  "mode_pressed": "Plain language",
+  "first_screen": "options",
+  "first_seconds": 2.083,
+  "first_text": "recent papers on C9orf43\nNew search\n\n1.4s · 0 tool calls · 0 sources cited\n\nShow work ▾\nOne more detail needed\nHow far back should I search?\nhttps://www.ncbi.nlm.nih.gov/search/all/?term=recent%20papers%20on%20C9orf43\n\nASK ANOTHER QUESTION\n\nAsk\nRecent papers on C9orf43 from the last 12 months?\nRecent papers on C9orf43 from the last 5 years?\nRecent papers on C9orf43 from the last 10 years?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+  "options": [
+    "Recent papers on C9orf43 from the last 12 months?",
+    "Recent papers on C9orf43 from the last 5 years?",
+    "Recent papers on C9orf43 from the last 10 years?"
+  ],
+  "overflow_picker": {
+    "scroll_width": 390,
+    "client_width": 390
+  },
+  "picked": "Recent papers on C9orf43 from the last 12 months?",
+  "picked_seconds": 11.691,
+  "meta": [
+    "? Answered11.0s · 13 tool calls · 6 sources cited from 1 layer"
+  ],
+  "trust_line": [
+    "Based on 6 sources cited from ClinVar and NCBI Gene"
+  ],
+  "overflow": {
+    "scroll_width": 390,
+    "client_width": 390
+  },
+  "overflow_sources_open": {
+    "scroll_width": 390,
+    "client_width": 390
+  },
+  "links": []
+}

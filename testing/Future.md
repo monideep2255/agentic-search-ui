@@ -7,7 +7,7 @@ Every piece of remaining work that is not on the board. The board, `testing/UI_f
 
 Each row of both sources was checked against the code, the tracker and the done file before it was listed. A row the evidence showed closed is under "Checked and closed" with that evidence. A row that could not be settled is listed as open with "Check first" in its card. The detail stays in the source each card names; this file only points to it. Code paths are under `src/system_03_search_agent/` and test paths under `tests/system_03_search_agent/` unless written in full.
 
-Last updated: 2026-10-05.
+Last updated: 2026-10-17.
 
 ## Table of contents
 
@@ -79,6 +79,8 @@ Ordered from the chair of the person using the product: what they notice first (
 | 56 | A failed fetch, summary or link still hands NCBI's own error text, up to 500 characters, to the synthesis prompt's structured fields | Board card 69, moved here 2026-10-05 because no user would notice it; its source: Card 63's judge, F-63-J04, pre-existing (`core/graph.py`, `_ncbi_efetch_output_to_structured_fields` and its Cypher twin) | Nobody on it: a diagnosis first, of whether any of that text can reach the answer |
 | 57 | Two moderate advisories remain in the frontend's test tools, `vitest` and `@vitest/mocker`; clearing them needs a major version bump | Board card 70, moved here 2026-10-05 because no user would notice it; its source: #129 on 2026-09-29 cleared the high one, `fast-uri`, which had turned gate 7 red; these sit below gate 7's high threshold | Nobody on it: a reviewed upgrade of its own, with the frontend suite run on the new major |
 | 58 | Model prices that keep the cost cap honest: glm-5.2's table price is one endpoint's figure rather than the model's catalogue price (within 35% of five billed calls), a near-zero litellm price such as 1e-30 still beats the table, and two comments in the price code are stale; also, the writer's sentence check failing leaves a count-line-only summary with no logged cause, and the opening sentence can repeat what the next line lists | Card 114's reviews, V-114-01, V-114-06, V-114-08, A-114-01, A-114-02 (`testing/Developer/reports/2026-10-15_ci_green/`) | Nobody on it yet |
+| 59 | Small guards the night of 2026-10-16 to 17 left untested or loose, none reached by a real record: a Plain language gene list or species name clipped mid-term at 100 characters; a cell over 500 characters only in principle; no test pins the ortholog edge-type strip to value-fold templates; no test fails if the empty-window line took the last of two typed genes; the window flag also reaches disease-anchored questions, with true wording and no record lost | Card 37 slice A1's V-37-06, card 38 slice B's V-38B-02 and V-38B-03, card 105's V-105-03 and V-105-04 (`testing/Developer/reports/2026-10-16_card37_38/`, `2026-10-16_card105/`) | Nobody on it yet |
+| 60 | A unit test that fills the MedGen name cache leaves it filled, so three `test_graph.py` tests fail when they run after it; CI's order is unaffected | Card 30 step 2b's V-30b-01 (`testing/Developer/reports/2026-10-16_card30/verifier_2b.md`), on its closed branch only | Only if step 2b is rebuilt |
 
 Already on the board, so not repeated here:
 

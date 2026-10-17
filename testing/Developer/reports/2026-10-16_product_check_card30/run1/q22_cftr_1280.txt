@@ -1,0 +1,48 @@
+Which clinically significant variants have been reported in CFTR?
+New search
+
+? Answered14.7s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Four additional named variants are ClinVar:1018653, named NM_000492.4(CFTR):c.364T>A (p.Tyr122Asn), ClinVar:1018890, named NM_000492.4(CFTR):c.4028G>A (p.Gly1343Asp), ClinVar:1024644, named NM_000492.4(CFTR):c.4244T>G (p.Val1415Gly), and ClinVar:1029874, named NM_000492.4(CFTR):c.389T>C (p.Leu130Pro).⁠12 +3 I found 54 genetic variants related to CFTR, out of 6047 available.⁠1–20
+
+Further named variants include ClinVar:1029875, named NM_000492.4(CFTR):c.407T>G (p.Leu136Arg), ClinVar:1035472, named NM_000492.4(CFTR):c.242T>A (p.Phe81Tyr), ClinVar:1036122, named NM_000492.4(CFTR):c.3498C>G (p.Phe1166Leu), ClinVar:1037205, named NM_000492.4(CFTR):c.2755T>A (p.Tyr919Asn), ClinVar:1037208, named NM_000492.4(CFTR):c.3590A>G (p.His1197Arg), ClinVar:1038310, named NM_000492.4(CFTR):c.3157A>T (p.Thr1053Ser), and ClinVar:1038737, named NM_000492.4(CFTR):c.1444A>G (p.Ile482Val).⁠18 +6
+
+WHERE THIS ANSWER COMES FROM
+NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr)	⁠1
+NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala)	⁠2
+NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser)	⁠3
+NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu)	⁠4
+NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala)	⁠5
+NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn)	⁠6
+NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys)	⁠7
+NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro)	⁠8
+NM_000492.4(CFTR):c.3064G>A (p.Val1022Met)	⁠9
+NM_000492.4(CFTR):c.744-9G>T	⁠10
+Showing 1–10 of 71
+‹ Previous
+Page 1 of 8
+Next ›
+NOTES
+ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification.
+Note: this answer was truncated because only 117 of the 6047 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+71
+Based on 71 sources cited, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

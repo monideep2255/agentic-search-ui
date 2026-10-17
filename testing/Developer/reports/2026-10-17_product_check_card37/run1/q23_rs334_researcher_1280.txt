@@ -1,0 +1,32 @@
+What is rs334 and what condition is it associated with?
+New search
+
+? Answered7.7s · 3 tool calls · 1 source cited from 1 layer
+
+Plain language
+Researcher
+Show work ▾
+
+Found 1 variant record record for rs334: rs334.⁠1
+
+VARIANT RECORD RECORDS FOUND
+VARIANT	IDENTIFIER	GENE	CLINICAL SIGNIFICANCE	
+rs334	rs334	HBB	not-provided, protective, likely-benign, pathogenic, other	⁠1
+NOTES
+Note: no written summary could be checked against the records, so the records found are listed below with their sources
+▶
+SOURCES
+1
+Based on 1 source cited, not yet confirmed
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

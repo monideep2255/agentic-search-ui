@@ -1,0 +1,70 @@
+{
+  "name": "q01_brca1_researcher_1280",
+  "mode": "Researcher",
+  "question": "Which diseases are associated with BRCA1?",
+  "width": 1280,
+  "wall_seconds_to_meta": 11.032,
+  "meta": "? Answered10.1s · 13 tool calls · 21 sources cited from 2 layers",
+  "trust_line": "Based on 21 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases; their values could not be compared\n·\nHigh-risk claim",
+  "trust_spans": [
+    {
+      "testid": "trust-plain",
+      "text": "Based on 21 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases; their values could not be compared",
+      "rects": 1,
+      "height": 21,
+      "lineHeight": 20.625,
+      "right": 984
+    },
+    {
+      "testid": "trust-risk",
+      "text": "High-risk claim",
+      "rects": 1,
+      "height": 21,
+      "lineHeight": 20.625,
+      "right": 335
+    }
+  ],
+  "trust_line_box": {
+    "left": 247,
+    "right": 1033,
+    "width": 786,
+    "height": 47,
+    "scrollWidth": 786,
+    "clientWidth": 786
+  },
+  "overflow": {
+    "scroll_width": 1280,
+    "client_width": 1280
+  },
+  "sources_text": "▶\nSOURCES\n21\n▶\nLIVE NCBI APIS\n16\n▶\nENRICHMENT\n5",
+  "source_groups": [
+    {
+      "id": "sources-group-2",
+      "text": "▶\nLIVE NCBI APIS\n16"
+    },
+    {
+      "id": "sources-group-2-count",
+      "text": "16"
+    },
+    {
+      "id": "sources-group-3",
+      "text": "▶\nENRICHMENT\n5"
+    },
+    {
+      "id": "sources-group-3-count",
+      "text": "5"
+    }
+  ],
+  "explainer_text": "Trust signals\n\nSources cited counts the record pages this answer cites, the same pages listed under Sources; two links to one page count once. Confirmed means two or more independent databases agree on the same high-stakes fact. A Based on line names the databases the cited pages come from, the three most cited when there are four or more. When an answer rests on two or more databases and the values behind one of its high-stakes facts could not be compared, the line adds \"their values could not be compared\".",
+  "explainer_box": {
+    "left": 341,
+    "right": 621,
+    "top": 599,
+    "bottom": 925,
+    "width": 280
+  },
+  "overflow_explainer_open": {
+    "scroll_width": 1280,
+    "client_width": 1280
+  }
+}

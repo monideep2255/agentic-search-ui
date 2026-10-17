@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-09-29.
+Kick-off: 2026-05-06. Last updated: 2026-10-17.
 
 ## Status at a glance
 
@@ -1049,6 +1049,19 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-10-17. THE UI FIX LOOP, OVERNIGHT OF 2026-10-16 TO 17: CARDS 30 (STEP 1), 37 (SLICE A1), 8, 38 (SLICES B AND C) AND 105 MERGED; CARDS 18, 30 (STEP 2B) AND 37 (SLICE A2) CLOSED BY THE OWNER'S RULE; SIX NEW CARDS FILED. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history. Decisions taken under the owner's rules: `DECISIONS.md`, rows dated 2026-10-16 and 2026-10-17.
+
+- What landed, by what a person notices, each behind green CI, its reviews and a fresh verifier, then checked on deployed develop at 1280 and 390:
+  - A gene's graph variant list says in its Notes that ClinVar's classification was not retrieved, and a classification question is never marked confirmed (card 30, step 1, #261).
+  - rs334's record is called rs334, with its gene and its clinical significance in their own columns (card 37, slice A1, #262).
+  - The line under an answer names the databases it rests on, never "not yet confirmed" (card 8, #266, second attempt; #259 closed).
+  - TP53's orthologs list their species (card 38, slice B, #265).
+  - After picking a "How far back" window, the graph's undated papers are left out and the windowed PubMed papers lead (card 105, #268, second attempt; #260 closed).
+  - A gene's graph papers are listed by their PubMed titles, notation kept exactly (card 38, slice C, #267, second attempt; #263 closed).
+- What was closed, each back in To do with its reviews and final diff on develop, under the owner's rule that a pull request a reviewer finds worse than develop does not merge: card 18 (#258), card 30 step 2b (#269) and card 37 slice A2 (#264). Cards 8, 105 and 38 slice C were re-attempted once each and merged.
+- Six cards were filed, 119 to 124, all buildable now. Nothing is parked: locally only `develop`, on GitHub only `develop` and `production`.
+- A usage limit stopped the session from 01:40 to 11:32 and the 07:00 close never ran; the owner chose on return to resume card 30 step 2b's verifier, then close. Production is unchanged on `v0.2.0`.
 
 2026-10-16, afternoon. THE UI FIX LOOP: THE BOARD SORTED BY WHO MOVES EACH CARD NEXT; FACTORY BACK ON FOUR SCREEN CARDS; ITS REVIEW LOOP DESIGNED, APPROVED AND PAUSED. What awaits the owner: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history.
 
