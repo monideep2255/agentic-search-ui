@@ -175,6 +175,16 @@ _CLASSIFIER_DECISION_POINTS: tuple[TaskTierEntry, ...] = (
             "which decides whether the answer makes room for them."
         ),
     ),
+    TaskTierEntry(
+        call_site="think.asks_classification",
+        step="think",
+        tier="classifier",
+        note=(
+            "Whether the question asks about the clinical classification of variants "
+            "(card 30), which decides whether a list of unclassified variants floors "
+            "the answer's verdict at ask."
+        ),
+    ),
 )
 
 # Sorted by call_site, fixed in code. Not part of the prompt-cache stable

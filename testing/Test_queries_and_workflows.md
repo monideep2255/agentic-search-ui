@@ -539,8 +539,9 @@ Queries to try:
 
 What you should see:
 
-- A previously working gene-variant question keeps answering the same way.
-- The answer still answers, with the same sources as before.
+- The answer still lists CFTR's variant records, with the same sources as before.
+- Below the answer, one line reads "ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification."
+- The answer is not marked as a confirmed answer, because the question asks which variants are clinically significant and the list does not say. If a run marks it confirmed anyway, report it: the check that reads the question's meaning missed it.
 - Why it matters: someone checking CFTR before an appointment needs this answer to keep working exactly as it did last time, not to quietly go missing because some unrelated part of the product changed.
 
 ### 23. rs334 without invented conditions
@@ -622,7 +623,7 @@ What you should see:
 
 - Variant-to-disease and gene-to-disease tables over the graph's ClinVar links, in every mode.
 - The HNF1A answer shows "Variant-to-disease mapping".
-- With that table, and with no other, one line reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI." (card 23). Directly under that table, at 1280 and 390, whether more records follow it or the table ends the answer; never in the Notes list. Plain language shows no table, so no line.
+- With that table, and with no other, one line reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI." (card 23). Directly under that table, at 1280 and 390, whether more records follow it or the table ends the answer; never in the Notes list. Plain language shows no table, so no card 23 line, but its Notes list carries card 30's line that ClinVar's classification was not retrieved (the variant list is unclassified).
 - When checked live on 2026-09-14 the table stopped at 5 rows where the reference prototype shows 13, because an answer cites at most 20 sources. Whether that ceiling is right is the product owner's call, a card in the board's To do column.
 - No disease cell is blank without a reason: a row whose ClinVar record names only a placeholder reads "None named: the ClinVar record says not provided" (or "not specified", or "gives only a placeholder"), and a row whose disease name could not be looked up reads "Name could not be looked up" (card 103).
 - Why it matters: a person asking which diseases a gene's variants cause wants the variant and the disease side by side, not two lists to match up themselves.
@@ -642,6 +643,22 @@ What you should see:
 - Known: the breast cancer answer still gives no count of genes, and can name MedGen records such as "Seen by breast cancer nurse". Removing the sentence does not fix that (the phase 8.1 product review, PR-8.1-05).
 - Known: the arachnodactyly answer can name only Haim-Munk syndrome, from a paper's title, and not Marfan syndrome (F-8.6-V08, an answer-quality note for the product owner).
 - Why it matters: a sentence about a record the person never asked about reads as part of the answer. In the phase 8.1 product review's words: "It told me twice that a nurse visit has no clinical features, and never told me how many genes."
+
+### 115. Variants are never shown as pathogenic unless ClinVar says so (card 30)
+
+Queries to try:
+
+- `Which BRCA1 variants are pathogenic?`: ask it once in Plain language and once in Researcher.
+- `What is rs334 and what condition is it associated with?`, in either mode, as the control.
+
+What you should see:
+
+- The BRCA1 answer still lists BRCA1's variant records, each linked to its ClinVar record.
+- Below the answer, one line reads "ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification."
+- The BRCA1 answer is never marked as a confirmed answer, and no sentence calls the listed variants pathogenic.
+- Both modes carry the same line, once.
+- The rs334 answer shows dbSNP's clinical significance and carries no such line.
+- Why it matters: of the first 40 BRCA1 variants this question listed on 2026-10-05, ClinVar classifies 2 as pathogenic. A person asking which variants are pathogenic reads any list under that question as the answer, and an unmarked list of unclassified variants is a confident wrong answer about cancer risk.
 
 ## 4. Chromosome windows and accessions
 
@@ -1971,7 +1988,7 @@ The daily shipped lists named below were folded into this document and `testing/
 |---|---|
 | 1. Basic search and answers | `Product/Product_workflows.md` tests 1, 7, 12, 13, 14; the 2026-09-22 shipped list's items 1, 6; the 2026-09-20 shipped list's retest items 1, 2, 3, 5, 6; `UI_fixes_done.md` "What is live on develop" and items 8.4, 9.12, 11.14, 11.27, 11.31, 11.34, 11.35, 11.36; the 2026-09-23 shipped list's items 3, 4, 5 |
 | 2. Follow-up questions and conversation | `Product/Product_workflows.md` test 2 |
-| 3. Genes, variants and diseases | the 2026-09-22 shipped list's items 3, 5, 7, 8, 12, 13; the 2026-09-23 shipped list's item 6; `UI_fixes_done.md` items 11.6, 11.20 and 12.14; board card 1 and `tracker/phase_8.6.md` ticket T-8.6-06 with findings F-8.6-A11 and F-8.6-V08 |
+| 3. Genes, variants and diseases | the 2026-09-22 shipped list's items 3, 5, 7, 8, 12, 13; the 2026-09-23 shipped list's item 6; `UI_fixes_done.md` items 11.6, 11.20 and 12.14; board card 1 and `tracker/phase_8.6.md` ticket T-8.6-06 with findings F-8.6-A11 and F-8.6-V08; board card 30 |
 | 4. Chromosome windows and accessions | the 2026-09-22 shipped list's items 2, 9, 10, 11, 14, 15, 16 |
 | 5. Pathogen isolates | `Product/queries/Isolate_search_queries_and_workflow.md` queries 1 to 12; the 2026-09-22 shipped list's items 17 to 22 |
 | 6. Refusals, off-topic and compute requests | `Product/Product_workflows.md` tests 8, 19; the 2026-09-22 shipped list's item 4; `UI_fixes_done.md` "What is live on develop" and item 12.6; `tracker/phase_8.6.md` ticket T-8.6-04, re-land ticket R-02 and findings F-8.6-A10 and F-8.6-G01, with golden rows G-043 and G-044 |
@@ -2109,6 +2126,7 @@ Every feature accounted for, in three tables:
 |---|---|---|
 | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
 | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
+| card 30 | A list of a gene's variants says ClinVar's classification was not retrieved, and a question about which are pathogenic is never marked confirmed | Queries 22 and 115 |
 | card 17 | A written sentence that moves to a different paper on one shared title word opens with the name of that paper | Query 113 |
 | card 35 | An off-topic follow-up that contains a word such as "cell" or "study" is checked for topic like any other question | Query 111 |
 | cards 84 and 72 | When the check every question passes first cannot finish, the message says nothing was searched, the problem was ours, and to ask again | Query 109 |

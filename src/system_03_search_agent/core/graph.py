@@ -550,6 +550,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     PLAIN_SOURCES_HEADING,
     TABLE_COLUMNS,
     TABLE_HEADINGS,
+    VARIANT_TO_DISEASE_SOURCE_NOTE,
     AskedField,
     GroundingInput,
     answer_summary_sentence,
@@ -574,6 +575,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     record_label,
     record_status_or_year,
     table_second_cell,
+    variant_classification_note,
     variant_to_disease_source_note,
 )
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
@@ -1206,9 +1208,37 @@ _ASKS_FEATURES: Final = _DecisionSpec(
     },
 )
 
-#: `DonePayload.decisions`' own `max_length`. A run makes at most six
-#: decisions today (relevancy, injection, ask_back, recent_years,
-#: literature, asks_features).
+#: Card 30 (owner decision D15): whether the question asks about the
+#: clinical classification of variants. Read by Write, which floors the
+#: answer's verdict at "ask" when the variants listed carry none.
+_ASKS_CLASSIFICATION: Final = _DecisionSpec(
+    point="think.asks_classification",
+    options=("asks_classification", "not_applicable"),
+    fail_open="not_applicable",
+    instructions=(
+        "The state is a question a person typed into a biomedical evidence search "
+        "engine. Decide whether it asks about the clinical classification of "
+        "genetic variants: whether variants are pathogenic, likely pathogenic, "
+        "benign, of uncertain significance or clinically significant."
+    ),
+    criteria={
+        "asks_classification": (
+            "It asks which variants, or whether a variant, are pathogenic, "
+            "harmful, disease causing, benign, clinically significant or of "
+            "uncertain significance, or how a variant is classified."
+        ),
+        "not_applicable": (
+            "Anything else. It asks what variants exist in a gene, which "
+            "conditions a variant is linked to, about a gene, a disease, papers, "
+            "trials or records, or it is not about variants at all. Naming a "
+            "variant or a gene is not asking how it is classified."
+        ),
+    },
+)
+
+#: `DonePayload.decisions`' own `max_length`. A run makes well under this
+#: many decisions today (relevancy, injection, ask_back, recent_years,
+#: literature, asks_features, asks_classification, and a few more).
 _MAX_DONE_DECISIONS: Final[int] = 16
 
 #: How long a later step waits, at the point it needs a decision Think
@@ -1247,6 +1277,9 @@ class _RunDecisions:
     #: that decides what is said about a condition's clinical features. None
     #: when Think never started it (small talk, or a Write reached directly).
     features_task: asyncio.Task[DecisionRecord | None] | None = None
+    #: `think.asks_classification` (card 30), started at Think beside the
+    #: features decision and read once by Write.
+    classification_task: asyncio.Task[DecisionRecord | None] | None = None
 
 
 #: One entry per live run, keyed by the run's `Harness`. `core/run.py`
@@ -1515,6 +1548,26 @@ async def _clinical_features_asked(harness: Harness, deadline: float | None = No
     entry = _run_decisions(harness)
     task, entry.features_task = entry.features_task, None
     return _usable_choice(await _read_late_decision(task, deadline)) == "asks_features"
+
+
+async def _classification_asked(harness: Harness, deadline: float | None = None) -> bool:
+    """Whether `think.asks_classification` picked `asks_classification`.
+
+    Card 30. Read once, by Write, with the late-read grace. No decision, no
+    usable pick, or one still running past the grace all read as False, the
+    decision's fail-open side: the verdict is left as computed.
+    """
+    entry = _run_decisions(harness)
+    task, entry.classification_task = entry.classification_task, None
+    return _usable_choice(await _read_late_decision(task, deadline)) == "asks_classification"
+
+
+def _drop_classification_decision(harness: Any) -> None:
+    """Stop `think.asks_classification` on a path that ends the run without
+    reading it. Never awaits."""
+    entry = _run_decisions(harness)
+    task, entry.classification_task = entry.classification_task, None
+    _cancel_if_pending(task)
 
 
 def _drop_features_decision(harness: Any) -> None:
@@ -4135,6 +4188,11 @@ async def think_node(state: GraphState) -> dict[str, Any]:
         decisions.features_task = asyncio.create_task(
             _decide_point(harness, query.trace_id, _ASKS_FEATURES, query.text)
         )
+    # think.asks_classification (card 30): same shape, read by Write.
+    if not small_talk and decisions.classification_task is None:
+        decisions.classification_task = asyncio.create_task(
+            _decide_point(harness, query.trace_id, _ASKS_CLASSIFICATION, query.text)
+        )
     result: dict[str, Any] | None = None
     try:
         result = await _think(state, recent_task, step_deadline)
@@ -4146,6 +4204,8 @@ async def think_node(state: GraphState) -> dict[str, Any]:
             decisions.literature_task = None
             _cancel_if_pending(decisions.features_task)
             decisions.features_task = None
+            _cancel_if_pending(decisions.classification_task)
+            decisions.classification_task = None
 
 
 def _search_goes_ahead(think_result: dict[str, Any]) -> bool:
@@ -13012,6 +13072,7 @@ def _answer_parts(
     findings: list[Finding],
     mentions: list[str],
     notes: list[str],
+    classification_note: str | None = None,
     summary_sentence: str | None = None,
     condition_names: dict[str, str | None] | None = None,
     lead_index: int | None = None,
@@ -13674,6 +13735,13 @@ def _answer_parts(
 
     # THE NOTES, after the listing in reading order.
     notes_at = len(tokens)
+    # Card 30: skipped when card 23's line already says the classification is
+    # not shown, so the fact is never said twice.
+    if classification_note is not None and not any(
+        t.kind == "note" and t.text == VARIANT_TO_DISEASE_SOURCE_NOTE for t in tokens
+    ):
+        paragraph_break()
+        tokens.append(TokenPayload(text=classification_note, marker_ids=[], kind="note"))
     for note in notes:
         paragraph_break()
         tokens.append(TokenPayload(text=note[:1000], marker_ids=[], kind="note"))
@@ -13696,6 +13764,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         return await _write_answer(state)
     finally:
         _drop_features_decision(state["harness"])
+        _drop_classification_decision(state["harness"])
         # Build phase 8.7, card 50: a second draft started beside the first
         # never outlives the Write step, however it ends.
         await _drop_second_draft(state["harness"])
@@ -14004,7 +14073,12 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     #
     # Either can renumber, so this runs before `row_types` and the prompt
     # slice read the numbering.
-    clinical_features_asked = await _clinical_features_asked(harness, step_deadline)
+    # Both late reads share one grace (card 30 fix round): awaited together,
+    # the worst case stays `_LATE_DECISION_GRACE_S`, as with one decision.
+    clinical_features_asked, classification_asked = await asyncio.gather(
+        _clinical_features_asked(harness, step_deadline),
+        _classification_asked(harness, step_deadline),
+    )
     if clinical_features_asked:
         synth_findings = reserve_prompt_slots(
             synth_findings,
@@ -14908,6 +14982,21 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         # Card 63: "Try again later" when NCBI said a database is down, the
         # original "Ask again to retry" otherwise. See the builder.
         failed_search_note = _build_failed_search_note(failed_searches)
+    # Card 30 (owner decision D15): a list of graph variants carries no
+    # classification. The note is true on every such listing; the verdict
+    # floor needs the classifier's reading that the question asked for one.
+    # Floors the answer-level outcome only, never a claim's trust.
+    classification_note = variant_classification_note(synth_findings)
+    # The code-built listing may already have left (or be about to leave)
+    # with card 23's line under its table; that line says the same thing.
+    if any(
+        t.kind == "note" and t.text == VARIANT_TO_DISEASE_SOURCE_NOTE for t in listing_tokens
+    ):
+        note_for_notes: str | None = None
+    else:
+        note_for_notes = classification_note
+    if classification_note is not None and classification_asked and trust_outcome != "refuse":
+        trust_outcome = aggregate([trust_outcome, "ask"])
     if repair_cap_exceeded and trust_outcome != "refuse":
         repair_cap_note = _build_repair_cap_note(omission_remains=bool(omitted_findings))
 
@@ -15235,6 +15324,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             findings=findings,
             mentions=answer_mentions,
             notes=notes,
+            classification_note=note_for_notes,
             summary_sentence=summary_sentence,
             condition_names=condition_names,
             lead_index=lead_index,
