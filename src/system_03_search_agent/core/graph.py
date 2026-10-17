@@ -555,6 +555,7 @@ from system_03_search_agent.synthesis.answer_layout import (
     AskedField,
     GroundingInput,
     answer_summary_sentence,
+    classification_text_suffix,
     collected_placeholder,
     collected_with_place,
     condition_ids_for_row,
@@ -1286,6 +1287,9 @@ class _RunDecisions:
     #: `think.asks_classification` (card 30), started at Think beside the
     #: features decision and read once by Write.
     classification_task: asyncio.Task[DecisionRecord | None] | None = None
+    #: Card 30 step 2b: Write's ClinVar classification lookup while it runs,
+    #: so a Write that ends early stops it.
+    variant_lookup_task: asyncio.Task[dict[str, str]] | None = None
 
 
 #: One entry per live run, keyed by the run's `Harness`. `core/run.py`
@@ -1573,6 +1577,14 @@ def _drop_classification_decision(harness: Any) -> None:
     reading it. Never awaits."""
     entry = _run_decisions(harness)
     task, entry.classification_task = entry.classification_task, None
+    _cancel_if_pending(task)
+
+
+def _drop_variant_lookup(harness: Any) -> None:
+    """Stop Write's ClinVar classification lookup if Write ended before
+    reading it. Never awaits."""
+    entry = _run_decisions(harness)
+    task, entry.variant_lookup_task = entry.variant_lookup_task, None
     _cancel_if_pending(task)
 
 
@@ -13179,8 +13191,12 @@ def _answer_parts(
         cells: list[str] | None = None,
         emphasize: bool = False,
         extra_marker_ids: list[str] | None = None,
+        suffix: str = "",
     ) -> None:
-        text = (sentence if sentence.endswith(" ") else sentence + " ")[:1000]
+        text = (sentence if sentence.endswith(" ") else sentence + " ")
+        # Card 30 step 2b: a graph variant row's classification also rides in
+        # its text, inside the token's cap.
+        text = text[: 1000 - len(suffix)] + suffix
         emphasis = emphasis_for(text, terms) if emphasize and terms else []
         ids = marker_ids(sentence)
         for extra in extra_marker_ids or []:
@@ -13446,7 +13462,12 @@ def _answer_parts(
             record_key = record_merge_key(finding, identifier)
             if merge_into(listed_records, record_key, sentence, [label]):
                 continue
-            sentence_token(sentence, kind="list_item", cells=[label])
+            sentence_token(
+                sentence,
+                kind="list_item",
+                cells=[label],
+                suffix=classification_text_suffix(finding, shown_row_fields(finding)),
+            )
             remember(listed_records, record_key, [label])
         # Beneath the one list, so the list itself stays one list: each
         # disease's features under a heading that names the disease.
@@ -13624,7 +13645,12 @@ def _answer_parts(
                 record_key = record_merge_key(finding, identifier)
                 if not as_table:
                     if not merge_into(listed_records, record_key, sentence, cells):
-                        sentence_token(sentence, kind="list_item", cells=cells)
+                        sentence_token(
+                            sentence,
+                            kind="list_item",
+                            cells=cells,
+                            suffix=classification_text_suffix(finding, row_fields),
+                        )
                         remember(listed_records, record_key, cells)
                     continue
                 mapping = (
@@ -13635,7 +13661,13 @@ def _answer_parts(
                 if merge_into(listed_records, record_key, sentence, cells, mapping):
                     continue
                 linked = linked_disease_ids(entity_type, row_fields) if mapped else []
-                sentence_token(sentence, kind="table_row", cells=cells, extra_marker_ids=linked)
+                sentence_token(
+                    sentence,
+                    kind="table_row",
+                    cells=cells,
+                    extra_marker_ids=linked,
+                    suffix=classification_text_suffix(finding, row_fields),
+                )
                 remember(listed_records, record_key, cells, row_fields)
 
             # Card 23 (owner, 2026-10-06): directly under the
@@ -13780,6 +13812,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     finally:
         _drop_features_decision(state["harness"])
         _drop_classification_decision(state["harness"])
+        _drop_variant_lookup(state["harness"])
         # Build phase 8.7, card 50: a second draft started beside the first
         # never outlives the Write step, however it ends.
         await _drop_second_draft(state["harness"])
@@ -14030,14 +14063,33 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     # variant starts here, beside the name lookups, and is awaited after
     # them, so the two run together. Never raises; a CURIE it could not read
     # is absent and keeps today's row.
+    #
+    # A variant row that carries a variant-to-disease mapping is left out:
+    # card 23's table shows no classification, and its line says so. The
+    # lookup also leaves the calls the name lookups below can need (two per
+    # MedGen or MeSH round, up to four for the fallback names and two for the
+    # fold's), so it never takes a call they need from the 20-call budget.
     classification_task: asyncio.Task[dict[str, str]] | None = None
     variant_curies = [
         f.curie
         for f in synth_findings
-        if f.layer == "layer_1_graph" and f.entity_type == "SequenceVariant" and f.curie
+        if f.layer == "layer_1_graph"
+        and f.entity_type == "SequenceVariant"
+        and f.curie
+        and not condition_ids_for_row(f.entity_type, _row_fields_for(f, findings))
     ]
+    folds_conditions = any(
+        condition_ids_for_row(f.entity_type, _row_fields_for(f, findings)) for f in synth_findings
+    )
     if variant_curies:
-        classification_task = asyncio.create_task(resolve_variant_classifications(variant_curies))
+        classification_task = asyncio.create_task(
+            resolve_variant_classifications(
+                variant_curies,
+                reserve_calls=(4 if curie_fallback_curies else 0) + (2 if folds_conditions else 0),
+            )
+        )
+        # Stopped by `write_node` if Write ends before it is read.
+        _run_decisions(harness).variant_lookup_task = classification_task
     resolved_names = await resolve_concept_ids(curie_fallback_curies)
     resolved_names.update(
         {
@@ -14082,6 +14134,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     variant_classifications: dict[str, str] = (
         await classification_task if classification_task is not None else {}
     )
+    _run_decisions(harness).variant_lookup_task = None
 
     # Build phase 8.6, T-8.6-06: what is said about a condition's clinical
     # features follows the `think.asks_features` decision, never the

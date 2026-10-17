@@ -36,6 +36,7 @@ by the same `is_plain_language` test the plain arms exercise.
 
 from __future__ import annotations
 
+import asyncio
 import re
 import time
 from types import SimpleNamespace
@@ -1103,7 +1104,9 @@ async def test_card23_the_source_note_sits_directly_under_the_variant_table(monk
     assert "Variant-to-disease mapping" in headings and "Gene-to-disease mapping" in headings
     (note_at,) = _source_notes(tokens)
     variant_heading = next(
-        i for i, t in enumerate(tokens) if t["kind"] == "heading" and "Variant-to-disease" in t["text"]
+        i
+        for i, t in enumerate(tokens)
+        if t["kind"] == "heading" and "Variant-to-disease" in t["text"]
     )
     # Everything between the variant heading and the note is that table.
     between = [t["kind"] for t in tokens[variant_heading + 1 : note_at]]
@@ -1413,9 +1416,7 @@ def _numbers(result, tokens: list[dict]) -> tuple[str, str, int]:
     done = next(e.payload for e in result["events"] if e.type == "done")
     opening = next(t["text"] for t in tokens if t["kind"] == "claim")
     pages = {
-        source_page_key(e.payload["source_url"])
-        for e in result["events"]
-        if e.type == "citation"
+        source_page_key(e.payload["source_url"]) for e in result["events"] if e.type == "citation"
     }
     return opening, done["trust_line"], len(pages)
 
@@ -1826,12 +1827,16 @@ def test_two_records_with_no_identifier_merge_only_on_the_same_name(depth: str) 
     identifier merge without comparing names, and 'second thing' is lost
     under 'first thing'."""
     different = _rows_of(
-        _direct_tokens(depth, [_nameless("g-1", 1, "first thing"), _nameless("g-2", 2, "second thing")]),
+        _direct_tokens(
+            depth, [_nameless("g-1", 1, "first thing"), _nameless("g-2", 2, "second thing")]
+        ),
         "list_item",
     )
     assert [t.cells for t in different] == [["first thing"], ["second thing"]], different
     same = _rows_of(
-        _direct_tokens(depth, [_nameless("g-1", 1, "DNA repair"), _nameless("g-2", 2, "DNA repair")]),
+        _direct_tokens(
+            depth, [_nameless("g-1", 1, "DNA repair"), _nameless("g-2", 2, "DNA repair")]
+        ),
         "list_item",
     )
     assert [(t.cells, t.marker_ids) for t in same] == [(["DNA repair"], ["g-1", "g-2"])], same
@@ -1877,8 +1882,7 @@ async def test_the_command_line_prints_every_citation_of_a_merged_row(monkeypatc
     out, err = io.StringIO(), io.StringIO()
     renderer = Renderer(out, err, operator=False)
     assert any(event.type == "done" for event in result["events"]), (
-        "populate-check failed: the run sent no `done`, so the held listing "
-        "would never print."
+        "populate-check failed: the run sent no `done`, so the held listing would never print."
     )
     for event in result["events"]:
         if event.type in ("token", "citation", "done"):
@@ -2015,7 +2019,6 @@ async def test_card30_beside_the_variant_table_only_card_23s_line_shows(monkeypa
     assert _classification_notes(tokens) == []
 
 
-
 @pytest.mark.asyncio
 async def test_card30_answer_parts_skips_its_line_beside_card_23s_table(monkeypatch) -> None:
     """On a request that does not read `placement` the table is built in the
@@ -2061,7 +2064,7 @@ _CLASSES = {
 
 
 def _install_classifications(monkeypatch, mapping, calls: list | None = None) -> None:
-    async def _fake(curies):
+    async def _fake(curies, **_kw):
         if calls is not None:
             calls.append(list(curies))
         return {c: mapping[c] for c in curies if c in mapping}
@@ -2118,8 +2121,7 @@ async def test_card30b_plain_language_keeps_the_classification_after_the_name(
     labels = [t["cells"][0] for t in tokens if t["kind"] == "list_item"]
     assert "c.1A>G (p.Xaa1Yaa), ClinVar classification: Pathogenic" in labels
     assert (
-        "c.3A>G (p.Xaa3Yaa), ClinVar classification: "
-        "Conflicting classifications of pathogenicity"
+        "c.3A>G (p.Xaa3Yaa), ClinVar classification: Conflicting classifications of pathogenicity"
     ) in labels
     assert _classification_notes(tokens) == []
 
@@ -2149,14 +2151,12 @@ async def test_card30b_no_classification_at_all_is_todays_answer(monkeypatch, de
     of a run where the lookup never existed."""
     _, with_lookup = await _variant_list(monkeypatch, depth, {})
     monkeypatch.setattr(
-        graph_module, "resolve_variant_classifications", lambda curies: _async_empty()
+        graph_module, "resolve_variant_classifications", lambda curies, **_kw: _async_empty()
     )
     _, again = await _variant_list(monkeypatch, depth, {})
     assert with_lookup == again
     assert len(_classification_notes(with_lookup)) == 1
-    assert not any(
-        "ClinVar classification" in str(t.get("cells") or "") for t in with_lookup
-    )
+    assert not any("ClinVar classification" in str(t.get("cells") or "") for t in with_lookup)
 
 
 async def _async_empty() -> dict:
@@ -2183,7 +2183,7 @@ async def test_card30b_a_question_without_variants_is_byte_identical(monkeypatch
     monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
     _install(monkeypatch, _no_prose)
 
-    async def _boom(curies):
+    async def _boom(curies, **_kw):
         raise AssertionError("no lookup without graph variants")
 
     monkeypatch.setattr(graph_module, "resolve_variant_classifications", _boom)
@@ -2211,3 +2211,215 @@ async def test_card30b_rs334_style_answer_is_unchanged(monkeypatch) -> None:
     ((header, _),) = _tables(tokens)
     assert "ClinVar classification" not in header
     assert _classification_notes(tokens) == []
+
+
+# ---- card 30 step 2b fix round (judge J-30b-01..06, adversary A-30-01..05)
+
+
+def _text_surface(result) -> str:
+    """What the command line, MCP and GraphQL print: the tokens' text only."""
+    from system_03_search_agent.contracts.token_order import joined_text
+
+    return joined_text(_tokens(result))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("depth", ["plain_language", "researcher"])
+async def test_card30b_the_text_surfaces_carry_each_classification(monkeypatch, depth) -> None:
+    """J-30b-01: the text a surface without cells prints holds every value."""
+    result, _ = await _variant_list(monkeypatch, depth, _CLASSES)
+    text = _text_surface(result)
+    # Each value follows its own row's citation marker, not another row's.
+    for index, value in enumerate(_CLASSES.values(), start=1):
+        assert f"[{index}]. ClinVar classification: {value}." in text, index
+
+
+@pytest.mark.asyncio
+async def test_card30b_the_text_suffix_stays_inside_the_token_cap(monkeypatch) -> None:
+    long_name = "c." + "A" * 990
+    rows = [{**_UNCLASSIFIED_VARIANT_ROWS[0], "fields": {"name": long_name}}]
+    result, _ = await _variant_list(monkeypatch, "researcher", _CLASSES, rows=rows)
+    assert all(len(t["text"]) <= 1000 for t in _tokens(result))
+    assert "ClinVar classification: Pathogenic." in _text_surface(result)
+
+
+@pytest.mark.asyncio
+async def test_card30b_the_variant_to_disease_table_has_no_classification(monkeypatch) -> None:
+    """J-30b-02, A-30-01: query 79's table keeps its three columns and card
+    23's line stays true; the variants of that table are not looked up."""
+    calls: list = []
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+    _install_classifications(monkeypatch, {"ClinVar:1": "Pathogenic", "ClinVar:2": "Benign"}, calls)
+    _install(monkeypatch, lambda lines: f"{lines[1]} [1].")
+    rows = [*_FOLDED_VARIANT_ROWS, _FOLDED_GENE_ROW]
+    result = await graph_module.write_node(_state("researcher", rows=rows))
+    tokens = _read_tokens(result)
+    variant_table = next(t for t in _tables(tokens) if "Associated disease(s)" in t[0])
+    assert len(variant_table[0]) == 3 and "ClinVar classification" not in variant_table[0]
+    assert len(_source_notes(tokens)) == 1
+    assert "Pathogenic" not in _text_surface(result)
+    assert calls == []
+
+
+def _live_clinvar_state(monkeypatch):
+    from system_03_search_agent.harness.coordinator_worker import Finding
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    record = NcbiEfetchRecord(
+        id="900",
+        db="clinvar",
+        fields={"title": "NM_000000.1(BRCA1):c.9A>G", "accession": "VCV000000900"},
+        source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/900/",
+    )
+    output = NcbiEfetchOutput(
+        status="ok",
+        action="summary",
+        records=[record],
+        record_count=1,
+        total_available=1,
+        truncated=False,
+    )
+    state = _state("researcher", rows=_UNCLASSIFIED_VARIANT_ROWS)
+    state["findings"].append(
+        Finding(
+            call_id="ne-live-clinvar",
+            tool="ncbi_efetch",
+            layer="layer_2_api",
+            source="structured_pass_through",
+            structured_fields=graph_module._ncbi_efetch_output_to_structured_fields(
+                output, "clinvar_summary"
+            ),
+            extracted_entities=None,
+            normalized_ids=None,
+            evidence_summary=None,
+        )
+    )
+    state["findings_count"] = len(state["findings"])
+    state["layer2_raw_outputs"] = {"ne-live-clinvar": output}
+    return state
+
+
+@pytest.mark.asyncio
+async def test_card30b_a_live_clinvar_row_keeps_the_line(monkeypatch) -> None:
+    """A-30-02: graph rows all classified, one live ClinVar row without a
+    classification on the page: the line stays."""
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+    _install_classifications(monkeypatch, _CLASSES)
+    _install(monkeypatch, _no_prose)
+    result = await graph_module.write_node(_live_clinvar_state(monkeypatch))
+    tokens = _read_tokens(result)
+    assert "BRCA1):c.9A>G" in _text_surface(result), "populate-check: the live row is listed"
+    assert "ClinVar classification: Pathogenic." in _text_surface(result)
+    assert len(_classification_notes(tokens)) == 1
+
+
+@pytest.mark.asyncio
+async def test_card30b_the_lookup_is_stopped_when_write_ends_early(monkeypatch) -> None:
+    """J-30b-04: a Write that ends before reading the lookup cancels it."""
+    started = asyncio.Event()
+    seen: list[asyncio.Task] = []
+
+    async def _slow(curies, **_kw):
+        seen.append(asyncio.current_task())
+        started.set()
+        await asyncio.sleep(30)
+        return {}
+
+    monkeypatch.setattr(graph_module, "resolve_variant_classifications", _slow)
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fake_resolve_concept_ids)
+    _install(monkeypatch, _no_prose)
+    state = _state("researcher", rows=_UNCLASSIFIED_VARIANT_ROWS)
+
+    # Fail the first await after the task starts: the name lookup.
+    async def _fail(_ids):
+        await asyncio.sleep(0)
+        raise RuntimeError("write ends here")
+
+    monkeypatch.setattr(graph_module, "resolve_concept_ids", _fail)
+    with pytest.raises(RuntimeError):
+        await graph_module.write_node(state)
+    await asyncio.sleep(0)
+    assert seen and seen[0].cancelled()
+
+
+@pytest.mark.asyncio
+async def test_card30b_at_18_calls_used_the_name_lookup_still_gets_its_call(monkeypatch) -> None:
+    """J-30b-03, A-30-03: the classification lookup leaves the MedGen lookup
+    its two calls. Faked tool actions charge the budget as the transport does."""
+    from system_03_search_agent.harness import call_budget
+    from system_03_search_agent.synthesis import disease_names
+    from system_03_search_agent.tools import ncbi_eutils_actions as actions
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    disease_names.reset_cache_for_tests()
+    reached: list[str] = []
+
+    def _out(action, *records):
+        return NcbiEfetchOutput(
+            status="ok",
+            action=action,
+            records=list(records),
+            record_count=len(records),
+            truncated=False,
+        )
+
+    async def _search(params):
+        call_budget.charge_one_call(tool="medgen_search", layer=2)
+        await asyncio.sleep(0.02)  # the network wait, where the other lookup charges
+        reached.append("medgen_search")
+        return _out("search", NcbiEfetchRecord(id="x", db="medgen", fields={"idlist": ["77"]}))
+
+    async def _summary(params):
+        call_budget.charge_one_call(tool=params.db + "_summary", layer=2)
+        await asyncio.sleep(0.02)
+        reached.append(params.db + "_summary")
+        if params.db == "medgen":
+            return _out(
+                "summary",
+                NcbiEfetchRecord(
+                    id="77", db="medgen", fields={"conceptid": "C0346153", "title": "A disease"}
+                ),
+            )
+        return _out(
+            "summary",
+            *[
+                NcbiEfetchRecord(
+                    id=i,
+                    db="clinvar",
+                    fields={"germline_classification": {"description": "Benign"}},
+                )
+                for i in params.ids
+            ],
+        )
+
+    monkeypatch.setattr(actions, "search", _search)
+    monkeypatch.setattr(actions, "summary", _summary)
+    _install(monkeypatch, _no_prose)
+    disease = {
+        "node_or_edge_type": "Disease",
+        "curie": "MedGen:C0346153",
+        "fields": {"name": "MedGen"},
+        "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+        "graph_snapshot_version": "v1",
+    }
+    rows = [*_UNCLASSIFIED_VARIANT_ROWS, disease]
+
+    async def _go(used: int):
+        reached.clear()
+        disease_names.reset_cache_for_tests()
+        with call_budget.query_budget_scope("lookup"):
+            for _ in range(used):
+                call_budget.charge_one_call(tool="t", layer=2)
+            await graph_module.write_node(_state("researcher", rows=rows))
+        return list(reached)
+
+    at_18 = await _go(18)
+    assert at_18 == ["medgen_search", "medgen_summary"], at_18
+    at_10 = await _go(10)
+    assert "clinvar_summary" in at_10 and "medgen_summary" in at_10, at_10

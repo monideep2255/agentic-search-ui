@@ -70,9 +70,9 @@ _CLINVAR_CURIE = re.compile(r"^ClinVar:(\d{1,20})$", re.ASCII)
 
 _IDS_PER_REQUEST = 50
 _MAX_REQUESTS = 2
-# Per request. About a second is typical (measured), so this leaves room
-# for a slow reply without holding the answer for long.
-_REQUEST_TIMEOUT_S = 4.0
+# Per request. About 0.3 s is typical (measured), so a hung reply costs at
+# most this, inside the owner's "about a second" at the median.
+_REQUEST_TIMEOUT_S = 1.5
 # ClinVar's longest germline description is "Conflicting classifications of
 # pathogenicity" (44 characters).
 _MAX_CLASSIFICATION_CHARS = 100
@@ -100,12 +100,14 @@ def _classification_of(fields: Any) -> str | None:
     return text
 
 
-def _requests_allowed(wanted: int) -> int:
-    """How many requests the query's call ceiling still permits."""
+def _requests_allowed(wanted: int, reserve: int = 0) -> int:
+    """How many requests the query's call ceiling still permits, leaving
+    `reserve` calls for lookups that need them more (the name lookups)."""
     made = call_budget.calls_made()
     if made is None:
         return wanted
-    return max(0, min(wanted, call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY - made))
+    left = call_budget.MAX_LAYER_2_3_CALLS_PER_QUERY - made - reserve
+    return max(0, min(wanted, left))
 
 
 async def _summary_classifications(ids: list[str]) -> dict[str, str | None]:
@@ -137,13 +139,16 @@ async def _summary_classifications(ids: list[str]) -> dict[str, str | None]:
     return found
 
 
-async def resolve_variant_classifications(curies: Sequence[str]) -> dict[str, str]:
+async def resolve_variant_classifications(
+    curies: Sequence[str], *, reserve_calls: int = 0
+) -> dict[str, str]:
     """Map each `ClinVar:` CURIE to ClinVar's classification of it.
 
     Only CURIEs whose classification was read appear in the result. A CURIE
     of another vocabulary, a duplicate, or one whose record could not be
     read is simply absent. No request is made when there is nothing to ask
-    or the per-query call ceiling is spent.
+    or the per-query call ceiling is spent. `reserve_calls` leaves that many
+    calls of the ceiling for the name lookups that run beside this one.
     """
     by_local: dict[str, list[str]] = {}
     for curie in curies:
@@ -157,7 +162,7 @@ async def resolve_variant_classifications(curies: Sequence[str]) -> dict[str, st
         locals_sorted[i : i + _IDS_PER_REQUEST]
         for i in range(0, len(locals_sorted), _IDS_PER_REQUEST)
     ][:_MAX_REQUESTS]
-    chunks = chunks[: _requests_allowed(len(chunks))]
+    chunks = chunks[: _requests_allowed(len(chunks), reserve_calls)]
     if not chunks:
         return {}
     replies = await asyncio.gather(*(_summary_classifications(chunk) for chunk in chunks))

@@ -540,8 +540,9 @@ Queries to try:
 What you should see:
 
 - The answer still lists CFTR's variant records, with the same sources as before.
-- Below the answer, one line reads "ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification."
-- The answer is not marked as a confirmed answer, because the question asks which variants are clinically significant and the list does not say. If a run marks it confirmed anyway, report it: the check that reads the question's meaning missed it.
+- Each listed knowledge graph variant shows ClinVar's classification of it, word for word ("Pathogenic", "Uncertain significance", "Conflicting classifications of pathogenicity"): a "ClinVar classification" column in Researcher, after the name in Plain language, and in the text the command line prints. ClinVar's own wording such as "no classification for the single variant" appears as it is.
+- The live ClinVar records listed beside them show no classification, so while any listed ClinVar variant shows none, one line below the answer reads "ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification." It disappears only when every listed variant shows a classification.
+- The answer is not marked as a confirmed answer, because the question asks which variants are clinically significant, even when every variant shows a classification. If a run marks it confirmed anyway, report it: the check that reads the question's meaning missed it.
 - Why it matters: someone checking CFTR before an appointment needs this answer to keep working exactly as it did last time, not to quietly go missing because some unrelated part of the product changed.
 
 ### 23. rs334 without invented conditions
@@ -624,7 +625,7 @@ What you should see:
 
 - Variant-to-disease and gene-to-disease tables over the graph's ClinVar links, in every mode.
 - The HNF1A answer shows "Variant-to-disease mapping".
-- With that table, and with no other, one line reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI." (card 23). Directly under that table, at 1280 and 390, whether more records follow it or the table ends the answer; never in the Notes list. Plain language shows no table, so no card 23 line, but its Notes list carries card 30's line that ClinVar's classification was not retrieved (the variant list is unclassified).
+- With that table, and with no other, one line reads "Each row lists the conditions the variant's ClinVar record names; the record's classification (for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI." (card 23). Directly under that table, at 1280 and 390, whether more records follow it or the table ends the answer; never in the Notes list. The table has three columns, as before, and no classification column, so card 23's line stays true. Plain language shows no table, so no card 23 line, but its Notes list carries card 30's line that ClinVar's classification was not retrieved, because these variants are not looked up.
 - When checked live on 2026-09-14 the table stopped at 5 rows where the reference prototype shows 13, because an answer cites at most 20 sources. Whether that ceiling is right is the product owner's call, a card in the board's To do column.
 - No disease cell is blank without a reason: a row whose ClinVar record names only a placeholder reads "None named: the ClinVar record says not provided" (or "not specified", or "gives only a placeholder"), and a row whose disease name could not be looked up reads "Name could not be looked up" (card 103).
 - Why it matters: a person asking which diseases a gene's variants cause wants the variant and the disease side by side, not two lists to match up themselves.
@@ -655,11 +656,12 @@ Queries to try:
 What you should see:
 
 - The BRCA1 answer still lists BRCA1's variant records, each linked to its ClinVar record.
-- Below the answer, one line reads "ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification."
-- The BRCA1 answer is never marked as a confirmed answer, and no sentence calls the listed variants pathogenic.
-- Both modes carry the same line, once.
+- Each BRCA1 variant from the knowledge graph shows ClinVar's classification of it, word for word, in a "ClinVar classification" column in Researcher, after the name in Plain language, and in the text the command line, MCP and GraphQL print. Tonight's 40 are 2 Pathogenic, 15 Uncertain significance and 23 Conflicting classifications of pathogenicity.
+- The line "ClinVar's classification of these variants ... was not retrieved" appears only if some listed variant, including a live ClinVar record listed beside them, shows no classification. A variant whose classification could not be read keeps its row without one.
+- The BRCA1 answer is never marked as a confirmed answer, even when every variant shows its classification, and no sentence calls the listed variants pathogenic.
+- Both modes show the same classifications, and when the line appears it appears once.
 - The rs334 answer shows dbSNP's clinical significance and carries no such line.
-- Why it matters: of the first 40 BRCA1 variants this question listed on 2026-10-05, ClinVar classifies 2 as pathogenic. A person asking which variants are pathogenic reads any list under that question as the answer, and an unmarked list of unclassified variants is a confident wrong answer about cancer risk.
+- Why it matters: of the first 40 BRCA1 variants this question listed on 2026-10-05, ClinVar classifies 2 as pathogenic. A person asking which variants are pathogenic reads any list under that question as the answer, and a list of unclassified variants with no word on it is a confident wrong answer about cancer risk.
 
 ## 4. Chromosome windows and accessions
 

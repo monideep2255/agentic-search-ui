@@ -407,7 +407,10 @@ def variant_classification_note(
     least one finding is a knowledge graph `SequenceVariant` record, and no
     finding cites a classification field. Step 2b: `classified` holds the
     CURIEs whose ClinVar classification the answer shows, and the line is
-    dropped only when every graph variant finding is among them.
+    dropped only when every graph variant finding is among them and no live
+    ClinVar variant record sits on the page, since a live row shows no
+    classification of its own (a classification field it cites is handled
+    above).
     """
     graph_variants = [
         f for f in findings if f.layer == "layer_1_graph" and f.entity_type == "SequenceVariant"
@@ -416,9 +419,28 @@ def variant_classification_note(
         return None
     if any(f.field in _CLASSIFICATION_FIELDS for f in findings):
         return None
-    if classified and all(f.curie and f.curie in classified for f in graph_variants):
+    live_variant_rows = any(
+        f.layer != "layer_1_graph" and f.entity_type.lower().startswith("clinvar")
+        for f in findings
+    )
+    if (
+        classified
+        and not live_variant_rows
+        and all(f.curie and f.curie in classified for f in graph_variants)
+    ):
         return None
     return VARIANT_CLASSIFICATION_NOTE
+
+
+def classification_text_suffix(finding: Any, row_fields: dict[str, Any] | None) -> str:
+    """The words a graph variant row's token text carries after its cited
+    sentence, so a surface that prints the text (the command line, MCP,
+    GraphQL) shows the classification the table cell shows. Empty for every
+    other row."""
+    value = (row_fields or {}).get(CLASSIFICATION_ROW_FIELD)
+    if finding.entity_type == "SequenceVariant" and isinstance(value, str) and value.strip():
+        return f"ClinVar classification: {value.strip()}. "
+    return ""
 
 
 def with_variant_classification(

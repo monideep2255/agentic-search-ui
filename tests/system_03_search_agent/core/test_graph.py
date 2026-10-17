@@ -7683,7 +7683,7 @@ async def test_card30_no_floor_when_the_answer_shows_a_classification(
 async def _classified_write(
     monkeypatch: pytest.MonkeyPatch, mapping: dict[str, str], pick: str | None
 ) -> dict[str, object]:
-    async def _lookup(curies: list[str]) -> dict[str, str]:
+    async def _lookup(curies: list[str], **_kw: object) -> dict[str, str]:
         return {c: mapping[c] for c in curies if c in mapping}
 
     monkeypatch.setattr(graph_module, "resolve_variant_classifications", _lookup)

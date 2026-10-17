@@ -250,3 +250,74 @@ def test_row_fields_gain_the_classification_only_for_a_graph_variant() -> None:
     assert with_variant_classification(live, row, {"ClinVar:1": "Pathogenic"}) is row
     assert with_variant_classification(graph, row, {"ClinVar:2": "Benign"}) is row
     assert with_variant_classification(graph, row, None) is row
+
+
+# ---------------------------------------------------------- fix round
+
+
+def test_a_hung_reply_costs_at_most_one_and_a_half_seconds(monkeypatch) -> None:
+    """J-30b-05, A-30-04: the product's own timeout, not a patched one."""
+    import time
+
+    async def _hang():
+        await asyncio.sleep(30)
+
+    _install(monkeypatch, lambda ids: _hang())
+    started = time.monotonic()
+    assert _run(["ClinVar:1"]) == {}
+    assert time.monotonic() - started < 2.5
+    assert vc._REQUEST_TIMEOUT_S <= 1.5
+
+
+def _with_calls_used(used: int, coro_fn):
+    async def _go():
+        with call_budget.query_budget_scope("lookup"):
+            for _ in range(used):
+                call_budget.charge_one_call(tool="t", layer=2)
+            return await coro_fn()
+
+    return asyncio.run(_go())
+
+
+def test_the_lookup_leaves_the_calls_the_name_lookups_need(monkeypatch) -> None:
+    """J-30b-03, A-30-03: 18 used and 2 reserved leaves nothing for it."""
+    fake = _install(monkeypatch, _ok(_record("1")))
+    got = _with_calls_used(
+        18, lambda: vc.resolve_variant_classifications(["ClinVar:1"], reserve_calls=2)
+    )
+    assert got == {} and fake.calls == []
+    got = _with_calls_used(18, lambda: vc.resolve_variant_classifications(["ClinVar:1"]))
+    assert got == {"ClinVar:1": "Pathogenic"} and len(fake.calls) == 1
+
+
+def test_only_the_germline_block_is_read(monkeypatch) -> None:
+    """J-30b-06: a record with both blocks shows the germline word; one with
+    an oncogenicity block alone is unread."""
+    both = NcbiEfetchRecord(
+        id="1",
+        db="clinvar",
+        fields={
+            "germline_classification": {"description": "Pathogenic"},
+            "oncogenicity_classification": {"description": "Likely oncogenic"},
+        },
+    )
+    onco_only = NcbiEfetchRecord(
+        id="2",
+        db="clinvar",
+        fields={
+            "germline_classification": {"description": ""},
+            "oncogenicity_classification": {"description": "Likely oncogenic"},
+        },
+    )
+    _install(monkeypatch, _ok(both, onco_only))
+    assert _run(["ClinVar:1", "ClinVar:2"]) == {"ClinVar:1": "Pathogenic"}
+
+
+def test_a_live_clinvar_row_keeps_the_line() -> None:
+    """A-30-02: every graph variant classified, a live ClinVar row beside."""
+    graph = [_finding("ClinVar:1")]
+    live = _finding("ClinVar:900", layer="layer_2_api")
+    assert variant_classification_note([*graph, live], {"ClinVar:1"}) == (
+        VARIANT_CLASSIFICATION_NOTE
+    )
+    assert variant_classification_note(graph, {"ClinVar:1"}) is None
