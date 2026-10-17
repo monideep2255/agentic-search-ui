@@ -1083,15 +1083,15 @@ def test_the_drafts_price_bounds_what_a_dropped_draft_is_metered_at() -> None:
     assert per_draft > cost_control.estimate_call_cost_usd("synth")
 
 
-def test_the_second_draft_leaves_the_stable_prefix_byte_identical(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_the_second_draft_leaves_the_stable_prefix_byte_identical() -> None:
     """Prompt-cache discipline: the directive rides in the dynamic suffix.
 
-    The block tags' random suffix (card 125) is pinned, so the first draft's
-    user message can be compared as a prefix of the second's.
+    Card 125: each prompt draws its own random tag suffix, so the user
+    messages of two drafts are not a prefix of one another unpinned. What
+    holds, and matters for the cache, is that the system message is
+    byte-identical and the user message is the same once the per-prompt
+    suffix is masked (the correction rides after it, at the end).
     """
-    monkeypatch.setattr(findings_module, "_delimiter_suffix", lambda untrusted: "0" * 16)
     findings = [_synth_finding(index, f"disease name number {index}") for index in (1, 2, 3)]
     plain = build_synth_messages("Which diseases?", findings, "researcher")
     beside = build_synth_messages(
@@ -1100,8 +1100,13 @@ def test_the_second_draft_leaves_the_stable_prefix_byte_identical(
         "researcher",
         completeness_directive=findings_module.build_listing_gap_directive(findings[2:]),
     )
+
+    def masked(message: dict[str, str]) -> str:
+        return re.sub(r"[0-9a-f]{16}", "<SUFFIX>", message["content"])
+
     assert plain[0] == beside[0]
-    assert beside[1]["content"].startswith(plain[1]["content"])
+    assert plain[0]["content"] == findings_module.SYNTH_SYSTEM_INSTRUCTION
+    assert masked(beside[1]).startswith(masked(plain[1]))
     assert REQUIREMENT in beside[1]["content"]
     assert "previous answer" not in findings_module.build_listing_gap_directive(findings)
 
