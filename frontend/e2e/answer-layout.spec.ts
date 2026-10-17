@@ -180,7 +180,7 @@ function landedStream(mode: "plain" | "researcher"): string {
     frame("trust_signal", { outcome: "answer", risk_tier: "high", grounded: true, triangulated: null, scope: "answer" }),
     frame("done", {
       total_cost_usd: 0.02, total_tool_calls: 2, elapsed_ms: 6200, trust_outcome: "answer",
-      trust_line: "Based on 4 sources, not yet confirmed",
+      trust_line: "Based on 4 sources cited, all from MedGen",
     }),
   ].join("");
 }
@@ -234,7 +234,7 @@ for (const width of [1280, 390]) {
         await expect(page.getByRole("heading", { name: "Related clinical trials" })).toBeVisible();
         await expect(page.getByTestId("answer-notes")).toBeVisible();
         await expect(page.getByTestId("sources-disclosure")).toBeVisible();
-        await expect(page.getByTestId("trust-line")).toContainText("Based on 4 sources, not yet confirmed");
+        await expect(page.getByTestId("trust-line")).toContainText("Based on 4 sources cited, all from MedGen");
         if (mode === "plain") await expect(page.getByTestId("answer-medical-note")).toBeVisible();
         else await expect(page.getByTestId("answer-medical-note")).toHaveCount(0);
         if (width === 390) {

@@ -123,20 +123,19 @@ export function summarySentencesShown(claims: Claim[]): number {
  * which stopped being true for "Based on N sources" on 2026-09-23 (item
  * 12.8 made it count pages). It now states what each number counts.
  *
- * Card 22 fix round (J-22-08): "not yet confirmed" has two causes, and the
- * card names both. The backend floors an answer at `ask` when it may be
- * incomplete (a background search did not finish, more records were found
- * than it lists, a named item went unanswered, or the written summary fell
- * back to a list: `core/graph.py`), as well as when a high-stakes fact has
- * only one database behind it. The sentence says what the reader gets in
- * each case and blames no one.
+ * Card 8 (2026-10-16): the "Based on" lines name their databases and no
+ * longer say "not yet confirmed", so the last sentence describes them: which
+ * databases, and when values could not be compared (an answer from two or
+ * more databases with a high-stakes fact that had no second database to check
+ * it against; the backend adds the clause on exactly that).
  */
 export const TRUST_LINE_EXPLAINER =
   "Sources cited counts the record pages this answer cites, the same pages listed under " +
   "Sources; two links to one page count once. Confirmed means two or more independent " +
-  "databases agree on the same high-stakes fact. Not yet confirmed means a high-stakes fact " +
-  "has not been found in a second independent database, or this answer may be incomplete, " +
-  "for example because a search did not finish or more records were found than it lists.";
+  "databases agree on the same high-stakes fact. A Based on line names the databases the " +
+  "cited pages come from, the three most cited when there are four or more. When an answer rests " +
+  "on two or more databases and a high-stakes fact could not be checked against a second one, " +
+  "the line adds \"their values could not be compared\".";
 
 /*
  * UI fix 11.27, product owner 2026-09-14: "There is too much bold. Only the

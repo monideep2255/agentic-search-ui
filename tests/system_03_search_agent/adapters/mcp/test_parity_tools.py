@@ -70,7 +70,7 @@ _GERD_OPTIONS = [
     "Are there clinical trials on GERD treatments?",
     "What does recent research say about GERD?",
 ]
-_TRUST_LINE = "Based on 3 sources, not yet confirmed"
+_TRUST_LINE = "Based on 3 sources cited, all from ClinVar"
 
 
 # ---------------------------------------------------------------------------

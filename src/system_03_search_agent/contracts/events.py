@@ -612,7 +612,7 @@ class DonePayload(BaseModel):
     trust_outcome: TrustOutcome
 
     # UI fix set 9, item 9.9 (2026-09-13). The one plain trust line for the
-    # answer ("Based on 1 source, not yet confirmed"), built in code by
+    # answer ("Based on 1 source cited, from MedGen"), built in code by
     # `synthesis.trust.answer_trust_line` from the verdicts `trust_outcome`
     # already summarises. Additive and optional; None on a refusal. Carried
     # HERE rather than on `TrustSignalPayload` because the MCP surface
