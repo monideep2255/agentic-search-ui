@@ -665,6 +665,33 @@ What you should see:
 
 ## 4. Chromosome windows and accessions
 
+
+### 116. A gene's orthologs name their species (card 38)
+
+Queries to try:
+
+- `What are the known orthologs of TP53 in other species?`: ask it once in Plain language and once in Researcher.
+
+What you should see:
+
+- In Researcher, the table has an Organism column beside each ortholog, for example "Oryctolagus cuniculus".
+- In Plain language, each ortholog reads like "tumor protein p53 (Oryctolagus cuniculus)".
+- Never a list of rows that all read "tumor protein p53" with no species.
+- The count line reads as before (it counts every record the answer found, so it says "of 715" rather than the 591 orthologs alone).
+- Why it matters: the person asked which species carry the gene; a list of identical names answers nothing.
+
+### 117. A gene's papers in the graph are named by their titles (card 38)
+
+Queries to try:
+
+- `Which papers in the graph mention the CFTR gene, and what do they cover?`: ask it once in Plain language and once in Researcher.
+
+What you should see:
+
+- Each paper listed by its PubMed title, linked to its PubMed page, in both depths; never a bare "Article record PMID:..." or "Published paper" row, except a paper whose title PubMed gives only in square brackets, which keeps its number.
+- Titles read exactly as PubMed writes them, variant notation such as "c.3140-26A>G" included.
+- No paper is listed twice.
+- Why it matters: a paper's number tells a person nothing about what it covers; they would have to open every link to learn what the answer found.
 ### 26. A copy number variant window, before the coordinate range feature
 
 Queries to try:
@@ -2128,6 +2155,11 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 38, slice C | A gene's papers in the knowledge graph are listed by their PubMed titles, never as bare numbers | Query 117 |
+| card 105 | After picking a "How far back" window, the knowledge graph's undated papers are left out and the windowed PubMed papers lead; a line says when none were found | Query 108 |
+| card 38, slice B | A gene's orthologs name their species | Query 116 |
+| card 8 | The line under an answer names the databases it rests on, never "not yet confirmed" | Queries 1, 22 and 23 |
+| card 37, slice A1 | rs334's record is called rs334, with its gene and its clinical significance in their own columns | Query 23 |
 | card 111 | A summary never ends on a sentence that only repeats one paper title, and a features list has "and" only before its last name | Query 66 |
 | card 114 | Answers keep their written summary after a deploy, because the writer's price no longer depends on a downloaded price list | Query 1 |
 | card 30 | A list of a gene's variants says ClinVar's classification was not retrieved, and a question about which are pathogenic is never marked confirmed | Queries 22 and 115 |
