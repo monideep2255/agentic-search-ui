@@ -326,7 +326,7 @@ def _claims(*findings: SynthFinding) -> list[GroundedClaim]:
 
 def test_trust_line_single_source_not_confirmed() -> None:
     line = answer_trust_line("ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE))
-    assert line == "Based on 1 source cited, not yet confirmed"
+    assert line == "Based on 1 source cited, from MedGen"
 
 
 def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
@@ -344,7 +344,7 @@ def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
     line = answer_trust_line(
         "ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE, other, GENE)
     )
-    assert line == "Based on 3 sources cited, not yet confirmed"
+    assert line == "Based on 3 sources cited, all from MedGen"
 
 
 def _significance(ref_index: int, url: str, *, tool: str = "cypher_query") -> SynthFinding:
@@ -396,7 +396,9 @@ def test_trust_line_confirmed_only_on_concordance() -> None:
         "Confirmed by 2 independent databases"
     )
     low = [_trust("c-1", "low", "insufficient", "answer")]
-    assert answer_trust_line("answer", low, _claims(CLINVAR_A, LITVAR)) == "Based on 2 sources cited"
+    assert answer_trust_line("answer", low, _claims(CLINVAR_A, LITVAR)) == (
+        "Based on 2 sources cited from ClinVar and dbSNP"
+    )
 
 
 def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
@@ -409,7 +411,7 @@ def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
         for n in range(1, 6)
     ]
     line = answer_trust_line("answer", [], _claims(*papers))
-    assert line == "Based on 5 sources cited"
+    assert line == "Based on 5 sources cited, all from MedGen"
 
 
 def test_trust_line_counts_pages_the_source_list_shows() -> None:
@@ -432,7 +434,7 @@ def test_trust_line_counts_pages_the_source_list_shows() -> None:
     assert len({c.finding.citation_id for c in claims}) == 3, (
         "populate-check: three citation ids, or the old count could not be told apart"
     )
-    assert answer_trust_line("answer", [], claims) == "Based on 2 sources cited"
+    assert answer_trust_line("answer", [], claims) == "Based on 2 sources cited, all from MedGen"
 
 
 def test_trust_line_flag_and_refuse() -> None:
@@ -1353,3 +1355,54 @@ def test_card30_no_line_when_a_shown_record_gives_a_classification() -> None:
     ]
     assert variant_classification_note(classified) is None
     assert variant_classification_note([]) is None
+
+
+# Card 38, slice B: an ortholog gene row carries its organism.
+def _ortholog_finding(entity_type: str = "Gene"):
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    return SynthFinding(
+        citation_id="NCBIGene:100009292",
+        entity_type=entity_type,
+        field="name",
+        field_value="tumor protein p53",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/100009292",
+        curie="NCBIGene:100009292",
+        ref_index=1,
+        layer=1,
+        tool="cypher_query",
+    )
+
+
+def test_ortholog_row_shows_its_organism() -> None:
+    from system_03_search_agent.synthesis.answer_layout import (
+        plain_record_label,
+        record_status_or_year,
+    )
+
+    fields = {"name": "tumor protein p53", "organism": "Oryctolagus cuniculus"}
+    assert record_status_or_year("Gene", fields) == ("Organism", "Oryctolagus cuniculus")
+    assert (
+        plain_record_label(_ortholog_finding(), fields)
+        == "tumor protein p53 (Oryctolagus cuniculus)"
+    )
+
+
+def test_gene_rows_without_an_organism_and_other_row_types_are_unchanged() -> None:
+    from system_03_search_agent.synthesis.answer_layout import (
+        plain_record_label,
+        record_status_or_year,
+    )
+
+    plain = {"name": "tumor protein p53"}
+    assert record_status_or_year("Gene", plain) is None
+    assert plain_record_label(_ortholog_finding(), plain) == "tumor protein p53"
+    # The Layer 2 `gene` type is a different key, and a list or dict value
+    # is never rendered.
+    layer2 = {"name": "tumor protein p53", "organism": "Homo sapiens"}
+    assert record_status_or_year("gene", layer2) is None
+    assert plain_record_label(_ortholog_finding("gene"), layer2) == "tumor protein p53"
+    for odd in (["Mus musculus"], {"a": "b"}, 7, ""):
+        odd_fields = {"name": "tumor protein p53", "organism": odd}
+        assert record_status_or_year("Gene", odd_fields) is None
+        assert plain_record_label(_ortholog_finding(), odd_fields) == "tumor protein p53"
