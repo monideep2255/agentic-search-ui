@@ -752,6 +752,172 @@ async def test_a_picked_window_reaches_a_gene_question_s_pubmed_search(
     assert plan is not None and "published in the last 5 years only" in plan["narrative"], plan
 
 
+def _install_gene_papers(monkeypatch: pytest.MonkeyPatch, *, pubmed_ids: list[str] | None = None) -> None:
+    """Card 105: BRCA1's graph call returns two undated Article rows (the
+    1999 papers) and the Gene row; the windowed PubMed search finds one
+    paper from 2024 and the abstracts fetch returns it with its title."""
+    from system_03_search_agent.tools.clinicaltrials_search_schemas import (
+        ClinicalTrialsSearchOutput,
+    )
+    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchRecord
+
+    found_ids = ["38000001"] if pubmed_ids is None else pubmed_ids
+    from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnotateOutput
+
+    def _article(pmid: str) -> CypherQueryRow:
+        return CypherQueryRow(
+            node_or_edge_type="Article",
+            curie=f"PMID:{pmid}",
+            fields={"name": "A 1999 title"},
+            source_url=f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
+            graph_snapshot_version="v1",
+        )
+
+    async def _cypher(harness: object, cypher_input: object, **kwargs: object) -> CypherQueryOutput:
+        if kwargs.get("template") is not None:
+            # The code-chosen GO context call: no papers in its answer.
+            return CypherQueryOutput(
+                status="empty", row_count=0, total_available=0, truncated=False, rows=[]
+            )
+        rows = [
+            _article("10026184"),
+            _article("10417300"),
+            CypherQueryRow(
+                node_or_edge_type="Gene",
+                curie="NCBIGene:672",
+                fields={"name": "BRCA1 DNA repair associated"},
+                source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+                graph_snapshot_version="v1",
+            ),
+        ]
+        return CypherQueryOutput(
+            status="ok", row_count=3, total_available=3487, truncated=True, rows=rows
+        )
+
+    async def _efetch(tool_input: Any, **kwargs: object) -> NcbiEfetchOutput:
+        dumped = tool_input.model_dump()
+        action = dumped.get("action", "search")
+        if action == "search" and dumped.get("db") == "pubmed" and found_ids:
+            return NcbiEfetchOutput(
+                status="ok",
+                action="search",
+                records=[
+                    NcbiEfetchRecord(
+                        db="pubmed", fields={"idlist": found_ids, "idlist_count": len(found_ids)}
+                    )
+                ],
+                record_count=1,
+                total_available=len(found_ids),
+                truncated=False,
+            )
+        if action == "fetch" and dumped.get("db") == "pubmed":
+            return NcbiEfetchOutput(
+                status="ok",
+                action="fetch",
+                records=[
+                    NcbiEfetchRecord(
+                        id="38000001",
+                        db="pubmed",
+                        fields={"title": "BRCA1 and a recent finding", "abstract": "BRCA1 repairs DNA."},
+                        source_url="https://pubmed.ncbi.nlm.nih.gov/38000001/",
+                    )
+                ],
+                record_count=1,
+                total_available=1,
+                truncated=False,
+            )
+        return NcbiEfetchOutput(
+            status="empty", action=action, records=[], record_count=0,
+            total_available=None, truncated=False, error=None,
+        )
+
+    async def _pubtator(tool_input: Any, **kwargs: object) -> PubtatorAnnotateOutput:
+        return PubtatorAnnotateOutput(status="empty", mode="entity_lookup")
+
+    async def _trials(tool_input: Any, **kwargs: object) -> ClinicalTrialsSearchOutput:
+        return ClinicalTrialsSearchOutput(status="empty")
+
+    monkeypatch.setattr(graph_module, "cypher_query", _cypher)
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _efetch)
+    monkeypatch.setattr(graph_module, "pubtator_annotate", _pubtator)
+    monkeypatch.setattr(graph_module, "clinicaltrials_search", _trials)
+
+
+def _cited_and_written(events: list[Any]) -> str:
+    """Every citation payload and every token of the answer, as one string."""
+    parts = [json.dumps(event.payload, default=str) for event in events if event.type in ("citation", "token")]
+    return "\n".join(parts)
+
+
+async def _ask_brca1(
+    monkeypatch: pytest.MonkeyPatch, *, pick_window: bool, pubmed_ids: list[str] | None = None
+) -> list[Any]:
+    _install_tools(monkeypatch)
+    _spy_searches(monkeypatch)
+    _install_gene_papers(monkeypatch, pubmed_ids=pubmed_ids)
+    _install_models(monkeypatch, clarify_reply=None)
+    _install_decide(monkeypatch, {"think.recent_years": "recent_unbounded"})
+    asked = await _run("recent papers on BRCA1")
+    if not pick_window:
+        # The same words typed again with no click: an unpicked question.
+        clarify.clear_offered_windows()
+        _install_decide(monkeypatch)
+        return await _run("recent papers on BRCA1 from the last 5 years?")
+    options = _payload(asked, "think")["clarifying_options"]  # type: ignore[index]
+    _install_decide(monkeypatch)
+    return await _run(options[1])
+
+
+@pytest.mark.asyncio
+async def test_a_picked_window_leaves_the_graph_s_undated_papers_out(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 105: the 1999 papers the graph links to BRCA1 carry no date, so a
+    picked window shows the windowed PubMed paper instead, and the count
+    line counts it."""
+    events = await _ask_brca1(monkeypatch, pick_window=True)
+
+    text = _cited_and_written(events)
+    assert "10026184" not in text and "10417300" not in text, text
+    assert "38000001" in text, text
+    assert "Found 2 article records" not in text and "of 3487" not in text, text
+    assert "Found 1 pubmed record" in text, text
+    done = _payload(events, "done")
+    assert done is not None and done["trust_outcome"] != "refuse", done
+
+
+@pytest.mark.asyncio
+async def test_a_picked_window_with_no_papers_in_it_lists_no_older_papers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 105: the window's PubMed search finds nothing. The graph's undated
+    papers stay out, so no paper from outside the window is listed and the
+    answer still ships on the gene record. (Today the answer does not also
+    say that no paper in the window was found; the plan line is the only
+    place the window shows. That note is a separate card.)"""
+    events = await _ask_brca1(monkeypatch, pick_window=True, pubmed_ids=[])
+
+    text = _cited_and_written(events)
+    assert "10026184" not in text and "10417300" not in text, text
+    assert "NCBIGene:672" in text
+    done = _payload(events, "done")
+    assert done is not None and done["trust_outcome"] == "answer", done
+
+
+@pytest.mark.asyncio
+async def test_an_unpicked_window_keeps_the_graph_s_papers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The control: the same words typed, with no click on an offer, run the
+    code they always did, so the graph's papers are still cited."""
+    events = await _ask_brca1(monkeypatch, pick_window=False)
+
+    text = _cited_and_written(events)
+    assert "10026184" in text, text
+    done = _payload(events, "done")
+    assert done is not None and done["trust_outcome"] != "refuse", done
+
+
 @pytest.mark.asyncio
 async def test_a_choice_s_words_typed_with_no_offer_limit_nothing(
     monkeypatch: pytest.MonkeyPatch,

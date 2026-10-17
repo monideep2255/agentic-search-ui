@@ -4710,6 +4710,12 @@ class _PlannedToolCall:
     #: rather than the answer to the question's own shape. `_answer_call_ids`
     #: skips it, so its rows are never numbered as answer findings.
     context_only: bool = False
+    #: Card 105: True only on the gene path's own graph call when the person
+    #: picked a "How far back" window. The graph's Article rows carry no
+    #: publication date, so Act leaves them out and the windowed PubMed
+    #: papers answer instead. False everywhere else, so a question with no
+    #: picked window runs the code it always did.
+    undated_papers_left_out: bool = False
 
 
 @dataclass(frozen=True)
@@ -7200,6 +7206,10 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             tool_calls=[p.tool_call for p in planned_tool_calls],
         )
     else:
+        if publication_window is not None:
+            # Card 105: the graph's paper links carry no date, so a picked
+            # window leaves them out and the windowed PubMed papers lead.
+            planned = dataclasses.replace(planned, undated_papers_left_out=True)
         planned_tool_calls = [planned]
         narrative = "selected cypher_query for a Layer 1 graph lookup"
 
@@ -7564,6 +7574,32 @@ def _split_rows_by_trust(
         else:
             trusted.append(row)
     return trusted, untrusted
+
+
+def _without_article_rows(output: CypherQueryOutput) -> CypherQueryOutput:
+    """Card 105: `output` with every Article row removed, for a question whose
+    person picked a "How far back" window.
+
+    An Article vertex has no publication date, so the graph cannot say which
+    of its papers fall inside the window; showing them would list papers from
+    outside it. Counts are recomputed from the rows kept, so `row_count` and
+    `total_available` agree (F-2.1-C07) and a truncation note never quotes
+    the graph's full paper count. A result that held only Article rows
+    becomes `empty`, not `ok` with no rows. Other rows are untouched.
+    """
+    kept = [row for row in output.rows if row.node_or_edge_type != "Article"]
+    if len(kept) == len(output.rows):
+        return output
+    status = output.status if kept or output.status != "ok" else "empty"
+    return output.model_copy(
+        update={
+            "rows": kept,
+            "row_count": len(kept),
+            "total_available": len(kept),
+            "truncated": False,
+            "status": status,
+        }
+    )
 
 
 def _untrusted_rows_free_text(rows: list[CypherQueryRow]) -> str:
@@ -8566,6 +8602,8 @@ async def _execute_planned_call(
     # rows' own free-text content is separately quarantined into a second,
     # reader-bound tool_call/result pair, so that content still never
     # reaches structured_fields or a citation's claim_text unmediated.
+    if getattr(planned, "undated_papers_left_out", False):
+        output = _without_article_rows(output)
     _, untrusted_rows = _split_rows_by_trust(output.rows)
     pairs: list[tuple[ToolCall, ToolExecutionResult]] = [
         (
@@ -12687,6 +12725,15 @@ def _answer_call_ids(planned_tool_calls: list[Any], question: str) -> frozenset[
         ) or (call.tool == "clinicaltrials_search" and asks_for_trials)
         if answers:
             ids.add(call.call_id)
+    # Card 105: when the graph's undated papers were left out for a picked
+    # window, the windowed PubMed papers are the answer, so their abstracts
+    # call answers too and its records lead the page and the count line.
+    if any(getattr(planned, "undated_papers_left_out", False) for planned in planned_tool_calls):
+        for planned in planned_tool_calls:
+            if getattr(planned, "purpose", "") == _PUBMED_ABSTRACTS_PURPOSE and (
+                getattr(planned, "source_purpose", "") == "pubmed_search"
+            ):
+                ids.add(planned.tool_call.call_id)
     return frozenset(ids)
 
 
