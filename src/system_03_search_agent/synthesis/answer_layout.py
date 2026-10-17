@@ -586,6 +586,11 @@ _YEAR = re.compile(r"(?<!\d)(1[89]\d{2}|20\d{2})(?!\d)")
 #: naming the row by its rs id never hides them. No other type matches.
 _ROW_TYPE_COLUMNS: dict[tuple[str, str], str] = {
     ("Variant record", "clinical_significance"): "Clinical significance",
+    # dbSNP's tool withholds a significance list with an over long term or
+    # more than ten, so the row's one cited fact is then the consequence
+    # (V-37-01). Read only when the significance is absent: the loop returns
+    # the first match in this order.
+    ("Variant record", "functional_consequence"): "Consequence",
 }
 
 #: Card 37, slice A1: the row field that names a record of this exact type.
@@ -599,6 +604,34 @@ _ROW_TYPE_LABEL_FIELDS: dict[str, str] = {
 _ROW_TYPE_PLAIN_SUFFIXES: dict[tuple[str, str], str] = {
     ("Variant record", "genes"): "Genetic variant",
 }
+
+#: Card 37, slice A1 fix round (V-37-02): after the gene, the plain-language
+#: label keeps dbSNP's own values verbatim, the first field present winning:
+#: "Genetic variant (HBB), clinical significance: pathogenic".
+_ROW_TYPE_PLAIN_DETAILS: dict[str, tuple[tuple[str, str], ...]] = {
+    "Variant record": (
+        ("clinical_significance", "clinical significance"),
+        ("functional_consequence", "consequence"),
+    ),
+}
+
+
+def _clip_terms(value: str, limit: int) -> str:
+    """`value`, a ", " separated list of terms, cut at a term boundary.
+
+    Never mid-term: whole terms are kept while they fit, and an ellipsis
+    says the list continues (V-37-03). The first term alone is kept even if
+    it is over the limit, since a term is one of dbSNP's own words.
+    """
+    text = value.strip()
+    if len(text) <= limit:
+        return text
+    kept: list[str] = []
+    for term in text.split(", "):
+        if len(", ".join([*kept, term])) + 1 > limit and kept:
+            break
+        kept.append(term)
+    return ", ".join(kept) + "\u2026"
 
 
 def _row_type_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> str | None:
@@ -631,7 +664,7 @@ def record_status_or_year(
     for (row_type, key), column in _ROW_TYPE_COLUMNS.items():
         value = row_fields.get(key)
         if row_type == entity_type and isinstance(value, str) and value.strip():
-            return (column, value.strip()[:MAX_IDENTIFIER_CHARS])
+            return (column, _clip_terms(value, MAX_LABEL_CHARS))
     for key in _STATUS_FIELDS:
         value = row_fields.get(key)
         if key != mapped and isinstance(value, str) and value.strip():
@@ -894,11 +927,17 @@ def plain_record_label(
         # The label is the record's own code (an rs id), so a reader sees its
         # everyday noun and, where the row gives one, its gene.
         noun = plain_noun(finding.entity_type)
+        head = noun[:1].upper() + noun[1:]
         for (row_type, key), base in _ROW_TYPE_PLAIN_SUFFIXES.items():
-            suffix = (row_fields or {}).get(key)
-            if row_type == finding.entity_type and isinstance(suffix, str) and suffix.strip():
-                return f"{base} ({suffix.strip()[:100]})"
-        return noun[:1].upper() + noun[1:]
+            gene = (row_fields or {}).get(key)
+            if row_type == finding.entity_type and isinstance(gene, str) and gene.strip():
+                head = f"{base} ({gene.strip()[:100]})"
+        for key, phrase in _ROW_TYPE_PLAIN_DETAILS.get(finding.entity_type, ()):
+            value = (row_fields or {}).get(key)
+            if isinstance(value, str) and value.strip():
+                prefix = f"{head}, {phrase}: "
+                return prefix + _clip_terms(value, MAX_LABEL_CHARS - len(prefix))
+        return head
     codes = {
         code
         for code in (

@@ -46,19 +46,45 @@ SIGNIFICANCE = "not-provided, protective, likely-benign, pathogenic, other"
 RS334_URL = "https://www.ncbi.nlm.nih.gov/snp/rs334"
 
 
+def _real_row(
+    rsid: str = "rs334",
+    *,
+    significance: list[str] | None = None,
+    consequence: list[str] | None = None,
+    genes: list[str] | None = None,
+) -> dict:
+    """The dbSNP pseudo-row as the REAL builder in `core.graph` shapes it
+    (V-37-04), so a reorder of that builder turns the guard arm red."""
+    from system_03_search_agent.tools.ncbi_dbsnp_schemas import NcbiDbsnpGene, NcbiDbsnpOutput
+
+    output = NcbiDbsnpOutput(
+        status="ok",
+        rsid=rsid,
+        spdi_canonical="NC_000011.10:5227001:T:A",
+        chrpos="11:5227002",
+        clinical_significance=significance or [],
+        functional_consequence=consequence or [],
+        genes=[NcbiDbsnpGene(name=g) for g in (genes or [])],
+        source_url=f"https://www.ncbi.nlm.nih.gov/snp/{rsid}",
+    )
+    shaped = graph_module._layer_tool_output_to_structured_fields("ncbi_dbsnp", output)
+    assert shaped["rows"], "populate-check: the real builder returned no row"
+    return shaped["rows"][0]
+
+
 def _rs334_row() -> dict:
-    """The dbSNP pseudo-row for rs334, shaped by the real builder (phase 8.9
-    probe 3): significance first, then consequence, rs id, genes, position."""
-    return graph_module._pseudo_row(
-        "Variant record",
-        {
-            "clinical_significance": SIGNIFICANCE,
-            "functional_consequence": "missense variant",
-            "rsid": "rs334",
-            "genes": "HBB",
-            "chrpos": "11:5227002",
-        },
-        RS334_URL,
+    return _real_row(
+        significance=SIGNIFICANCE.split(", "),
+        consequence=["missense variant"],
+        genes=["HBB"],
+    )
+
+
+def _rs6025_row() -> dict:
+    """dbSNP's tool withholds a significance list that is over long, so the
+    row's first field is the functional consequence (V-37-01)."""
+    return _real_row(
+        "rs6025", consequence=["coding_sequence_variant", "missense_variant"], genes=["F5"]
     )
 
 
@@ -110,6 +136,7 @@ def test_the_writers_input_and_the_trust_verdict_do_not_move() -> None:
         "genes",
         "chrpos",
     ], list(row["fields"])
+    assert _synth(_rs6025_row()).field == "functional_consequence"
 
 
 # ---------------------------------------------------------------- the label
@@ -153,9 +180,10 @@ def test_a_variant_record_without_a_gene_has_no_gene_cell() -> None:
 def test_the_plain_language_label_names_the_gene() -> None:
     finding = _synth(_rs334_row())
     fields = _rs334_row()["fields"]
-    assert plain_record_label(finding, fields, "rs334") == "Genetic variant (HBB)"
+    expected = f"Genetic variant (HBB), clinical significance: {SIGNIFICANCE}"
+    assert plain_record_label(finding, fields, "rs334") == expected
     # Without an identifier passed in, the rs id still never shows.
-    assert plain_record_label(finding, fields) == "Genetic variant (HBB)"
+    assert plain_record_label(finding, fields) == expected
 
 
 def test_the_plain_language_label_without_a_gene_is_the_everyday_noun() -> None:
@@ -163,7 +191,11 @@ def test_the_plain_language_label_without_a_gene_is_the_everyday_noun() -> None:
         "Variant record", {"clinical_significance": SIGNIFICANCE, "rsid": "rs334"}, RS334_URL
     )
     finding = _synth(row)
-    assert plain_record_label(finding, row["fields"], "rs334") == "Genetic variant"
+    assert plain_record_label(finding, row["fields"], "rs334") == (
+        f"Genetic variant, clinical significance: {SIGNIFICANCE}"
+    )
+    bare = _real_row("rs1")
+    assert plain_record_label(_synth(bare), bare["fields"], "rs1") == "Genetic variant"
 
 
 # ------------------------------------------------- no other type moves
@@ -319,5 +351,84 @@ async def test_opening_sentence_is_pinned_as_it_reads_now(monkeypatch) -> None:
 async def test_plain_language_page_reads_genetic_variant_hbb(monkeypatch) -> None:
     tokens, _ = await _page(monkeypatch, "plain_language")
     items = [t["cells"] for t in tokens if t["kind"] == "list_item"]
-    assert items == [["Genetic variant (HBB)"]], items
+    assert items == [[f"Genetic variant (HBB), clinical significance: {SIGNIFICANCE}"]], items
     assert not any(t["kind"] in ("table_header", "table_row") for t in tokens)
+
+
+# ------------------------------------------------- fix round (verifier A1)
+
+
+def test_v37_01_a_withheld_significance_shows_the_consequence_in_its_own_column() -> None:
+    row = _rs6025_row()
+    finding = _synth(row)
+    fields = row["fields"]
+    assert "clinical_significance" not in fields
+    assert record_label(finding, fields) == "rs6025"
+    assert table_second_cell("Variant record", fields) == "F5"
+    assert record_status_or_year("Variant record", fields) == (
+        "Consequence",
+        "coding_sequence_variant, missense_variant",
+    )
+    assert plain_record_label(finding, fields, "rs6025") == (
+        "Genetic variant (F5), consequence: coding_sequence_variant, missense_variant"
+    )
+
+
+def test_v37_01_significance_wins_over_the_consequence_when_both_exist() -> None:
+    fields = _rs334_row()["fields"]
+    assert record_status_or_year("Variant record", fields)[0] == "Clinical significance"
+
+
+@pytest.mark.asyncio
+async def test_v37_01_researcher_page_for_a_withheld_significance_keeps_the_consequence(
+    monkeypatch,
+) -> None:
+    prompts: list[str] = []
+    _install(monkeypatch, prompts)
+    state = _state("researcher")
+    state["findings"] = [_finding_for(_rs6025_row())]
+    result = await graph_module.write_node(state)
+    tokens = in_reading_order([e.payload for e in result["events"] if e.type == "token"])
+    headers = [t["cells"] for t in tokens if t["kind"] == "table_header"]
+    rows = [t["cells"] for t in tokens if t["kind"] == "table_row"]
+    assert headers == [["Variant", "Identifier", "Gene", "Consequence"]], headers
+    assert rows == [["rs6025", "rs6025", "F5", "coding_sequence_variant, missense_variant"]], rows
+
+
+def _long_terms(count: int) -> str:
+    return ", ".join(f"established-risk-allele-{n:02d}-term" for n in range(count))
+
+
+def test_v37_03_a_long_list_is_cut_between_terms_never_inside_one() -> None:
+    value = _long_terms(30)
+    assert len(value) > 500
+    column = record_status_or_year("Variant record", {"clinical_significance": value})[1]
+    assert len(column) <= 500
+    assert column.endswith("\u2026")
+    kept = column[:-1].split(", ")
+    assert kept == value.split(", ")[: len(kept)]
+    assert len(kept) < 30
+    row = {"clinical_significance": value, "genes": "HBB", "rsid": "rs1"}
+    finding = _synth(graph_module._pseudo_row("Variant record", row, RS334_URL))
+    plain = plain_record_label(finding, row, "rs1")
+    assert len(plain) <= 500
+    assert plain.startswith("Genetic variant (HBB), clinical significance: ")
+    assert set(plain[:-1].split(": ", 1)[1].split(", ")) <= set(value.split(", "))
+
+
+def test_v37_03_a_list_that_fits_is_unchanged() -> None:
+    assert record_status_or_year("Variant record", {"clinical_significance": SIGNIFICANCE}) == (
+        "Clinical significance",
+        SIGNIFICANCE,
+    )
+
+
+def test_v37_05_a_url_in_the_rs_id_field_is_never_the_label() -> None:
+    row = graph_module._pseudo_row(
+        "Variant record",
+        {"clinical_significance": "benign", "rsid": "https://example.org/rs1"},
+        RS334_URL,
+    )
+    finding = _synth(row)
+    assert record_label(finding, row["fields"]) != "https://example.org/rs1"
+    assert record_label(finding, row["fields"]) == "benign"
