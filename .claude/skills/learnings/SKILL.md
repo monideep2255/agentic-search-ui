@@ -51,16 +51,17 @@ Append the row at the end of `LEARNINGS.md`, which is the end of the Lessons tab
 
 The last two cells (`What was tried` and `What fixed it`) are each wrapped in a `<details>` dropdown, and every existing row follows that shape. The first three cells stay visible so the table scans for "have we hit this before"; the rest opens on demand. Match the shape when appending, or the table stops scanning.
 
-After appending, run `python tracker/check_doc_drift.py --check`. It fails on four things:
+After appending, run `python tracker/check_doc_drift.py --check`. It fails on five things:
 
 - A row that is missing a wrapper.
 - A row whose column count is wrong.
 - A blank line inside the table, which ends the table when rendered and turns every row below it into loose text. That happened on 2026-08-14 and hid 273 of 311 rows while every source-level check still passed, so this is a gate rather than a suggestion.
 - A dated row outside the Lessons table, which is what appending anywhere but the end of the file produces. 140 rows had landed that way before the table was gathered on 2026-10-17.
+- Text after the table's last row: the table is the last thing in the file, so an append always lands in it.
 
 Applies to: the tool, layer, build phase, or subsystem, so a future reader can filter. Tag generously; a missed tag is a missed recall.
 
-When the table cell is too small for the fix: add a detailed section below the table, under a heading matching the date and topic. The table row stays as the index pointing to it.
+When the table cell is too small for the fix: add a detailed section under "Entry detail", which sits above the Lessons table, under a heading matching the date and topic, and end the row with "Full account in Entry detail." The table row stays as the index pointing to it. Never add text after the table: it is the last thing in the file.
 
 Two things every entry needs, and the second is the one people skip:
 

@@ -21,7 +21,7 @@ It is one of four separate security tools in the LLM CLI tooling. Keep them stra
 | /security-review | Single pass on your branch, when you ask | No, built in |
 | security-guidance plugin | In session, reviews as code is written and on commit | Yes, sibling plugin |
 | claude-security plugin | On demand, deep multi-agent scan | Yes, this one |
-| Code Review | At pull request time | Team or Enterprise plans only |
+| Code Review | At pull request time | Some paid plans only |
 
 ## How to run a scan
 
