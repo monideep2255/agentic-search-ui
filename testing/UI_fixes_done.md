@@ -257,13 +257,13 @@ What the Waiting on column means:
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-10-17, AT THE END OF THE DAY SESSION OF 2026-10-17. THE ONE THING TO KNOW:
+LAST UPDATED 2026-10-18, AT THE END OF THE POSTER RELEASE DAY. THE ONE THING TO KNOW:
 
-- One change merged today: card 125 (#271), no paper's title or abstract can pose as the answer writer's instructions and records read exactly as PubMed writes them, after two closed attempts. It was checked on deployed develop at 1280 and 390 and waits for your retest, row 1 of `testing/Retest_product_owner.md`, above the night's six
-- Two cards were built and closed by their reviewers, never pushed: card 126 (a "Sources disagree" line that fired where nothing disagreed) and card 56's first slice (a single NCBI fit trusted for an acronym, "HEV" read as a pig virus). Both are back in To do as "Design with you first", card 56 with a written design and nine of your calls (`testing/Developer/reports/2026-10-17_card56/design.md`)
-- Your calls on card 8 (V-8-04 kept, V-8-06 became card 126) and card 38 slice C (every title path protected, which became card 125) are answered
-- Three new cards: 126, 127 (a remembered organism never reaches its sequencing records) and 128 (a CFTR answer with no summary and no note)
-- Nothing is parked: no branch, tag or worktree other than develop. Live spend today about $1.6, inside the $5 and $2 you set
+- Production is on `v0.3.0` (merge `59aba7d8`), released for the innovation day poster after your four release calls; no card was built today, by your freeze of 2026-10-17
+- Before the release the lead drove all 61 retest rows by hand in a browser on develop: 48 work, 7 partly, 6 cannot be triggered, none fail (`testing/Developer/reports/2026-10-18_browser_retest/report.md`)
+- After it, production answered the retest questions as develop does, and the poster's demo questions five runs each (the report's "Production check")
+- New cards 129 to 145, the findings of that run and of the production check
+- Nothing is parked: no branch, tag or worktree other than `develop`, `production` and the release tags
 
 `HANDOFF.md` says what to do next.
 
@@ -271,9 +271,9 @@ What is live on develop:
 
 - Every card in `testing/Retest_product_owner.md`, newest first. Each is one row in "Done features at a glance", with its query number.
 - Card 98 (an empty guard reply asks the person to try again) is live with no query to type.
-- Develop's API carries `CLASSIFIER_PROVIDER=jev`, `SYSTEM_DAILY_CAP_USD=25`, `PER_QUERY_COST_CAP_USD=0.25` (set 2026-10-09 with the owner's yes) and its own `SYNTH_MODEL`, so a code default does not change develop's writer. Both Railway services redeploy on every push to `develop`.
+- Develop's API carries `CLASSIFIER_PROVIDER=jev`, `SYSTEM_DAILY_CAP_USD=25`, `PER_QUERY_COST_CAP_USD=0.25` (set 2026-10-09 with the owner's yes) and its own `SYNTH_MODEL`, so a code default does not change develop's writer.
 - What each numbered phase delivered and what stays open: its ledger, `tracker/phase_N.M.md`; phase 8.7's is `tracker/phase_8.7.md`.
-- Production is unchanged on `v0.2.0`. The release job tags `production` and never pushes to it, and only the owner changes `develop` and `production`.
+- Production runs the same code as develop since 2026-10-18, with develop's settings; its crowd limits are raised to 1000 guest runs and $25 a day until after the event (`DECISIONS.md`, 2026-10-18). The release job tags `production` and never pushes to it, and only the owner changes `develop` and `production`.
 
 What awaits the product owner is under "What is waiting on the product owner" below.
 
@@ -301,7 +301,8 @@ This section is also the shared plan.
 
 ### What is waiting on the product owner
 
-- `testing/Retest_product_owner.md`, newest first, the night's rows on top; each names its queries in `testing/Test_queries_and_workflows.md`.
+- `testing/Retest_product_owner.md`, newest first; each names its queries in `testing/Test_queries_and_workflows.md`, and the lead's browser verdict on every row is in `testing/Developer/reports/2026-10-18_browser_retest/report.md`.
+- After the poster event: production's crowd limits back to 200 guest runs and $10 a day, and the order of cards 129 to 145.
 - Card 72 evidence: two of slice B's product check runs stopped at the safety check; develop's log shows the guard model's classify call timing out twice each, provider "unknown". Card 84's row asks you to read a week of such lines on 23 October.
 - Designs with you: card 56's next slice (its design and the first slice's reviews are in `testing/Developer/reports/2026-10-17_card56/`), card 126 (how records count as the same fact), and cards 18 and 37 slice A2.
 - Cards 84 and 72, step 3b: on 23 October, a week of `event loop lag` lines decides whether the gatekeeper's freeze fix is worth building (`testing/Developer/reports/2026-10-15_card84_72/design.md`).
@@ -436,7 +437,7 @@ board on 2026-09-24.
 
 ### Next, in order
 
-- Rewritten 2026-10-17, at the checkpoint closing the day session of 2026-10-17, in the order of the board's To do column, top to bottom, one line per card: its Next move, then its status cell.
+- Rewritten 2026-10-18, at the checkpoint closing the poster release day, in the order of the board's To do column, top to bottom, one line per card: its Next move, then its status cell.
 - The board is the order; this list gives each card's state or a pointer to its detail.
 - `testing/Board_plan.md` holds the dependencies and the waves, and the order work is built in.
 
@@ -482,18 +483,35 @@ board on 2026-09-24.
 40. Card 126 (Design with you first): Built 2026-10-17 and closed by your call the same day, never pushed: the line fired on answers where nothing disagrees, because the check that compares records matches any record with the same field, not the same variant and not only cited records (A-126-01, A-126-02, J-126-02). The next build fixes that comparison first (same variant, cited records only; A-126-03, 04, 14), then the line (A-126-06, 07, 12, J-126-01). Diff kept: `closed_branch.patch`
 41. Card 127 (Team: buildable now): Nobody on it; filed 2026-10-17, built after card 56 merges
 42. Card 128 (Team: buildable now): Nobody on it; filed 2026-10-17, needs a diagnosis first
-43. Card 11.11 (Yours: your architecture work): Tenth in "Next, in order". It was listed as in progress until 2026-09-24 with nobody on it, so it moved out of section 1. 12.9 and 12.10 answered part of its ask. The answer-writing model is unchanged: switching models is a separate decision
-44. Card 11.29 (Yours: your architecture work): Reclassified 2026-09-22 by the product owner: a discussion that precedes a build under `/bossman-mode`, not a question waiting on them. Raised 2026-09-20. Full detail: [11.29](UI_fix_plan.md#detail-1129)
-45. Card 11.32 (Yours: your architecture work): Reclassified 2026-09-22 by the product owner: scoped in a discussion first, then built under `/bossman-mode`, still against the locked Section 6 tool list. Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](UI_fix_plan.md#detail-1132)
-46. Card 11.38 (Yours: your architecture work): Raised 2026-09-22 by the product owner, who named the guardrail and the resource choice. BACKLOG ONLY, nothing designed and nothing promised. IDENTIFIED 2026-09-23 from the two links the product owner gave: it is `typesafe/jev-1.13` from TypeSafe, and it fits two of the three places they named and not the third. CORRECTION, because the assistant said the opposite hours earlier: it is NOT a harness config change, because it answers on its own `POST /api/alpha/decisions` endpoint rather than chat completions, so a trial needs a new client path. Full detail: [11.38](UI_fix_plan.md#detail-1138)
+43. Card 129 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+44. Card 130 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+45. Card 131 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+46. Card 132 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+47. Card 133 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+48. Card 134 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+49. Card 135 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+50. Card 136 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+51. Card 137 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+52. Card 138 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+53. Card 139 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+54. Card 140 (Design with you first): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+55. Card 141 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+56. Card 142 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+57. Card 143 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+58. Card 144 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+59. Card 145 (Team: buildable now): Nobody on it; filed 2026-10-18 from the production check, after the poster
+60. Card 11.11 (Yours: your architecture work): Tenth in "Next, in order". It was listed as in progress until 2026-09-24 with nobody on it, so it moved out of section 1. 12.9 and 12.10 answered part of its ask. The answer-writing model is unchanged: switching models is a separate decision
+61. Card 11.29 (Yours: your architecture work): Reclassified 2026-09-22 by the product owner: a discussion that precedes a build under `/bossman-mode`, not a question waiting on them. Raised 2026-09-20. Full detail: [11.29](UI_fix_plan.md#detail-1129)
+62. Card 11.32 (Yours: your architecture work): Reclassified 2026-09-22 by the product owner: scoped in a discussion first, then built under `/bossman-mode`, still against the locked Section 6 tool list. Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](UI_fix_plan.md#detail-1132)
+63. Card 11.38 (Yours: your architecture work): Raised 2026-09-22 by the product owner, who named the guardrail and the resource choice. BACKLOG ONLY, nothing designed and nothing promised. IDENTIFIED 2026-09-23 from the two links the product owner gave: it is `typesafe/jev-1.13` from TypeSafe, and it fits two of the three places they named and not the third. CORRECTION, because the assistant said the opposite hours earlier: it is NOT a harness config change, because it answers on its own `POST /api/alpha/decisions` endpoint rather than chat completions, so a trial needs a new client path. Full detail: [11.38](UI_fix_plan.md#detail-1138)
 
 ### How to start the next session
 
 1. Read `HANDOFF.md`, "The one next action" (the lead rewrites it at each checkpoint, so read the current one), then "Where we stopped" above, then the session tables under "Session history" below, newest first.
-2. Run `git status` and `git worktree list`. Local carries only `develop`; GitHub carries only `develop` and `production` (`git ls-remote --heads origin`). Anything else is new since 2026-10-17 and `HANDOFF.md` names it.
+2. Run `git status` and `git worktree list`. Local carries only `develop`; GitHub carries only `develop` and `production` (`git ls-remote --heads origin`). Anything else is new since 2026-10-18 and `HANDOFF.md` names it.
 3. Read "What is parked, and why" before picking anything up. OMIM is live WITH its title filter; the two ship together and neither is re-enabled or removed without the other.
 4. Retests: `testing/Retest_product_owner.md`.
-   - Its newest row is card 125, merged on 2026-10-17; below it the overnight of 2026-10-16 to 17: cards 38 (slices C and B), 105, 8, 37 (slice A1) and 30 (step 1), then 24, 118, 75, 94's timeout fix, 17 and 115, then 114, 35 and 111, and the older rows below them.
+   - Every row was driven by hand in a browser on 2026-10-18, verdicts in `testing/Developer/reports/2026-10-18_browser_retest/report.md`. Its newest row is card 125, merged on 2026-10-17; below it the overnight of 2026-10-16 to 17: cards 38 (slices C and B), 105, 8, 37 (slice A1) and 30 (step 1), then 24, 118, 75, 94's timeout fix, 17 and 115, then 114, 35 and 111, and the older rows below them.
    - Each names its queries in `testing/Test_queries_and_workflows.md`.
 5. Then take the next card from the board's To do column, as `HANDOFF.md` says.
    - Test queries sign in with throwaway accounts made on develop only with the owner's yes, their details kept in the scratchpad and never committed; the golden run is an alarm, run only when the owner asks (2026-10-08).
@@ -555,6 +573,15 @@ Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-
 | 12.17 | A good question sometimes fails at the think step and shows a refusal | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it | Seen twice in about forty live runs over 2026-09-23 and 2026-09-24: `Does coffee help make exercise more effective?` and `is there a trial recruiting for melanoma`, both at researcher depth, each failing with "the plan tier's response did not match the think classification schema". Neither question reaches 12.3's ask-back, which only reads one to three words, so tonight's work did not cause it. The reader sees a refusal for a question the product answers on every other run. Evidence: `testing/Developer/reports/2026-09-24_no_hardcoding/live_runs/` |
 
 ## Session history
+
+### 2026-10-18, poster release day, in one table
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| Release v0.3.0 (#275) | Develop's tip released to production after your four calls: release as it stands, settings made consistent with develop's by name only, crowd limits 1000 runs and $25, the four migrations. Merged with admin rights by your call, deployed by hand from source because the merge triggered no deploy; tag, GitHub Release and changelog back-merge #277 done | Live on production |
+| All 61 retest rows | Driven by hand in a browser on develop, recorded: 48 work, 7 partly, 6 cannot be triggered, none fail; signed-in and command line rows after your sign-ins | In `testing/Developer/reports/2026-10-18_browser_retest/report.md`; your verdicts close the rows |
+| Production check | Today's questions asked of develop and production side by side, and the demo questions five runs each and in the browser at 1280 and 390: production behaves as develop does | Done; in the report |
+| Cards 129 to 145 | The findings no retest row covers, from the breast cancer gene count to the bronchiolitis ask-back | Filed, after the event |
 
 ### 2026-10-17, day session, in one table
 
