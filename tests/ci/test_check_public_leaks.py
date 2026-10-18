@@ -19,7 +19,11 @@ WHAT THIS COVERS, stated so a gap is arguable rather than discovered:
                  `.gitattributes`; file and directory names; the machine-local
                  private-name check found only as `verify_no_local_refs.py` on
                  the hook's exec line, run in `--message` and `--all` modes,
-                 never relayed raw; exit codes 0, 1 and 2, timeouts and crashes.
+                 never relayed raw; every tracked symlink's stored target, in
+                 the index and in outgoing commits and the working copy
+                 (absolute, home path and private-term targets fail, a
+                 relative one leaving the repository is a NOTE, the target is
+                 never printed); exit codes 0, 1 and 2, timeouts and crashes.
     Not covered  The owner's real private-name check. It cannot live in this
                  public repository, so a stand-in script of the same name and
                  output format plays its part.
@@ -1163,6 +1167,157 @@ def test_private_check_is_found_from_a_linked_worktree(repo: Path) -> None:
     result = scan(linked, allow_missing=False)
     assert result.returncode == 0, result.stdout
     assert "private-name check: PASS" in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# Tracked symlinks: the stored target is a path, and the scan reads it
+# ---------------------------------------------------------------------------
+
+LINK_WHERE = ["outgoing", "on-the-base"]
+
+
+def add_link(repo: Path, name: str, target: str, where: str = "outgoing") -> None:
+    """Commit a symlink; "on-the-base" moves the base onto it, so only the index pass sees it."""
+    link = repo / name
+    link.parent.mkdir(parents=True, exist_ok=True)
+    os.symlink(target, link)
+    git(repo, "add", name)
+    git(repo, "commit", "-q", "-m", "chore: add link")
+    if where == "on-the-base":
+        git(repo, "tag", "-f", "base")
+
+
+def scan_with_flagging_check(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> tuple[int, str]:
+    """Run the scan in-process with a stand-in private-name check that flags OWNER_TERM.
+
+    The stand-in replaces the check itself: `--message` flags a line carrying the
+    term, `--all` passes, as the real check's whole-tree mode does for a link,
+    since it reads the file a link points to, never the link's own text.
+    """
+
+    def locate(root: Path) -> tuple[Path, str]:
+        return root / "stand_in_check.py", ""
+
+    def run_private(script: Path, root: Path, args: list[str]) -> tuple[int, list[str]]:
+        if args[0] != "--message":
+            return 0, ["PASS: no local references found."]
+        text = Path(args[1]).read_text(encoding="utf-8")
+        hits = [
+            f"FAIL: commit message:{number}: owner-term"
+            for number, line in enumerate(text.splitlines(), start=1)
+            if OWNER_TERM in line
+        ]
+        return (1, hits) if hits else (0, ["PASS: no local references found."])
+
+    monkeypatch.setattr(leaks, "locate_private_check", locate)
+    monkeypatch.setattr(leaks, "_run_private", run_private)
+    code = leaks.main(["--base", "base", "--no-fetch"], cwd=repo)
+    captured = capsys.readouterr()
+    return code, captured.out + captured.err
+
+
+@pytest.mark.parametrize("where", LINK_WHERE)
+@pytest.mark.parametrize(
+    "target",
+    ["/srv/zqnotes/plan.md", "~/zqnotes/plan.md", "C:\\zqnotes\\plan.md", "C:/zqnotes/plan.md"],
+    ids=["posix-root", "home", "drive-backslash", "drive-slash"],
+)
+def test_an_absolute_symlink_target_fails(repo: Path, target: str, where: str) -> None:
+    add_link(repo, "link.md", target, where)
+    result = scan(repo)
+    output = result.stdout + result.stderr
+    assert result.returncode == 1, output
+    assert "symlink link.md (stored target" in result.stdout
+    assert "[absolute-symlink]" in result.stdout
+    assert "zqnotes" not in output
+    if where == "on-the-base":
+        assert "(already on the base" in result.stdout
+    else:
+        assert any(
+            line.startswith("FAIL commit ") and "[absolute-symlink]" in line
+            for line in result.stdout.splitlines()
+        ), result.stdout
+
+
+@pytest.mark.parametrize("where", LINK_WHERE)
+def test_a_home_path_symlink_target_fails(repo: Path, where: str) -> None:
+    add_link(repo, "link.md", HOME_ROOT + "jdoe42/notes/plan.md", where)
+    result = scan(repo)
+    output = result.stdout + result.stderr
+    assert result.returncode == 1, output
+    assert "[local-path]" in result.stdout
+    assert "jdoe42" not in output
+
+
+@pytest.mark.parametrize("where", LINK_WHERE)
+def test_a_symlink_target_the_private_check_flags_fails(
+    repo: Path, where: str, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The gap of 2026-10-17: a relative link into a private place, already on the base."""
+    add_link(repo, "docs/guide.md", f"../../{OWNER_TERM}-notes/guide.md", where)
+    code, output = scan_with_flagging_check(repo, monkeypatch, capsys)
+    assert code == 1, output
+    assert "FAIL private-name check: " in output
+    assert "symlink docs/guide.md (stored target" in output
+    assert "[owner-term]" in output
+    assert OWNER_TERM not in output
+    if where == "on-the-base":
+        assert "(already on the base" in output
+
+
+@pytest.mark.parametrize("where", LINK_WHERE)
+def test_a_relative_target_leaving_the_repository_is_a_note(repo: Path, where: str) -> None:
+    add_link(repo, "reference/sibling", "../../sibling-zq-repository", where)
+    result = scan(repo)
+    output = result.stdout + result.stderr
+    assert result.returncode == 0, output
+    assert "NOTE symlink reference/sibling: " in result.stdout
+    assert "FAIL" not in result.stdout
+    assert "sibling-zq-repository" not in output
+
+
+def test_an_in_repository_target_passes(repo: Path) -> None:
+    commit_file(repo, "docs/real.md", "clean\n")
+    add_link(repo, "guide.md", "docs/real.md", "on-the-base")
+    add_link(repo, "reference/inner", "../docs")
+    result = scan(repo)
+    assert result.returncode == 0, result.stdout
+    assert "FAIL" not in result.stdout
+    assert "NOTE" not in result.stdout
+
+
+@pytest.mark.parametrize("change", ["commit", "working-copy"])
+def test_a_link_retargeted_after_the_base_is_read(repo: Path, change: str) -> None:
+    commit_file(repo, "docs/real.md", "clean\n")
+    add_link(repo, "guide.md", "docs/real.md", "on-the-base")
+    (repo / "guide.md").unlink()
+    os.symlink("/srv/zqnotes/plan.md", repo / "guide.md")
+    if change == "commit":
+        git(repo, "add", "guide.md")
+        git(repo, "commit", "-q", "-m", "chore: retarget")
+    result = scan(repo)
+    assert result.returncode == 1, result.stdout
+    expected = "commit " if change == "commit" else "(stored target, working tree)"
+    assert any(
+        expected in line and "[absolute-symlink]" in line for line in result.stdout.splitlines()
+    ), result.stdout
+
+
+@pytest.mark.parametrize("where", LINK_WHERE)
+def test_a_fail_line_never_prints_the_target(
+    repo: Path, where: str, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    secret_part = "Zq8vR2xT9mKp"
+    add_link(repo, "link.md", f"/srv/{secret_part}/{OWNER_TERM}", where)
+    code, output = scan_with_flagging_check(repo, monkeypatch, capsys)
+    assert code == 1, output
+    assert "[absolute-symlink] /***(" in output
+    assert "[owner-term]" in output
+    assert no_run_of(secret_part, output) == []
+    assert "/srv/" not in output
+    assert OWNER_TERM not in output
 
 
 # ---------------------------------------------------------------------------
