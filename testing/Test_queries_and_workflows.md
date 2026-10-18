@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-10-09.
+Last updated: 2026-10-18.
 
 Every entry has the same three parts:
 
@@ -1389,6 +1389,7 @@ What you should see:
 - The disclaimer is a wide box titled "Important medical disclaimer" with a bold opening sentence, a paragraph advising you to seek your physician's advice, and a notice box titled "Prototype".
 - The continue button runs the full width of the box, reads "I understand, continue to the research tool", and stays greyed out until the box is ticked.
 - Escape does not close it.
+- On a phone (card of 2026-10-18, #282), open the site in a private window: the box opens at its heading and bold first sentence, not partway down, fills the screen's width bar a thin edge, and scrolls down to the box and the button.
 - After ticking and Continue, the product opens.
 - It does not come back while you use the site, and it appears again after Log out.
 - Why it matters: this is the one screen standing between a person and a research prototype that must never be mistaken for medical advice, so it cannot be skippable.

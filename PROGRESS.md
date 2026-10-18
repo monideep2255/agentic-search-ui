@@ -63,6 +63,7 @@ NEW ON 18 OCTOBER, on the public site that visitors to the innovation day poster
 
 - Everything that worked on the practice site now works on the public site too. The public site had been a month behind; it now runs the same version, with the same settings, and answers the same questions the same way.
 - Before releasing, every one of the 61 changes waiting for the product owner was tried by hand in a real browser, at desktop and phone width: 48 work as promised, 7 only partly, 6 can only be seen when something fails, and none fail.
+- On a phone, the disclaimer every visitor sees first now opens at its heading and uses the whole width of the screen. Before, it opened partway down its own text, so a visitor began reading mid-sentence; the product owner spotted it on their phone the evening before the event and it was fixed the same night.
 - The five questions planned for the poster were each asked five times on the public site: every run answered, with the same sources each time.
 
 ### 17 October
@@ -743,7 +744,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
-| Release day for the poster, and every waiting change tried by hand | The public site was brought up to date with the practice site, with the same settings and raised daily limits for the event crowd. Before that, all 61 changes waiting for the product owner were tried by hand in a browser and the findings written down as seventeen new pieces of work | 18 October 2026 |
+| Release day for the poster, every waiting change tried by hand, and the disclaimer fixed for phones | The public site was brought up to date with the practice site, with the same settings and raised daily limits for the event crowd. Before that, all 61 changes waiting for the product owner were tried by hand in a browser and the findings written down as seventeen new pieces of work | 18 October 2026 |
 | A day of designing with the owner, one protection in and two pieces taken back | The answer writer can no longer be steered by text inside a paper, and records read exactly as the paper writes them; it took three tries. A disagreement warning and the first part of the coronavirus fix were built and taken back before anyone saw them, each for a reason the reviewers found. The coronavirus fix was designed with the product owner in nine decisions | 17 October |
 | A night of six changes, three taken back and three rebuilt | Six changes went live: a note that variant classifications were not retrieved, a properly named rs334 record, a line naming the databases an answer rests on, the species shown beside a gene's counterparts, a date window that leaves out undated papers, and real titles on a gene's papers. Three others were taken back because each could lose part of an answer for programs that read it, or attach a gene to the wrong variant. Three first tries were rebuilt once after their reviewers found a wrong detail. Six new small problems were written down | 17 October |
 | A night of building every parked piece, four changes in and eight taken back | Every piece of half-finished work was finished or taken back, so nothing is left waiting on a side branch. Four changes went live: the read-only reply, the paper named when an answer moves between papers, isolate answers that survive a slow search, and the Plain language and Researcher switch. Eight were taken back because a reviewer found each could show something wrong | 16 October |
@@ -1262,7 +1263,7 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. The innovation day poster: the public site is ready, and the five demo questions were checked on it. After the event, the daily limits go back to their usual size.
+1. The innovation day poster: the public site is ready, the five demo questions were checked on it, and the raised daily limits stay in place after the event.
 2. The product owner retests what went live, newest first, with the lead's own verdict on each change beside it.
 3. On 23 October, a week of the new freeze count decides whether the gatekeeper's freeze fix is worth building.
 4. New designs for the changes taken back: reading a year and a place for isolate questions in a way that matches how the records write places; looking up one named isolate; the checked database searches; where a quoted record sentence ends; the answer's first sentence; the one-sentence paper quotes; asking which aspect a broad subject means; keeping every sentence of a long abstract for programs that read our answers; showing each variant's classification without making long answers too big; and keeping a variant tied to its gene in the source check.
