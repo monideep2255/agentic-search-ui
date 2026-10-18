@@ -79,4 +79,22 @@ describe("DisclaimerModal", () => {
 
     expect(onAccept).toHaveBeenCalledTimes(1);
   });
+
+  it("focuses the checkbox on open without scrolling the dialog past its title", () => {
+    // On a phone the dialog is taller than the screen, and a plain focus()
+    // on the checkbox near its foot opened it scrolled past the title
+    // (owner, 2026-10-18). jsdom has no layout, so pin the call itself, and
+    // report every element as laid out: jsdom's offsetParent is always null,
+    // which the component reads as hidden.
+    const laidOut = vi
+      .spyOn(HTMLElement.prototype, "offsetParent", "get")
+      .mockReturnValue(document.body);
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    render(<DisclaimerModal onAccept={vi.fn()} />);
+
+    expect(screen.getByRole("checkbox")).toHaveFocus();
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    focus.mockRestore();
+    laidOut.mockRestore();
+  });
 });
