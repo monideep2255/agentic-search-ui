@@ -2,7 +2,7 @@
 
 The current state a fresh session needs, and nothing else. `/phase-checkpoint` rewrites it in place at every session end and keeps it to about 4 KB. Earlier versions, and the setup steps for a new laptop, are in `docs/build/Handoff_history.md`.
 
-Last updated: 2026-10-17.
+Last updated: 2026-10-18.
 
 ## Table of contents
 
@@ -13,24 +13,22 @@ Last updated: 2026-10-17.
 
 ## What is live
 
-- Develop: `6935a0a3` is the product (card 125, #271); documents since then only. Deployed and healthy. Production: `v0.2.0`, tag `cde4f592`, unchanged. CI is green.
-- Merged today, behind CI, a judge and an adversary, then checked on deployed develop at 1280 and 390: card 125, no paper's title or abstract can pose as the answer writer's instructions, and records read exactly as PubMed writes them. Its third attempt; three small items merged open by your call (`testing/Future.md`, row 61).
-- Closed today, never pushed, each back in To do as "Design with you first": card 126 (the disagreement line fired where nothing disagreed) and card 56's first slice (a single NCBI fit trusted for an acronym, "HEV" read as a pig virus). Why: `DECISIONS.md`, rows dated 2026-10-17.
-- Nothing is parked. Locally only `develop`; on GitHub only `develop` and `production`.
+- Production: `v0.3.0`, merge `59aba7d8`, released 2026-10-18 for the innovation day poster. Deployed by hand from source because the merge triggered no Railway deploy (`LEARNINGS.md`, 2026-10-18); migrations at 0011; healthy.
+- Production's settings match develop's, and its crowd limits are raised for the event: 1000 guest runs and $25 a day (`DECISIONS.md`, 2026-10-18).
+- Develop: the same code as production, plus documents only; the changelog's v0.3.0 section arrived by back-merge #277. Deployed and healthy. CI is green.
+- Nothing is being built. Locally only `develop`; on GitHub only `develop` and `production`.
 
 ## What awaits the product owner
 
-- Retests: the rows at the top of `testing/Retest_product_owner.md`, card 125 first, then the night of 16 to 17 October; each checked by the team on deployed develop.
-- The poster release: four calls for you in the plan above, each asked on its own tomorrow.
-- After the event, privacy: whether to rewrite git history to drop two private symlink targets (`DECISIONS.md`, 2026-10-17); the current tree is clean.
-- Designs, after the event: card 56's next slice (the design and the first slice's reviews: `testing/Developer/reports/2026-10-17_card56/`), card 126, and the other "Design with you first" cards on the board.
-- New cards: 127 (a remembered organism never reaches its sequencing records) and 128 (a CFTR answer with no summary and no note), both buildable.
+- Retests: the rows in `testing/Retest_product_owner.md`. Every row was driven by hand in a browser on develop on 2026-10-18, with a verdict and a take each: `testing/Developer/reports/2026-10-18_browser_retest/report.md` (its recordings are local only, in that folder).
+- After the event: set production's crowd limits back to 200 guest runs and $10 a day; the privacy call on rewriting git history (`DECISIONS.md`, 2026-10-17).
+- The findings of that retest and of the production check, filed as board cards 129 to 145, to order with the owner after the event.
+- Designs, after the event: card 56's next slice, card 126 and the other "Design with you first" cards.
 - On 23 October, card 84's row: a week of the server's lag lines decides the freeze fix.
-- Every decision taken today: `DECISIONS.md`, rows dated 2026-10-17. What broke: `LEARNINGS.md`.
 
 ## The one next action
 
-Tomorrow, Sunday 18 October, is a freeze-and-release day for the innovation day poster, by your call: no new features; retest the top rows of `testing/Retest_product_owner.md`, answer the four release calls, then release develop to production and verify the demo questions there. The plan, step by step: `testing/Developer/reports/2026-10-17_poster_release/plan.md`.
+The poster event: the QR code opens `https://search-agent-web-production.up.railway.app`, and the owner checks it from a phone. Demo questions checked on production, five runs each, are in the report's "Production check"; keep the bronchiolitis question and the breast cancer gene count off the poster. After the event, the owner orders cards 129 to 145, then building resumes.
 
 How to start a session: read this file, then `git status --short` and `git worktree list`, then `testing/Retest_product_owner.md` and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
 
@@ -40,9 +38,10 @@ How to start a session: read this file, then `git status --short` and `git workt
 - Retests: `testing/Retest_product_owner.md`
 - The cutoff and closed items: `testing/UI_fixes_done.md`; older: `testing/UI_fixes_archive.md`
 - Queries to type: `testing/Test_queries_and_workflows.md`
-- Each card's reviews: `testing/Developer/reports/<date>_card*`; today's: `testing/Developer/reports/2026-10-17_card56/`, `_card125/`, `_card126/`
+- Each card's reviews: `testing/Developer/reports/<date>_card*`; today's retest and release: `testing/Developer/reports/2026-10-18_browser_retest/`, `2026-10-17_poster_release/`
+- Releases: `docs/build/Release_flow.md`; the changelog: `CHANGELOG.md`
 - Factory's brief: `docs/build/Factory_onboarding.md`; other work: `testing/Future.md`
 - Models: `docs/architecture/Model_architecture.md`
 - Why, and what broke: `DECISIONS.md`, `LEARNINGS.md`; the narrative: `requirements/Plan.md`
-- How a card or phase runs: `.claude/skills/bossman-mode/SKILL.md`; releases: `docs/build/Release_flow.md`
+- How a card or phase runs: `.claude/skills/bossman-mode/SKILL.md`
 - The registry and sync check: `tracker/Living_documents.md`, `tracker/check_doc_sync.py`

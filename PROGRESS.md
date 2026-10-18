@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-10-17.
+Last updated: 2026-10-18.
 
 ## Table of contents
 
@@ -56,6 +56,14 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+### 18 October
+
+NEW ON 18 OCTOBER, on the public site that visitors to the innovation day poster reach from its QR code:
+
+- Everything that worked on the practice site now works on the public site too. The public site had been a month behind; it now runs the same version, with the same settings, and answers the same questions the same way.
+- Before releasing, every one of the 61 changes waiting for the product owner was tried by hand in a real browser, at desktop and phone width: 48 work as promised, 7 only partly, 6 can only be seen when something fails, and none fail.
+- The five questions planned for the poster were each asked five times on the public site: every run answered, with the same sources each time.
 
 ### 17 October
 
@@ -344,6 +352,20 @@ All six live-government-API connections the plan called for are now built. That 
 - Give it a stretch of chromosome coordinates with the genome build, and it names the genes under that stretch without being told them, then lists the structural and clinical variants recorded there, each with a link. Leave the build out and it asks which one, rather than guessing. On the practice site since the night of 22 September, waiting for the product owner to try it.
 
 ## What does not work yet
+
+### 18 October
+
+THE HONEST HEADLINE AS OF 18 OCTOBER, in one sentence:
+
+- the public site is now up to date, but trying all 61 changes by hand found answers that miss the point of the question, the worst being that "How many genes are associated with breast cancer?" answers with one record called "Seen by breast cancer nurse".
+
+What the day found, in plain words:
+
+- Many everyday questions get a list of records with no written summary, and where there is a summary its first sentence often counts records instead of answering.
+- Some answers cover only part of what was asked: a comparison of two genes describes one, and a question about babies with bronchiolitis is sometimes asked back "which gene or condition?" though it names one.
+- A few totals disagree by one between the list and the line underneath.
+- A saved answer reopened from your history cannot open its OMIM source, and the history shows only your latest 20 searches.
+- Releasing found that the public site did not rebuild itself when the release was merged; it was started by hand.
 
 ### 17 October
 
@@ -721,6 +743,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| Release day for the poster, and every waiting change tried by hand | The public site was brought up to date with the practice site, with the same settings and raised daily limits for the event crowd. Before that, all 61 changes waiting for the product owner were tried by hand in a browser and the findings written down as seventeen new pieces of work | 18 October 2026 |
 | A day of designing with the owner, one protection in and two pieces taken back | The answer writer can no longer be steered by text inside a paper, and records read exactly as the paper writes them; it took three tries. A disagreement warning and the first part of the coronavirus fix were built and taken back before anyone saw them, each for a reason the reviewers found. The coronavirus fix was designed with the product owner in nine decisions | 17 October |
 | A night of six changes, three taken back and three rebuilt | Six changes went live: a note that variant classifications were not retrieved, a properly named rs334 record, a line naming the databases an answer rests on, the species shown beside a gene's counterparts, a date window that leaves out undated papers, and real titles on a gene's papers. Three others were taken back because each could lose part of an answer for programs that read it, or attach a gene to the wrong variant. Three first tries were rebuilt once after their reviewers found a wrong detail. Six new small problems were written down | 17 October |
 | A night of building every parked piece, four changes in and eight taken back | Every piece of half-finished work was finished or taken back, so nothing is left waiting on a side branch. Four changes went live: the read-only reply, the paper named when an answer moves between papers, isolate answers that survive a slow search, and the Plain language and Researcher switch. Eight were taken back because a reviewer found each could show something wrong | 16 October |
@@ -1239,17 +1262,18 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. The product owner retests what went live on 17 October, the protection against text inside papers and last night's six changes, then 16 October, then 15 October, then 8 and 9 October, newest first.
-2. On 23 October, a week of the new freeze count decides whether the gatekeeper's freeze fix is worth building.
-3. New designs for the changes taken back: reading a year and a place for isolate questions in a way that matches how the records write places; looking up one named isolate; the checked database searches; where a quoted record sentence ends; the answer's first sentence; the one-sentence paper quotes; asking which aspect a broad subject means; keeping every sentence of a long abstract for programs that read our answers; showing each variant's classification without making long answers too big; and keeping a variant tied to its gene in the source check.
-4. Factory, the second building agent, works again on four small screen fixes, including the two small marks on the new mode switch and a top bar that runs off the screen with a long email address.
-5. Fix the six small problems found overnight on 17 October, listed in the table below: more than five papers after picking a date window, the condition for rs334, a repeated word in an opening sentence, unrelated papers for the RS1 gene, the explainer card running off a phone, and a stray old paper in a date window.
-6. Finish the coronavirus question: designed with the product owner on 17 October and built in three parts; the first part was taken back, and the next design decides when a single database match can be trusted for a short name.
-7. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
-8. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting.
-9. Build the step where the system checks its own results and tries once more when they do not answer the question.
-10. Tell the reader when the system wrote its own search rather than using a checked one.
-11. Build the connections between facts the product owner chose on 25 September: facts cited as paths through the graph.
+1. The innovation day poster: the public site is ready, and the five demo questions were checked on it. After the event, the daily limits go back to their usual size.
+2. The product owner retests what went live, newest first, with the lead's own verdict on each change beside it.
+3. On 23 October, a week of the new freeze count decides whether the gatekeeper's freeze fix is worth building.
+4. New designs for the changes taken back: reading a year and a place for isolate questions in a way that matches how the records write places; looking up one named isolate; the checked database searches; where a quoted record sentence ends; the answer's first sentence; the one-sentence paper quotes; asking which aspect a broad subject means; keeping every sentence of a long abstract for programs that read our answers; showing each variant's classification without making long answers too big; and keeping a variant tied to its gene in the source check.
+5. Factory, the second building agent, works again on four small screen fixes, including the two small marks on the new mode switch and a top bar that runs off the screen with a long email address.
+6. Fix the six small problems found overnight on 17 October, listed in the table below: more than five papers after picking a date window, the condition for rs334, a repeated word in an opening sentence, unrelated papers for the RS1 gene, the explainer card running off a phone, and a stray old paper in a date window.
+7. Finish the coronavirus question: designed with the product owner on 17 October and built in three parts; the first part was taken back, and the next design decides when a single database match can be trusted for a short name.
+8. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
+9. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting.
+10. Build the step where the system checks its own results and tries once more when they do not answer the question.
+11. Tell the reader when the system wrote its own search rather than using a checked one.
+12. Build the connections between facts the product owner chose on 25 September: facts cited as paths through the graph.
 
 Done since this list was last written, overnight on 23 September, while nobody was watching:
 
@@ -1366,6 +1390,11 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| "How many genes are associated with breast cancer?" answers with one record called "Seen by breast cancer nurse" | On the list of work to do, found on 18 October; after the poster |
+| Many everyday questions show a list of records with no written summary, and summaries often open by counting instead of answering | On the list of work to do, found on 18 October |
+| A comparison of two genes describes only one, and a question about babies with bronchiolitis is asked back about half the time | On the list of work to do, found on 18 October |
+| Totals that disagree by one between a list and the line under it | On the list of work to do, found on 18 October |
+| A reopened saved answer cannot open its OMIM source, and the history shows only the latest 20 searches | On the list of work to do, found on 18 October |
 | "SARS CoV-2" typed with a space can still be answered about the disease SARS, and "Illumina" can still be read as a gene and refused | Designed with the product owner on 17 October; the first part was taken back the same day and waits for a new design |
 | When two databases disagree on a dangerous fact and something else also asks you to check the answer, the line under it gives no warning | Taken back on 17 October after the warning fired where nothing disagreed; waits for a new design |
 | After a question about tuberculosis, "And its SRA runs?" searches our own database, not the sequencing records | On the list of work to do, found on 17 October |

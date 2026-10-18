@@ -205,3 +205,15 @@ What it shows:
 - Production was slower on four answers, three of them over 20 s: queries 117, 33 and 37 at 24 to 34 s. Twelve runs went out at once against each deployment, so part of that is load; a visitor asking alone meets the times in the browser run above.
 - Develop gave no final event on two answers late in a day of heavy testing, which points at develop's own daily limits, not the code.
 - Bronchiolitis is asked back about half the time on both, card 145.
+
+The poster's demo questions on production, five runs each through the API, then once each in the browser at 1280 and query 1 also at 390 (`gifs/S_production_demo_questions_1280_and_390.gif`):
+
+| Demo question | Five runs | Browser |
+|---|---|---|
+| Query 1, Researcher | all answered, 23 sources every run, 7.0 to 8.4 s | 7.0 s at 1280; 6.9 s at 390 with nothing past the edge |
+| Query 117, Plain language | all answered, 72 sources every run, 17.3 to 28.4 s | 14.9 s, written summary, every paper by title |
+| Query 116, Researcher | all answered, 58 sources every run, 18.3 to 24.4 s | 20.1 s, Organism column, count line with no written summary |
+| "Recent papers on BRCA1 from the last 5 years?", Researcher | all answered, 58 sources every run, 17.2 to 22.3 s | covered by the API runs |
+| "Which cell phone is it best to buy this year?" | refused every run, 1.1 to 1.8 s | "Outside biomedical research" with what to ask instead, 3.2 s |
+
+All five are fit for the poster. Query 116 and query 117 can pass 20 s, and query 116 shows a list rather than a written summary (card 130).
