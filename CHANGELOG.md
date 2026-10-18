@@ -9,6 +9,12 @@ entry, rather than editing a release that already shipped. The v0.1.0 section
 is the one deliberate exception and says so in its own text, because a first
 release has no previous tag and so generates from the entire history.
 
+## v0.3.1 (2026-10-18)
+
+No user-facing changes. 7 internal changes (7 maintenance): chores, documentation, tests, refactors and build configuration.
+
+Full diff: `v0.3.0..v0.3.1`
+
 ## v0.3.0 (2026-10-18)
 
 ### Reverts
