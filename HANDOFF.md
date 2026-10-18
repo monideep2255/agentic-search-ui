@@ -22,6 +22,7 @@ Last updated: 2026-10-17.
 
 - Retests: the rows at the top of `testing/Retest_product_owner.md`, card 125 first, then the night of 16 to 17 October; each checked by the team on deployed develop.
 - The poster release: four calls for you in the plan above, each asked on its own tomorrow.
+- After the event, privacy: whether to rewrite git history to drop two private symlink targets (`DECISIONS.md`, 2026-10-17); the current tree is clean.
 - Designs, after the event: card 56's next slice (the design and the first slice's reviews: `testing/Developer/reports/2026-10-17_card56/`), card 126, and the other "Design with you first" cards on the board.
 - New cards: 127 (a remembered organism never reaches its sequencing records) and 128 (a CFTR answer with no summary and no note), both buildable.
 - On 23 October, card 84's row: a week of the server's lag lines decides the freeze fix.

@@ -1,10 +1,10 @@
 # Factory review loop
 
-How Factory's pull requests get reviewed, fixed and merged without the product owner carrying messages between Factory and the lead. Proposed on 2026-10-16 at the owner's request and approved item by item the same day (`DECISIONS.md`, 2026-10-16, "The Factory review loop is approved item by item"). It is built under `.claude/skills/factory-loop/`: the hourly script `factory_loop.py`, the review procedure `SKILL.md` and the launch agent template. Nothing runs until the owner installs it ([Install](#install)).
+How Factory's pull requests get reviewed, fixed and merged without the product owner carrying messages between Factory and the lead. Proposed on 2026-10-16 at the owner's request and approved item by item the same day (`DECISIONS.md`, 2026-10-16, "The Factory review loop is approved item by item"). It was built for `.claude/skills/factory-loop/`: the hourly script `factory_loop.py`, the review procedure `SKILL.md` and the launch agent template. That folder is not in the repository while the loop is paused (below). Nothing runs until the owner installs it ([Install](#install)).
 
 PAUSED on 2026-10-16 at the owner's call: not merged and not installed. The built code, its tests and its report are saved as `testing/Developer/reports/2026-10-16_factory_loop/paused_build.patch` and `build.md`. Two changes were agreed before pausing and are not in the patch: the loop runs only when the owner says go, for one named card, and stops when that card merges or needs the owner (no hourly schedule); and the review may merge its own docs branch, a one-line rule the owner adds by hand, since an agent may not widen its own permissions. To resume: apply the patch on a branch, make both changes, and run the review loop on it.
 
-Last updated: 2026-10-16.
+Last updated: 2026-10-17.
 
 ## Table of contents
 

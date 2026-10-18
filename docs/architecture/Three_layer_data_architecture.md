@@ -2,6 +2,8 @@
 
 How data flows from NCBI sources to user answers. Three layers, each with a different purpose, latency, and ownership.
 
+This document came from the data engineering repository, symlinked here at `reference/agentic-search-data-engineering`. Where it says "this repository", it means that one: Systems 1 and 2 are built there, never here.
+
 ## Table of contents
 
 - [Layer 1: knowledge graph (System 1 + 2, this repository)](#layer-1-knowledge-graph-system-1--2-this-repository)
@@ -55,6 +57,11 @@ Excluded entirely (not in any layer):
 | SRA | Raw sequencing reads. Input to analysis pipelines, not search. |
 | dbGaP | Controlled-access. Requires individual Data Access Request with IRB approval. |
 | PubChem | Community-submitted with varying curation. Breaks the provenance trust moat. |
+
+That table is the data engineering plan. System 3 does reach two of the three live today:
+
+- PubChem, through the `pubchem_property` action of `ncbi_efetch` (`src/system_03_search_agent/tools/ncbi_pubchem_actions.py`).
+- The SRA run records NCBI links to a paper, through ELink (`src/system_03_search_agent/core/paper_links.py`).
 
 ## Why these 5 databases for Layer 1?
 

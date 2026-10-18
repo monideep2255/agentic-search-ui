@@ -192,6 +192,58 @@ def test_check_still_fails_on_a_blank_line_inside_the_decisions_table(repo, caps
     assert "blank line INSIDE the table" in out
 
 
+_HDR = {
+    "DECISIONS.md": "| Date | Decision | Alternatives considered | Why |\n|---|---|---|---|\n",
+    "LEARNINGS.md": "| Date | Applies to | What broke | What was tried | What fixed it |\n|---|---|---|---|---|\n",
+}
+
+
+def _row(rel: str, day: str = "2026-09-25") -> str:
+    w = "<details><summary>s</summary>x</details>"
+    if rel == "DECISIONS.md":
+        return f"| {day} | A | B | {w} |\n"
+    return f"| {day} | area | broke | {w} | {w} |\n"
+
+
+@pytest.mark.parametrize("rel", ["DECISIONS.md", "LEARNINGS.md"])
+def test_append_only_table_clean_case_reports_nothing(repo, capsys, rel):
+    repo.write(rel, "# T\n\nintro\n\n## Section\n\ntext\n\n" + _HDR[rel] + _row(rel) + _row(rel, "2026-09-26"))
+    _, out = _check(capsys)
+    assert "outside the one table" not in out and "text follows" not in out
+
+
+@pytest.mark.parametrize("rel", ["DECISIONS.md", "LEARNINGS.md"])
+def test_a_dated_row_after_the_table_in_another_section_fails(repo, capsys, rel):
+    repo.write(rel, "# T\n\n" + _HDR[rel] + _row(rel) + "\n## Later\n\n" + _row(rel, "2026-10-01"))
+    rc, out = _check(capsys)
+    assert rc == 1
+    assert f"{rel}:9: dated row after the table" in out and "renders as loose text" in out
+
+
+def test_a_dated_row_before_the_header_fails(repo, capsys):
+    rel = "LEARNINGS.md"
+    repo.write(rel, "# T\n\n" + _row(rel) + "\n" + _HDR[rel] + _row(rel))
+    rc, out = _check(capsys)
+    assert rc == 1
+    assert f"{rel}:3: dated row before the header" in out
+
+
+def test_a_row_glued_to_a_paragraph_in_a_later_section_fails(repo, capsys):
+    rel = "LEARNINGS.md"
+    repo.write(rel, "# T\n\n" + _HDR[rel] + _row(rel) + "\n## Notes\n\nSome paragraph.\n" + _row(rel, "2026-08-28"))
+    rc, out = _check(capsys)
+    assert rc == 1
+    assert f"{rel}:10: dated row after the table" in out
+
+
+@pytest.mark.parametrize("rel", ["DECISIONS.md", "LEARNINGS.md"])
+def test_text_after_the_table_fails(repo, capsys, rel):
+    repo.write(rel, "# T\n\n" + _HDR[rel] + _row(rel) + "\n## Appendix\n\nnotes\n")
+    rc, out = _check(capsys)
+    assert rc == 1
+    assert f"{rel}:7: text follows the table's last row" in out
+
+
 def test_check_still_fails_on_a_wrong_pull_request_reference(repo, capsys):
     repo.write("docs/Notes.md", "# Notes\n\nBuild phase 3.1 merged as PR #99.\n")
     rc, out = _check(capsys)

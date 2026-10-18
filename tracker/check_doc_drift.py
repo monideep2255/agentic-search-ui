@@ -15,7 +15,9 @@ the build board can settle:
     fenced code.
   - The two append-only tables, DECISIONS.md and LEARNINGS.md: no blank line
     inside the table (markdown ends a table there), every dated row has the
-    header's column count, and every row carries its `<details>` wrappers.
+    header's column count, every row carries its `<details>` wrappers, every
+    dated row in the file sits inside the one contiguous table under its
+    header, and no text follows the table's last row (it is the file's end).
   - Phase and pull request references: a sentence of the shape "phase X.Y
     ... PR #N" names the pull request that actually merged that phase.
   - "Next" references: no document calls a build phase "next" when
@@ -954,10 +956,12 @@ def check_append_only_table(rel: str, lines: list[str], mask: list[bool]) -> lis
     # Walk from the separator to the end of the dated rows.
     i = header_idx + 2
     seen_row = False
+    last_row = header_idx + 1
     while i < len(lines):
         line = lines[i]
         if DATED_ROW_RE.match(line):
             seen_row = True
+            last_row = i
             cells = split_unescaped_pipes(line)
             if len(cells) != len(columns):
                 findings.append(Finding(
@@ -988,6 +992,32 @@ def check_append_only_table(rel: str, lines: list[str], mask: list[bool]) -> lis
                 ))
                 i = j
                 continue
+        break
+
+    # Every dated row must sit inside that one contiguous table. Checked over
+    # the whole file, not a list of known places: 140 rows were appended into
+    # other sections of LEARNINGS.md over two months and rendered as loose text.
+    for k, line in enumerate(lines):
+        if mask[k] or not DATED_ROW_RE.match(line):
+            continue
+        if header_idx + 2 <= k <= last_row:
+            continue
+        where = "before the header" if k < header_idx else "after the table"
+        findings.append(Finding(
+            "structural", rel, k + 1,
+            f"dated row {where}, outside the one table under its header: it renders as loose text "
+            f"outside the table. Move it into the table",
+        ))
+
+    # The table must be the last thing in the file, so an append lands in it.
+    for k in range(last_row + 1, len(lines)):
+        if lines[k].strip() == "" or (not mask[k] and DATED_ROW_RE.match(lines[k])):
+            continue
+        findings.append(Finding(
+            "structural", rel, k + 1,
+            "text follows the table's last row: the table must be the last thing in the file, "
+            "so that an append lands inside it",
+        ))
         break
     return findings
 

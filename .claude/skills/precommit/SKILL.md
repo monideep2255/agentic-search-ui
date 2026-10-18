@@ -102,7 +102,7 @@ Checks the structure of every tracked markdown file, and two kinds of reference 
 - A table of contents that does not match its body.
 - Two sections describing the same build phase.
 - A last-updated date older than the file's newest dated content.
-- The integrity of the two append-only tables in DECISIONS.md and LEARNINGS.md: a blank line inside a table, which silently truncates it when rendered; a row missing the `<details>` wrapper its format requires; a row whose column count does not match the header.
+- The integrity of the two append-only tables in DECISIONS.md and LEARNINGS.md: a blank line inside a table, which silently truncates it when rendered; a row missing the `<details>` wrapper its format requires; a row whose column count does not match the header; a dated row outside the table.
 - A phase-to-pull-request reference that names a pull request other than the one that merged the phase.
 - A phase called "next" that `tracker/BOARD.md`, frozen at build phase 6.2, marks done.
 

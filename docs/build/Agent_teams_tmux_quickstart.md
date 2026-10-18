@@ -13,7 +13,7 @@ Why a terminal: the bossman skill spawns parallel builders into tmux panes, and 
    - JetBrains (PyCharm, IntelliJ): View then Tool Windows then Terminal, or press Alt and F12
 2. Start tmux: `tmux`. A green status bar appears at the bottom. You are now inside a tmux session.
 3. Launch Claude inside it: `claude`. This starts a new session that picks up `teammateMode: tmux`.
-4. Activate: `/bossman`.
+4. Activate: `/bossman-mode`.
 
 When a phase has 2 or more builders, tmux splits the window into panes, one per teammate. Your lead (main session) stays in the top pane and monitors the shared task list.
 
@@ -34,4 +34,4 @@ When a phase has 2 or more builders, tmux splits the window into panes, one per 
 - "command not found: tmux": reinstall with `brew install tmux`.
 - Want to step away: detach with Ctrl-b then d. The session and its agents keep running. Return with `tmux attach`.
 
-Prerequisites already configured on this machine: tmux installed, `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`, and `teammateMode: tmux` in the user-level `settings.json` (the `.claude` folder in the home directory). The bossman skill also runs a tmux preflight at Step 1, so if you forget and launch outside tmux, it prints these steps before dispatching any builders.
+Prerequisites already configured on this machine: tmux installed, `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`, and `teammateMode: tmux` in the user-level `settings.json` (the `.claude` folder in the home directory). The bossman skill also runs a tmux preflight at step 3 of opening a phase (`.claude/skills/bossman-mode/reference/Phase_execution.md`), so if you forget and launch outside tmux, it prints these steps before dispatching any builders.

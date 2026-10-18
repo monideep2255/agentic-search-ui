@@ -92,7 +92,7 @@ Shell hooks in `.claude/settings.json` that each guard complements:
 - Guards that ask: they ask through the engine's question dialog. Dismissing the dialog counts as Cancel, and a run with no one to ask also cancels.
 - Public repository guard: it fails closed. A missing or failing leak scanner holds the commit or push.
 - `/capture`: it writes screenshots and results to `logs/capture/`, which is gitignored, so a capture never adds files git would track and never reaches GitHub.
-- Citation drift: it currently reports `omim.org` present in the Python citation pattern but absent from the frontend list. That is an open product question about which hosts may be cited, not a bug in the mod.
+- Citation drift: `omim.org` is present in the Python citation pattern but absent from the frontend list, and the mod does not report it, because `omim.org` and `www.omim.org` are on the `acknowledged` list in its `config.ts`. Which hosts may be cited is an open product question, not a bug in the mod. Remove the entry once the lists agree.
 - Test triple: it matches test names, so it cannot tell whether a test named "invalid" sends invalid input.
 - Tool budgets: it checks that two numbers agree, not that the code enforces the timeout at run time.
 - Stack status: ports come from the repository defaults, so a changed port needs an edit in the mod's `config.ts`.

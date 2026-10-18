@@ -40,7 +40,7 @@ A chain like `pytest ... | tail -3 && git commit` reports `tail`'s exit code, no
 - `isort --check-only --diff src tests services tracker alembic .claude .github`: matches CI gate 2.
 - `bash .github/gates/gate04_unit_suite.sh`: whenever any Python file under `src/`, `tests/`, `services/` or `tracker/` changed. Roughly five minutes. A docs-only change skips this and the report says so.
 - `npm run build` in `frontend/`: whenever any file under `frontend/` changed. Railway's own build is what fails silently otherwise, and this is the only local check that would catch it first.
-- `python3 tracker/check_doc_drift.py --check`: always. It checks document structure (tables of contents, the two append-only tables, phase and pull request references), compares no count and runs no tests, so it takes seconds. A fact it could not compute is a failure line naming why, never an "ok".
+- `python3 tracker/check_doc_drift.py --check`: always. It checks document structure (tables of contents, the two append-only tables, where a blank line inside either or a dated row outside either fails, phase and pull request references), compares no count and runs no tests, so it takes seconds. A fact it could not compute is a failure line naming why, never an "ok".
 - `python3 tracker/check_doc_sync.py`: always. It compares the key documents with each other (a card in one place only, each retest row naming a real query, every card the board plan, the Factory brief and `HANDOFF.md` name on a list, Factory's cards not already built, the handoff's develop commit in history, every registered path on disk, and every done row that says "awaiting your retest" having its row in `testing/Retest_product_owner.md`) and takes well under a second. Exit 1 is a disagreement and blocks the push: fix the document it names, as `/phase-checkpoint` Step 6b does. Exit 2 is that it could not run, which is never a pass.
 - `python3 .claude/skills/ship/scripts/check_public_leaks.py`: always, and last, because it is the final check before anything is pushed. It fetches the base, then scans every outgoing commit, the working tree and untracked files for a secret or a private value (see the subsection below). Exit 0 is clean; 1 is a finding, a file too large to scan, or a machine without the private-name check; 2 is that it could not run, which is never a pass. Gate on that code, never through a pipe.
 
@@ -57,6 +57,7 @@ What it reads:
 - It runs `git fetch` for the base first (`origin/develop`, or `--base <ref>`), so a stale or force-pushed remote cannot hide a commit. `--no-fetch` skips that on purpose, for example offline.
 - Every commit in `origin/develop..HEAD`, ONE AT A TIME: every added line, the name of every file it adds, its message, and its author and committer email. A value added in one commit and deleted in a later one is still published, so it is still a finding, reported as `commit <sha> file:line`. A merge commit is read through its remerge diff, so a change made while resolving it is read too.
 - The staged diff, the unstaged diff, and every untracked file git does not ignore, whole, with its name.
+- Every tracked symlink's stored target, which is a path: every symlink in the index, those already on the base included, and every symlink an outgoing commit or the working copy adds or changes. The target goes through every rule below and the private-name check's `--message` mode, and an absolute target (`/`, `\`, `~` or a drive letter) FAILS as `absolute-symlink`. A relative target that leaves the repository prints a `NOTE` naming only the link, not a failure, since `reference/agentic-search-data-engineering` points to a public sibling repository.
 - Nothing is skipped silently. No line is cut short. `.gitattributes` cannot hide a file, because any file git calls binary is read from its blob and judged by content. UTF-16 and text with a stray NUL byte are decoded and read. A text file over 2 MB FAILS the scan: shrink or split it.
 
 What it catches, each reported as `FAIL <where> [category] <mask>`:
@@ -76,6 +77,7 @@ What it still cannot catch, so a clean run is necessary and not sufficient:
 - The inside of a screenshot or an archive (the `NOT SCANNED` lines).
 - An email written out in words (`name at domain dot com`), and an internal ticket key on its own.
 - An annotated tag's message. /ship does not push tags; push one only after reading its message.
+- Where a relative symlink that leaves the repository (a `NOTE` line) points: its text passes every rule, but only a person can confirm the place it names is public.
 - A leak already public on `develop`, `production` or another pushed branch. Removing one needs the owner, since it means rewriting history.
 
 A finding stops the push. Where it is decides the fix:

@@ -88,7 +88,7 @@ SSH access, openCypher examples, the 7 smoke queries, and index listings are doc
 
 ## G. Cost
 
-The full V1 graph runs at roughly $30 per month on a Hetzner CPX42 VPS. See the [Monthly cost](../README.md#monthly-cost) table in the README for the breakdown, and [DECISIONS.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/DECISIONS.md) row 80 for the host-selection rationale (Hetzner versus Netcup versus Contabo, EU versus US).
+The full V1 graph runs at roughly $30 per month on a Hetzner CPX42 VPS. See the [Monthly cost](../../README.md#cost-model) table in the README for the breakdown, and [DECISIONS.md](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/DECISIONS.md) row 80 for the host-selection rationale (Hetzner versus Netcup versus Contabo, EU versus US).
 
 ## H. How decisions are tracked
 
