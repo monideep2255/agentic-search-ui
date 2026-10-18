@@ -1050,6 +1050,12 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-18. THE POSTER RELEASE DAY: RELEASE V0.3.0 TO PRODUCTION; ALL 61 RETEST ROWS DRIVEN BY HAND IN A BROWSER; PRODUCTION CHECKED SIDE BY SIDE WITH DEVELOP. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history. Decisions: `DECISIONS.md`, rows dated 2026-10-18.
+
+- What landed: release v0.3.0 (#275, merge `59aba7d8`, tag `v0.3.0`, changelog back-merge #277) after the owner's four calls: release as it stands, production's settings made consistent with develop's by name only, crowd limits for the event, the migrations. Merged with admin rights by the owner's call; deployed by hand from source because the merge triggered no deploy (`LEARNINGS.md`, 2026-10-18).
+- What was checked: every retest row on develop, 48 work, 7 partly, 6 cannot be triggered, none fail; then production against develop on the same questions, and the poster's demo questions five runs each (`testing/Developer/reports/2026-10-18_browser_retest/report.md`).
+- No card was built, by the owner's freeze. Filed: cards 129 to 145. Nothing is parked.
+
 2026-10-17. THE UI FIX LOOP, DAY SESSION OF 2026-10-17: CARD 125 MERGED ON ITS THIRD ATTEMPT; CARD 126 AND CARD 56'S FIRST SLICE CLOSED BY THEIR REVIEWERS; CARD 56 DESIGNED WITH THE OWNER. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history. Decisions: `DECISIONS.md`, rows dated 2026-10-17 from "Every path that brings a PubMed paper title" on.
 
 - What landed: no paper's title or abstract can pose as the answer writer's instructions, and records read exactly as PubMed writes them (card 125, #271), behind green CI, a judge and an adversary, and checked on deployed develop at 1280 and 390. Three small items merged open by the owner's call under Rule 4 (`testing/Future.md`, row 61).

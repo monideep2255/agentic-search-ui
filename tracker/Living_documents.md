@@ -20,7 +20,7 @@ Nothing here requires a document to carry today's date:
 - Build harness review item D2 removed the column and the gate, delegated by the product owner on 2026-09-25 (DECISIONS.md, the lead implements both harness reviews' takeaways).
 - Now `HANDOFF.md` is rewritten at every session end, and every other document is edited when its fact changes.
 
-Last updated: 2026-10-17.
+Last updated: 2026-10-18.
 
 ## Table of contents
 
@@ -68,7 +68,7 @@ Last updated: 2026-10-17.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-10-17 that begins "Card 56 slice 1 is closed, never pushed, and card 56 goes back to To do", the last row at the checkpoint closing the day session of 2026-10-17. None of the rows read since the morning checkpoint changes a registered document's shape: they record the owner's calls on cards 8, 38 C, 56, 125 and 126, two live-spend limits, card 125's three attempts and merge, and card 56's design and closed first slice, none of which adds, removes or renames a registered section.
+Guarded through the DECISIONS.md row dated 2026-10-18 that begins "The browser retest's recordings and screenshots stay on the lead's machine", the last row at the checkpoint closing the poster release day of 2026-10-18. None of the rows read since the last checkpoint changes a registered document's shape beyond the one already registered (2026-10-17, LEARNINGS.md's Lessons table moved to the end of the file): they record the freeze-and-release day, the leak scan's symlink reads, the four release calls, the admin merge and manual deploy of v0.3.0, the browser retest before every owner retest, and where its recordings live.
 
 ## Why the registry lives here
 
