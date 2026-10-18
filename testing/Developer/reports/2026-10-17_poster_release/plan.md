@@ -58,6 +58,14 @@ Candidates, each with a known good answer on develop; the product reviewer confi
 - If the migrations ran, first run `alembic downgrade` to the revision before 0008 from the new build's code, then redeploy the previous build at once (`docs/build/Release_flow.md`, "Rolling back"; each migration's docstring names its command).
 - A rollback does not undo the tag or the GitHub Release; the next merge to `production` redeploys forward.
 
+The migration downgrade, in this order, written down on 2026-10-18 before the owner's call 4:
+
+1. From the new build's code, the only tree that holds revisions 0008 to 0011, run `alembic downgrade 0007_session_memory` against production's user database. It walks 0011, 0010, 0009 and 0008 back in that order.
+2. At once, redeploy the previous build of the API in the Railway console. Never before step 1: the previous build's start command runs `alembic upgrade head`, which fails on a revision it does not know, and the service does not start.
+3. Keep the window between the two steps to the minutes the redeploy takes: on the old schema the new build cannot reopen saved answers or save history.
+
+What a downgrade loses, from each migration's docstring: only what the release added. 0011 drops the stored risk tiers, 0010 the saved answer texts, 0009 an index, 0008 the owner column on interactions. Every row's question, citations, classification and cost stay. Each of the four only adds a column or an index and rewrites no existing row on the way up.
+
 ## Not tomorrow
 
 - No new card is built or merged, on develop or production.

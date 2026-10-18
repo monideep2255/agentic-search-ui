@@ -7,13 +7,14 @@ Every change that is built, live on develop and waiting for the product owner to
 - A wording or layout card the product reviewer passed at both widths closes by itself seven days after it lands here unless you object (`DECISIONS.md`, 2026-09-25).
 - Moved here from `testing/UI_fixes_done.md` on 2026-10-15 at the product owner's request, so every retest lives in one file of its own.
 
-Last updated: 2026-10-17.
+Last updated: 2026-10-18.
 
 ## Waiting for your retest
 
 Built and live on develop, waiting for the product owner's verdict, newest first.
 
 - Moved here from the board on 2026-10-06 at the owner's request, so the board counts only work still to do.
+- On 2026-10-18 the lead drove every row below by hand in a browser on deployed develop, with a verdict and a take for each: `testing/Developer/reports/2026-10-18_browser_retest/report.md`. 48 work, 7 partly, 6 cannot be triggered on demand, none fail. What it found that no row covers is on the board as cards 129 to 144. Your verdict still closes each row.
 
 | # | What to check, in plain words | Item | Queries | Retest |
 |---|---|---|---|---|
