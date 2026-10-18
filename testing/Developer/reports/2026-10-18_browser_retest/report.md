@@ -7,6 +7,7 @@ The lead drove every row of `testing/Retest_product_owner.md` by hand in a real 
 - Recordings: `gifs/`, one per batch, named by batch letter and query numbers. Batch A (rows 10, 13 and 15 at 1280) ran before recording started. Still images: `screens/`. The signed-in recording shows the account's email address at 1280, so it stays in `signed_in_local_only/`, which git ignores; this repository is public.
 - Where a moment was too fast to catch by hand (Stop once the records show, the progress steps), a small page script pressed the app's own Stop button or sampled the step labels every 100 ms; each such row says so.
 - Verdicts: Works, Partly, Fails, Untested (cannot be shown on demand).
+- Row numbers are the retest file's as of the morning of 2026-10-18. That evening the disclaimer's phone fix (v0.3.2) went in as a new row 1, so each row below is one higher in the retest file now: this report's row 1 is its row 2.
 
 ## Table of contents
 
